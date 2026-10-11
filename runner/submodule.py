@@ -173,6 +173,57 @@ def _committed_pin(skill_md: Path) -> dict[str, str] | None:
     return data if data.get("version") and data.get("commit") else None
 
 
+def modified_files(path: Path) -> list[str]:
+    """Tracked files of the tree's own repository whose working bytes differ from its HEAD.
+
+    Empty for a tree that is not its own git repository (a copied fixture has no HEAD to differ
+    from; provenance still hashes its bytes). Raises NfclawError when git cannot answer, so an
+    unverifiable tree is never treated as unmodified."""
+    if _own_head(path) is None:
+        return []
+    try:
+        out = subprocess.run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=no",
+                              "--ignore-submodules=all"], cwd=str(path), capture_output=True,
+                             text=True, timeout=_GIT_TIMEOUT, check=True).stdout
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
+        raise NfclawError(
+            ErrorCode.SUBMODULE_INCOMPLETE,
+            f"Could not check {path} for local modifications: {exc}",
+            fix="Make sure git works in that directory, then retry.") from exc
+    files: list[str] = []
+    entries = iter(out.split("\x00"))
+    for entry in entries:
+        if not entry:
+            continue
+        files.append(entry[3:])
+        if entry[0] in "RC":                      # a rename/copy carries its source path next
+            next(entries, None)
+    return files
+
+
+def tree_issues(st: SubmoduleStatus, pin_doc: Path | None) -> list[str]:
+    """Why the tree `st` is not the unmodified code its label (and its docs) claim, or [].
+
+    The pinned submodule must sit at the commit its committed `skill.md` (`pin_doc`) documents: a
+    `git pull` that moves the pin without `git submodule update` otherwise runs a different release
+    than the one the agent read about — under the old release's schema, silently. Any tree nfclaw
+    runs — the pin, a release cache, a `dev` commit — must also be free of local edits to tracked
+    files, because provenance names it by its release and commit."""
+    issues: list[str] = []
+    pinned = _committed_pin(pin_doc) if pin_doc is not None else None
+    if pinned and st.commit and st.commit != pinned["commit"]:
+        found = _git(st.path, "describe", "--tags", "--always") or st.commit[:12]
+        issues.append(
+            f"pipelines/{st.name}/upstream is checked out at {found} ({st.commit[:12]}), but this "
+            f"nf-claw checkout pins nf-core/{st.name} {pinned['version']} "
+            f"({pinned['commit'][:12]}) — the release its skill.md and reference.md describe")
+    if changed := modified_files(st.path):
+        shown = ", ".join(changed[:5]) + (f" and {len(changed) - 5} more" if len(changed) > 5 else "")
+        issues.append(f"{st.path} has local modifications to tracked pipeline files ({shown}); "
+                      f"nfclaw runs releases unmodified")
+    return issues
+
+
 def ensure_initialized(name: str, pipelines_dir: Path, repo_root: Path) -> SubmoduleStatus:
     st = resolve(name, pipelines_dir)
     if not st.complete:

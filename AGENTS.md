@@ -177,7 +177,7 @@ nf-core sizes every process from a label in the pipeline's `conf/base.config`, t
 nfclaw run <name> ... --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h
 ```
 
-These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. Do not chase this with `withName:` overrides: those re-size one named process's initial request, so you must name every step that could exceed the host, and they do not cap the retry. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
+These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one (pin a newer engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those re-size one named process's initial request, so you must name every step that could exceed the host, and they do not cap the retry. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
 
 Any other environment (proxies, `JAVA_HOME`, …) is inherited from your shell unchanged. Each run launches Nextflow from its `--outdir`, so its `.nextflow/` history is isolated and `--resume` resumes that run (use a distinct `--outdir` per pipeline).
 
@@ -185,6 +185,7 @@ If a pipeline's `upstream/` is empty, initialise it first:
 ```bash
 git submodule update --init pipelines/<name>/upstream
 ```
+`nfclaw run` refuses a pinned `upstream/` that is not at the commit its `skill.md` documents (e.g. after a `git pull` without a submodule update, which would otherwise run the old release under the new release's docs) or that has local edits to tracked files: restore it with `git submodule update --force pipelines/<name>/upstream`, or pass `--pipeline-version` to run another release deliberately.
 
 ---
 

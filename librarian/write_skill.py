@@ -261,7 +261,7 @@ def _reference_section(ps: ParamSchema) -> str:
 
 
 def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
-                    repo_up: str = "../..") -> str:
+                    repo_up: str = "../..", ps: ParamSchema | None = None) -> str:
     """The Nextflow version this release declares, and how to run exactly that one.
 
     The engine is not a neutral detail: a release is written against the Nextflow line it declares,
@@ -282,6 +282,16 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
                     f"nfclaw run {name} ... --nxf-ver {pin}\n```\n"
                     "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
                     f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
+        if not engine_version.supports_resource_limits(pin):
+            # The Resources section's --limit-* ceiling is process.resourceLimits, which an engine
+            # this old ignores without a word; nfclaw refuses the combination.
+            own = [f"`--{p.replace('_', '-')}`" for p in ("max_cpus", "max_memory", "max_time")
+                   if ps is not None and p in ps.params]
+            pin_line += (f"\n\nNextflow {pin} predates `process.resourceLimits` (24.04.0), so "
+                         "`--limit-*` cannot be combined with this pin — nfclaw refuses it rather "
+                         "than run without the ceiling"
+                         + (f"; cap resources with the {what}'s own " + ", ".join(own) + " instead."
+                            if own else "."))
     return f"This {what} declares `nextflowVersion = '{spec}'`.{pin_line}\n"
 
 
@@ -621,7 +631,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
     # tree, pipelines/<name>/.versions/<label>/skill.md, so their links climb two levels further.
-    engine = _engine_section(name, st, what, "../.." if pipeline_version is None else "../../../..")
+    engine = _engine_section(name, st, what, "../.." if pipeline_version is None else "../../../..",
+                             ps)
     engine_block = f"## Nextflow engine\n{engine}\n" if engine else ""
     chaining = _chaining_section(name, rules)
     chaining_block = f"## Chaining\n{chaining}\n" if chaining else ""

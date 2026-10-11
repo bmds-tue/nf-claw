@@ -86,6 +86,28 @@ def warning(spec: str | None, installed: str | None) -> str | None:
             f"(advisory — Nextflow enforces the engine version).")
 
 
+def effective(nxf_ver: str | None = None) -> str | None:
+    """The engine version a launch will run (`1.2.3`), or None when it cannot be determined: the
+    `--nxf-ver` pin when given, else what the launcher reports (it honours an exported NXF_VER)."""
+    if nxf_ver:
+        m = re.match(r"\d+(?:\.\d+)+", nxf_ver)
+        return m.group() if m else None
+    raw = _installed_raw()
+    m = _INSTALLED_RE.search(raw) if raw else None
+    return m.group(1) if m else None
+
+
+# `process.resourceLimits` first shipped in Nextflow 24.04.0. Older engines accept the setting
+# without a word and apply no ceiling at all (verified with 23.10.1: a 16-CPU/64 GB request ran
+# uncapped under a 2-CPU/4 GB limit), so a requested ceiling must not be passed to one.
+RESOURCE_LIMITS_SINCE = (24, 4, 0)
+
+
+def supports_resource_limits(version: str) -> bool:
+    parts = _tuple(re.match(r"\d+(?:\.\d+)*", version).group())
+    return parts + (0,) * (3 - len(parts)) >= RESOURCE_LIMITS_SINCE
+
+
 def check(upstream: Path, *, nxf_ver: str | None = None) -> list[str]:
     """Zero or one advisory about the Nextflow engine vs. the pipeline's requirement.
 
