@@ -237,8 +237,9 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 - **`smoke.yml`** (Weekly & on changes): Validates command synthesis, schema parsing, and CLI arguments across all pipelines (`nfclaw run --check --demo`), as well as registered registry chains.
 - **`nextflow-validate.yml`** (Nightly & on changes): Executes `nextflow -preview` under pinned minimum Nextflow versions across parallel shards to verify pipeline compilation, profile resolution, schema validation, and DAG construction.
 - **`tests.yml`** (Push & PR): Executes the complete pytest test matrix across Python 3.11–3.13 on Ubuntu and macOS, deterministic Nextflow execution/replay/chaining, and static site validation.
-- **`drift-check.yml`** (Push & PR): Re-audits the repository to guarantee zero schema drift between submodules, skills, references, manifests, and handoff rules.
+- **`drift-check.yml`** (PR, daily & manual): Re-audits the repository to guarantee zero schema drift between submodules, skills, references, manifests, and handoff rules.
 - **`demo-validation.yml`** (PR & manual): Executes the pinned demo on native Linux amd64, replays it into a fresh directory, and independently validates FastQC metrics, scientific replay, and static plot exports.
+- **`fastqrepair-validation.yml`** (PR & manual): Executes fastqrepair 1.1.1 with nfclaw's recorded runtime corrections on native Linux amd64 and checks gzip recovery and paired-read conservation against independent controls.
 - **`pipeline-execution.yml`** (PR & manual): Executes selected pinned pipelines on native Linux amd64 under bounded resources, exercising complete execution, replay, and structural/strict verification (`nfclaw verify`).
 
 Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).

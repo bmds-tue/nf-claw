@@ -8,8 +8,8 @@ Key conventions for AI agents navigating this repository:
 - Discover without token bloat: Do not read full catalogs or directory listings. Grep `catalog.json` (or `catalog.md`) for keywords.
 - Inspect pipeline skills: Read `pipelines/<name>/skill.md` for required inputs, parameters, and verified run commands. Consult `pipelines/<name>/reference.md` for complete parameter constraints.
 - Run safely: Execute with `nfclaw run <name> --input <file> --outdir <dir> -profile <profile>` (or `python3 -m runner run ...`). Pass `--check` for preflight schema validation and dry-run command inspection without execution.
-- Check status: Monitor foreground or background runs with `nfclaw status <outdir>`. Runs are logged to `<outdir>/provenance/logs/run.log` and protected by non-blocking sibling locks (`.{outdir}.nfclaw.lock`).
-- Sample identity safety: Scientific metadata identifiers (`meta.id`, sample/patient IDs, database names) must match `^[A-Za-z0-9_][A-Za-z0-9._-]*$`. Local paths in samplesheets must always be absolute.
+- Check status: Monitor foreground or background runs with `nfclaw status <outdir>`. Runs are logged to `<outdir>/provenance/logs/run.log` and protected by a non-blocking writer lock beside the output directory (`.<outdir name>.nfclaw.lock`).
+- Sample identity safety: Scientific metadata identifiers (`meta.id`, sample/patient IDs, genome/database names) must start with a letter, digit or underscore and contain only letters, digits, combining marks, dots, underscores or hyphens (Unicode letters and digits count). nfclaw refuses other identifiers rather than renaming samples. Local paths in samplesheets must always be absolute.
 - Multi-stage chaining: Orchestrate sequential pipelines via declarative JSON specs with `nfclaw chain run <spec.json> --outdir <dir>`.
 - Replay & verification: Reproduce runs into fresh targets using `<outdir>/provenance/commands.sh` and verify results with `nfclaw verify <target> --against <original>`.
 - Operational manual: Read `AGENTS.md` before executing or chaining pipelines.
@@ -30,8 +30,8 @@ Key conventions for AI agents navigating this repository:
 
 ## Pipeline Catalogs & Library
 
-- [Pipeline Catalog Markdown (catalog.md)](https://github.com/danilomonge/nf-claw/blob/main/catalog.md): Human-readable index of all 92+ tracked nf-core pipelines with declared inputs, descriptions, and citations (use grep; do not read whole).
-- [Pipeline Catalog JSON (catalog.json)](https://github.com/danilomonge/nf-claw/blob/main/catalog.json): Machine-readable catalog containing all tracked pipelines, versions, schemas, and topics (use grep; do not read whole).
+- [Pipeline Catalog Markdown (catalog.md)](https://github.com/danilomonge/nf-claw/blob/main/catalog.md): Human-readable index of every tracked nf-core pipeline with its pinned version, declared input, output locations and description (use grep; do not read whole).
+- [Pipeline Catalog JSON (catalog.json)](https://github.com/danilomonge/nf-claw/blob/main/catalog.json): Machine-readable catalog: for every tracked pipeline its name, pinned version, description, summary, declared input, output locations, tools and the pipelines it feeds (use grep; do not read whole).
 - [Upstream Sources Manifest (sources.tsv)](https://github.com/danilomonge/nf-claw/blob/main/sources.tsv): Tab-separated registry mapping each pipeline to its upstream Git repository and tracking policy.
 - [Pipeline Library Directory (pipelines/)](https://github.com/danilomonge/nf-claw/tree/main/pipelines): Library of individual pipelines (`pipelines/<name>/`), each holding pinned code (`upstream/`), agent instructions (`skill.md`), and complete parameter schemas (`reference.md`).
 
