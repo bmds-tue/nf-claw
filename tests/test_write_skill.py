@@ -403,7 +403,9 @@ def test_resources_section_documents_the_nf_core_resource_ceiling(tmp_path):
     skill, _ = write_skill.generate("mini", pipelines_dir=pdir)
     text = skill.read_text()
     assert "## Resources" in text
-    assert "--limit-cpus 4 --limit-memory 15.GB --limit-time 1.h" in text
+    assert "--limit-cpus 4 --limit-memory 15.GB\n" in text
+    # A time cap is not a machine capacity: a too-short one stops long tasks at every retry.
+    assert "--limit-time 1.h" not in text and "never as a guess" in text
     assert "process.resourceLimits" in text
     assert "nf-co.re/docs/running/configuration/nextflow-for-your-system" in text
 

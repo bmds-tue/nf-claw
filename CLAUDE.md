@@ -174,8 +174,9 @@ Prefer a release for results you need to reproduce from a version number; use `d
 
 nf-core sizes every process from a label in the pipeline's `conf/base.config`, tuned for a server: one step can request far more memory than a workstation has (`Process requirement exceeds available memory`), and Nextflow retries a failed step with *more*. `--demo` never shows this because nf-core's `test` profile ships its own small ceiling; a real run has none. Set one:
 ```bash
-nfclaw run <name> ... --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h
+nfclaw run <name> ... --limit-cpus 4 --limit-memory 15.GB
 ```
+`--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
 These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one (pin a newer engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those re-size one named process's initial request, so you must name every step that could exceed the host, and they do not cap the retry. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
 

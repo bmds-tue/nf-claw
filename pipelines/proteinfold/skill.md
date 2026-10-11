@@ -81,10 +81,10 @@ A real (non-`--demo`) run requests the resources the pipeline's `conf/base.confi
 
 ```bash
 nfclaw run proteinfold --input samplesheet.csv --outdir results -profile docker \
-  --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h
+  --limit-cpus 4 --limit-memory 15.GB
 ```
 
-nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` config — the mechanism nf-core prescribes for exactly this ([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). Set them to the machine's real capacity. The generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.
+nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` config — the mechanism nf-core prescribes for exactly this ([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes. The generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.
 
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=25.10.2'`.

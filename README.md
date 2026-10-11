@@ -148,8 +148,10 @@ nfclaw chain status /abs/chain
 ```bash
 # Apply a resource ceiling to prevent out-of-memory aborts on local workstations
 nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
-  --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h
+  --limit-cpus 4 --limit-memory 15.GB
 ```
+
+`--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
 ---
 

@@ -201,12 +201,12 @@ def _resources_section(name: str, ps: ParamSchema, insch: InputSchema | None,
         "retry, at what this machine actually has:\n\n"
         "```bash\n"
         f"nfclaw run {name}{inp} --outdir results{ver} -profile docker \\\n"
-        "  --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h\n"
+        "  --limit-cpus 4 --limit-memory 15.GB\n"
         "```\n\n"
         "nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` "
         "config — the mechanism nf-core prescribes for exactly this "
         "([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). "
-        "Set them to the machine's real capacity. The generated config is kept in "
+        "Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes. The generated config is kept in "
         "`<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.\n"
     )
 
