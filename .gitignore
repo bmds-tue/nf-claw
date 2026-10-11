@@ -1,8 +1,6 @@
 # --- superpowers (plans, scratch, skill state) — KEEP LOCAL, NEVER UPLOAD ---
 superpowers/
 .superpowers/
-docs/superpowers/
-**/superpowers/
 
 # --- Python ---
 __pycache__/
@@ -26,7 +24,6 @@ venv/
 .nextflow.log*
 work/
 results/
-*.pyc
 
 # The Nextflow launcher, if installed into the repo root (`curl -s https://get.nextflow.io | bash`).
 # It is a local tool, never part of the library — anchored so pipeline sources are unaffected.
