@@ -68,6 +68,8 @@ def test_broken_output_symlink_cannot_look_like_an_empty_success(tmp_path):
     ("yaml", "nested:\n  threshold: 0.01\n  threshold: 0.99\n"),
 ])
 def test_duplicate_parameter_keys_are_rejected(tmp_path, suffix, text):
+    if suffix == "yaml":
+        pytest.importorskip("yaml")
     path = tmp_path / f"params.{suffix}"
     path.write_text(text)
     with pytest.raises(NfclawError, match="duplicate"):
@@ -75,12 +77,14 @@ def test_duplicate_parameter_keys_are_rejected(tmp_path, suffix, text):
 
 
 def test_yaml_merge_override_remains_valid(tmp_path):
+    pytest.importorskip("yaml")
     path = tmp_path / "params.yaml"
     path.write_text("base: &base {threshold: 0.01}\nsettings: {<<: *base, threshold: 0.99}\n")
     assert parameters.load_params_file(path)["settings"] == {"threshold": 0.99}
 
 
 def test_recursive_yaml_parameter_alias_is_a_clear_validation_error(tmp_path):
+    pytest.importorskip("yaml")
     path = tmp_path / "params.yaml"
     path.write_text("settings: &settings {again: *settings}\n")
     with pytest.raises(NfclawError, match="cyclic"):
@@ -88,6 +92,7 @@ def test_recursive_yaml_parameter_alias_is_a_clear_validation_error(tmp_path):
 
 
 def test_yaml_object_tags_cannot_execute_code(tmp_path):
+    pytest.importorskip("yaml")
     path = tmp_path / "params.yaml"
     marker = tmp_path / "executed"
     path.write_text(f'object: !!python/object/apply:os.system ["touch {marker}"]\n')
