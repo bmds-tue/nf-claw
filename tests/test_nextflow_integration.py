@@ -4,6 +4,7 @@ This exercises nfclaw's execution contract; it makes no claim about biological a
 """
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 
@@ -441,3 +442,58 @@ workflow { CONSUME(file(params.input)) }
     (affected / "sample_A").rename(affected / "sample_C")
     state, problems = chain.status(out)
     assert problems and chain.status_exit_code(state, problems) == 1
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_resume_recomputes_when_a_file_inside_an_input_directory_changes(engine, tmp_path):
+    # Nextflow's cache key for a directory input is its path, size and mtime; editing a file in a
+    # subdirectory changes none of them, so a plain -resume reuses the task and republishes the
+    # result computed from the old bytes (verified: it printed the old content). Same names, same
+    # types: only the content differs, so the namespace comparison alone cannot see it.
+    root = tmp_path / "library"
+    tree = root / "pipelines/fixture/upstream"
+    tree.mkdir(parents=True)
+    (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "directory-path", "exists": True},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    (tree / "main.nf").write_text('''process READ {
+ publishDir params.outdir, mode: 'copy', overwrite: true
+ input:
+ path data
+ output:
+ path 'value.txt'
+ script:
+ """
+ cat ${data}/nested/value.txt > value.txt
+ """
+}
+workflow { READ(file(params.input)) }
+''')
+    data = tmp_path / "data"
+    (data / "nested").mkdir(parents=True)
+    value = data / "nested" / "value.txt"
+    value.write_text("AAAA\n")
+    out = tmp_path / "analysis"
+
+    def run(resume):
+        return orchestration.run_pipeline("fixture", repo_root=root, input_path=data,
+            outdir=out, profile="", params_file=None, cli_overrides={}, resume=resume,
+            demo=False, check_only=False, write_provenance=True, timeout_seconds=90,
+            nxf_ver=engine, limits=resources.parse(1, None, None))
+
+    run(False)
+    assert (out / "value.txt").read_text() == "AAAA\n"
+    stamp = data.stat(), (data / "nested").stat()
+    value.write_text("BBBB\n")                                   # same size, same names
+    for path, before in zip((data, data / "nested"), stamp):
+        os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    changed = run(True)
+    assert "-resume" not in changed.command
+    assert any("all tasks will be recomputed" in warning for warning in changed.warnings)
+    assert (out / "value.txt").read_text() == "BBBB\n"
+    unchanged = run(True)                                       # nothing changed since: reuse
+    assert "-resume" in unchanged.command
+    assert (out / "value.txt").read_text() == "BBBB\n"

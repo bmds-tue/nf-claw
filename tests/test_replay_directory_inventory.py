@@ -248,8 +248,8 @@ def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tm
         else:
             manifest["unverified_dependency_inventories"] = ["inputs"]
         path.write_text(json.dumps(manifest))
-    _, inventory = provenance.snapshot_inputs([source])
-    warning = orchestration._directory_resume_warning(tmp_path / "out", inventory)
+    digests, inventory = provenance.snapshot_inputs([source])
+    warning = orchestration._directory_resume_warning(tmp_path / "out", inventory, digests)
     assert warning and "fresh Nextflow cache session" in warning
 
 
@@ -264,10 +264,39 @@ def test_resume_checks_file_membership_within_directories_but_preserves_unrelate
         input_paths=[source, standalone])
     standalone.rename(tmp_path / "new-table.tsv")
     _, inventory = provenance.snapshot_inputs([source, tmp_path / "new-table.tsv"])
-    assert orchestration._directory_resume_warning(tmp_path / "out", inventory) is None
+    digests = orchestration._directory_file_digests(inventory, None)
+    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, digests) is None
     (source / "new_reads.txt").write_text("reads\n")
     _, inventory = provenance.snapshot_inputs([source])
-    assert "inventory changed" in orchestration._directory_resume_warning(tmp_path / "out", inventory)
+    digests = orchestration._directory_file_digests(inventory, None)
+    assert "inventory changed" in orchestration._directory_resume_warning(
+        tmp_path / "out", inventory, digests)
+
+
+def test_resume_detects_changed_bytes_beneath_an_input_directory(tmp_path):
+    # Same names and types, different content: Nextflow's directory cache key cannot see it.
+    from runner import orchestration
+    source = tmp_path / "data"
+    (source / "nested").mkdir(parents=True)
+    reads = source / "nested" / "reads.txt"
+    reads.write_text("AAAA\n")
+    standalone = tmp_path / "table.tsv"
+    standalone.write_text("old\n")
+    provenance.write(outdir=tmp_path / "out", pipeline="fixture", command_str="echo REPLAY_RAN",
+        submodule=SubmoduleStatus("fixture", tmp_path / "up", True, True, "1.0.0", "deadbeef", ()),
+        input_paths=[source, standalone])
+    _, inventory = provenance.snapshot_inputs([source, standalone])
+    unchanged = orchestration._directory_file_digests(inventory, None)
+    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, unchanged) is None
+    standalone.write_text("new\n")      # a standalone file's change is Nextflow's own cache key
+    _, inventory = provenance.snapshot_inputs([source, standalone])
+    digests = orchestration._directory_file_digests(inventory, None)
+    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, digests) is None
+    reads.write_text("BBBB\n")
+    _, inventory = provenance.snapshot_inputs([source, standalone])
+    digests = orchestration._directory_file_digests(inventory, None)
+    assert "content of a file inside an input directory changed" in \
+        orchestration._directory_resume_warning(tmp_path / "out", inventory, digests)
 
 
 def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_aliases(tmp_path, monkeypatch):

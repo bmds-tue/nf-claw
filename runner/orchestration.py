@@ -39,19 +39,37 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
             "so tasks touched by the change re-run and the results combine both commits."]
 
 
-def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]]) -> str | None:
-    """Nextflow's ordinary directory cache key omits the recursive namespace.
+def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    """The input directories and every entry beneath them."""
+    roots = {Path(name) for name, entry in inventory.items() if entry["type"] == "directory"}
+    return {name: entry for name, entry in inventory.items()
+            if Path(name) in roots or any(parent in roots for parent in Path(name).parents)}
 
-    A new session is necessary when it changes: public engine directives offer no way to add a
-    namespace fingerprint to every directory consumer's task hash. Unchanged inventories retain
-    normal cache reuse. Include files beneath directories, since membership is also observable.
+
+def _directory_file_digests(inventory: dict[str, dict[str, str]],
+                            known: dict[str, str] | None) -> dict[str, str]:
+    """SHA-256 of every file beneath an input directory (from `known` when already hashed)."""
+    digests = {}
+    for name, entry in _directory_nodes(inventory).items():
+        if entry["type"] == "file":
+            digests[name] = (known or {}).get(name) or provenance._sha256(
+                Path(entry.get("resolved_path", name)))
+    return digests
+
+
+def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
+                              current_digests: dict[str, str]) -> str | None:
+    """Nextflow's ordinary directory cache key omits the recursive namespace and content.
+
+    Its key for a directory input is the directory's path, size and modification time: renaming,
+    adding or editing a file in a subdirectory changes none of them, so -resume reuses the task
+    and republishes results computed from the old data (verified on 25.10.4). A new session is
+    necessary when anything beneath an input directory changed: public engine directives offer no
+    way to add a namespace or content fingerprint to every directory consumer's task hash.
+    Unchanged directories retain normal cache reuse. `current_digests` holds the SHA-256 of every
+    file beneath an input directory, compared with the previous launch's recorded snapshot.
     """
-    def directory_nodes(inventory):
-        roots = {Path(name) for name, entry in inventory.items() if entry["type"] == "directory"}
-        return {name: entry for name, entry in inventory.items()
-                if Path(name) in roots or any(parent in roots for parent in Path(name).parents)}
-
-    current_nodes = directory_nodes(current)
+    current_nodes = _directory_nodes(current)
     try:
         previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
         manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
@@ -60,14 +78,19 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]]) 
                 or manifest["dependency_inventory_version"] != 1
                 or "inputs" in manifest.get("unverified_dependency_inventories", [])):
             raise ValueError("previous namespace was not captured")
+        previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
+                                                     relative=False)
     except (OSError, ValueError, TypeError):
         if not current_nodes:
             return None
         reason = "the earlier input-directory inventory is unavailable or invalid"
     else:
-        if current_nodes == directory_nodes(previous):
+        if current_nodes != _directory_nodes(previous):
+            reason = "the input-directory inventory changed"
+        elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
+            reason = "the content of a file inside an input directory changed"
+        else:
             return None
-        reason = "the input-directory inventory changed"
     return (f"--resume starts a fresh Nextflow cache session because {reason}. "
             "Directory metadata alone cannot establish unchanged task inputs; all tasks will "
             "be recomputed to prevent stale results. An existing output directory will be "
@@ -374,7 +397,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         except OSError as exc:
             raise NfclawError(ErrorCode.ENVIRONMENT,
                               f"cannot inspect local input directories before resume: {exc}") from exc
-        if warning := _directory_resume_warning(outdir, resume_inventory):
+        try:
+            resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
+        except OSError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"cannot read local input directories before resume: {exc}") from exc
+        if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
             effective_resume = False
             warnings.append(warning)
             if on_warning is not None:

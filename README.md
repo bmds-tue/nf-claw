@@ -161,7 +161,8 @@ By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
 For declared local directory inputs, `--resume` retains the cache only when the recorded
-directory namespace is unchanged. A changed or unavailable inventory starts a fresh
+directory namespace and the bytes of every file beneath it are unchanged. A changed
+namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
 logs are copied forward. Old sample publications are kept in the archive. Replay targets
