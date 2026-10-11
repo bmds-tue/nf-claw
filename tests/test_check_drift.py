@@ -92,3 +92,35 @@ def test_drift_gate_reports_an_unreadable_handoff(library):
     (root / "handoffs" / "mini_up" / "mini.json").write_text("{nope")
     [drift] = check_drift._handoff_drift(root, root / "pipelines")
     assert "handoffs/mini_up/mini.json cannot be read" in drift
+
+
+def test_drift_when_a_checkout_is_not_the_recorded_gitlink(tmp_path):
+    # Docs are generated from the checked-out tree. CI checks out the gitlinks, but a local
+    # `make check` with a submodule at another commit used to pass while the committed docs
+    # described a commit the repository does not pin.
+    import subprocess
+
+    def git(path, *args):
+        return subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t",
+                               *args], check=True, capture_output=True, text=True).stdout.strip()
+
+    pdir = _seed(tmp_path, "mini")
+    up = pdir / "mini" / "upstream"
+    git(up, "init", "-q")
+    git(up, "add", "-A")
+    git(up, "commit", "-qm", "one")
+    pinned = git(up, "rev-parse", "HEAD")
+    (up / "main.nf").write_text("y")
+    git(up, "commit", "-qam", "two")
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "update-index", "--add", "--cacheinfo", f"160000,{pinned},pipelines/mini/upstream")
+    write_skill.generate("mini", pipelines_dir=pdir)               # docs of the checked-out "two"
+    write_catalog.generate(pipelines_dir=pdir,
+                           out_md=tmp_path / "catalog.md", out_json=tmp_path / "catalog.json")
+    drift = check_drift.check(pdir)
+    assert any("checked out at" in d and pinned[:12] in d for d in drift)
+    git(up, "checkout", "-q", pinned)
+    write_skill.generate("mini", pipelines_dir=pdir)
+    write_catalog.generate(pipelines_dir=pdir,
+                           out_md=tmp_path / "catalog.md", out_json=tmp_path / "catalog.json")
+    assert not any("checked out at" in d for d in check_drift.check(pdir))

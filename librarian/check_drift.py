@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 import tempfile
 from collections import Counter
@@ -82,6 +83,23 @@ def _structure_drift(repo: Path, pipeline_names: list[str]) -> list[str]:
     return drift
 
 
+def _gitlinks(repo: Path) -> dict[str, str]:
+    """{pipeline: commit} as the repository index pins `pipelines/<name>/upstream` (the gitlinks a
+    commit would record). Empty outside a git checkout, e.g. an embedded test library."""
+    try:
+        out = subprocess.run(["git", "-C", str(repo), "ls-files", "-s", "--", "pipelines"],
+                             capture_output=True, text=True, timeout=60, check=True).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    links = {}
+    for line in out.splitlines():
+        meta, _, path = line.partition("\t")
+        mode, sha, _ = meta.split(" ", 2)
+        if mode == "160000" and (m := re.fullmatch(r"pipelines/([^/]+)/upstream", path)):
+            links[m.group(1)] = sha
+    return links
+
+
 def _handoff_drift(repo: Path, pipelines_dir: Path) -> list[str]:
     """Every handoff rule must name library pipelines and fit their pinned schemas, so a release that
     renames a parameter or a samplesheet column a rule relies on is caught when it is pinned."""
@@ -110,6 +128,7 @@ def check(pipelines_dir: Path) -> list[str]:
         rules = handoff.load_registry(repo)          # skill.md documents them
     except NfclawError:
         rules = {}                                   # reported by _handoff_drift below
+    gitlinks = _gitlinks(repo)
     for d in pipeline_dirs:
         name = d.name
         st = submod.resolve(name, pipelines_dir)
@@ -120,6 +139,12 @@ def check(pipelines_dir: Path) -> list[str]:
                 f"run `git submodule update --init pipelines/{name}/upstream`)"
             )
             continue
+        # The docs are generated from the checked-out tree; they describe the pin only if that tree
+        # is the commit the repository records (CI checks out gitlinks; a local tree may differ).
+        if name in gitlinks and st.commit and st.commit != gitlinks[name]:
+            drift.append(f"{name}/upstream is checked out at {st.commit[:12]}, but the repository "
+                         f"pins {gitlinks[name][:12]} (run `git submodule update "
+                         f"pipelines/{name}/upstream`, or `git add` it to change the pin)")
         fresh = dict(zip(("skill.md", "reference.md"),
                          write_skill.render_status(st, rules=rules), strict=True))
         for fname, expected in fresh.items():           # compare in memory; never touch the tree
