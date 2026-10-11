@@ -1,4 +1,5 @@
 import json
+import pytest
 from pathlib import Path
 
 from runner import schema, parameters
@@ -334,3 +335,15 @@ def test_schema_declared_local_file_uri_must_use_a_recordable_filesystem_path(tm
     problems = parameters.validate_params({"fasta": "file:///tmp/ref$(>MARKER).fa"},
                                           schema.load_param_schema(tmp_path))
     assert any("absolute filesystem path" in issue for issue in problems)
+
+
+@pytest.mark.parametrize("parameter", ["input", "fasta", "database"])
+def test_explicit_remote_path_parameters_have_staged_name_guards(tmp_path, parameter):
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        parameter: {"type": "string", "format": "file-path"}}}))
+    ps = schema.load_param_schema(tmp_path)
+    issues = parameters.validate_params(
+        {parameter: "https://example.org/ref$(id).fa"}, ps)
+    assert any("unsafe remote input filename" in issue for issue in issues)
+    assert parameters.validate_params(
+        {parameter: "https://example.org/ref.fa?token=a+b/c=&signature=$signed"}, ps) == []

@@ -115,3 +115,64 @@ workflow {
     assert sorted(path.name for path in published.iterdir()) == ["left.report", "right.report"]
     assert all(path.is_symlink() and path.read_text() == "Clean reads: 3\n" for path in published.iterdir())
     assert not (tmp_path / "wrong").exists()
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_remote_staging_names_match_preflight_without_decoding(engine, tmp_path):
+    """A local HTTP oracle checks actual staged bytes/names, with no unsafe interpolation."""
+    import http.server
+    import os
+    import threading
+
+    from runner.inputs import local_name_issues
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"known remote data\n")
+
+        def log_message(self, *_args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    names = ["reads$(id).txt", "reads%20space.txt", "safe.txt?token=x&y=2", "reads#fragment.txt"]
+    urls = [f"http://127.0.0.1:{server.server_port}/{name}" for name in names]
+    (tmp_path / "params.json").write_text(json.dumps({"inputs": urls}))
+    (tmp_path / "main.nf").write_text('''process INVENTORY {
+ input:
+ path data
+ output:
+ path 'observed.tsv'
+ script:
+ """
+ printf '%s\\n' *.txt > observed.tsv
+ """
+}
+workflow {
+ INVENTORY(channel.fromList(params.inputs).map { file(it, glob: false) })
+}
+''')
+    try:
+        result = subprocess.run(["nextflow", "run", "main.nf", "-params-file", "params.json",
+                                 "-ansi-log", "false"], cwd=tmp_path,
+                                env={**os.environ, "NXF_VER": engine},
+                                capture_output=True, text=True, timeout=120)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+    assert result.returncode == 0, result.stdout + result.stderr
+    outputs = list((tmp_path / "work").rglob("observed.tsv"))
+    assert sorted(path.read_text().strip() for path in outputs) == [
+        "reads#fragment.txt", "reads$(id).txt", "reads%20space.txt", "safe.txt"]
+    for path in outputs:
+        assert (path.parent / path.read_text().strip()).read_bytes() == b"known remote data\n"
+    assert local_name_issues(urls[0], "file-path")
+    assert local_name_issues(urls[1], "file-path") == []
+    assert local_name_issues(urls[2], "file-path") == []
+    assert local_name_issues(urls[3], "file-path")
+    assert local_name_issues("s3://bucket/reads.txt?x=1&y=2", "file-path")

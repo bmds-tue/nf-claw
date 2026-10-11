@@ -187,3 +187,25 @@ def test_optional_existing_source_with_broken_member_is_refused(
             resume=False, demo=True, check_only=False, write_provenance=True, timeout_seconds=None)
     if kind == "glob":
         assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("check_only", [True, False])
+def test_unsafe_remote_input_is_refused_before_environment_probe_or_launch(
+        library, tmp_path, monkeypatch, check_only):
+    root = library("mini")
+    outdir = tmp_path / "results"
+
+    def must_not_reach(*args, **kwargs):
+        pytest.fail("unsafe input reached environment probing or task execution")
+
+    monkeypatch.setattr(orchestration.preflight, "check_environment", must_not_reach)
+    monkeypatch.setattr(orchestration.execution, "run", must_not_reach)
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path="https://example.org/reads$(id).csv",
+            outdir=outdir, profile="docker", params_file=None, cli_overrides={},
+            resume=False, demo=False, check_only=check_only, write_provenance=True,
+            timeout_seconds=None)
+    assert exc.value.code == ErrorCode.PARAMS_INVALID
+    assert "unsafe remote input filename" in str(exc.value)
+    assert not outdir.exists()

@@ -212,6 +212,28 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 
 ---
 
+### An explicit remote input has an unsafe staged filename
+
+Nextflow can retain literal shell characters in a remote basename. A task deriving a
+prefix from that name can interpolate shell syntax even when its input path object is
+escaped. For example, a local HTTP fixture named `reads$(id).txt` produced
+`printf '%s\n' reads$(id) > name.txt` on Nextflow 25.10.4 and executed command
+substitution. nfclaw now refuses explicit unsafe remote names in path parameters and
+CSV/TSV or flat JSON/YAML path fields before launching. Use a safely named remote
+object or download the data into a safely named local file; sample identities are
+preserved.
+
+Percent escapes remain literal in the staged name and are not decoded by this guard.
+HTTP query suffixes are excluded from the filename check so signed URLs remain
+usable. A standalone HTTP fragment remains in the staged name and is checked. S3
+paths retain both query and fragment characters in their object keys.
+The local HTTP integration oracle checks actual staged names and bytes on Nextflow
+25.10.4 and 26.04.0 without interpolating their names into executable script text.
+Remote file contents, remote glob matches and values supplied only by configs/profiles
+are outside this explicit-value preflight.
+
+---
+
 ## Warnings a run prints that are not faults
 
 These messages originate in upstream configurations, plugins or tools. Some have
