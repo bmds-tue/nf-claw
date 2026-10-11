@@ -1349,22 +1349,16 @@ def test_auxiliary_chain_check_defers_future_handoff_table(tmp_path, monkeypatch
     assert result.checked_only and not (tmp_path / "out").exists()
 
 
-def _git(path, *args):
-    import subprocess
-    return subprocess.run(["git", "-C", str(path), *args], check=True, capture_output=True,
-                          text=True).stdout.strip()
-
-
 def _pinned_git_pipeline(tmp_path):
     """The `mini` fixture as its own git repository with two releases; skill.md pins 1.1.0."""
     root = _make_pipeline(tmp_path, "mini")
     up = root / "pipelines" / "mini" / "upstream"
     _git(up, "init", "-q")
-    _git(up, "-c", "user.name=t", "-c", "user.email=t@t", "add", "-A")
-    _git(up, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "1.0.0")
+    _git(up, "add", "-A")
+    _git(up, "commit", "-qm", "1.0.0")
     _git(up, "tag", "1.0.0")
     (up / "main.nf").write_text("y")
-    _git(up, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "1.1.0")
+    _git(up, "commit", "-qam", "1.1.0")
     _git(up, "tag", "1.1.0")
     pin = _git(up, "rev-parse", "HEAD")
     (root / "pipelines" / "mini" / "skill.md").write_text(
