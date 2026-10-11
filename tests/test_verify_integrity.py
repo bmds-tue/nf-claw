@@ -1,9 +1,10 @@
 """Verification must measure replay files, not stale or ambiguous checksum metadata."""
 import hashlib
+import json
 
 import pytest
 
-from runner import verify
+from runner import outputs, verify
 from runner.errors import NfclawError
 
 
@@ -17,6 +18,8 @@ def _run(root, name, files):
         result.write_bytes(content)
         lines.append(f"{hashlib.sha256(content).hexdigest()}  {path}\n")
     (out / "provenance" / "outputs.sha256").write_text("".join(lines))
+    (out / "provenance/outputs.inventory.json").write_text(json.dumps(
+        {"version": 1, "entries": outputs.snapshot(out)[1]}))
     return out
 
 

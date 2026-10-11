@@ -350,6 +350,9 @@ def test_handoff_refuses_an_unverified_or_changed_external_reference(
     reference = tmp_path / "external.gtf"
     reference.write_text("original annotation\n")
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
+    if not historical:
+        (up / "provenance/inputs.sha256").write_text("")
+        (up / "provenance/inputs.inventory.json").write_text("{}")
     if historical:
         digest = hashlib.sha256(reference.read_bytes()).hexdigest()
         (up / "provenance/inputs.sha256").write_text(f"{digest}  {reference}\n")
@@ -390,8 +393,13 @@ def test_status_detects_a_changed_external_handoff_reference(
             prov = kw["outdir"] / "provenance"
             if name == "mini_up":
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-            with (prov / "inputs.sha256").open("a") as fh:
-                fh.write(f"{digest}  {reference}\n")
+            from runner import provenance
+            hashes = provenance.read_checksums(prov / "inputs.sha256", relative=False)
+            hashes[str(reference)] = digest
+            nodes = provenance.read_input_inventory(prov / "inputs.inventory.json")
+            nodes.update(provenance.snapshot_inputs([reference])[1])
+            (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
+            (prov / "inputs.sha256").write_text("".join(f"{value}  {path}\n" for path, value in hashes.items()))
         return result
 
     monkeypatch.setattr(chain.orchestration, "run_pipeline", with_reference)
@@ -411,7 +419,7 @@ def test_status_detects_added_files_in_a_reference_directory(
     reference = tmp_path / "index"
     reference.mkdir()
     (reference / "index.bin").write_bytes(b"original")
-    hashes = provenance.hash_inputs([reference])
+    hashes, nodes = provenance.snapshot_inputs([reference])
     rule = {"params": {"fasta": {"upstream_param": "gtf"}}}
     root = library("mini_up", "mini", rules={("mini_up", "mini"): rule})
     launch = chain.orchestration.run_pipeline
@@ -422,8 +430,11 @@ def test_status_detects_added_files_in_a_reference_directory(
             prov = kw["outdir"] / "provenance"
             if name == "mini_up":
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-            with (prov / "inputs.sha256").open("a") as fh:
-                fh.write("".join(f"{digest}  {path}\n" for path, digest in hashes.items()))
+            recorded = provenance.read_checksums(prov / "inputs.sha256", relative=False)
+            (prov / "inputs.sha256").write_text("".join(
+                f"{digest}  {path}\n" for path, digest in {**recorded, **hashes}.items()))
+            recorded_nodes = json.loads((prov / "inputs.inventory.json").read_text())
+            (prov / "inputs.inventory.json").write_text(json.dumps({**recorded_nodes, **nodes}))
         return result
 
     monkeypatch.setattr(chain.orchestration, "run_pipeline", with_reference)
@@ -474,12 +485,15 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
                     reference.mkdir()
                 (reference / "index.bin").write_bytes(b"original index")
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-                hashes = provenance.output_checksums(kw["outdir"])
+                from runner import outputs
+                hashes, nodes, _ = outputs.snapshot(kw["outdir"], provenance._sha256)
+                (prov / "outputs.inventory.json").write_text(json.dumps({"version": 1, "entries": nodes}))
                 (prov / "outputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
             else:
                 # The real runner resolves the directory parameter before snapshotting inputs.
-                hashes = provenance.hash_inputs([reference.resolve()])
+                hashes, nodes = provenance.snapshot_inputs([reference.resolve()])
+                (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
                 (prov / "inputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
         return result

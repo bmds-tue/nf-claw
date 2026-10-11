@@ -67,6 +67,7 @@ def finished_run():
     from pathlib import Path
 
     from runner import provenance
+    from runner import outputs
 
     def make(outdir: Path, files: dict, params: dict | None = None) -> Path:
         for rel, text in files.items():
@@ -76,8 +77,17 @@ def finished_run():
         prov = outdir / "provenance"
         prov.mkdir(parents=True, exist_ok=True)
         (prov / "params.json").write_text(json.dumps({"outdir": str(outdir), **(params or {})}))
+        local = [Path(value) for key, value in (params or {}).items()
+                 if key != "outdir" and isinstance(value, str) and Path(value).is_absolute()
+                 and Path(value).exists()]
+        input_hashes, input_nodes = provenance.snapshot_inputs(local)
+        (prov / "inputs.sha256").write_text("".join(
+            f"{digest}  {path}\n" for path, digest in input_hashes.items()))
+        (prov / "inputs.inventory.json").write_text(json.dumps(input_nodes))
         (prov / "outputs.sha256").write_text("".join(
             f"{d}  {r}\n" for r, d in provenance.output_checksums(outdir).items()))
+        (prov / "outputs.inventory.json").write_text(json.dumps(
+            {"version": 1, "entries": outputs.snapshot(outdir)[1]}))
         (prov / "run_manifest.json").write_text(json.dumps(
             {"pipeline": "x", "version": "1.0.0", "commit": "c" * 40, "outcome": "success"}))
         return outdir

@@ -29,6 +29,7 @@ from typing import Any
 from runner import (discovery, engine_version, execution, handoff, inputs, nextflow_command,
                     orchestration, parameters, preflight, provenance, resources, runlog, versions)
 from runner import schema as schema_mod
+from runner import outputs as output_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.probes import capture
 from runner.submodule import SubmoduleStatus
@@ -866,13 +867,19 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 problems.append(f"{sid}: its recorded {key} does not match its stage manifest")
         try:
             outputs = _digests(down / "provenance" / "outputs.sha256")
+            historical_nodes = output_mod.read_inventory(
+                down / "provenance/outputs.inventory.json", outputs)
+            live, current_nodes, _ = output_mod.snapshot(down, _sha)
+            if historical_nodes != current_nodes:
+                problems.append(f"{sid}: its published output namespace changed since the recorded run; "
+                                + output_mod.namespace_difference(historical_nodes, current_nodes))
         except (OSError, ValueError) as exc:
             problems.append(f"{sid}: cannot verify its output checksums: {exc}")
             continue
         output_indices[str(down)] = outputs
-        current_outputs[str(down)] = {}
+        current_outputs[str(down)] = live
         for rel, digest in outputs.items():
-            actual = current_outputs[str(down)][rel] = _sha(down / rel)
+            actual = live.get(rel)
             if actual != digest:
                 problems.append(f"{sid}: upstream result {rel} changed or is missing since the "
                                 "recorded run")
@@ -919,12 +926,17 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 problems.append(f"{sid}: cannot verify upstream output checksums: {exc}")
                 up_out = {}
         down_in: dict[str, str] = {}
+        down_nodes = {}
         if succeeded and any(isinstance(item, dict) and ("sha256" in item
                                                         or item.get("input_dependencies")
-                                                        or item.get("output_dependencies"))
+                                                        or item.get("output_dependencies")
+                                                        or "directory_reference" in item
+                                                        or "input_inventory" in item)
                              for item in params.values()):
             try:
                 down_in = _digests(down / "provenance" / "inputs.sha256", relative=False)
+                if any(isinstance(item, dict) and ("directory_reference" in item or "input_inventory" in item) for item in params.values()):
+                    down_nodes = provenance.read_input_inventory(down / "provenance/inputs.inventory.json")
             except (OSError, ValueError) as exc:
                 problems.append(f"{sid}: cannot verify its input checksums: {exc}")
         for name, item in params.items():
@@ -954,62 +966,54 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 continue
             if "directory_reference" in item:
                 reference = item["directory_reference"]
-                expected = dependencies
-                if item.get("output_dependencies"):
-                    outputs = item["output_dependencies"]
-                    if not isinstance(outputs, dict):
-                        problems.append(f"{sid}: --{name} has malformed output dependencies")
-                        continue
-                    if any(not isinstance(rel, str) or not handoff._relative(rel)
-                           for rel in outputs):
-                        problems.append(f"{sid}: --{name} has malformed output dependencies")
-                        continue
-                    expected = {str(up_dir / rel): digest for rel, digest in outputs.items()}
                 try:
-                    current = None
-                    if isinstance(reference, str) and Path(reference).is_absolute():
-                        if item.get("output_dependencies"):
-                            current = {str(up_dir / rel): digest for rel, digest in
-                                       provenance.output_checksums(up_dir).items()
-                                       if (up_dir / rel).is_relative_to(reference)}
-                        else:
-                            current = provenance.hash_inputs([Path(reference)])
-                except (OSError, ValueError):
-                    current = None
-                if not expected or current != expected:
-                    problems.append(f"{sid}: --{name}: reference directory {reference} changed "
-                                    "or has no matching historical inventory")
-                if succeeded:
-                    consumed = normalized_expected = None
-                    if isinstance(reference, str) and Path(reference).is_absolute():
-                        try:
-                            # Parameters resolve the reference root before launch. Rebase the
-                            # published inventory to that root, preserving aliases beneath it.
-                            normalized_root = Path(reference).resolve()
-                            normalized_expected = {
-                                str(normalized_root / Path(path).relative_to(reference)): digest
-                                for path, digest in expected.items()}
-                            consumed = {path: digest for path, digest in down_in.items()
-                                        if Path(path).is_relative_to(normalized_root)}
-                        except (OSError, ValueError, RuntimeError):
-                            pass
-                    if consumed is None or consumed != normalized_expected:
-                        problems.append(f"{sid}: --{name}: reference directory {reference} is "
-                                        "not the input inventory this stage hashed")
-            if dependencies:
+                    if not isinstance(reference, str) or not Path(reference).is_absolute():
+                        raise ValueError("directory reference is not an absolute path")
+                    evidence = handoff.directory_reference_evidence(Path(reference), up_dir, boundary=item)
+                    if any(item.get(key) != value for key, value in evidence.items()):
+                        raise ValueError("directory handoff has no matching complete namespace record")
+                    if succeeded:
+                        normalized = handoff.normalize_reference_inventory(evidence["directory_inventory"],
+                                                                           Path(reference))
+                        root = Path(reference).resolve()
+                        consumed = {path: entry for path, entry in down_nodes.items()
+                                    if Path(path).is_relative_to(root)}
+                        source_files = (evidence["bundle_dependencies"] if "bundle_dependencies" in evidence
+                                        else evidence.get("input_dependencies") or
+                                        {str(up_dir / path): digest for path, digest in
+                                         evidence.get("output_dependencies", {}).items()})
+                        expected = {str(root / Path(path).relative_to(reference)): digest
+                                    for path, digest in source_files.items()}
+                        consumed_files = {path: digest for path, digest in down_in.items()
+                                          if Path(path).is_relative_to(root)}
+                        if normalized != consumed or expected != consumed_files:
+                            problems.append(f"{sid}: --{name}: reference directory {reference} is "
+                                            "not the input inventory this stage hashed")
+                except (OSError, ValueError, RuntimeError) as exc:
+                    problems.append(f"{sid}: --{name}: cannot verify reference directory {reference}: {exc}")
+            if dependencies and "directory_reference" not in item:
                 try:
-                    up_in = _digests(up_dir / "provenance" / "inputs.sha256", relative=False)
-                except (OSError, ValueError) as exc:
-                    problems.append(f"{sid}: cannot verify upstream input checksums: {exc}")
-                    up_in = {}
-                for value, digest in dependencies.items():
-                    if (not isinstance(value, str) or not Path(value).is_absolute()
-                            or up_in.get(value) != digest or _sha(Path(value)) != digest):
-                        problems.append(f"{sid}: --{name}: external reference {value} changed "
-                                        "or has no matching upstream input record")
-                    if succeeded and down_in.get(value) != digest:
-                        problems.append(f"{sid}: --{name}: external reference {value} is not "
-                                        "the input this stage hashed")
+                    up_in = _digests(up_dir / "provenance/inputs.sha256", relative=False)
+                    up_nodes = provenance.read_input_inventory(up_dir / "provenance/inputs.inventory.json")
+                    for value, digest in dependencies.items():
+                        if not isinstance(value, str) or not Path(value).is_absolute():
+                            raise ValueError("external reference is not an absolute path")
+                        path = Path(value)
+                        actual, nodes = provenance.snapshot_inputs([path])
+                        expected_nodes = {value: up_nodes[value]} if value in up_nodes else {}
+                        if (up_in.get(value) != digest or actual != {value: digest}
+                                or nodes != expected_nodes or item.get("input_inventory") != expected_nodes):
+                            problems.append(f"{sid}: --{name}: external reference {value} changed "
+                                            "or has no matching complete upstream input record")
+                            continue
+                        if succeeded:
+                            canonical = str(path.resolve())
+                            normalized = handoff.normalize_reference_inventory(expected_nodes, path)
+                            if down_in.get(canonical) != digest or down_nodes.get(canonical) != normalized[canonical]:
+                                problems.append(f"{sid}: --{name}: external reference {value} is not "
+                                                "the input this stage hashed")
+                except (OSError, ValueError, RuntimeError) as exc:
+                    problems.append(f"{sid}: --{name}: cannot verify external reference: {exc}")
     return problems
 
 

@@ -3,7 +3,6 @@
 Nextflow never runs here: `run_pipeline` is replaced by a fake that lays out what a finished run
 leaves behind (results, provenance bundle). `mini_up` writes a samplesheet for `mini`.
 """
-import hashlib
 import json
 import signal
 
@@ -63,13 +62,16 @@ def fake_runs(monkeypatch, finished_run):
         manifest = kw["outdir"] / "provenance" / "run_manifest.json"
         manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
                                         "chain": kw.get("chain_link")}))
-        if kw["input_path"]:                       # a real bundle hashes its local --input
-            local = kw["input_path"]
-            try:
-                digest = hashlib.sha256(open(local, "rb").read()).hexdigest()
-                (kw["outdir"] / "provenance" / "inputs.sha256").write_text(f"{digest}  {local}\n")
-            except OSError:
-                pass
+        from runner import provenance, schema
+        from pathlib import Path
+        path_params = schema.load_param_schema(kw["repo_root"] / "pipelines" / name / "upstream").reference_path_params()
+        candidates = [kw["input_path"]] + [value for key, value in kw["cli_overrides"].items()
+                                                 if key in path_params and isinstance(value, str)]
+        sources = [Path(value).resolve() for value in candidates if value and Path(value).exists()]
+        hashes, inventory = provenance.snapshot_inputs(sources)
+        (kw["outdir"] / "provenance/inputs.sha256").write_text("".join(
+            f"{digest}  {path}\n" for path, digest in hashes.items()))
+        (kw["outdir"] / "provenance/inputs.inventory.json").write_text(json.dumps(inventory))
         return orchestration.RunResult(command=f"nextflow run {name}", outdir=kw["outdir"],
                                        checked_only=False, outputs_report=None)
 

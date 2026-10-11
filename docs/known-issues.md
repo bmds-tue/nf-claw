@@ -167,7 +167,7 @@ nfclaw verify results.replay --against results
 ```
 It hashes the replay's live files and compares them with the original recorded checksums
 **by path**, reporting `identical` / `changed` / `missing` / `extra`. Missing or extra
-files fail the structural check; add `--strict` to fail on any changed bytes as well.
+files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
@@ -360,3 +360,9 @@ When a stage specifies `demo: true`, it executes with its bundled test profile d
 - **`detaxizer`:** The test profile filters reads with an empty database, removing all reads and leaving empty FastQ files. For downstream chaining, provide active classification parameters: `"params": {"classification_kraken2": false, "classification_bbduk": true, "fasta_bbduk": "<host fasta>"}`.
 - **`demultiplex`:** Test data consists of human amplicon reads. Downstream stages requiring reference genomes need human references (`fasta`/`gtf`), and paired-end profiles: `"profile": "test_pe,docker"`.
 - **`taxprofiler`:** Test profiling on unrecognized reads fails in unhandled zero-hit modules; enable only resilient profilers (`run_kraken2`, `run_kaiju`) with `"run_profile_standardisation": false`.
+
+### File-only inventories missed empty directories and changed aliases
+- **Status: Fixed for new recorded namespaces.** Output verification previously accepted two trees with identical files but different empty-directory names. Reference handoffs could also accept changed directory shapes or retargeted aliases whose file bytes remained identical.
+- **Behavior:** New bundles record `outputs.inventory.json`. Verification reports missing/extra directories and changed link identities alongside file differences. Old file-only manifests provide byte comparisons, but historical directory agreement remains unverified and cannot return a successful structural check. Live trees without historical manifests remain comparable.
+- **Handoffs:** Published output namespaces and local reference namespaces are verified before the next stage starts. Chain status checks source namespaces and the downstream prelaunch snapshot. Complete run-directory handoffs retain all entries and record execution metadata at the boundary separately from historically published results.
+- **Validation:** Real producer and consumer tasks exercised external references, published directories and complete run directories. Renaming an empty sample directory while retaining reference bytes blocked the consumer; restoring the original namespace allowed resume, and subsequent changes broke lineage. These execution and conservation checks do not establish biological accuracy.

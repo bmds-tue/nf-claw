@@ -215,3 +215,26 @@ who can rewrite the entire bundle. Static rule checks use parameter/input schema
 published paths; the repository has no general upstream output schema. File existence and historical
 identity are checked at runtime. A configuration probe that fails to execute or times out blocks
 both `--check` and execution, rather than being treated as a passing result.
+
+### Directory and reference lineage
+
+Published results are checked against both their file checksums and their complete
+`outputs.inventory.json` namespace before a handoff. Empty directories and aliases
+remain distinct entries. A local reference inherited from a producer also needs
+the recorded input namespace and bytes; a changed alias cannot pass merely because
+the new target contains identical data. Missing historical namespace records block
+a handoff rather than certifying an unknown structure.
+
+Each directory handoff records its exact boundary namespace and file dependencies.
+Chain status verifies the current source and the consumer's prelaunch snapshot,
+accounting for the root canonicalization applied to path parameters while retaining
+nested aliases. Empty reference directories are permitted when their complete
+namespace is recorded; downstream schemas and tools decide whether they are valid
+analytical inputs.
+
+When a rule passes an entire run directory, execution records and engine state are
+part of that directory too. They are recorded at the handoff boundary, separately
+from the published results whose original byte and namespace manifests remain
+authoritative. The directory is passed intact. Later changes to either part break
+that boundary's lineage. This observation does not claim that execution records
+were scientific products of the pipeline.

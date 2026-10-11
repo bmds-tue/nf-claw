@@ -28,6 +28,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
 from runner import inputs, parameters, provenance, samplesheet
+from runner import outputs as output_mod
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.outputs import is_result
@@ -262,6 +263,84 @@ def _bundle_text(outdir: Path, name: str) -> str:
 def recorded_outputs(outdir: Path) -> dict[str, str]:
     """A run's results as {path relative to its outdir: sha256}, as its bundle recorded them."""
     return provenance.read_checksums(outdir / "provenance" / "outputs.sha256")
+
+
+def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Path
+                                  ) -> dict[str, dict[str, str]]:
+    """Match the canonical root supplied by schema-declared downstream path parameters.
+
+    Root canonicalization removes only the root alias. Nested aliases and their literal targets
+    remain scientific namespace entries; multiple logical paths must never be collapsed.
+    """
+    normalized = root.resolve()
+    result = {}
+    for name, entry in inventory.items():
+        relative = Path(name).relative_to(root)
+        key = str(normalized / relative)
+        node = dict(entry)
+        if relative == Path("."):
+            node.pop("link_target", None)
+        if node.get("resolved_path") == key:
+            node.pop("resolved_path")
+        result[key] = node
+    return result
+
+
+def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | None = None) -> dict:
+    """Require historical namespace and byte agreement before handing over a directory."""
+    internal = _under(path, upstream)
+    if internal == ".":
+        historical = recorded_outputs(upstream)
+        recorded_nodes = output_mod.read_inventory(upstream / "provenance/outputs.inventory.json", historical)
+        current, raw_nodes = provenance.snapshot_inputs([path])
+        _, nodes, raw_published = output_mod.snapshot(upstream)
+        actual = {name: current.get(str(upstream / name)) for name, entry in nodes.items()
+                  if entry["type"] == "file"}
+        published = {name: entry for name, entry in raw_nodes.items()
+                     if Path(name) != path and output_mod.is_result(Path(name).relative_to(path))}
+        if (historical != actual or recorded_nodes != nodes or raw_published != published
+                or any(current.get(str(upstream / name)) != digest for name, digest in historical.items())):
+            raise ValueError("published results changed while recording the complete run directory")
+        evidence = {"directory_reference": str(path), "directory_inventory": raw_nodes,
+                    "directory_source": "bundle", "bundle_dependencies": current,
+                    "output_dependencies": historical, "directory_output_inventory": recorded_nodes}
+        if boundary is not None and any(boundary.get(key) != value for key, value in evidence.items()):
+            raise ValueError("complete run directory changed since its recorded handoff boundary")
+        return evidence
+    if internal is None:
+        historical = provenance.read_checksums(upstream / "provenance/inputs.sha256", relative=False)
+        expected = {name: digest for name, digest in historical.items() if Path(name).is_relative_to(path)}
+        nodes = provenance.read_input_inventory(upstream / "provenance/inputs.inventory.json")
+        expected_nodes = {name: entry for name, entry in nodes.items() if Path(name).is_relative_to(path)}
+        current, current_nodes = provenance.snapshot_inputs([path])
+        raw_nodes = current_nodes
+        root_key = str(path)
+        expected_file_nodes = expected.keys()
+    else:
+        historical = recorded_outputs(upstream)
+        expected = {str(upstream / name): digest for name, digest in historical.items()
+                    if Path(name).is_relative_to(internal)}
+        nodes = output_mod.read_inventory(upstream / "provenance/outputs.inventory.json", historical)
+        expected_nodes = {name: entry for name, entry in nodes.items() if Path(name).is_relative_to(internal)}
+        hashes, current_nodes, raw_nodes = output_mod.snapshot(upstream, sha256_file, only=path)
+        current = {str(upstream / name): digest for name, digest in hashes.items()}
+        root_key = internal
+        expected_file_nodes = {Path(name).relative_to(upstream).as_posix() for name in expected}
+    if (expected_nodes.get(root_key, {}).get("type") != "directory"
+            or current_nodes != expected_nodes or current != expected
+            or {name for name, entry in expected_nodes.items() if entry["type"] == "file"}
+               != expected_file_nodes):
+        raise ValueError(f"reference directory {path} has no complete historical inventory or "
+                         "changed since the upstream launch")
+    evidence = {"directory_reference": str(path), "directory_inventory": raw_nodes,
+                "directory_source": "inputs" if internal is None else "outputs"}
+    if internal is None:
+        evidence["input_dependencies"] = expected
+    else:
+        evidence["output_dependencies"] = {
+            Path(name).relative_to(upstream).as_posix(): digest for name, digest in expected.items()}
+        evidence["directory_output_inventory"] = expected_nodes
+    return evidence
 
 
 def _recorded_params(outdir: Path) -> tuple[dict[str, Any], str | None]:
@@ -519,58 +598,34 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                                   f"{rule.origin}: local upstream reference {value} is missing.",
                                   fix=remedy)
             if path.is_dir():
-                # Index/database directories are scientific dependencies too. Compare their
-                # complete inventory, not just files that happen to remain after a deletion.
-                internal = _under(path, upstream_outdir)
                 try:
-                    if internal is None:
-                        historical = provenance.read_checksums(
-                            upstream_outdir / "provenance" / "inputs.sha256", relative=False)
-                        expected = {name: digest for name, digest in historical.items()
-                                    if Path(name).is_relative_to(path)}
-                    else:
-                        historical = recorded_outputs(upstream_outdir)
-                        expected = {str(upstream_outdir / name): digest
-                                    for name, digest in historical.items()
-                                    if Path(name).is_relative_to(internal)}
-                    current = (provenance.hash_inputs([path]) if internal is None else {
-                        str(upstream_outdir / name): digest
-                        for name, digest in provenance.output_checksums(upstream_outdir).items()
-                        if Path(name).is_relative_to(internal)})
+                    extra = directory_reference_evidence(path, upstream_outdir)
                 except (OSError, ValueError) as exc:
-                    raise NfclawError(
-                        ErrorCode.HANDOFF_FAILED,
+                    raise NfclawError(ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: cannot verify local upstream reference {value}: {exc}",
                         fix=remedy) from exc
-                if not expected or current != expected:
-                    raise NfclawError(
-                        ErrorCode.HANDOFF_FAILED,
-                        f"{rule.origin}: local upstream reference {value} has no historical "
-                        "inventory or changed since the upstream launch.", fix=remedy)
-                if internal is None:
-                    extra["input_dependencies"] = expected
-                else:
-                    extra["output_dependencies"] = {
-                        Path(name).relative_to(upstream_outdir).as_posix(): digest
-                        for name, digest in expected.items()}
-                extra["directory_reference"] = str(path)
             elif _under(path, upstream_outdir) is None:
                 try:
                     historical = provenance.read_checksums(
                         upstream_outdir / "provenance" / "inputs.sha256", relative=False)
                     digest = historical.get(str(path))
-                    actual = sha256_file(path)
+                    nodes = provenance.read_input_inventory(
+                        upstream_outdir / "provenance/inputs.inventory.json")
+                    expected_nodes = {str(path): nodes[str(path)]} if str(path) in nodes else {}
+                    actual, current_nodes = provenance.snapshot_inputs([path])
                 except (OSError, ValueError) as exc:
                     raise NfclawError(
                         ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: cannot verify local upstream reference {value}: {exc}",
                         fix=remedy) from exc
-                if digest is None or actual != digest:
+                if (digest is None or actual != {str(path): digest} or current_nodes != expected_nodes
+                        or expected_nodes.get(str(path), {}).get("type") != "file"):
                     raise NfclawError(
                         ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: local upstream reference {value} has no historical input "
                         "hash or changed since the upstream launch.", fix=remedy)
                 extra["input_dependencies"] = {str(path): digest}
+                extra["input_inventory"] = expected_nodes
     rel = _under(Path(value), upstream_outdir) if isinstance(value, str) else None
     derived = [r for r in (recorded_in, rel) if r and (upstream_outdir / r).is_file()]
     derived += list(extra.get("output_dependencies", {}))
@@ -588,6 +643,12 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
     own `outputs.sha256` gives it: that is what links the two runs."""
     try:
         outputs = recorded_outputs(upstream_outdir)
+        historical_nodes = output_mod.read_inventory(
+            upstream_outdir / "provenance/outputs.inventory.json", outputs)
+        current_nodes = output_mod.snapshot(upstream_outdir)[1]
+        if historical_nodes != current_nodes:
+            raise ValueError("published output namespace changed since the upstream run; "
+                             + output_mod.namespace_difference(historical_nodes, current_nodes))
     except (OSError, ValueError) as exc:
         raise NfclawError(
             ErrorCode.HANDOFF_FAILED,
@@ -614,6 +675,8 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
                 details={"upstream_outdir": str(upstream_outdir)}) from None
         for rel in dict.fromkeys(derived):
             digest = outputs.get(rel)
+            if digest is not None and extra.get("output_dependencies", {}).get(rel) == digest:
+                continue  # The directory evidence already verified these bytes and namespace.
             try:
                 actual = sha256_file(upstream_outdir / rel)
             except OSError as exc:

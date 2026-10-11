@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runner.outputs import result_files
+from runner import outputs
 from runner.engine_version import version_text
 from runner.probes import capture
 from runner.replay_guard import (MissingInputSource as MissingInputSource,
@@ -290,8 +291,11 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     _atomic_bytes(prov / "replay_guard.py", Path(__file__).with_name("replay_guard.py").read_bytes())
 
-    out_lines = [f"{digest}  {rel}" for rel, digest in output_checksums(outdir).items()]
+    output_hashes, output_inventory, _ = outputs.snapshot(outdir, _sha256)
+    out_lines = [f"{digest}  {rel}" for rel, digest in output_hashes.items()]
     _atomic_text(prov / "outputs.sha256", "\n".join(out_lines) + ("\n" if out_lines else ""))
+    _atomic_text(prov / "outputs.inventory.json", json.dumps(
+        {"version": 1, "entries": output_inventory}, indent=2, sort_keys=True) + "\n")
 
     # Copy the run's collated software-versions YAML into the bundle. nf-core publishes it under two
     # names across template generations: the older `software_versions.yml` and the newer

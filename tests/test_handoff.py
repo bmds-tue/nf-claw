@@ -301,6 +301,9 @@ def test_upstream_param_prefers_the_pipelines_own_resolved_params(library, finis
     up = finished_run(tmp_path / "up", {
         "pipeline_info/params_2026-01-01_10-00-00.json": json.dumps({"gtf": "/old.gtf"}),
         "pipeline_info/params_2026-01-02_10-00-00.json": json.dumps({"gtf": str(reference)})})
+    from runner import provenance
+    (up / "provenance/inputs.inventory.json").write_text(json.dumps(
+        provenance.snapshot_inputs([reference])[1]))
     (up / "provenance/inputs.sha256").write_text(
         f"{handoff.sha256_file(reference)}  {reference}\n")
     hand = handoff.materialize(_rule({"params": {"fasta": {"upstream_param": "gtf"}}}),

@@ -354,3 +354,90 @@ workflow { WAIT() }
         except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGKILL)
             process.communicate(timeout=10)
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("source", ["external", "published", "bundle"])
+def test_real_chain_refuses_changed_reference_namespace_and_resumes_after_restoration(tmp_path, monkeypatch, source):
+    from runner.errors import ErrorCode, NfclawError
+    root = tmp_path / "library"
+    for name in ("producer", "consumer"):
+        tree = root / "pipelines" / name / "upstream"
+        tree.mkdir(parents=True)
+        (tree.parent / "skill.md").write_text(f"---\nname: {name}\n---\n")
+        (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+            "input": {"type": "string", "format": "directory-path", "exists": True},
+            "reference_out": {"type": "string", "enum": ["reference"]},
+            "outdir": {"type": "string", "format": "directory-path"}}}))
+        (tree / "nextflow.config").write_text(
+            "nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (root / "pipelines/producer/upstream/main.nf").write_text('''process PRODUCE {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data, stageAs: 'source_data'
+ output:
+ path params.reference_out
+ script:
+ """
+ mkdir ${params.reference_out}
+ cp -RL ${data}/. ${params.reference_out}/
+ """
+}
+workflow { PRODUCE(file(params.input)) }
+''')
+    (root / "pipelines/consumer/upstream/main.nf").write_text('''process CONSUME {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ output:
+ path 'namespace.txt'
+ script:
+ """
+ find -L ${data} -mindepth 1 -maxdepth 1 -type d -print | sed 's#^.*/##' | LC_ALL=C sort > namespace.txt
+ """
+}
+workflow { CONSUME(file(params.input)) }
+''')
+    rule = root / "handoffs/producer/consumer.json"
+    rule.parent.mkdir(parents=True)
+    rule.write_text(json.dumps({"params": {"input": {"upstream_param":
+        {"external": "input", "published": "reference_out", "bundle": "outdir"}[source]}}}))
+    reference = tmp_path / "reference"
+    (reference / "sample_A").mkdir(parents=True)
+    (reference / "index.bin").write_bytes(b"unchanged reference bytes")
+    spec = chain.parse_spec({"profile": "standard", "nxf_ver": "25.10.4", "stages": [
+        {"pipeline": "producer", "input": str(reference), "params": {"reference_out": "reference"}},
+        {"pipeline": "consumer"}]})
+    original = chain.orchestration.run_pipeline
+    launches = []
+
+    def mutate_after_real_producer(name, **options):
+        result = original(name, **options)
+        if not options["check_only"]:
+            launches.append(name)
+            if name == "producer":
+                affected = reference if source == "external" else options["outdir"] / "reference"
+                (affected / "sample_A").rename(affected / "sample_B")
+        return result
+
+    monkeypatch.setattr(chain.orchestration, "run_pipeline", mutate_after_real_producer)
+    out = tmp_path / "analysis"
+    with pytest.raises(NfclawError) as error:
+        chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=90)
+    assert error.value.code == ErrorCode.HANDOFF_FAILED
+    assert "reference" in str(error.value) or "namespace" in str(error.value)
+    assert launches == ["producer"]
+    assert not (out / "02-consumer/namespace.txt").exists()
+    affected = reference if source == "external" else out / "01-producer/reference"
+    assert (out / "01-producer/reference" / ("sample_A" if source == "external" else "sample_B")).is_dir()
+    assert (out / "01-producer/reference/index.bin").read_bytes() == b"unchanged reference bytes"
+    (affected / "sample_B").rename(affected / "sample_A")
+    result = chain.run_chain(None, repo_root=root, outdir=out, resume=True, timeout_seconds=90)
+    assert result.outcome == "success" and launches == ["producer", "consumer"]
+    expected = ".nextflow\nprovenance\nreference\n" if source == "bundle" else "sample_A\n"
+    assert (out / "02-consumer/namespace.txt").read_text() == expected
+    state, problems = chain.status(out)
+    assert problems == [] and chain.status_exit_code(state, problems) == 0
+    (affected / "sample_A").rename(affected / "sample_C")
+    state, problems = chain.status(out)
+    assert problems and chain.status_exit_code(state, problems) == 1
