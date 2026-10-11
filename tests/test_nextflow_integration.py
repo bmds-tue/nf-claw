@@ -214,3 +214,132 @@ workflow { INVENTORY(channel.fromPath(params.input + '/*.txt')) }
     assert local_name_issues(str(source), "directory-path")
     (source / names[0]).unlink()
     assert local_name_issues(str(source), "directory-path") == []
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_empty_directory_namespace_is_guarded_and_resume_is_current(engine, tmp_path):
+    import os
+    root = tmp_path / "library"
+    tree = root / "pipelines/fixture/upstream"
+    tree.mkdir(parents=True)
+    (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "directory-path", "exists": True},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (tree / "nextflow.config").write_text('''nextflow.enable.dsl=2
+trace {
+ enabled = true
+ file = "${params.outdir}/pipeline_info/trace.txt"
+}
+''')
+    (tree / "main.nf").write_text('''process NAMESPACE {
+ publishDir params.outdir, mode: 'copy', overwrite: true
+ input:
+ path data
+ output:
+ path 'result'
+ script:
+ """
+ mkdir result
+ find -L ${data} -mindepth 1 -maxdepth 1 -type d -print | sed 's#^.*/##' | LC_ALL=C sort > result/namespace.txt
+ for sample in ${data}/*; do basename "\\$sample" > "result/\\$(basename "\\$sample").txt"; done
+ """
+}
+workflow { NAMESPACE(file(params.input)) }
+''')
+    data = tmp_path / "data"
+    data.mkdir()
+    first = data / "sample_A"
+    first.mkdir()
+    stamp = data.stat()
+    out = tmp_path / "analysis"
+
+    def run(resume):
+        return orchestration.run_pipeline("fixture", repo_root=root, input_path=data,
+            outdir=out, profile="", params_file=None, cli_overrides={}, resume=resume,
+            demo=False, check_only=False, write_provenance=True, timeout_seconds=90,
+            nxf_ver=engine, limits=resources.parse(1, None, None))
+
+    run(False)
+    assert (out / "result/namespace.txt").read_text() == "sample_A\n"
+    assert (out / "result/sample_A.txt").read_text() == "sample_A\n"
+    unchanged = run(True)
+    assert "-resume" in unchanged.command
+    assert "Cached process > NAMESPACE" in (out / "provenance/logs/run.log").read_text()
+    script = out / "provenance/commands.sh"
+    result = subprocess.run([str(script), str(tmp_path / "replay")],
+                            capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (tmp_path / "replay/result/namespace.txt").read_text() == "sample_A\n"
+    first.rename(data / "sample_B")
+    os.utime(data, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    assert data.stat().st_size == stamp.st_size
+    assert data.stat().st_mtime_ns == stamp.st_mtime_ns
+    refused = subprocess.run([str(script), str(tmp_path / "refused")],
+                             capture_output=True, text=True, timeout=15)
+    assert refused.returncode != 0 and "inventory changed" in refused.stderr
+    assert not (tmp_path / "refused/result/namespace.txt").exists()
+    changed = run(True)
+    assert "-resume" not in changed.command
+    assert any("all tasks will be recomputed" in warning for warning in changed.warnings)
+    assert (out / "result/namespace.txt").read_text() == "sample_B\n"
+    assert not (out / "result/sample_A.txt").exists()
+    archives = list(tmp_path.glob("analysis.previous-*"))
+    assert len(archives) == 1
+    assert (archives[0] / "result/sample_A.txt").read_text() == "sample_A\n"
+    assert (archives[0] / "provenance/commands.sh").is_file()
+    current = run(True)
+    assert "-resume" in current.command
+    assert (out / "result/namespace.txt").read_text() == "sample_B\n"
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_archiving_respects_the_real_engines_active_session_lock(engine, tmp_path):
+    import os
+    import signal
+    import time
+    from runner import resume_safety
+    from runner.errors import NfclawError
+    tree = tmp_path / "pipeline"
+    tree.mkdir()
+    (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    marker = tmp_path / "task-running"
+    (tree / "main.nf").write_text('''process WAIT {
+ output:
+ path 'result.txt'
+ script:
+ """
+ touch ${params.marker}
+ sleep 60
+ echo finished > result.txt
+ """
+}
+workflow { WAIT() }
+''')
+    out = tmp_path / "analysis"
+    out.mkdir()
+    process = subprocess.Popen(["nextflow", "run", str(tree), "--marker", str(marker),
+                                "-work-dir", str(tmp_path / "work")], cwd=out,
+        env={**os.environ, "NXF_VER": engine}, start_new_session=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        deadline = time.monotonic() + 30
+        while not marker.exists() and process.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert marker.exists(), "the real task did not start"
+        assert list((out / ".nextflow/cache").glob("*/db/LOCK"))
+        with pytest.raises(NfclawError, match="session is active or locked"):
+            resume_safety.archive_previous_run(out, {}, [])
+        assert (out / ".nextflow/cache").is_dir()
+        assert not list(tmp_path.glob("analysis.previous-*"))
+    finally:
+        if process.poll() is None:
+            os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.communicate(timeout=10)

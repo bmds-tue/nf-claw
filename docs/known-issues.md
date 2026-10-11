@@ -123,6 +123,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 
+### Directory-consuming tasks are incorrectly cached after `--resume`
+- **Status: Fixed for explicitly declared local input directories.** Nextflow 25.10.4 and 26.04.0 can reuse a cached directory-consuming task after an empty directory is renamed while the root size and timestamp remain unchanged. File checksums cannot detect the rename.
+- **Behavior:** nfclaw records the full directory namespace before launch. An unchanged namespace preserves normal resume caching; a changed or unavailable previous inventory preserves the previous run in a sibling `<outdir>.previous-<id>` archive, starts a fresh cache session, and recomputes all tasks. This avoids stale publications and fixed report filename conflicts; prior logs are retained and copied forward. Active engine database locks and dependencies overlapping the run directory block archiving. This also applies when the new launch disables provenance. Remote and indirectly configured directory inputs are outside this preflight's scope.
+- **Validation:** Real tasks enumerated `sample_A` before the change and `sample_B` after resume on both engines, with the root timestamp restored. Unchanged resumes reused the cached task. Sample-specific output files proved that old publications stayed in the archive, while a fixed trace filename was successfully regenerated. Standalone replay refused the changed inventory before launching Nextflow.
+
 ### `--resume` fails with "Unable to acquire lock on session …"
 - **Symptom:** After a run was interrupted (killed/timed out), re-running with `--resume` fails to acquire the session lock.
 - **Why:** A hard kill leaves Nextflow's session lock behind; Nextflow refuses to resume because it cannot determine whether the lock is stale or held by a live process.
@@ -196,7 +201,7 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 
 ### Replay dependency guard failures (`provenance/replay_guard.py`)
 - **Symptom:** Running `<outdir>/provenance/commands.sh` aborts with `nfclaw replay: dependency check failed: ...` before Nextflow is launched.
-- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests.
+- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests. New bundles also check directory namespaces, empty directories, entry types and symlink identities against `inputs.inventory.json` and `configs.inventory.json`. A checksum-only prelaunch snapshot cannot certify the original directory namespace and is refused.
 - **Fix:** Restore the original input files or external configs to match the recorded checksums in `<outdir>/provenance/inputs.sha256` and `configs.sha256`. If intentional changes were made, launch a new run into a new `--outdir` instead of replaying.
 
 ### Replay refuses an unobserved engine or malformed environment names

@@ -158,6 +158,12 @@ nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
 By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
+For declared local directory inputs, `--resume` retains the cache only when the recorded
+directory namespace is unchanged. A changed or unavailable inventory starts a fresh
+cache session and recomputes all tasks, with an explicit advisory. The complete
+previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
+logs are copied forward. Old sample publications are kept in the archive. Replay targets
+inside a recorded input directory are refused before any lock or log is written.
 
 | Artifact | File Path | Function & Role |
 |---|---|---|
@@ -166,6 +172,7 @@ External dependencies must remain available: the bundle does not archive every i
 | **Dependency Guard** | `replay_guard.py` | Pre-flight validator executed by `commands.sh` verifying that pipeline commits, inputs, samplesheets, and configs match recorded SHA-256 digests. |
 | **Run Manifest** | `run_manifest.json` | Pipeline version, commit SHA, command, recording timestamp, outcome, observed engine version and environment settings. |
 | **Parameter File** | `params.json` | Resolved wrapper parameters passed to Nextflow. Additional defaults or profile values can be recorded separately by the upstream pipeline. |
+| **Dependency Inventories** | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch directory entries, empty directories, entry types and symlink identities; replay checks these alongside file bytes. |
 | **Checksum Manifests** | `inputs.sha256` / `outputs.sha256` | Cryptographic digests of declared local inputs and generated result files; remote inputs are not frozen by these manifests. |
 | **Resource Limits** | `resource_limits.config` | Nextflow `process.resourceLimits` configuration generated when `--limit-*` flags are specified. |
 

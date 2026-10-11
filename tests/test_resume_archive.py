@@ -1,0 +1,110 @@
+"""Fresh cache sessions preserve old evidence and cannot retain stale publications."""
+import subprocess
+
+import pytest
+
+from runner import provenance, resume_safety
+from runner.errors import NfclawError
+from runner.submodule import SubmoduleStatus
+
+
+@pytest.mark.parametrize("aliased_outdir", [False, True])
+def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, monkeypatch, aliased_outdir):
+    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+    physical = tmp_path / "analysis"
+    physical.mkdir()
+    out = physical
+    if aliased_outdir:
+        out = tmp_path / "alias"
+        out.symlink_to(physical, target_is_directory=True)
+    source = tmp_path / "data"
+    source.mkdir()
+    (source / "empty_sample").mkdir()
+    work = physical / "work/task"
+    work.mkdir(parents=True)
+    (work / "reads.txt").write_bytes(b"recorded reads")
+    results = physical / "result"
+    results.mkdir()
+    (results / "absolute.txt").symlink_to(work / "reads.txt")
+    (results / "relative.txt").symlink_to("../work/task/reads.txt")
+    (physical / "provenance/logs").mkdir(parents=True)
+    (physical / "provenance/logs/run.log").write_text("recorded log\n")
+    (physical / "provenance/params.json").write_text('{"scientific_parameter": 42}\n')
+    provenance.write(outdir=out, pipeline="fixture", command_str="echo REPLAY_RAN",
+        submodule=SubmoduleStatus("fixture", tmp_path / "up", True, True, "1.0.0", "deadbeef", ()),
+        input_paths=[source])
+    before = provenance.output_checksums(out)
+    _, inventory = provenance.snapshot_inputs([source])
+    archive = resume_safety.archive_previous_run(out, inventory, [])
+    assert provenance.output_checksums(archive) == before
+    assert not (out / "result").exists()
+    assert (out / "provenance/logs/run.log").read_text() == "recorded log\n"
+    assert (archive / "provenance/logs/run.log").read_text() == "recorded log\n"
+    assert (archive / "result/absolute.txt").resolve() == archive / "work/task/reads.txt"
+    assert (archive / "result/relative.txt").resolve() == archive / "work/task/reads.txt"
+    replay = subprocess.run([str(archive / "provenance/commands.sh"), str(tmp_path / "replay")],
+                            capture_output=True, text=True, timeout=15)
+    assert replay.returncode == 0, replay.stdout + replay.stderr
+    assert "REPLAY_RAN" in replay.stdout
+
+
+@pytest.mark.parametrize("dependency", ["inside_input", "ancestor_input", "inside_config", "inside_pipeline"])
+def test_archiving_cannot_move_or_modify_dependencies_of_the_new_launch(tmp_path, dependency):
+    out = tmp_path / "analysis"
+    out.mkdir()
+    data = out / "reads.txt"
+    data.write_bytes(b"scientific data")
+    inventory = {}
+    configurations = []
+    if dependency == "inside_input":
+        _, inventory = provenance.snapshot_inputs([data])
+    elif dependency == "ancestor_input":
+        _, inventory = provenance.snapshot_inputs([tmp_path])
+    elif dependency == "inside_config":
+        config = out / "extra.config"
+        config.write_text("process.cpus=1\n")
+        configurations = [config]
+    else:
+        pipeline = out / "pipeline"
+        pipeline.mkdir()
+        configurations = [pipeline]
+    before = provenance.snapshot_inputs([out])
+    with pytest.raises(NfclawError, match="Cannot preserve the previous run"):
+        resume_safety.archive_previous_run(out, inventory, configurations)
+    assert provenance.snapshot_inputs([out]) == before
+    assert not list(tmp_path.glob("analysis.previous-*"))
+
+
+def test_archive_cannot_bypass_an_active_nextflow_database_lock(tmp_path):
+    import select
+    import sys
+    out = tmp_path / "analysis"
+    lock = out / ".nextflow/cache/session/db/LOCK"
+    lock.parent.mkdir(parents=True)
+    lock.write_bytes(b"")
+    before = provenance.snapshot_inputs([out])
+    holder = subprocess.Popen([sys.executable, "-u", "-c", """
+import fcntl, sys
+with open(sys.argv[1], 'r+b') as handle:
+    fcntl.lockf(handle, fcntl.LOCK_EX)
+    print('LOCKED', flush=True)
+    sys.stdin.readline()
+""", str(lock)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    try:
+        ready, _, _ = select.select([holder.stdout], [], [], 5)
+        assert ready and holder.stdout.readline().strip() == "LOCKED"
+        with pytest.raises(NfclawError, match="session is active or locked"):
+            resume_safety.archive_previous_run(out, {}, [])
+        assert provenance.snapshot_inputs([out]) == before
+        assert not list(tmp_path.glob("analysis.previous-*"))
+    finally:
+        holder.communicate("release\n", timeout=5)
+
+
+def test_archive_filename_respects_filesystem_byte_limits_for_unicode_names(tmp_path):
+    out = tmp_path / ("é" * 115)
+    out.mkdir()
+    (out / "scientific.txt").write_bytes(b"retained scientific output")
+    archive = resume_safety.archive_previous_run(out, {}, [])
+    assert (archive / "scientific.txt").read_bytes() == b"retained scientific output"
+    assert out.is_dir() and not list(out.iterdir())
