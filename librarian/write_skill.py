@@ -346,7 +346,7 @@ def _inputs_section(insch: InputSchema | None, ps: ParamSchema | None = None) ->
         base = [c.name for c in named if c.required]               # always-required columns
         groups = "\n".join("- " + ", ".join(f"`{col}`" for col in grp) for grp in insch.one_of)
         headers = "".join(
-            f"```{ext}\n{delimiter.join(list(dict.fromkeys(base + list(grp))))}\n```\n"
+            f"```{ext}\n{delimiter.join(dict.fromkeys(base + list(grp)))}\n```\n"
             for grp in insch.one_of)
         return (f"{head}{rows}\n"
                 f"{input_note}"

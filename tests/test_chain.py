@@ -238,7 +238,7 @@ def test_normalized_spec_round_trips(library):
 
 # --- the configuration probe -------------------------------------------------------------------
 
-def test_the_probe_parses_each_stage_config_with_its_own_engine(library, monkeypatch, tmp_path):
+def test_the_probe_parses_each_stage_config_with_its_own_engine(library, monkeypatch):
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     spec = chain.parse_spec({"nxf_env": {"NXF_JVM_ARGS": "-Dipv6"}, "stages": [
         {"pipeline": "mini_up"}, {"pipeline": "mini", "nxf_ver": "25.10.4", "demo": True}]})

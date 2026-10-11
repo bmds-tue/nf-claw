@@ -742,8 +742,7 @@ def test_a_launched_run_is_not_recorded_twice(tmp_path, monkeypatch):
     assert log.read_text().count("==> nfclaw run started") == 2
 
 
-def test_status_of_a_chain_outdir_points_at_chain_status(tmp_path, monkeypatch, capsys,
-                                                         library):
+def test_status_of_a_chain_outdir_points_at_chain_status(tmp_path, capsys, library):
     log = tmp_path / "c" / "chain" / "logs" / "chain.log"
     log.parent.mkdir(parents=True)
     log.write_text("==> nfclaw chain started 2026-01-01T00:00:00+00:00\n"

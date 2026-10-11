@@ -103,8 +103,6 @@ def _squeeze(lines: list[str]) -> list[str]:
             out.append(line)
     while out and not out[-1]:
         out.pop()
-    while out and not out[0]:
-        out.pop(0)
     return out
 
 

@@ -189,11 +189,9 @@ function extractTagline(): { tagline: string; description: string } {
 
 export function getRepoMeta(): RepoMeta {
   const pipelines = getPipelines();
-  const modules = new Set<string>();
   let moduleTotal = 0;
   for (const p of pipelines) moduleTotal += p.moduleCount;
   // distinct module estimate isn't reconstructable from counts, so report total.
-  void modules;
 
   const { tagline, description } = extractTagline();
   const remote = getRemote();
