@@ -751,3 +751,13 @@ def test_status_of_a_chain_outdir_points_at_chain_status(tmp_path, capsys, libra
     assert cli.main(["status", str(tmp_path / "c")]) == 0
     out = capsys.readouterr().out
     assert "status: success" in out and "nfclaw chain status" in out
+
+
+@pytest.mark.parametrize("token,hint", [
+    ("-resume", "`--resume`"), ("-params-file", "`--params-file`"),
+    ("-r", "`--pipeline-version`"), ("-with-tower", "single-dash options itself")])
+def test_nextflow_style_single_dash_options_name_the_nfclaw_flag(token, hint):
+    from runner.errors import NfclawError
+    with pytest.raises(NfclawError) as exc:
+        cli._collect_overrides([token])
+    assert hint in exc.value.fix
