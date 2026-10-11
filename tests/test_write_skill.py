@@ -403,7 +403,9 @@ def test_resources_section_documents_the_nf_core_resource_ceiling(tmp_path):
     skill, _ = write_skill.generate("mini", pipelines_dir=pdir)
     text = skill.read_text()
     assert "## Resources" in text
-    assert "--limit-cpus 4 --limit-memory 15.GB --limit-time 1.h" in text
+    assert "--limit-cpus 4 --limit-memory 15.GB\n" in text
+    # A time cap is not a machine capacity: a too-short one stops long tasks at every retry.
+    assert "--limit-time 1.h" not in text and "never as a guess" in text
     assert "process.resourceLimits" in text
     assert "nf-co.re/docs/running/configuration/nextflow-for-your-system" in text
 
@@ -763,3 +765,27 @@ def test_generate_reads_the_registry_next_to_the_pipelines(library):
                                                  "provides": ["sample", "fastq_1"]}}}})
     skill, _ = write_skill.generate("mini_up", pipelines_dir=root / "pipelines")
     assert "## Chaining" in skill.read_text()
+
+
+def _engine_tree(tmp_path, spec):
+    from runner.submodule import SubmoduleStatus
+    (tmp_path / "nextflow.config").write_text(f"manifest {{ nextflowVersion = '{spec}' }}\n")
+    return SubmoduleStatus(name="p", path=tmp_path, initialized=True, complete=True,
+                           version="1.0.0", commit="c" * 40, missing_files=())
+
+
+def test_engine_pin_older_than_resource_limits_says_limit_flags_are_refused(tmp_path):
+    from runner.schema import Param, ParamSchema
+
+    def param(name):
+        return Param(name, "string", None, None, "", None, False, "g")
+    ps = ParamSchema("p", "", {n: param(n) for n in ("max_cpus", "max_memory", "input")})
+    text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=23.04.0"), ps=ps)
+    assert "--nxf-ver 23.04.0" in text
+    assert "predates `process.resourceLimits` (24.04.0)" in text
+    assert "`--max-cpus`, `--max-memory` instead" in text
+
+
+def test_engine_pin_with_resource_limits_adds_no_caveat(tmp_path):
+    text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=24.04.2"))
+    assert "--nxf-ver 24.04.2" in text and "resourceLimits" not in text

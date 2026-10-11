@@ -1,7 +1,7 @@
 ---
 name: ampliseq
-version: 2.18.0
-commit: 2723d4c298d48321594920d0324697e14d73ee94
+version: 3.0.0
+commit: 992e6df34065067185b5e34665b5861b6827981d
 ---
 
 # ampliseq — full parameter reference
@@ -12,14 +12,16 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--mergepairs-consensus-gap` | integer |  |  |  |  | -4 | The penalty score assigned for each gap introduced during sequence alignment. |
-| `--mergepairs-consensus-match` | integer |  |  |  |  | 1 | The score assigned for each matching base pair during sequence alignment. |
-| `--mergepairs-consensus-maxmismatch` | integer |  |  |  |  | 0 | The maximum number of mismatches allowed within the overlapping region for merging reads. |
-| `--mergepairs-consensus-minoverlap` | integer |  |  |  |  | 12 | The minimum number of overlapping base pairs required to merge forward and reverse reads. |
-| `--mergepairs-consensus-mismatch` | integer |  |  |  |  | -2 | The penalty score assigned for each mismatched base pair during sequence alignment. |
-| `--mergepairs-consensus-percentile-cutoff` | number |  |  |  |  | 0.001 | The percentile used to determine a stringent cutoff which will correspond to the minimum observed overlap in the dataset. This ensures that only read pairs with high overlap are merged into consensus sequences. Those with insufficient overlap are concatenated. |
-| `--mergepairs-strategy` | string |  |  | `merge`, `concatenate`, `consensus` |  | merge | Strategy to merge paired end reads. When paired end reads are not sufficiently overlapping for merging, you can use "concatenate" (not recommended). When you have a mix of overlapping and non overlapping reads use "consensus" |
-| `--sample-inference` | string |  |  | `independent`, `pooled`, `pseudo` |  | independent | Mode of sample inference: "independent", "pooled" or "pseudo" |
+| `--asv-calling` | string |  |  | `dada2`, `savont`, `auto` |  | auto | Tool for ASV calculation. |
+| `--mergepairs-consensus-gap` | integer |  |  |  |  | -4 | DADA2: The penalty score assigned for each gap introduced during sequence alignment. |
+| `--mergepairs-consensus-match` | integer |  |  |  |  | 1 | DADA2: The score assigned for each matching base pair during sequence alignment. |
+| `--mergepairs-consensus-maxmismatch` | integer |  |  |  |  | 0 | DADA2: The maximum number of mismatches allowed within the overlapping region for merging reads. |
+| `--mergepairs-consensus-minoverlap` | integer |  |  |  |  | 12 | DADA2: The minimum number of overlapping base pairs required to merge forward and reverse reads. |
+| `--mergepairs-consensus-mismatch` | integer |  |  |  |  | -2 | DADA2: The penalty score assigned for each mismatched base pair during sequence alignment. |
+| `--mergepairs-consensus-percentile-cutoff` | number |  |  |  |  | 0.001 | DADA2: The percentile used to determine a stringent cutoff which will correspond to the minimum observed overlap in the dataset. This ensures that only read pairs with high overlap are merged into consensus sequences. Those with insufficient overlap are concatenated. |
+| `--mergepairs-strategy` | string |  |  | `merge`, `concatenate`, `consensus` |  | merge | DADA2: Strategy to merge paired end reads. When paired end reads are not sufficiently overlapping for merging, you can use "concatenate" (not recommended). When you have a mix of overlapping and non overlapping reads use "consensus" |
+| `--sample-inference` | string |  |  | `independent`, `pooled`, `pseudo` |  | pooled | Mode of sample inference: "independent", "pooled" or "pseudo" |
+| `--savont-options` | string |  |  |  |  | --fl-16s | Options for Savont ONT analysis |
 
 ## asv_filtering
 
@@ -48,6 +50,17 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--vsearch-cluster` | boolean |  |  |  |  |  | Post-cluster ASVs with VSEARCH |
 | `--vsearch-cluster-id` | number |  |  |  | ≥ 0; ≤ 1 | 0.97 | Pairwise Identity value used when post-clustering ASVs if `--vsearch_cluster` option is used (default: 0.97). |
 
+## comparison
+
+| parameter | type | required | hidden | allowed values | constraints | default | description |
+|---|---|---|---|---|---|---|---|
+| `--expected-abundances` | string (file path) |  |  |  | matches ^\S+\.(tsv\|txt)$ |  | Path to file of abundances of expected sequences in tsv format |
+| `--expected-profile` | string (file path) |  |  |  | matches ^\S+\.(tsv\|txt)$ |  | Path to file of abundances of expected taxnonomies in tsv format |
+| `--expected-sequences` | string (file path) |  |  |  | matches ^\S+\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to file of expected sequences in fasta format |
+| `--expected-sequences-merge` | string |  |  | `all`, `observed`, `expected`, `none` |  | all | How to handle multiple sequence matches |
+| `--expected-sequences-mismatches` | integer |  |  |  | ≥ 0 | 0 | Threshold of accepted mismatches and gaps to the expected sequences |
+| `--expected-sequences-region` | string |  |  | `alignment`, `observed`, `expected` |  | observed | What region of the sequence comparison is evaluated |
+
 ## differential_abundance_analysis
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
@@ -72,7 +85,6 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--metadata-category-barplot` | string |  |  |  |  |  | Comma separated list of metadata column headers for plotting average relative abundance barplots. |
 | `--picrust` | boolean |  |  |  |  |  | If the functional potential of the bacterial community is predicted. |
 | `--qiime-adonis-formula` | string |  |  |  |  |  | Formula for QIIME2 ADONIS metadata feature importance test for beta diversity distances |
-| `--sbdiexport` | boolean |  |  |  |  |  | If data should be exported in SBDI (Swedish biodiversity infrastructure) Excel format. |
 | `--tax-agglom-max` | integer |  |  |  |  | 6 | Maximum taxonomy agglomeration level for taxonomic classifications |
 | `--tax-agglom-min` | integer |  |  |  |  | 2 | Minimum taxonomy agglomeration level for taxonomic classifications |
 
@@ -101,15 +113,14 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--FW-primer` | string |  |  |  |  |  | Forward primer sequence |
-| `--RV-primer` | string |  |  |  |  |  | Reverse primer sequence |
 | `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
 | `--input` | string (file path) |  |  |  | matches ^\S+\.(tsv\|csv\|yml\|yaml\|txt)$ |  | Path to tab-separated sample sheet |
 | `--input-fasta` | string (file path) |  |  |  | matches ^\S+\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to ASV/OTU fasta file |
-| `--input-folder` | string (directory path) |  |  |  |  |  | Path to folder containing zipped FastQ files |
 | `--metadata` | string (file path) |  |  |  |  |  | Path to metadata sheet, when missing most downstream analysis are skipped (barplots, PCoA plots, ...). |
 | `--multiregion` | string (file path) |  |  |  | matches ^\S+\.(tsv\|csv\|yml\|yaml\|txt)$ |  | Path to multi-region definition sheet, for multi-region analysis with Sidle |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
+| `--primer-fwd` | string |  |  |  |  |  | Forward primer sequence |
+| `--primer-rev` | string |  |  |  |  |  | Reverse primer sequence |
 | `--ref-taxonomy-storage` | string (directory path) |  |  |  |  |  | The directory where the reference taxonomy databases will be saved for re-use. Absolute paths to storage on Cloud infrastructure. |
 | `--save-intermediates` | boolean |  |  |  |  |  | Save intermediate results such as QIIME2's qza and qzv files |
 
@@ -129,19 +140,19 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--sidle-ref-aln-custom` | string |  |  |  | matches ^.*\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to multiple sequence alignment of reference taxonomy sequences in fasta format |
+| `--sidle-ref-aln-custom` | string (file path) |  |  |  | matches ^.*\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to multiple sequence alignment of reference taxonomy sequences in fasta format |
 | `--sidle-ref-cleaning` | string |  |  |  |  |  | Arguments for `qiime sidle reconstruct-taxonomy` regarding ad-hoc cleaning |
 | `--sidle-ref-degenerates` | integer |  |  |  |  | 5 | Exclude reference sequences with more than this much degenerates |
-| `--sidle-ref-seq-custom` | string |  |  |  | matches ^.*\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to reference taxonomy sequences in fasta format |
-| `--sidle-ref-tax-custom` | string |  |  |  | matches ^.*\.txt$ |  | Path to reference taxonomy strings (headerless, *.txt) |
+| `--sidle-ref-seq-custom` | string (file path) |  |  |  | matches ^.*\.(fasta\|fas\|fna\|fa\|ffn)$ |  | Path to reference taxonomy sequences in fasta format |
+| `--sidle-ref-tax-custom` | string (file path) |  |  |  | matches ^.*\.txt$ |  | Path to reference taxonomy strings (headerless, *.txt) |
 | `--sidle-ref-taxonomy` | string |  |  | `silva`, `silva=128`, `greengenes`, `greengenes=13_8`, `greengenes88` |  |  | Name of supported database, and optionally also version number |
-| `--sidle-ref-tree-custom` | string |  |  |  | matches ^.*\.qza$ |  | Path to SIDLE reference taxonomy tree (*.qza) |
+| `--sidle-ref-tree-custom` | string (file path) |  |  |  | matches ^.*\.qza$ |  | Path to SIDLE reference taxonomy tree (*.qza) |
 
 ## pipeline_report
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--report-abstract` | string |  |  |  |  |  | Path to Markdown file (md) that replaces the 'Abstract' section |
+| `--report-abstract` | string (file path) |  |  |  |  |  | Path to Markdown file (md) that replaces the 'Abstract' section |
 | `--report-css` | string |  |  |  |  | ${projectDir}/assets/nf-core_style.css | Path to style file (css) |
 | `--report-logo` | string |  |  |  |  | ${projectDir}/assets/nf-core-ampliseq_logo_light_long.png | Path to logo file (png) |
 | `--report-template` | string |  |  |  |  | ${projectDir}/assets/report_template.Rmd | Path to Markdown file (Rmd) |
@@ -163,6 +174,7 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 |---|---|---|---|---|---|---|---|
 | `--ignore-failed-filtering` | boolean |  |  |  |  |  | Ignore files with too few reads after quality filtering. |
 | `--max-ee` | integer |  |  |  |  | 2 | DADA2 read filtering option |
+| `--max-ee-r` | integer |  |  |  |  |  | DADA2 read filtering option for reverse reads, overriding --max_ee for reverse reads only (paired-end Illumina data only) |
 | `--max-len` | integer |  |  |  |  |  | DADA2 read filtering option |
 | `--min-len` | integer |  |  |  |  | 50 | DADA2 read filtering option |
 | `--trunc-qmin` | integer |  |  |  |  | 25 | If --trunclenf and --trunclenr are not set, these values will be automatically determined using this median quality score |
@@ -181,17 +193,13 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--binned-quality` | string |  |  |  | matches ^[0-9]+(,[0-9]+)*$ |  | Comma separated quality bins. If data has binned quality scores. |
-| `--extension` | string |  |  |  |  | /*_R{1,2}_001.fastq.gz | If using `--input_folder`: naming of sequencing files |
+| `--binned-quality` | string |  |  |  | matches ^[0-9]+(,[0-9]+)*$ |  | Comma separated quality bins for DADA2. If data has binned quality scores. |
 | `--ignore-binned-quality` | boolean |  |  |  |  |  | Ignore warnings about binned quality scores. |
 | `--ignore-empty-input-files` | boolean |  |  |  |  |  | Ignore input files with too few reads. |
-| `--illumina-pe-its` | boolean |  |  |  |  |  | If analysing ITS amplicons or any other region with large length variability with Illumina paired end reads |
-| `--iontorrent` | boolean |  |  |  |  |  | If data is single-ended IonTorrent reads instead of Illumina |
+| `--illumina-pe-readthrough` | boolean |  |  |  |  |  | If analyzing Illumina paired end reads of an amplicon with large length variability such as ITS |
 | `--min-read-counts` | integer |  |  |  |  | 1 | Set read count threshold for failed samples. |
-| `--multiple-sequencing-runs` | boolean |  |  |  |  |  | If using `--input_folder`: samples were sequenced in multiple sequencing runs |
-| `--pacbio` | boolean |  |  |  |  |  | If data is single-ended PacBio reads instead of Illumina |
-| `--quality-type` | string |  |  | `Auto`, `FastqQuality`, `SFastqQuality` |  | Auto | Type of quality scores in raw read data |
-| `--single-end` | boolean |  |  |  |  |  | If data is single-ended Illumina reads instead of paired-end |
+| `--quality-type` | string |  |  | `Auto`, `FastqQuality`, `SFastqQuality` |  | Auto | Type of quality scores in raw read data for DADA2 |
+| `--sequencing-type` | string |  |  | `illumina_pe`, `illumina_se`, `iontorrent`, `pacbio`, `nanopore` |  | illumina_pe | Sequencing technology of the data, determines analyze settings and tools. |
 
 ## skipping_specific_steps
 
@@ -201,18 +209,21 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--skip-alpha-rarefaction` | boolean |  |  |  |  |  | Skip alpha rarefaction |
 | `--skip-barplot` | boolean |  |  |  |  |  | Skip producing barplot |
 | `--skip-barrnap` | boolean |  |  |  |  |  | Skip annotating SSU matches. |
+| `--skip-chopper` | boolean |  |  |  |  |  | Skip quality filtering with Chopper (ONT reads). |
 | `--skip-cutadapt` | boolean |  |  |  |  |  | Skip primer trimming with cutadapt. This is not recommended! Use only in case primer sequences were removed before and the data does not contain any primer sequences. |
-| `--skip-dada-addspecies` | boolean |  |  |  |  |  | Skip species level when using DADA2 for taxonomic classification. This reduces the required memory dramatically under certain conditions. Incompatible with `--sbdiexport` |
+| `--skip-dada-addspecies` | boolean |  |  |  |  |  | Skip species level when using DADA2 for taxonomic classification. This reduces the required memory dramatically under certain conditions. |
 | `--skip-dada-quality` | boolean |  |  |  |  |  | Skip quality check with DADA2. Can only be skipped when `--trunclenf` and `--trunclenr` are set. |
 | `--skip-dada-taxonomy` | boolean |  |  |  |  |  | Skip taxonomic classification with DADA2 |
 | `--skip-diversity-indices` | boolean |  |  |  |  |  | Skip alpha and beta diversity analysis |
 | `--skip-fastqc` | boolean |  |  |  |  |  | Skip FastQC |
 | `--skip-multiqc` | boolean |  |  |  |  |  | Skip MultiQC reporting |
+| `--skip-parquet-summary` | boolean |  |  |  |  |  | Skip writing summary tables as Parquet, alongside the default gzipped tsv |
 | `--skip-phyloseq` | boolean |  |  |  |  |  | Skip exporting phyloseq rds object(s) |
+| `--skip-porechop-abi` | boolean |  |  |  |  |  | Skip adapter trimming with porechop_ABI (ONT reads). |
 | `--skip-qiime` | boolean |  |  |  |  |  | Skip all steps that are executed by QIIME2, including QIIME2 software download, taxonomy assignment by QIIME2, barplots, relative abundance tables, diversity analysis, differential abundance testing. |
 | `--skip-qiime-downstream` | boolean |  |  |  |  |  | Skip steps that are executed by QIIME2 except for taxonomic classification. Skip steps including barplots, relative abundance tables, diversity analysis, differential abundance testing. |
 | `--skip-report` | boolean |  |  |  |  |  | Skip Markdown summary report |
-| `--skip-taxonomy` | boolean |  |  |  |  |  | Skip taxonomic classification. Incompatible with `--sbdiexport` |
+| `--skip-taxonomy` | boolean |  |  |  |  |  | Skip taxonomic classification. |
 | `--skip-tse` | boolean |  |  |  |  |  | Skip exporting TreeSummarizedExperiment rds object(s) |
 
 ## taxonomic_assignment
@@ -220,34 +231,36 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--addsh` | boolean |  |  |  |  |  | If ASVs should be assigned to UNITE species hypotheses (SHs). Only relevant for ITS data. |
-| `--classifier` | string |  |  |  |  |  | Path to QIIME2 trained classifier file (typically *-classifier.qza) |
+| `--consolidate-taxonomies` | string |  |  | `first`, `most-specific`, `score` |  | first | How to pick one DADA2 taxonomy per ASV when `--dada_ref_taxonomy` lists several databases |
 | `--cut-dada-ref-taxonomy` | boolean |  |  |  |  |  | If the expected amplified sequences are extracted from the DADA2 reference taxonomy database |
 | `--cut-its` | string |  |  | `none`, `full`, `its1`, `its2` |  | none | Part of ITS region to use for taxonomy assignment: "full", "its1", or "its2" |
 | `--dada-addspecies-allowmultiple` | boolean |  |  |  |  |  | If multiple exact matches against different species are returned |
 | `--dada-assign-chunksize` | integer |  |  |  |  | 10000 | ASV fasta will be subset into chunks of this size for classification |
 | `--dada-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels used in DADA2's assignTaxonomy function |
 | `--dada-min-boot` | integer |  |  |  | ≥ 0; ≤ 100 | 50 | The minimum bootstrap confidence (out of 100 trials) for assigning a taxonomic level with DADA2. Matches `minBoot` in DADA2's assignTaxonomy method. |
-| `--dada-ref-tax-custom` | string |  |  |  |  |  | Path to a custom DADA2 reference taxonomy database |
-| `--dada-ref-tax-custom-sp` | string |  |  |  |  |  | Path to a custom DADA2 reference taxonomy database for species assignment |
-| `--dada-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `greengenes2`, `greengenes2=2024.09`, `gtdb`, `gtdb=R05-RS95`, `gtdb=R06-RS202`, `gtdb=R07-RS207`, `gtdb=R08-RS214`, `gtdb=R09-RS220`, `gtdb=R10-RS226`, `gtdb=R11-RS232`, `midori2-co1`, `midori2-co1=gb250`, `pr2`, `pr2=4.13.0`, `pr2=4.14.0`, `pr2=5.0.0`, `pr2=5.1.0`, `rdp`, `rdp=18`, `sbdi-gtdb`, `sbdi-gtdb=R11-RS232-1`, `sbdi-gtdb=R10-RS226-2`, `sbdi-gtdb=R09-RS220-2`, `sbdi-gtdb=R09-RS220-1`, `sbdi-gtdb=R08-RS214-1`, `sbdi-gtdb=R07-RS207-1`, `sbdi-gtdb=R06-RS202-3`, `sbdi-gtdb=R06-RS202-1`, `silva`, `silva=138.2`, `silva=138`, `silva=132`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `zehr-nifh`, `zehr-nifh=2.5.0` |  | sbdi-gtdb=R11-RS232-1 | Name of supported database, and optionally also version number |
+| `--dada-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom DADA2 reference taxonomy database |
+| `--dada-ref-tax-custom-sp` | string (file path) |  |  |  |  |  | Path to a custom DADA2 reference taxonomy database for species assignment |
+| `--dada-ref-taxonomy` | string |  |  |  |  | sbdi-gtdb=R11-RS232-1 | Name of supported database(s), and optionally also version number(s) -- comma-separated for multiple databases |
 | `--dada-taxonomy-rc` | boolean |  |  |  |  |  | If reverse-complement of each sequences will be also tested for classification |
 | `--its-extractor` | string |  |  | `itsx`, `itsxrust` |  | itsx | Tool for ITS region extraction: "itsx" or "itsxrust". |
 | `--its-partial` | integer |  |  |  |  | 0 | Cutoff for partial ITS sequences. Only full sequences by default. |
 | `--kraken2-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels used in Kraken2. Will overwrite default values. |
 | `--kraken2-confidence` | number |  |  |  | ≥ 0; ≤ 1 | 0.0 | Confidence score threshold for taxonomic classification. |
-| `--kraken2-ref-tax-custom` | string |  |  |  |  |  | Path to a custom Kraken2 reference taxonomy database (*.tar.gz\|*.tgz archive or folder) |
-| `--kraken2-ref-taxonomy` | string |  |  | `silva`, `silva=138`, `silva=132`, `rdp`, `rdp=18`, `greengenes`, `greengenes=13.5`, `standard`, `standard=20240904`, `standard=20230605` |  |  | Name of supported database, and optionally also version number |
-| `--pplace-aln` | string |  |  |  |  |  | File with reference sequences. Requires also `--pplace_tree` and `--pplace_model`. |
+| `--kraken2-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom Kraken2 reference taxonomy database (*.tar.gz\|*.tgz archive or folder) |
+| `--kraken2-ref-taxonomy` | string |  |  | `silva`, `silva=138`, `silva=132`, `rdp`, `rdp=18`, `greengenes`, `greengenes=13.5`, `standard`, `standard=20260626`, `standard=20240904`, `standard=20230605` |  |  | Name of supported database, and optionally also version number |
+| `--pplace-aln` | string (file path) |  |  |  |  |  | File with reference sequences. Requires also `--pplace_tree` and `--pplace_model`. |
 | `--pplace-alnmethod` | string |  |  | `clustalo`, `hmmer`, `mafft` |  | clustalo | Method used for alignment, "clustalo", "hmmer" or "mafft" |
 | `--pplace-model` | string |  |  |  |  |  | Phylogenetic model to use in placement, e.g. 'LG+F' or 'GTR+I+F'. Requires also `--pplace_tree` and `--pplace_aln`. |
 | `--pplace-name` | string |  | yes |  |  |  | A name for the run |
 | `--pplace-sheet` | string (file path) |  |  |  | matches ^\S+\.(tsv\|csv\|yml\|yaml\|txt)$ |  | Spreadsheet with phylogenetic placement information. Possible columns: target, alignmethod, hmm, extract_hmm, align_hmm, align_extract_hmm, refseqfile, refphylogeny, model, taxonomy. |
-| `--pplace-taxonomy` | string |  |  |  |  |  | Tab-separated file with taxonomy assignments of reference sequences. |
-| `--pplace-tree` | string |  |  |  |  |  | Newick file with reference phylogenetic tree. Requires also `--pplace_aln` and `--pplace_model`. |
+| `--pplace-taxonomy` | string (file path) |  |  |  |  |  | Tab-separated file with taxonomy assignments of reference sequences. |
+| `--pplace-tree` | string (file path) |  |  |  |  |  | Newick file with reference phylogenetic tree. Requires also `--pplace_aln` and `--pplace_model`. |
+| `--qiime-classifier` | string (file path) |  |  |  |  |  | Path to QIIME2 trained classifier file (typically *-classifier.qza) |
 | `--qiime-ref-tax-custom` | string |  |  |  |  |  | Path to files of a custom QIIME2 reference taxonomy database (tarball, or two comma-separated files) |
 | `--qiime-ref-taxonomy` | string |  |  | `silva=138`, `silva`, `greengenes85`, `greengenes2`, `greengenes2=2024.09`, `greengenes2=2022.10` |  |  | Name of supported database, and optionally also version number |
 | `--sintax-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels used in SINTAX with a custom reference database |
-| `--sintax-ref-tax-custom` | string |  |  |  |  |  | Path to a custom SINTAX reference database (fasta) |
+| `--sintax-cutoff` | number |  |  |  | ≥ 0; ≤ 1 | 0.8 | Confidence cutoff for SINTAX taxonomic classification. |
+| `--sintax-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom SINTAX reference database (fasta) |
 | `--sintax-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2` |  |  | Name of supported database, and optionally also version number |
 | `--vsearch-lca-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels for VSEARCH LCA with a custom reference database |
 | `--vsearch-lca-id` | number |  |  |  | ≥ 0; ≤ 1 | 0.9 | VSEARCH usearch_global identity cutoff (`--id`) used for VSEARCH LCA. |
@@ -255,7 +268,7 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--vsearch-lca-maxaccepts` | integer |  |  |  | ≥ 0 | 0 | Maximum number of target sequences to accept per query for VSEARCH LCA (`--maxaccepts`). |
 | `--vsearch-lca-maxrejects` | integer |  |  |  | ≥ 0 | 0 | Maximum number of non-matching target sequences to reject per query for VSEARCH LCA (`--maxrejects`). |
 | `--vsearch-lca-query-cov` | number |  |  |  | ≥ 0; ≤ 1 | 1.0 | Minimum fraction of the query that must align to a target for VSEARCH LCA (`--query_cov`). |
-| `--vsearch-lca-ref-tax-custom` | string |  |  |  |  |  | Path to a custom VSEARCH LCA reference database (SINTAX-compatible FASTA) |
+| `--vsearch-lca-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom VSEARCH LCA reference database (SINTAX-compatible FASTA) |
 | `--vsearch-lca-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `midori2-co1`, `midori2-co1=gb270`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2` |  |  | Name of built-in VSEARCH LCA reference database, and optionally also version number |
 
-<!-- Generated from nf-core/ampliseq@2723d4c298d48321594920d0324697e14d73ee94. Do not edit by hand. -->
+<!-- Generated from nf-core/ampliseq@992e6df34065067185b5e34665b5861b6827981d. Do not edit by hand. -->

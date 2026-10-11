@@ -67,8 +67,17 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{src.name}: skipped (policy={src.policy}; not auto-bumped)")
             continue
         try:
+            up = root / "pipelines" / validate_pipeline_name(src.name) / "upstream"
+            before = submod._own_head(up)
             tag = bump(src.name, src.url, root)
-            print(f"{src.name}: {'bumped to ' + tag if tag else 'no release tag found'}")
+            # Say what changed: a pipeline already at its latest release is checked, not bumped.
+            if tag is None:
+                outcome = "no release tag found"
+            elif before is not None and submod._own_head(up) != before:
+                outcome = f"bumped to {tag}"
+            else:
+                outcome = f"already at {tag}"
+            print(f"{src.name}: {outcome}")
         except Exception as exc:                          # one failure never blocks others
             print(f"{src.name}: ERROR {exc}")
             failures += 1

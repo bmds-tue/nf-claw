@@ -43,7 +43,19 @@ def test_one_failure_does_not_block_others(monkeypatch, tmp_path, capsys):
     assert rc == 1  # process every source, but fail the automation so partial errors are visible
     assert calls == ["a", "b"]  # b still processed after a raised
     out = capsys.readouterr().out
-    assert "a: ERROR" in out and "b: bumped to 1.2.3" in out
+    # The fake bump moves nothing, so b is reported as checked, not bumped.
+    assert "a: ERROR" in out and "b: already at 1.2.3" in out
+
+
+def test_report_distinguishes_a_bump_from_an_unchanged_pin(monkeypatch, tmp_path, capsys):
+    tsv = tmp_path / "sources.tsv"
+    tsv.write_text("moved\thttps://x/m.git\nsame\thttps://x/s.git\n")
+    heads = {"moved": iter(["a" * 40, "b" * 40]), "same": iter(["c" * 40, "c" * 40])}
+    monkeypatch.setattr(up.submod, "_own_head", lambda path: next(heads[path.parent.name]))
+    monkeypatch.setattr(up, "bump", lambda name, url, root: "2.0.0")
+    assert up.main(["--sources", str(tsv), "--repo-root", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "moved: bumped to 2.0.0" in out and "same: already at 2.0.0" in out
 
 
 def test_bump_refuses_an_uninitialised_submodule(monkeypatch, tmp_path):

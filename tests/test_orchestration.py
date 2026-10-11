@@ -1347,3 +1347,109 @@ def test_auxiliary_chain_check_defers_future_handoff_table(tmp_path, monkeypatch
         demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
         deferred_params=frozenset({"references"}))
     assert result.checked_only and not (tmp_path / "out").exists()
+
+
+def _pinned_git_pipeline(tmp_path):
+    """The `mini` fixture as its own git repository with two releases; skill.md pins 1.1.0."""
+    root = _make_pipeline(tmp_path, "mini")
+    up = root / "pipelines" / "mini" / "upstream"
+    _git(up, "init", "-q")
+    _git(up, "add", "-A")
+    _git(up, "commit", "-qm", "1.0.0")
+    _git(up, "tag", "1.0.0")
+    (up / "main.nf").write_text("y")
+    _git(up, "commit", "-qam", "1.1.0")
+    _git(up, "tag", "1.1.0")
+    pin = _git(up, "rev-parse", "HEAD")
+    (root / "pipelines" / "mini" / "skill.md").write_text(
+        f"---\nname: mini\nversion: 1.1.0\ncommit: {pin}\n---\n")
+    return root, up
+
+
+def _check_pinned(root, tmp_path, **kw):
+    return orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+        params_file=None, cli_overrides={}, resume=False, demo=True, check_only=True,
+        write_provenance=False, timeout_seconds=10, **kw)
+
+
+def test_the_documented_pin_runs(tmp_path, monkeypatch):
+    root, _ = _pinned_git_pipeline(tmp_path)
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    assert _check_pinned(root, tmp_path).checked_only
+
+
+def test_a_checkout_off_the_documented_pin_is_refused(tmp_path, monkeypatch):
+    # `git pull` of nf-claw moves the pin; without `git submodule update` the old release would run
+    # under the new release's docs.
+    from runner.errors import ErrorCode, NfclawError
+    root, up = _pinned_git_pipeline(tmp_path)
+    _git(up, "checkout", "-q", "1.0.0")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    with pytest.raises(NfclawError) as exc:
+        _check_pinned(root, tmp_path)
+    assert exc.value.code is ErrorCode.SUBMODULE_INCOMPLETE
+    text = str(exc.value)
+    assert "checked out at 1.0.0" in text and "pins nf-core/mini 1.1.0" in text
+    assert "git submodule update --force pipelines/mini/upstream" in text
+
+
+def test_locally_modified_pipeline_code_is_refused(tmp_path, monkeypatch):
+    from runner.errors import NfclawError
+    root, up = _pinned_git_pipeline(tmp_path)
+    (up / "main.nf").write_text("patched")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    with pytest.raises(NfclawError, match="local modifications to tracked pipeline files"):
+        _check_pinned(root, tmp_path)
+    # Untracked files (e.g. a stray .nextflow/ from a manual run) do not change the code.
+    (up / "main.nf").write_text("y")
+    (up / "notes.txt").write_text("scratch")
+    assert _check_pinned(root, tmp_path).checked_only
+
+
+def test_modified_file_listing_handles_renames(tmp_path):
+    root, up = _pinned_git_pipeline(tmp_path)
+    _git(up, "mv", "main.nf", "renamed.nf")
+    assert submodule.modified_files(up) == ["renamed.nf"]
+
+
+@pytest.mark.parametrize("engine", ["23.10.1", "24.03.0-edge"])
+def test_resource_limits_refused_on_an_engine_that_would_ignore_them(tmp_path, monkeypatch, engine):
+    # Verified on Nextflow 23.10.1: process.resourceLimits is accepted silently and a 16-CPU/64 GB
+    # request runs uncapped. A ceiling the engine will not apply must not be reported as applied.
+    from runner import resources
+    from runner.errors import ErrorCode, NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+            params_file=None, cli_overrides={}, resume=False, demo=True, check_only=True,
+            write_provenance=False, timeout_seconds=10, nxf_ver=engine,
+            limits=resources.parse(2, "4.GB", None))
+    assert exc.value.code is ErrorCode.PARAMS_INVALID
+    assert "24.04.0" in exc.value.message and engine.split("-")[0] in exc.value.message
+
+
+def test_resource_limits_on_the_installed_engine_are_judged_by_its_version(tmp_path, monkeypatch):
+    from runner import resources
+    from runner.errors import NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    kwargs = dict(repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+                  params_file=None, cli_overrides={}, resume=False, demo=True, check_only=True,
+                  write_provenance=False, timeout_seconds=10,
+                  limits=resources.parse(None, "4.GB", None))
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw",
+                        lambda: "nextflow version 23.04.0 build 5857")
+    with pytest.raises(NfclawError, match="Nextflow 23.04.0"):
+        orchestration.run_pipeline("mini", **kwargs)
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw",
+                        lambda: "nextflow version 24.04.0 build 5917")
+    res = orchestration.run_pipeline("mini", **kwargs)
+    assert "resource_limits.config" in res.command
+    assert not any("could not be determined" in w for w in res.warnings)
+    # An engine that cannot be identified is not assumed to enforce the ceiling: the run says so.
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
+    res = orchestration.run_pipeline("mini", **kwargs)
+    assert any("could not be determined" in w for w in res.warnings)

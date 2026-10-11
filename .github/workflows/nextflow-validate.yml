@@ -19,6 +19,7 @@ on:
       - "pipelines/*/skill.md"
       - "pipelines/*/upstream"
       - "scripts/nextflow_accept.sh"
+      - "scripts/nextflow_accept_exceptions.tsv"
       - ".github/workflows/nextflow-validate.yml"
 
 permissions:

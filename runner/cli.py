@@ -61,10 +61,20 @@ def _collect_overrides(extras: list[str]) -> dict:
                 out[key] = True                               # --flag (boolean)
                 i += 1
         else:
+            # Nextflow's own single-dash options (-resume, -params-file, -work-dir, …) are set by
+            # nfclaw; say which nfclaw flag covers them instead of a bare "unexpected argument".
+            nextflow = {"-resume": "--resume", "-params-file": "--params-file",
+                        "-config": "--config", "-r": "--pipeline-version",
+                        "-revision": "--pipeline-version",
+                        "-work-dir": "--nxf-env NXF_WORK=<dir>", "-w": "--nxf-env NXF_WORK=<dir>"}
+            name = tok.split("=", 1)[0]
+            hint = (f" Nextflow's `{name}` is `{nextflow[name]}` for nfclaw." if name in nextflow
+                    else " nfclaw sets Nextflow's own single-dash options itself."
+                    if tok.startswith("-") and not tok.startswith("--") else "")
             raise NfclawError(
                 ErrorCode.PARAMS_INVALID,
                 f"unexpected extra argument: {tok!r}",
-                fix="Pipeline parameters must be passed as --param value or --param=value.",
+                fix="Pipeline parameters must be passed as --param value or --param=value." + hint,
             )
     return out
 

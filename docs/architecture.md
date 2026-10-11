@@ -63,6 +63,8 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Samplesheet Preflight:** Verifies samplesheet existence, column headers, required fields, and path formats.
 - **Path Resolution:** Resolves the `--input` samplesheet path against the caller's working directory. Local data paths inside a samplesheet must already be absolute; relative entries are rejected.
 - **Type Coercion Safeguards:** Translates `--input false` to an unset `input` parameter in `params.json` for pipelines that support running without a samplesheet (e.g. sarek), preventing nf-schema type validation crashes.
+- **Pipeline Code Integrity:** Refuses a pinned `upstream/` that is not at the commit its `skill.md` documents, and any tree (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names code that did not run.
+- **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0, which ignores `process.resourceLimits` silently.
 - **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. Nextflow's runtime `nf-schema` plugin remains the ultimate authority for conditional constraints.
 
 ### 2.2 Run Execution & Sibling Directory Locking
@@ -102,8 +104,8 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 
 Missing local path parameters without an upstream `exists: true` constraint are delegated to Nextflow: they may be output/cache destinations. They produce a warning and an `unverified_local_paths` manifest entry rather than a false input checksum. Required missing inputs are refused. Remote data, profile-only references, indirect configuration includes, container digests and data referenced by non-tabular input formats are not comprehensively frozen.
 
-### 2.6 Deterministic Replay & Replay Guard
-- **`provenance/commands.sh`**: Standalone reproduction script that re-runs the exact recorded execution into a fresh output directory (default `<outdir>.replay`). Replaying in place is rejected to avoid output collisions with existing published artifacts.
+### 2.6 Replay & Replay Guard
+- **`provenance/commands.sh`**: Standalone reproduction script that re-runs the recorded execution — same pinned code, local inputs, parameters, configs and observed engine — into a fresh output directory (default `<outdir>.replay`). Replaying in place is rejected to avoid output collisions with existing published artifacts. Outputs are reproduced only as far as the pipeline's tools are deterministic: a multithreaded or unseeded stochastic step can produce different results from identical inputs (measured for ampliseq 3.0.0 in [known-issues](known-issues.md#pipeline-specific-run-notes)). Compare replays with `nfclaw verify` and a format-aware inspection of changed files.
 - **`provenance/replay_guard.py`**: A zero-dependency script executed by `commands.sh` prior to launching Nextflow. Verifies that local inputs, referenced samplesheets, external configs, and pipeline git commits match the hashes in `provenance/*.sha256`. If inputs have drifted or disappeared, replay halts immediately.
 - **Dynamic Relocation:** `commands.sh` discovers its current bundle directory and rebases
   bundle-owned params/config arguments. External dependencies retain their recorded paths.

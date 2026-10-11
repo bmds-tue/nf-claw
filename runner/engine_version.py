@@ -17,18 +17,28 @@ _INSTALLED_RE = re.compile(r"version\s+(\d+(?:\.\d+)+)")
 _VERSION_LINE = re.compile(
     r"^nextflow[ \t]+version[ \t]+\d+(?:\.\d+)+(?:-[A-Za-z0-9.-]+)?"
     r"(?:[ \t]+build[ \t]+\d+)?[ \t\r]*$", re.MULTILINE | re.IGNORECASE)
+# What `nextflow -version` actually prints: its banner, whose second line is the version, e.g.
+#       N E X T F L O W
+#       version 26.04.3 build 12259
+_BANNER_VERSION = re.compile(
+    r"^[ \t]*N E X T F L O W[ \t\r]*\n[ \t]*version[ \t]+(\d+(?:\.\d+)+(?:-[A-Za-z0-9.-]+)?)"
+    r"[ \t]+build[ \t]+(\d+)[ \t\r]*$", re.MULTILINE)
 
 
 def version_text(result: subprocess.CompletedProcess[str]) -> str | None:
-    """Accept one unambiguous version line from a successful metadata probe.
+    """Accept one unambiguous engine version from a successful metadata probe, as
+    `nextflow version X build N` (or the `nextflow version …` line `nextflow -v` prints).
 
     Bootstrap diagnostics are not engine identity and can contain private URLs.
     Do not retain them in provenance or treat a failed probe as version evidence.
     """
     if result.returncode != 0:
         return None
-    lines = {match.group().strip() for output in (result.stdout, result.stderr)
-             for match in _VERSION_LINE.finditer(output or "")}
+    lines = set()
+    for output in (result.stdout, result.stderr):
+        lines.update(match.group().strip() for match in _VERSION_LINE.finditer(output or ""))
+        lines.update(f"nextflow version {m.group(1)} build {m.group(2)}"
+                     for m in _BANNER_VERSION.finditer(output or ""))
     return next(iter(lines)) if len(lines) == 1 else None
 
 
@@ -84,6 +94,28 @@ def warning(spec: str | None, installed: str | None) -> str | None:
     return (f"Nextflow {have} is older than this pipeline's required {op}{req}; "
             f"Nextflow will likely reject the run "
             f"(advisory — Nextflow enforces the engine version).")
+
+
+def effective(nxf_ver: str | None = None) -> str | None:
+    """The engine version a launch will run (`1.2.3`), or None when it cannot be determined: the
+    `--nxf-ver` pin when given, else what the launcher reports (it honours an exported NXF_VER)."""
+    if nxf_ver:
+        m = re.match(r"\d+(?:\.\d+)+", nxf_ver)
+        return m.group() if m else None
+    raw = _installed_raw()
+    m = _INSTALLED_RE.search(raw) if raw else None
+    return m.group(1) if m else None
+
+
+# `process.resourceLimits` first shipped in Nextflow 24.04.0. Older engines accept the setting
+# without a word and apply no ceiling at all (verified with 23.10.1: a 16-CPU/64 GB request ran
+# uncapped under a 2-CPU/4 GB limit), so a requested ceiling must not be passed to one.
+RESOURCE_LIMITS_SINCE = (24, 4, 0)
+
+
+def supports_resource_limits(version: str) -> bool:
+    parts = _tuple(re.match(r"\d+(?:\.\d+)*", version).group())
+    return parts + (0,) * (3 - len(parts)) >= RESOURCE_LIMITS_SINCE
 
 
 def check(upstream: Path, *, nxf_ver: str | None = None) -> list[str]:

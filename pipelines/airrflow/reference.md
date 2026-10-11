@@ -1,7 +1,7 @@
 ---
 name: airrflow
-version: 5.1.1
-commit: 8bc3e567d0bb3a4c47ead15a8f42e764580f76dc
+version: 5.1.2
+commit: 601bbe64a4a035b531b70626eeacca9770100e6e
 ---
 
 # airrflow — full parameter reference
@@ -203,4 +203,4 @@ nf-core/airrflow pipeline parameters. Every parameter from the pinned `nextflow_
 | `--reference-igblast` | string |  |  |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/airrflow/database-cache/igblast_base.zip | Path to the cached igblast database. |
 | `--save-germlines` | boolean |  |  |  |  | true | Save germline database to reuse the cache in future runs. |
 
-<!-- Generated from nf-core/airrflow@8bc3e567d0bb3a4c47ead15a8f42e764580f76dc. Do not edit by hand. -->
+<!-- Generated from nf-core/airrflow@601bbe64a4a035b531b70626eeacca9770100e6e. Do not edit by hand. -->

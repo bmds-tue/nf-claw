@@ -19,29 +19,32 @@
       "RAxML",
       "MultiQC"
     ],
-    "version": "5.1.1"
+    "version": "5.1.2"
   },
   {
     "description": "Amplicon sequencing analysis workflow using DADA2 and QIIME2",
     "feeds": [],
-    "input": "samplesheet (sampleID, forwardReads, reverseReads, sample, fastq_1, fastq_2, run, control, quant_reading)",
+    "input": "samplesheet (sample, fastq_1, fastq_2, run, control, quant_reading)",
     "name": "ampliseq",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
-    "summary": "nfcore/ampliseq is a bioinformatics analysis pipeline used for amplicon sequencing, supporting denoising of any amplicon and supports a variety of taxonomic databases for taxonomic assignment including 16S, ITS, CO1 and 18S. Phylogenetic placement is also possible. Multiple region analysis such as 5R is implemented. Supported is paired-end Illumina or single-end Illumina, PacBio and IonTorrent data. Default is the analysis of 16S rRNA gene amplicons sequenced paired-end with Illumina.",
+    "summary": "nfcore/ampliseq is a bioinformatics analysis pipeline used for amplicon sequencing, supporting denoising of any amplicon and supports a variety of taxonomic databases for taxonomic assignment including 16S, ITS, CO1 and 18S. Phylogenetic placement is also possible. Multiple region analysis such as 5R is implemented. Supported is paired-end Illumina or single-end Illumina, PacBio, IonTorrent, and Oxford Nanopore data. Default is the analysis of 16S rRNA gene amplicons sequenced paired-end with Illumina.",
     "tools": [
-      "FastQC",
       "Cutadapt",
-      "Barrnap",
+      "FastQC",
       "DADA2",
+      "Porechop_ABI",
+      "Chopper",
+      "Savont",
+      "Barrnap",
       "Greengenes2",
       "PR2 - Protist Reference Ribosomal Database",
       "GTDB - Genome Taxonomy Database",
       "SBDI-GTDB",
       "RDP - Ribosomal Database Project",
       "UNITE - eukaryotic nuclear ribosomal ITS region",
+      "GloSED - Global standardised soil eukaryome dataset",
       "MIDORI2 - a collection of reference databases",
       "COIDB - CO1 Taxonomy Database",
-      "PhytoRef plastid 16S rRNA database for photosynthetic eukaryotes",
       "Zehr lab nifH database",
       "BOLD Plantae",
       "nf-core/phyloplace",
@@ -66,9 +69,10 @@
       "VSEARCH",
       "decontam",
       "Kraken2",
-      "MultiQC"
+      "MultiQC",
+      "DuckDB"
     ],
-    "version": "2.18.0"
+    "version": "3.0.0"
   },
   {
     "description": "ATACSeq peak-calling and differential analysis pipeline.",

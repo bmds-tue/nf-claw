@@ -76,12 +76,27 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema) -> list[
             if key != "outdir" and param.fmt in PATH_FORMATS and isinstance(value, str) and value.strip():
                 errors.extend(f"parameter '{flag}': {issue}"
                               for issue in local_name_issues(value, param.fmt))
-            if param.enum and json_scalar(value) not in param.enum:
+            if param.enum and not _in_enum(value, param.enum):
                 errors.append(f"parameter '{flag}={value}' is not allowed; "
                               f"must be one of: {', '.join(param.enum)}")
-            if not (param.enum and json_scalar(value) in param.enum):
+            if not (param.enum and _in_enum(value, param.enum)):
                 errors.extend(_value_shape_errors(flag, value, param))
     return errors
+
+
+def _in_enum(value: Any, enum: tuple[str, ...]) -> bool:
+    """Whether `value` is one of a schema's allowed values. JSON Schema compares numbers by value
+    (`1.0` equals `1`), so a numeric value matches a numeric entry written either way."""
+    if json_scalar(value) in enum:
+        return True
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        for entry in enum:
+            try:
+                if float(entry) == value:
+                    return True
+            except ValueError:
+                continue
+    return False
 
 
 _UNSET = ("null", "''", '""')
@@ -176,7 +191,15 @@ def coerce_to_schema(merged: dict[str, Any], schema: ParamSchema) -> dict[str, A
     out = dict(merged)
     for key, val in merged.items():
         param = schema.params.get(key)
-        if param is None or not isinstance(val, str):
+        if param is None:
+            continue
+        if (param.type == "integer" and isinstance(val, float) and math.isfinite(val)
+                and val.is_integer()):
+            # JSON Schema counts 4.0 as an integer; pass the pipeline the integer its schema
+            # declares rather than a float it may interpolate as "4.0".
+            out[key] = int(val)
+            continue
+        if not isinstance(val, str):
             continue
         coerced = _coerce_scalar(val, param.type)
         if coerced is not _LEAVE:

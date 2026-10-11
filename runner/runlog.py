@@ -44,9 +44,12 @@ _STDERR_LINES = 25
 # lines go to stdout), so on a failure whatever else is on stderr is part of the error.
 _UPDATE_NOTICE = re.compile(r"^Nextflow \S+ is available - Please consider updating")
 
-# `.nextflow.log` entries: "Oct-05 21:57:35.089 [main] ERROR nextflow.cli.Launcher - …".
-_LOG_ENTRY = re.compile(r"^[A-Z][a-z]{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[[^\]]*\] ")
-_LOG_ERROR = re.compile(r"^[A-Z][a-z]{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[[^\]]*\] ERROR ")
+# `.nextflow.log` entries: "Oct-05 21:57:35.089 [main] ERROR nextflow.cli.Launcher - …". The month
+# is the JVM locale's abbreviation (`oct-05` in Spanish, `Okt.-05` in German, `10月-05`), so it is
+# matched as any token rather than as English.
+_LOG_STAMP = r"^[^\s\[\]-]{1,12}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[[^\]]*\] "
+_LOG_ENTRY = re.compile(_LOG_STAMP)
+_LOG_ERROR = re.compile(_LOG_STAMP + "ERROR ")
 _LOG_TAIL_BYTES = 2 * 1024 * 1024
 _MAX_CAUSES = 8
 _MAX_CAUSE_LINES = 6         # continuation lines kept per cause message

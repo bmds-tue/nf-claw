@@ -10,7 +10,7 @@ from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     outputs, parameters, plugin_compat, preflight, provenance,
-                    resources, runlog, samplesheet, versions)
+                    resources, runlog, samplesheet, submodule, versions)
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import single_writer
@@ -101,6 +101,20 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                          repo_root=repo_root)
     if st.name != name:
         raise ValueError("resolved_tree must belong to the requested pipeline")
+    # The code that runs must be the code provenance will name: the pin its docs describe (for the
+    # pinned submodule) and, for any tree, without local edits.
+    pinned_tree = not versions.is_cached(st)
+    if tree_problems := submodule.tree_issues(
+            st, pipelines_dir / name / "skill.md" if pinned_tree else None):
+        rel = f"pipelines/{name}/upstream" if pinned_tree else str(st.path)
+        raise NfclawError(
+            ErrorCode.SUBMODULE_INCOMPLETE,
+            "The pipeline code is not the unmodified release nfclaw would record.",
+            fix=(f"Restore it with `git submodule update --force {rel}`" if pinned_tree else
+                 f"Move {rel} aside (preserving any changes you need); nfclaw recreates it")
+                + (", or pass --pipeline-version to run another release deliberately."
+                   if pinned_tree else "."),
+            details={"issues": tree_problems})
     # The Nextflow runtime env nfclaw applies for this run: --nxf-env vars plus --nxf-ver
     # (sugar for NXF_VER, which wins if both set it). Threaded to the engine check, the
     # subprocess and provenance so the engine actually used is consistent and recorded.
@@ -112,6 +126,21 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # so a relative user value has one stable meaning in preflight, execution and provenance.
     work_dir = Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
                     or repo_root / "work").expanduser().resolve()
+    # A resource ceiling only exists if the engine enforces it; say so before anything runs.
+    limit_note = None
+    if limits is not None and not limits.is_empty():
+        engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
+        if engine is not None and not engine_version.supports_resource_limits(engine):
+            raise NfclawError(
+                ErrorCode.PARAMS_INVALID,
+                f"--limit-cpus/--limit-memory/--limit-time need Nextflow 24.04.0 or newer "
+                f"(process.resourceLimits); this run would use Nextflow {engine}, which ignores "
+                "the setting and would apply no ceiling at all.",
+                fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
+                    "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
+        if engine is None:
+            limit_note = ("The Nextflow version could not be determined, so it is not confirmed "
+                          "that it enforces --limit-* (process.resourceLimits needs 24.04.0+).")
     param_schema = schema_mod.load_param_schema(st.path)
 
     # Read the params file once; it is merged below, and it may be what supplies `input`.
@@ -217,6 +246,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
     # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
     warnings += plugin_compat.known_plugin_warnings(st.path)
+    warnings += [limit_note] if limit_note else []
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "

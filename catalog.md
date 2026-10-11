@@ -4,8 +4,8 @@
 
 | pipeline | version | input | output | description |
 |---|---|---|---|---|
-| `airrflow` | 5.1.1 | samplesheet (sample_id, subject_id, species, pcr_target_locus, tissue, sex, age, biomaterial_provider, single_cell, filename_R1, filename_R2, filename_I1, filename) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | B and T cell repertoire analysis pipeline with the Immcantation framework. |
-| `ampliseq` | 2.18.0 | samplesheet (sampleID, forwardReads, reverseReads, sample, fastq_1, fastq_2, run, control, quant_reading) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | Amplicon sequencing analysis workflow using DADA2 and QIIME2 |
+| `airrflow` | 5.1.2 | samplesheet (sample_id, subject_id, species, pcr_target_locus, tissue, sex, age, biomaterial_provider, single_cell, filename_R1, filename_R2, filename_I1, filename) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | B and T cell repertoire analysis pipeline with the Immcantation framework. |
+| `ampliseq` | 3.0.0 | samplesheet (sample, fastq_1, fastq_2, run, control, quant_reading) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | Amplicon sequencing analysis workflow using DADA2 and QIIME2 |
 | `atacseq` | 2.1.2 | samplesheet (sample, fastq_1, fastq_2, replicate, control, control_replicate) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | ATACSeq peak-calling and differential analysis pipeline. |
 | `bacass` | 2.6.1 | samplesheet (ID, R1, R2, LongFastQ, Fast5, GenomeSize) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional) | Simple bacterial assembly and annotation |
 | `bactmap` | 1.0.0 | --input (no samplesheet schema) | --outdir/ (configured results); pipeline_info/ (run metadata when enabled) | A mapping-based pipeline for creating a phylogeny from bacterial whole genome sequences |

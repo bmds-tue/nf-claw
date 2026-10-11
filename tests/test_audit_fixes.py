@@ -57,7 +57,8 @@ def test_nextflow_accept_timeout_is_portable():
     assert "command -v timeout" in text
     assert "command -v gtimeout" in text
     # Global engine options such as -log may precede the run subcommand.
-    assert "NXF_VER=\"$ver\" _run_with_timeout 900 nextflow " in text
+    assert "NXF_VER=\"$ver\" _run_with_timeout \"$budget\" nextflow " in text
+    assert "budget=900" in text
 
 
 def test_auto_update_validates_changed_releases_before_merge():
@@ -708,11 +709,12 @@ def test_known_issues_documents_coproid_genome_sheet_and_required_dbs():
 def test_generated_skills_surface_input_oneof_exclusivity():
     # Regression guard: the committed skill.md for every pipeline whose --input schema has
     # mutually-exclusive column groups must surface the choice (not flatten it into one table).
-    for name in ("createpanelrefs", "ampliseq", "drop"):
+    # (ampliseq had such groups until 3.0.0 removed its legacy sampleID/forwardReads format.)
+    for name in ("createpanelrefs", "drop"):
         skill = (REPO / "pipelines" / name / "skill.md").read_text(encoding="utf-8")
         assert "mutually-exclusive column groups" in skill, name
-    amp = (REPO / "pipelines" / "ampliseq" / "skill.md").read_text(encoding="utf-8")
-    assert "sampleID,forwardReads" in amp and "sample,fastq_1" in amp   # legacy vs standardized
+    cpr = (REPO / "pipelines" / "createpanelrefs" / "skill.md").read_text(encoding="utf-8")
+    assert "sample,bam" in cpr and "sample,cram" in cpr                  # one header per group
 
 
 def test_drugresponseeval_skill_has_no_input_flag():

@@ -476,3 +476,14 @@ def test_a_replay_log_is_read_the_same_way(tmp_path, named_process):
 def test_state_without_a_run_log(tmp_path):
     st = runlog.read_state(tmp_path / "provenance" / "logs" / "run.log")
     assert st.state == "missing"
+
+
+def test_causes_are_read_from_a_log_in_any_jvm_locale(tmp_path):
+    # A real `.nextflow.log` from Nextflow 25.10.4 under a Spanish JVM locale: its entries start
+    # `oct-12 …`, not `Oct-12 …`. The English-only pattern found no entry, so the `Caused by:` chain
+    # — here the only place the reason is written — was silently dropped from the error.
+    log = Path(__file__).parent / "fixtures" / "nextflow_logs" / "config-include-refused.es.log"
+    assert runlog.nextflow_log_causes(log) == ["Caused by: java.net.ConnectException: Connection refused"]
+    german = tmp_path / "de.log"
+    german.write_text(log.read_text(encoding="utf-8").replace("oct-12 ", "Okt.-12 "), encoding="utf-8")
+    assert runlog.nextflow_log_causes(german) == ["Caused by: java.net.ConnectException: Connection refused"]

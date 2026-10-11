@@ -1,8 +1,8 @@
 ---
 name: airrflow
 pipeline: nf-core/airrflow
-version: 5.1.1
-commit: 8bc3e567d0bb3a4c47ead15a8f42e764580f76dc
+version: 5.1.2
+commit: 601bbe64a4a035b531b70626eeacca9770100e6e
 description: B and T cell repertoire analysis pipeline with the Immcantation framework.
 summary: nf-core/airrflow is a bioinformatics best-practice pipeline to analyze B-cell receptor (BCR) or T-cell receptor (TCR) repertoire sequencing data. It allows the processing of targeted bulk and single-cell adaptive immune receptor sequencing data (AIRR-seq), as well as the extraction of TCR and BCR sequences from untargeted bulk and single-cell RNA-seq data. The pipeline enables an end-to-end analysis, departing from raw reads or assembled sequences, and performs sequence assembly, V(D)J assignment, novel allele identification, genotype inference, clonal inference, repertoire analysis, lineage reconstruction and BCR/TCR sequence embedding using the Immcantation framework, as well as other immune repertoire analysis tools.
 has_samplesheet: true
@@ -81,10 +81,10 @@ A real (non-`--demo`) run requests the resources the pipeline's `conf/base.confi
 
 ```bash
 nfclaw run airrflow --input samplesheet.tsv --outdir results -profile docker \
-  --limit-cpus 4 --limit-memory 15.GB --limit-time 1.h
+  --limit-cpus 4 --limit-memory 15.GB
 ```
 
-nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` config — the mechanism nf-core prescribes for exactly this ([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). Set them to the machine's real capacity. The generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.
+nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` config — the mechanism nf-core prescribes for exactly this ([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes. The generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.
 
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=26.04.1'`.
@@ -98,14 +98,14 @@ nfclaw run airrflow ... --nxf-ver 26.04.1
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `--skip-multiqc true` disables that report. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/airrflow/blob/5.1.1/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/airrflow/blob/5.1.2/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: FastQC, Fastp, pRESTO, SHazaM, Change-O, IgBLAST, Alakazam, SCOPer, Dowser, IgPhyML, RAxML, MultiQC.
 
-Full list with references: https://github.com/nf-core/airrflow/blob/5.1.1/CITATIONS.md
+Full list with references: https://github.com/nf-core/airrflow/blob/5.1.2/CITATIONS.md
 
 ## Demo
 ```bash
@@ -113,6 +113,6 @@ nfclaw run airrflow --demo --outdir results   # adds the upstream test profile (
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. Nextflow's nf-schema validates every parameter against this schema at runtime, so an unknown or invalid value fails fast. Upstream usage: https://github.com/nf-core/airrflow/blob/5.1.1/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. Nextflow's nf-schema validates every parameter against this schema at runtime, so an unknown or invalid value fails fast. Upstream usage: https://github.com/nf-core/airrflow/blob/5.1.2/docs/usage.md
 
-<!-- Generated from nf-core/airrflow@8bc3e567d0bb3a4c47ead15a8f42e764580f76dc. Do not edit by hand. -->
+<!-- Generated from nf-core/airrflow@601bbe64a4a035b531b70626eeacca9770100e6e. Do not edit by hand. -->
