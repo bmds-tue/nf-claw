@@ -103,7 +103,8 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
     """Staged names passed into task shell scripts, including explicit remote basenames.
 
     Parent directories are not staged under their original names; this guards the basename.
-    Also check resolved symlink targets because path-parameter resolution follows symlinks.
+    Also check directory contents and resolved symlink targets: downstream workflows can select
+    children as separate inputs or derive prefixes from their names.
     Missing glob matches and remote inventories remain the runtime schema's responsibility.
     Remote basenames retain percent escapes in Nextflow; do not decode or rewrite scientific
     inputs. HTTP/FTP providers remove the query suffix, but retain a standalone fragment in the
@@ -111,7 +112,7 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
     """
     if value.strip().lower().startswith("file:"):
         return [_FILE_URI_ISSUE]
-    from runner.replay_guard import MissingInputSource, input_files
+    from runner.replay_guard import MissingInputSource, inspect_input_paths
 
     def safe_name(name: str, *, pattern=False) -> bool:
         extra = "._-+@%=,:~" + ("*?[]{}" if pattern else "")
@@ -138,20 +139,32 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
                     "or download it to a safely named local file"]
         return []
     path = Path(value).expanduser()
+
+    class UnsafeName(ValueError):
+        pass
+
+    def check_name(name: str, *, is_pattern=False):
+        if not safe_name(name, pattern=is_pattern):
+            raise UnsafeName(name)
+
+    def check_path(item: Path):
+        check_name(item.name)
+        check_name(item.resolve().name)
+
     try:
-        names = [(path.name, pattern), (path.resolve().name, pattern)]
-        if pattern:
+        check_name(path.name, is_pattern=pattern)
+        check_name(path.resolve().name, is_pattern=pattern)
+        if pattern or path.is_dir():
             try:
-                names.extend((item.name, False) for item in input_files([path]))
+                inspect_input_paths([path], check_path)
             except MissingInputSource:
                 pass
+    except UnsafeName as exc:
+        return [f"unsafe local input filename {str(exc)!r} in {value!r}; use a renamed or copied "
+                "input with literal filename characters (letters, digits, combining marks, "
+                "dots, underscores, hyphens, plus, @, %, =, commas, colons or interior ~)"]
     except (OSError, RuntimeError) as exc:
         return [f"cannot inspect local input filenames for {value!r}: {exc}"]
-    for name, is_pattern in names:
-        if not safe_name(name, pattern=is_pattern):
-            return [f"unsafe local input filename {name!r} in {value!r}; use a renamed or copied "
-                    "input with literal filename characters (letters, digits, combining marks, "
-                    "dots, underscores, hyphens, plus, @, %, =, commas, colons or interior ~)"]
     return []
 
 

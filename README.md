@@ -18,7 +18,7 @@ A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelin
 
 ---
 
-Explicit local and remote input filenames are validated before launch because pinned task scripts can interpret shell-active names. Unsafe basenames, symlink targets and local matched filenames are refused without silently renaming scientific samples. See [the input rules](AGENTS.md) for supported names and the scope of these checks.
+Explicit local and remote input filenames are validated before launch because pinned task scripts can interpret shell-active names. Unsafe basenames, local directory entries, symlink targets and local matched filenames are refused without silently renaming scientific samples. See [the input rules](AGENTS.md) for supported names and the scope of these checks.
 
 ### Navigation
 

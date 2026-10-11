@@ -176,3 +176,41 @@ workflow {
     assert local_name_issues(urls[2], "file-path") == []
     assert local_name_issues(urls[3], "file-path")
     assert local_name_issues("s3://bucket/reads.txt?x=1&y=2", "file-path")
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_directory_children_become_individual_staged_inputs(engine, tmp_path):
+    import os
+    from runner.inputs import local_name_issues
+
+    source = tmp_path / "safe_directory"
+    source.mkdir()
+    names = ["reads$(id).txt", "safe_é.txt"]
+    for name in names:
+        (source / name).write_bytes(b"known directory data\n")
+    (tmp_path / "params.json").write_text(json.dumps({"input": str(source)}))
+    (tmp_path / "main.nf").write_text('''process INVENTORY {
+ input:
+ path data
+ output:
+ path 'observed.tsv'
+ script:
+ """
+ printf '%s\\n' *.txt > observed.tsv
+ """
+}
+workflow { INVENTORY(channel.fromPath(params.input + '/*.txt')) }
+''')
+    result = subprocess.run(["nextflow", "run", "main.nf", "-params-file", "params.json",
+                             "-ansi-log", "false"], cwd=tmp_path,
+                            env={**os.environ, "NXF_VER": engine},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+    outputs = list((tmp_path / "work").rglob("observed.tsv"))
+    assert sorted(path.read_text().strip() for path in outputs) == sorted(names)
+    for path in outputs:
+        assert (path.parent / path.read_text().strip()).read_bytes() == b"known directory data\n"
+    assert local_name_issues(str(source), "directory-path")
+    (source / names[0]).unlink()
+    assert local_name_issues(str(source), "directory-path") == []

@@ -229,6 +229,11 @@ usable. A standalone HTTP fragment remains in the staged name and is checked. S3
 paths retain both query and fragment characters in their object keys.
 The local HTTP integration oracle checks actual staged names and bytes on Nextflow
 25.10.4 and 26.04.0 without interpolating their names into executable script text.
+Local directory inputs and directory glob matches are inspected recursively, including
+empty subdirectories and resolved symlink target names. Broken members, unreadable
+subtrees and directory cycles are refused before launch. Parent names outside the
+explicit directory are not staged names and retain their separate path contract.
+
 Remote file contents, remote glob matches and values supplied only by configs/profiles
 are outside this explicit-value preflight.
 

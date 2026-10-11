@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -118,8 +119,8 @@ class MissingInputSource(FileNotFoundError):
     """A top-level source is absent, distinct from an incomplete source inventory."""
 
 
-def input_files(paths: list[Path]) -> list[Path]:
-    """Expand explicit files, directories and globs, with cycle-safe symlink traversal."""
+def _input_inventory(paths: list[Path], visit: Callable[[Path], None] | None,
+                     retain_files: bool) -> list[Path]:
     files: set[Path] = set()
 
     def walk(directory: Path, ancestors: frozenset[Path]) -> None:
@@ -129,10 +130,13 @@ def input_files(paths: list[Path]) -> list[Path]:
         with os.scandir(directory) as entries:
             for entry in sorted(entries, key=lambda e: e.name):
                 item = directory / entry.name
+                if visit is not None:
+                    visit(item)
                 if entry.is_dir(follow_symlinks=True):
                     walk(item, ancestors | {real})
                 elif entry.is_file(follow_symlinks=True):
-                    files.add(item)
+                    if retain_files:
+                        files.add(item)
                 else:
                     raise FileNotFoundError(f"input is missing or not a regular file: {item}")
 
@@ -149,8 +153,11 @@ def input_files(paths: list[Path]) -> list[Path]:
         if not matches:
             raise MissingInputSource(f"input pattern matches no files: {source}")
         for path in matches:
+            if visit is not None:
+                visit(path)
             if path.is_file():
-                files.add(path)
+                if retain_files:
+                    files.add(path)
             elif path.is_dir():
                 # Track ancestors per branch, not a global set of resolved directories: a second
                 # published alias is a second logical input path and can change sample multiplicity.
@@ -158,6 +165,20 @@ def input_files(paths: list[Path]) -> list[Path]:
             else:
                 raise FileNotFoundError(f"input is missing or not a regular file: {path}")
     return sorted(files)
+
+
+def input_files(paths: list[Path]) -> list[Path]:
+    """Expand explicit files, directories and globs, with cycle-safe symlink traversal."""
+    return _input_inventory(paths, None, True)
+
+
+def inspect_input_paths(paths: list[Path], visit: Callable[[Path], None]) -> None:
+    """Visit matched paths and every directory entry, including empty directories.
+
+    Uses the same traversal and error handling as the replay inventory, without retaining a second
+    file list or reading data bytes. A visitor can refuse an unsafe staged name immediately.
+    """
+    _input_inventory(paths, visit, False)
 
 
 def hash_inputs(paths: list[Path]) -> dict[str, str]:
