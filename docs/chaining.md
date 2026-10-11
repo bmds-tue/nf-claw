@@ -31,7 +31,7 @@ The chain spec is authored in JSON (or YAML if `pyyaml` is installed). Relative 
 {
   "profile": "docker",
   "nxf_env": {"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"},
-  "limits": {"cpus": 8, "memory": "30.GB", "time": "12.h"},
+  "limits": {"cpus": 8, "memory": "30.GB"},
   "stages": [
     {
       "pipeline": "fetchngs",
@@ -56,7 +56,7 @@ These settings apply globally to all stages unless overridden by an individual s
 | `nxf_ver` | string | `null` | Pin Nextflow engine version (`NXF_VER`) across all stages. |
 | `nxf_env` | object | `{}` | Environment variables passed to Nextflow (e.g. `{"NXF_OFFLINE": "true"}`). |
 | `config` | array | `[]` | Additional Nextflow configuration files passed via `-c`. |
-| `limits` | object | `null` | Global resource ceiling: `{"cpus": N, "memory": "SIZE", "time": "DURATION"}`. |
+| `limits` | object | `null` | Global resource ceiling: `{"cpus": N, "memory": "SIZE", "time": "DURATION"}` (`process.resourceLimits`, Nextflow ≥ 24.04.0). `time` caps every task's run time, retries included: set it only as a deliberate ceiling. |
 | `allow_spaces` | boolean | `false` | Allow filesystem paths containing spaces. |
 
 ### Stage-Level Keys
