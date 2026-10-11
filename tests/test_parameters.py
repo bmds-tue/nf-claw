@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from runner import schema, parameters
 
 FIX = Path(__file__).parent / "fixtures"
@@ -334,3 +336,30 @@ def test_schema_declared_local_file_uri_must_use_a_recordable_filesystem_path(tm
     problems = parameters.validate_params({"fasta": "file:///tmp/ref$(>MARKER).fa"},
                                           schema.load_param_schema(tmp_path))
     assert any("absolute filesystem path" in issue for issue in problems)
+
+
+def _numeric_schema():
+    from runner.schema import Param, ParamSchema
+
+    def p(name, type_, enum=None):
+        return Param(name, type_, None, enum, "", None, False, "g")
+    return ParamSchema("t", "", {"threads": p("threads", "integer"),
+                                 "mode": p("mode", "integer", ("1", "2")),
+                                 "ratio": p("ratio", "number", ("0.5", "1"))})
+
+
+@pytest.mark.parametrize("given,expected", [
+    ({"threads": 4.0}, {"threads": 4}), ({"mode": 1.0}, {"mode": 1}), ({"ratio": 1.0}, {"ratio": 1.0})])
+def test_numbers_valid_under_json_schema_are_not_rejected(given, expected):
+    # JSON Schema: 4.0 is an integer, and 1.0 equals the allowed value 1. A params file writing
+    # them that way is valid for nf-schema, so the preflight must not refuse it.
+    schema = _numeric_schema()
+    coerced = parameters.coerce_to_schema(given, schema)
+    assert coerced == expected and type(coerced[next(iter(expected))]) is type(next(iter(expected.values())))
+    assert parameters.validate_params(coerced, schema) == []
+
+
+@pytest.mark.parametrize("given", [{"threads": 4.5}, {"mode": 3}, {"mode": 1.5}, {"ratio": 2}])
+def test_numbers_invalid_under_json_schema_are_still_rejected(given):
+    schema = _numeric_schema()
+    assert parameters.validate_params(parameters.coerce_to_schema(given, schema), schema)
