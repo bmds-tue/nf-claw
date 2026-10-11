@@ -73,8 +73,8 @@ def compare(original: Path, replay: Path) -> Comparison:
     for path in sorted(before.keys() & after.keys()):
         (identical if after.pop(path) == before.pop(path) else changed).append(path)
     return Comparison(
-        identical=sorted(identical),
-        changed=sorted(changed),
+        identical=identical,
+        changed=changed,
         missing=sorted(before),
         extra=sorted(after),
     )

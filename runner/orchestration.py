@@ -129,7 +129,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     raw_input = (None if "input" in deferred_params
                  else input_path if input_path is not None else file_params.get("input"))
     resolved_input = inputs.resolve(raw_input, st.path)
-    input_schema = None
     sheet_inputs = []
     if resolved_input is not None and resolved_input.local_path is not None:
         input_schema = (schema_mod.load_input_schema(st.path, resolved_input.samplesheet_schema)

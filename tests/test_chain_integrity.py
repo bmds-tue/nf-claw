@@ -375,7 +375,7 @@ def test_handoff_records_a_verified_external_reference(library, finished_run, tm
 
 
 def test_status_detects_a_changed_external_handoff_reference(
-        library, fake_runs, finished_run, tmp_path, monkeypatch):
+        library, fake_runs, tmp_path, monkeypatch):
     import hashlib
     reference = tmp_path / "external.gtf"
     reference.write_text("original annotation\n")
