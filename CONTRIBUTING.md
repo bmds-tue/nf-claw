@@ -160,7 +160,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 Before opening a PR:
 1. Ensure all tests pass: `make test`.
 2. Verify zero schema drift: `python3 -m librarian.check_drift`.
-3. Check code formatting: `ruff check runner librarian`.
+3. Check linting as CI does: `ruff check .`.
 4. If documentation or data files were modified, verify the static site build:
    ```bash
    npm --prefix website run typecheck
@@ -186,7 +186,7 @@ When submitting the PR on GitHub:
 ### Code Style & Linting
 We enforce Ruff configuration defined in `pyproject.toml`:
 ```bash
-ruff check runner librarian
+ruff check .
 ```
 Keep code clean, readable, and free of extraneous dependencies.
 
