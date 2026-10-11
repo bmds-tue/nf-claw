@@ -39,6 +39,21 @@ jobs:
       - run: npm audit --audit-level=low
       - run: npm run typecheck
       - run: npm run build
+      # The site's markdown parser reads every generated skill.md. Its tests need node and the
+      # site's own TypeScript, so they are skipped in the Python matrix and run here instead.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - name: Website parsing of the generated skills
+        working-directory: .
+        run: |
+          set -o pipefail
+          pip install -e ".[dev]"
+          pytest -q -rs tests/test_website_parsing.py | tee "$RUNNER_TEMP/website-parsing.log"
+          if grep -q "SKIPPED" "$RUNNER_TEMP/website-parsing.log"; then
+            echo "::error::website parsing tests were skipped instead of run"
+            exit 1
+          fi
 
   nextflow-integration:
     runs-on: ubuntu-latest
