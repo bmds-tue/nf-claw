@@ -717,8 +717,12 @@ def _assert_input_choices_documented(name, tree, skill):
               if isinstance(branch, dict) and branch.get("required")]
     section = skill.split("## Inputs\n", 1)[1].split("\n## ", 1)[0]
     assert ("mutually-exclusive column groups" in section) == bool(groups), name
-    for group in groups:
-        assert "- " + ", ".join(f"`{column}`" for column in group) in section, name
+    if groups:
+        block = section.split("mutually-exclusive column groups", 1)[1].split("\n", 1)[1]
+        lines = block.split("\n\n", 1)[0].splitlines()
+        documented = [tuple(re.findall(r"`([^`]+)`", line)) for line in lines
+                      if line.startswith("- ")]
+        assert sorted(documented) == sorted(tuple(group) for group in groups), name
 
 
 def test_generated_skills_surface_input_oneof_exclusivity():
@@ -752,6 +756,14 @@ def test_generated_input_choice_gate_tracks_a_release_schema_change(tmp_path):
     with pytest.raises(AssertionError):
         _assert_input_choices_documented("fixture", tree, legacy.replace(
             "- `sampleID`, `forwardReads`", "- `sampleID`"))
+    # Removing one alternative must reject its obsolete documentation even while another
+    # mutually exclusive group remains in the selected schema.
+    path.write_text(json.dumps({"items": {"properties": props, "oneOf": [
+        {"required": ["sample", "fastq_1"]}]}}))
+    with pytest.raises(AssertionError):
+        _assert_input_choices_documented("fixture", tree, legacy)
+    write_skill.generate("fixture", pipelines_dir=tree.parents[1])
+    _assert_input_choices_documented("fixture", tree, skill_path.read_text())
     # The next release removes the legacy fields and makes the standard ones required.
     path.write_text(json.dumps({"items": {"properties": {name: props[name]
         for name in ("sample", "fastq_1")}, "required": ["sample", "fastq_1"]}}))
