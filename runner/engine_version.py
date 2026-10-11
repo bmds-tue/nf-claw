@@ -17,18 +17,28 @@ _INSTALLED_RE = re.compile(r"version\s+(\d+(?:\.\d+)+)")
 _VERSION_LINE = re.compile(
     r"^nextflow[ \t]+version[ \t]+\d+(?:\.\d+)+(?:-[A-Za-z0-9.-]+)?"
     r"(?:[ \t]+build[ \t]+\d+)?[ \t\r]*$", re.MULTILINE | re.IGNORECASE)
+# What `nextflow -version` actually prints: its banner, whose second line is the version, e.g.
+#       N E X T F L O W
+#       version 26.04.3 build 12259
+_BANNER_VERSION = re.compile(
+    r"^[ \t]*N E X T F L O W[ \t\r]*\n[ \t]*version[ \t]+(\d+(?:\.\d+)+(?:-[A-Za-z0-9.-]+)?)"
+    r"[ \t]+build[ \t]+(\d+)[ \t\r]*$", re.MULTILINE)
 
 
 def version_text(result: subprocess.CompletedProcess[str]) -> str | None:
-    """Accept one unambiguous version line from a successful metadata probe.
+    """Accept one unambiguous engine version from a successful metadata probe, as
+    `nextflow version X build N` (or the `nextflow version …` line `nextflow -v` prints).
 
     Bootstrap diagnostics are not engine identity and can contain private URLs.
     Do not retain them in provenance or treat a failed probe as version evidence.
     """
     if result.returncode != 0:
         return None
-    lines = {match.group().strip() for output in (result.stdout, result.stderr)
-             for match in _VERSION_LINE.finditer(output or "")}
+    lines = set()
+    for output in (result.stdout, result.stderr):
+        lines.update(match.group().strip() for match in _VERSION_LINE.finditer(output or ""))
+        lines.update(f"nextflow version {m.group(1)} build {m.group(2)}"
+                     for m in _BANNER_VERSION.finditer(output or ""))
     return next(iter(lines)) if len(lines) == 1 else None
 
 

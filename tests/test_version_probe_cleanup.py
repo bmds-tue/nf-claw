@@ -126,3 +126,43 @@ def test_timed_out_chain_config_probe_stops_children_before_scratch_cleanup(
     finally:
         if child and _alive(child):
             os.kill(child, signal.SIGKILL)
+
+
+# Verbatim `nextflow -version` output of real launchers (25.10.4 on macOS, 26.04.3 on Linux) and
+# `nextflow -v`. The probe once accepted only a `nextflow version …` line that `-version` never
+# prints, so no real engine was ever identified.
+_BANNER_25 = ("\n      N E X T F L O W\n      version 25.10.4 build 11173\n"
+              "      created 11-03-2026 15:51 UTC \n      cite doi:10.1038/nbt.3820\n"
+              "      http://nextflow.io\n\n")
+_BANNER_26 = _BANNER_25.replace("25.10.4 build 11173", "26.04.3 build 12259")
+
+
+@pytest.mark.parametrize("output,expected", [
+    (_BANNER_25, "nextflow version 25.10.4 build 11173"),
+    (_BANNER_26, "nextflow version 26.04.3 build 12259"),
+    ("nextflow version 25.10.4.11173\n", "nextflow version 25.10.4.11173"),
+])
+def test_real_launcher_output_identifies_the_engine(monkeypatch, output, expected):
+    for module in (provenance, engine_version):
+        monkeypatch.setattr(module, "capture", lambda *a, **k: subprocess.CompletedProcess(
+            ["nextflow", "-version"], 0, output, ""))
+    assert provenance._nextflow_version() == expected
+    assert engine_version._installed_raw() == expected
+
+
+def test_banner_version_drives_the_engine_checks(monkeypatch):
+    monkeypatch.setattr(engine_version, "capture", lambda *a, **k: subprocess.CompletedProcess(
+        ["nextflow", "-version"], 0, _BANNER_26, ""))
+    assert engine_version.effective() == "26.04.3"
+    assert engine_version.supports_resource_limits(engine_version.effective())
+    old = _BANNER_25.replace("25.10.4 build 11173", "23.10.1 build 5891")
+    monkeypatch.setattr(engine_version, "capture", lambda *a, **k: subprocess.CompletedProcess(
+        ["nextflow", "-version"], 0, old, ""))
+    assert engine_version.effective() == "23.10.1"
+    assert not engine_version.supports_resource_limits("23.10.1")
+
+
+def test_banner_without_its_header_is_not_version_evidence(monkeypatch):
+    monkeypatch.setattr(provenance, "capture", lambda *a, **k: subprocess.CompletedProcess(
+        ["nextflow", "-version"], 0, "      version 25.10.4 build 11173\n", ""))
+    assert provenance._nextflow_version() == ""
