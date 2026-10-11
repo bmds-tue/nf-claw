@@ -242,7 +242,7 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 - **`drift-check.yml`** (PR, daily & manual): Re-audits the repository to guarantee zero schema drift between submodules, skills, references, manifests, and handoff rules.
 - **`demo-validation.yml`** (PR & manual): Executes the pinned demo on native Linux amd64, replays it into a fresh directory, and independently validates FastQC metrics, scientific replay, and static plot exports.
 - **`fastqrepair-validation.yml`** (PR & manual): Executes fastqrepair 1.1.1 with nfclaw's recorded runtime corrections on native Linux amd64 and checks gzip recovery and paired-read conservation against independent controls.
-- **`pipeline-execution.yml`** (PR & manual): Executes selected pinned pipelines on native Linux amd64 under bounded resources, exercising complete execution, replay, and structural/strict verification (`nfclaw verify`).
+- **`pipeline-execution.yml`** (PR & manual): Executes a selected pinned pipeline's bundled test on native Linux amd64 under bounded resources and its declared engine, checks the run status and the recorded engine identity, and retains the outputs and task scripts as evidence. It does not replay or verify the run; `demo-validation.yml` and `fastqrepair-validation.yml` do.
 
 Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).
 
