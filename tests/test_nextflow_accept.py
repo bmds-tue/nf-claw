@@ -14,27 +14,50 @@ def _executable(path, text):
     path.chmod(0o755)
 
 
-def _accept(tmp_path, log, exit_code, *, timeout_available=True):
+COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
+def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
+            engine_log="engine cause\n", second=None):
+    """Run the gate on one fake pipeline whose preview prints `log` and exits `exit_code`.
+    `second` is (log, exit_code) for a second launch, when the gate relaunches the preview."""
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)
     (up / "nextflow.config").write_text("manifest { nextflowVersion = '!>=25.10.4' }\n")
     fake = tmp_path / "bin"
     fake.mkdir()
-    _executable(fake / "git", "#!/bin/sh\n[ \"$1\" = submodule ] || exit 2\nexit 0\n")
+    _executable(fake / "git", '#!/bin/sh\ncase "$*" in\n  submodule*) exit 0 ;;\n'
+                f'  "-C pipelines/mini/upstream rev-parse HEAD") echo {COMMIT} ;;\n'
+                '  *) exit 2 ;;\nesac\n')
     _executable(fake / "timeout", '#!/bin/sh\n[ "$1" = --kill-after=10s ] || exit 2\n'
-                'shift\nshift\nexec "$@"\n')
+                'printf "%s\\n" "$2" >> "$FAKE_TIMEOUTS"\nshift\nshift\nexec "$@"\n')
     _executable(fake / "nextflow", '#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_NXF_ARGS"\n'
-                '[ "$1" = -log ] && printf "engine cause\\n" > "$2"\n'
+                'n=$(cat "$FAKE_NXF_COUNT" 2>/dev/null || echo 0); n=$((n + 1))\n'
+                'echo "$n" > "$FAKE_NXF_COUNT"\n'
+                '[ "$1" = -log ] && cat "$FAKE_ENGINE_LOG" > "$2"\n'
+                'if [ "$n" -gt 1 ] && [ -f "$FAKE_NXF_LOG2" ]; then\n'
+                '  cat "$FAKE_NXF_LOG2"; exit "$FAKE_NXF_EXIT2"\nfi\n'
                 'cat "$FAKE_NXF_LOG"\nexit "$FAKE_NXF_EXIT"\n')
     source_log = tmp_path / "nextflow-output.txt"
     source_log.write_text(log)
+    (tmp_path / "engine-output.txt").write_text(engine_log)
+    registry = tmp_path / "exceptions.tsv"
+    registry.write_text(exceptions)
     result = tmp_path / "verdict.tsv"
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
            "RUNNER_TEMP": str(tmp_path), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
            "NFCLAW_RESULT_FILE": str(result), "NFCLAW_KEEP_SUBMODULES": "1",
            "NFCLAW_LOG_DIR": str(tmp_path / "retained-logs"),
+           "NFCLAW_ACCEPT_EXCEPTIONS": str(registry), "NFCLAW_ACCEPT_RETRY_DELAY": "0",
            "FAKE_NXF_LOG": str(source_log), "FAKE_NXF_EXIT": str(exit_code),
+           "FAKE_NXF_LOG2": str(tmp_path / "second-output.txt"),
+           "FAKE_NXF_EXIT2": str(second[1] if second else 0),
+           "FAKE_ENGINE_LOG": str(tmp_path / "engine-output.txt"),
+           "FAKE_NXF_COUNT": str(tmp_path / "launches.txt"),
+           "FAKE_TIMEOUTS": str(tmp_path / "timeouts.txt"),
            "FAKE_NXF_ARGS": str(tmp_path / "nextflow-args.txt")}
+    if second:
+        (tmp_path / "second-output.txt").write_text(second[0])
     if not timeout_available:
         startup = tmp_path / "bash-startup"
         startup.write_text('command() {\ncase "$*" in\n'
@@ -108,6 +131,114 @@ def test_acceptance_uses_private_scratch_and_preserves_unrelated_temp_files(tmp_
     assert (result / "precious.txt").read_text() == "previous scientific result\n"
     assert not list(tmp_path.glob("nfclaw-accept.*"))
 
+
+
+HANG = "barrier arrives \\(monitor: local\\)"
+
+
+def _row(outcome, evidence, commit=COMMIT):
+    return f"# comment line\nmini\t{commit}\t{outcome}\t{evidence}\tdocumented upstream defect\n"
+
+
+def test_documented_preview_hang_of_the_exact_commit_is_known_not_accepted(tmp_path):
+    process, verdict = _accept(tmp_path, "* PREVIEW *\n", 124, exceptions=_row("timeout", HANG),
+                               engine_log="DEBUG <<< barrier arrives (monitor: local)\n")
+    assert process.returncode == 0, process.stdout
+    assert verdict == "mini\tknown-timeout\n"
+    # A documented hang is bounded more tightly: its evidence is written within seconds.
+    assert (tmp_path / "timeouts.txt").read_text() == "300\n"
+
+
+def test_exception_for_another_commit_does_not_apply(tmp_path):
+    process, verdict = _accept(tmp_path, "* PREVIEW *\n", 124,
+                               exceptions=_row("timeout", HANG, commit="f" * 40),
+                               engine_log="DEBUG <<< barrier arrives (monitor: local)\n")
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+    assert (tmp_path / "timeouts.txt").read_text() == "900\n"
+
+
+def test_exception_whose_evidence_no_longer_matches_is_rejected(tmp_path):
+    # Same exit status, but not the documented point of failure (the DAG was never built).
+    process, verdict = _accept(tmp_path, "* PREVIEW *\n", 124, exceptions=_row("timeout", HANG),
+                               engine_log="DEBUG still staging inputs\n")
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+    assert "without its documented evidence" in process.stdout
+
+
+def test_exception_with_a_different_failure_is_rejected(tmp_path):
+    process, verdict = _accept(tmp_path, "ERROR ~ Invalid sample metadata\n", 1,
+                               exceptions=_row("timeout", HANG),
+                               engine_log="DEBUG <<< barrier arrives (monitor: local)\n")
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+    assert "no longer fails as documented (timeout): observed rejected" in process.stdout
+
+
+def test_documented_rejection_requires_its_evidence(tmp_path):
+    row = _row("rejected", "Unable to read script: .*GRCm39\\.fa")
+    process, verdict = _accept(tmp_path, "ERROR ~ Unable to read script: 'x.nf' -- cause: "
+                               "/o/references/mm10/GRCm39.fa\n", 1, exceptions=row)
+    assert process.returncode == 0
+    assert verdict == "mini\tknown-rejected\n"
+
+
+def test_exception_with_empty_evidence_never_applies(tmp_path):
+    row = f"mini\t{COMMIT}\trejected\t\treason\n"
+    process, verdict = _accept(tmp_path, "ERROR ~ anything\n", 1, exceptions=row)
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+
+
+def test_documented_pipeline_that_now_passes_is_a_stale_exception(tmp_path):
+    process, verdict = _accept(tmp_path, "* PREVIEW *\n", 0, exceptions=_row("timeout", HANG))
+    assert process.returncode != 0
+    assert verdict == "mini\tstale-exception\n"
+
+
+def test_unreachable_remote_file_is_retried_once(tmp_path):
+    flaky = ("* --checkm_download_url (https://zenodo.org/x.tar.gz): the file or directory "
+             "'https://zenodo.org/x.tar.gz' does not exist\n")
+    process, verdict = _accept(tmp_path, flaky, 1, second=("* PREVIEW *\n", 0))
+    assert process.returncode == 0, process.stdout
+    assert verdict == "mini\taccepted\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+
+
+def test_persistently_unreachable_remote_file_is_staging_unverified(tmp_path):
+    flaky = "ERROR ~ No such file or directory: https://example.invalid/reads.fastq.gz\n"
+    process, verdict = _accept(tmp_path, flaky, 1, second=(flaky, 1))
+    assert process.returncode != 0
+    assert verdict == "mini\tstaging-unverified\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+
+
+def test_ordinary_failure_is_not_retried(tmp_path):
+    process, verdict = _accept(tmp_path, "ERROR ~ Invalid sample metadata\n", 1,
+                               second=("* PREVIEW *\n", 0))
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "1"
+
+
+def test_committed_exceptions_are_well_formed_and_documented():
+    registry = ROOT / "scripts" / "nextflow_accept_exceptions.tsv"
+    sources = {line.split("\t")[0] for line in
+               (ROOT / "sources.tsv").read_text().splitlines()[1:] if line.strip()}
+    known_issues = (ROOT / "docs" / "known-issues.md").read_text()
+    rows = [line for line in registry.read_text().splitlines()
+            if line.strip() and not line.startswith("#")]
+    assert rows
+    for line in rows:
+        fields = line.split("\t")
+        assert len(fields) == 5 and all(fields), line
+        name, commit, outcome, evidence, _ = fields
+        assert name in sources
+        assert re.fullmatch(r"[0-9a-f]{40}", commit)
+        assert outcome in {"rejected", "staging-unverified", "timeout"}
+        re.compile(evidence)
+        assert f"`{name}`" in known_issues, f"{name} needs its investigation in known-issues.md"
 
 def _discovery_step(tmp_path, verdict):
     raw = (ROOT / ".github" / "workflows" / "discover-pipelines.yml").read_text()
