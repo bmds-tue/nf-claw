@@ -62,11 +62,11 @@ def test_every_skill_run_block_yields_both_commands(markdown_js):
 
 def test_samplesheet_headers_are_read_as_generated(markdown_js):
     parsed = _parse(markdown_js, [ROOT / "pipelines" / "mhcquant" / "skill.md",
-                                  ROOT / "pipelines" / "ampliseq" / "skill.md"])
+                                  ROOT / "pipelines" / "createpanelrefs" / "skill.md"])
     sheets = {Path(f).parent.name: [b for b in p["inputs"] if b["lang"] in ("csv", "tsv")]
               for f, p in parsed.items()}
     # mhcquant takes a TSV: its header is TAB-separated, not comma-joined.
     assert [b["lang"] for b in sheets["mhcquant"]] == ["tsv"]
     assert "\t" in sheets["mhcquant"][0]["code"] and "," not in sheets["mhcquant"][0]["code"]
-    # ampliseq's column groups exclude each other: one header per group, never all columns at once.
-    assert [b["code"] for b in sheets["ampliseq"]] == ["sampleID,forwardReads", "sample,fastq_1"]
+    # createpanelrefs' column groups exclude each other: one header per group, never all at once.
+    assert [b["code"] for b in sheets["createpanelrefs"]] == ["sample,bam", "sample,cram"]
