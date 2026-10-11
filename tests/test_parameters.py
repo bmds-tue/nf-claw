@@ -363,3 +363,15 @@ def test_numbers_valid_under_json_schema_are_not_rejected(given, expected):
 def test_numbers_invalid_under_json_schema_are_still_rejected(given):
     schema = _numeric_schema()
     assert parameters.validate_params(parameters.coerce_to_schema(given, schema), schema)
+
+
+@pytest.mark.parametrize("parameter", ["input", "fasta", "database"])
+def test_explicit_remote_path_parameters_have_staged_name_guards(tmp_path, parameter):
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        parameter: {"type": "string", "format": "file-path"}}}))
+    ps = schema.load_param_schema(tmp_path)
+    issues = parameters.validate_params(
+        {parameter: "https://example.org/ref$(id).fa"}, ps)
+    assert any("unsafe remote input filename" in issue for issue in issues)
+    assert parameters.validate_params(
+        {parameter: "https://example.org/ref.fa?token=a+b/c=&signature=$signed"}, ps) == []

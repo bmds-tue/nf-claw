@@ -201,3 +201,15 @@ def test_auxiliary_conditional_schema_and_primary_only_legacy_convention(tmp_pat
     assert inputs.resolve("other.csv", repo, param_name="other_file").samplesheet_schema is None
     # The string filename "false" is not the primary --input false sentinel for another parameter.
     assert inputs.resolve("false", repo, param_name="other_file").value == str(tmp_path / "false")
+
+
+def test_conditional_remote_input_names_are_guarded_before_returning(tmp_path):
+    from runner.errors import NfclawError
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "if": {"pattern": "^PRIDE"},
+                  "else": {"format": "file-path"}}}}))
+    with pytest.raises(NfclawError, match="unsafe remote input filename"):
+        inputs.resolve("https://example.org/reads$(id).sdrf.tsv", tmp_path)
+    result = inputs.resolve("https://example.org/reads.sdrf.tsv?token=x&y=2", tmp_path)
+    assert result.value == "https://example.org/reads.sdrf.tsv?token=x&y=2"
+    assert result.local_path is None

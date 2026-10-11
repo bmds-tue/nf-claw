@@ -177,13 +177,63 @@ def test_optional_existing_source_with_broken_member_is_refused(
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
     monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("launched"))
-    # Explicit patterns now inspect staged filenames before the dependency snapshot.
-    # A broken member must remain fatal and must never reach pipeline execution.
-    reason = "cannot inspect local input filenames" if kind == "glob" else "cannot snapshot local run dependencies"
-    with pytest.raises(NfclawError, match=reason):
+    # Directory inputs and patterns inspect staged entries before the dependency snapshot.
+    # Broken members must remain fatal and never reach pipeline execution.
+    with pytest.raises(NfclawError, match="cannot inspect local input filenames") as exc:
         orchestration.run_pipeline(
             "mini", repo_root=root, input_path=None, outdir=tmp_path / "results",
             profile="docker", params_file=None, cli_overrides={"reference_cache": str(value)},
             resume=False, demo=True, check_only=False, write_provenance=True, timeout_seconds=None)
-    if kind == "glob":
-        assert not (tmp_path / "results").exists()
+    assert exc.value.code == ErrorCode.PARAMS_INVALID
+    assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("check_only", [True, False])
+def test_unsafe_remote_input_is_refused_before_environment_probe_or_launch(
+        library, tmp_path, monkeypatch, check_only):
+    root = library("mini")
+    outdir = tmp_path / "results"
+
+    def must_not_reach(*args, **kwargs):
+        pytest.fail("unsafe input reached environment probing or task execution")
+
+    monkeypatch.setattr(orchestration.preflight, "check_environment", must_not_reach)
+    monkeypatch.setattr(orchestration.execution, "run", must_not_reach)
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path="https://example.org/reads$(id).csv",
+            outdir=outdir, profile="docker", params_file=None, cli_overrides={},
+            resume=False, demo=False, check_only=check_only, write_provenance=True,
+            timeout_seconds=None)
+    assert exc.value.code == ErrorCode.PARAMS_INVALID
+    assert "unsafe remote input filename" in str(exc.value)
+    assert not outdir.exists()
+
+
+@pytest.mark.parametrize("check_only", [True, False])
+def test_unsafe_directory_child_is_refused_before_probing_or_execution(
+        library, tmp_path, monkeypatch, check_only):
+    root = library("mini")
+    tree = root / "pipelines/mini/upstream"
+    (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "directory-path"},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    source = tmp_path / "data"
+    source.mkdir()
+    (source / "unsafe$(id)").mkdir()
+    outdir = tmp_path / "results"
+
+    def must_not_reach(*args, **kwargs):
+        pytest.fail("unsafe directory entry reached environment probing or task execution")
+
+    monkeypatch.setattr(orchestration.preflight, "check_environment", must_not_reach)
+    monkeypatch.setattr(orchestration.execution, "run", must_not_reach)
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=source, outdir=outdir,
+            profile="docker", params_file=None, cli_overrides={}, resume=False,
+            demo=False, check_only=check_only, write_provenance=True,
+            timeout_seconds=None)
+    assert exc.value.code == ErrorCode.PARAMS_INVALID
+    assert "unsafe local input filename" in str(exc.value)
+    assert not outdir.exists()

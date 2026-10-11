@@ -21,10 +21,14 @@ def test_directory_reference_handoff_requires_historical_inventory(
     index = reference / "index.bin"
     index.write_bytes(b"original")
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
+    if change == "unrecorded":
+        (up / "provenance/inputs.sha256").write_text("")
+        (up / "provenance/inputs.inventory.json").write_text("{}")
     if change != "unrecorded":
-        snapshot = provenance.hash_inputs([reference])
+        snapshot, inventory = provenance.snapshot_inputs([reference])
         (up / "provenance/inputs.sha256").write_text("".join(
             f"{digest}  {path}\n" for path, digest in snapshot.items()))
+        (up / "provenance/inputs.inventory.json").write_text(json.dumps(inventory))
     if change == "bytes":
         index.write_bytes(b"different")
     elif change == "extra":
@@ -144,9 +148,10 @@ def test_unchanged_reference_directory_has_complete_handoff_lineage(
     if not internal:
         reference.mkdir()
         (reference / "index.bin").write_bytes(b"original")
-        hashes = provenance.hash_inputs([reference])
+        hashes, inventory = provenance.snapshot_inputs([reference])
         (up / "provenance/inputs.sha256").write_text("".join(
             f"{digest}  {path}\n" for path, digest in hashes.items()))
+        (up / "provenance/inputs.inventory.json").write_text(json.dumps(inventory))
     (up / "provenance/params.json").write_text(json.dumps({"gtf": str(reference)}))
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf"}}})
     result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")

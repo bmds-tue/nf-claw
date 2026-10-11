@@ -1,8 +1,9 @@
 import hashlib
+import json
 
 import pytest
 
-from runner import verify
+from runner import outputs, verify
 from runner.errors import NfclawError
 
 
@@ -17,6 +18,8 @@ def _bundle(root, name, entries):
         result.write_text(content)
         lines.append(f"{hashlib.sha256(content.encode()).hexdigest()}  {path}\n")
     (out / "provenance" / "outputs.sha256").write_text("".join(lines))
+    (out / "provenance/outputs.inventory.json").write_text(json.dumps(
+        {"version": 1, "entries": outputs.snapshot(out)[1]}))
     return out
 
 
@@ -70,6 +73,8 @@ def test_the_replay_side_needs_no_bundle_of_its_own(tmp_path):
     (orig / "results.txt").write_text("same bytes")
     (orig / "provenance" / "outputs.sha256").write_text(
         __import__("hashlib").sha256(b"same bytes").hexdigest() + "  results.txt\n")
+    (orig / "provenance/outputs.inventory.json").write_text(json.dumps(
+        {"version": 1, "entries": outputs.snapshot(orig)[1]}))
     replay = tmp_path / "replay"                       # a plain results directory
     replay.mkdir()
     (replay / "results.txt").write_text("same bytes")

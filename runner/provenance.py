@@ -13,11 +13,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runner.outputs import result_files
+from runner import outputs
 from runner.engine_version import version_text
 from runner.probes import capture
 from runner.replay_guard import (MissingInputSource as MissingInputSource,
-                                 hash_inputs, hash_pipeline as hash_pipeline,
+                                 hash_inputs as hash_inputs, hash_pipeline as hash_pipeline,
                                  input_files as input_files,
+                                 snapshot_inputs as snapshot_inputs,
+                                 read_input_inventory as read_input_inventory,
                                  read_checksums as read_checksums)
 from runner.samplesheet import delimiter_for, serialized_rows
 from runner.schema import InputSchema, PATH_FORMATS
@@ -206,8 +209,10 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           env_extra: dict[str, str] | None = None,
           outcome: str = "success", chain: dict | None = None,
           input_checksums: dict[str, str] | None = None,
+          input_inventory: dict[str, dict[str, str]] | None = None,
           config_paths: tuple[Path, ...] = (),
           config_checksums: dict[str, str] | None = None,
+          config_inventory: dict[str, dict[str, str]] | None = None,
           pipeline_checksums: dict[str, str] | None = None,
           unverified_local_paths: dict[str, str] | None = None,
           nextflow_version: str | None = None) -> Path:
@@ -232,6 +237,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "nextflow_env": recorded_env,
         "redacted_nextflow_env": redacted_env,
         "os": platform.platform(),
+        "dependency_inventory_version": 1,
+        "provenance_real_path": str(prov.resolve()),
     }
     concrete_pin = (isinstance(nxf_env.get("NXF_VER"), str) and re.fullmatch(
         r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", nxf_env["NXF_VER"]))
@@ -258,21 +265,37 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     if params.is_file():
         config_paths = tuple(dict.fromkeys((*config_paths, params)))
         if config_checksums is not None and str(params.absolute()) not in config_checksums:
-            config_checksums = {**config_checksums, str(params.absolute()): _sha256(params)}
+            params_checksums, params_inventory = snapshot_inputs([params])
+            config_checksums = {**config_checksums, **params_checksums}
+            if config_inventory is not None:
+                config_inventory = {**config_inventory, **params_inventory}
     snapshots = {
-        "inputs": (input_paths, input_checksums),
-        "configs": (list(config_paths), config_checksums),
+        "inputs": (input_paths, input_checksums, input_inventory),
+        "configs": (list(config_paths), config_checksums, config_inventory),
     }
-    for kind, (paths, snapshot) in snapshots.items():
-        hashes = hash_inputs(paths) if snapshot is None else snapshot
+    for kind, (paths, snapshot, inventory) in snapshots.items():
+        if snapshot is None:
+            if inventory is not None:
+                raise ValueError(f"{kind} inventory requires its prelaunch file checksums")
+            hashes, inventory = snapshot_inputs(paths)
+        else:
+            hashes = snapshot
+            if inventory is None:
+                inventory = {}
+                if paths:
+                    manifest.setdefault("unverified_dependency_inventories", []).append(kind)
         lines = [f"{digest}  {path}" for path, digest in sorted(hashes.items())]
         _atomic_text(prov / f"{kind}.sha256", "\n".join(lines) + ("\n" if lines else ""))
         _atomic_text(prov / f"{kind}.sources.json", json.dumps(
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
+        _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     _atomic_bytes(prov / "replay_guard.py", Path(__file__).with_name("replay_guard.py").read_bytes())
 
-    out_lines = [f"{digest}  {rel}" for rel, digest in output_checksums(outdir).items()]
+    output_hashes, output_inventory, _ = outputs.snapshot(outdir, _sha256)
+    out_lines = [f"{digest}  {rel}" for rel, digest in output_hashes.items()]
     _atomic_text(prov / "outputs.sha256", "\n".join(out_lines) + ("\n" if out_lines else ""))
+    _atomic_text(prov / "outputs.inventory.json", json.dumps(
+        {"version": 1, "entries": output_inventory}, indent=2, sort_keys=True) + "\n")
 
     # Copy the run's collated software-versions YAML into the bundle. nf-core publishes it under two
     # names across template generations: the older `software_versions.yml` and the newer

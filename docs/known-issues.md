@@ -124,6 +124,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 
+### Directory-consuming tasks are incorrectly cached after `--resume`
+- **Status: Fixed for explicitly declared local input directories.** Nextflow 25.10.4 and 26.04.0 can reuse a cached directory-consuming task after an empty directory is renamed while the root size and timestamp remain unchanged. File checksums cannot detect the rename.
+- **Behavior:** nfclaw records the full directory namespace before launch. An unchanged namespace preserves normal resume caching; a changed or unavailable previous inventory preserves the previous run in a sibling `<outdir>.previous-<id>` archive, starts a fresh cache session, and recomputes all tasks. This avoids stale publications and fixed report filename conflicts; prior logs are retained and copied forward. Active engine database locks and dependencies overlapping the run directory block archiving. This also applies when the new launch disables provenance. Remote and indirectly configured directory inputs are outside this preflight's scope.
+- **Validation:** Real tasks enumerated `sample_A` before the change and `sample_B` after resume on both engines, with the root timestamp restored. Unchanged resumes reused the cached task. Sample-specific output files proved that old publications stayed in the archive, while a fixed trace filename was successfully regenerated. Standalone replay refused the changed inventory before launching Nextflow.
+
 ### `--resume` fails with "Unable to acquire lock on session …"
 - **Symptom:** After a run was interrupted (killed/timed out), re-running with `--resume` fails to acquire the session lock.
 - **Why:** A hard kill leaves Nextflow's session lock behind; Nextflow refuses to resume because it cannot determine whether the lock is stale or held by a live process.
@@ -163,7 +168,7 @@ nfclaw verify results.replay --against results
 ```
 It hashes the replay's live files and compares them with the original recorded checksums
 **by path**, reporting `identical` / `changed` / `missing` / `extra`. Missing or extra
-files fail the structural check; add `--strict` to fail on any changed bytes as well.
+files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
@@ -197,7 +202,7 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 
 ### Replay dependency guard failures (`provenance/replay_guard.py`)
 - **Symptom:** Running `<outdir>/provenance/commands.sh` aborts with `nfclaw replay: dependency check failed: ...` before Nextflow is launched.
-- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests.
+- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests. New bundles also check directory namespaces, empty directories, entry types and symlink identities against `inputs.inventory.json` and `configs.inventory.json`. A checksum-only prelaunch snapshot cannot certify the original directory namespace and is refused.
 - **Fix:** Restore the original input files or external configs to match the recorded checksums in `<outdir>/provenance/inputs.sha256` and `configs.sha256`. If intentional changes were made, launch a new run into a new `--outdir` instead of replaying.
 
 ### Replay refuses an unobserved engine or malformed environment names
@@ -210,6 +215,33 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
   from the pinned pipeline's documented engine requirement. Do not guess which
   engine an earlier unobserved run used. Private URI credentials are omitted from
   exported replay values; supply any needed credentials through your environment.
+
+---
+
+### An explicit remote input has an unsafe staged filename
+
+Nextflow can retain literal shell characters in a remote basename. A task deriving a
+prefix from that name can interpolate shell syntax even when its input path object is
+escaped. For example, a local HTTP fixture named `reads$(id).txt` produced
+`printf '%s\n' reads$(id) > name.txt` on Nextflow 25.10.4 and executed command
+substitution. nfclaw now refuses explicit unsafe remote names in path parameters and
+CSV/TSV or flat JSON/YAML path fields before launching. Use a safely named remote
+object or download the data into a safely named local file; sample identities are
+preserved.
+
+Percent escapes remain literal in the staged name and are not decoded by this guard.
+HTTP query suffixes are excluded from the filename check so signed URLs remain
+usable. A standalone HTTP fragment remains in the staged name and is checked. S3
+paths retain both query and fragment characters in their object keys.
+The local HTTP integration oracle checks actual staged names and bytes on Nextflow
+25.10.4 and 26.04.0 without interpolating their names into executable script text.
+Local directory inputs and directory glob matches are inspected recursively, including
+empty subdirectories and resolved symlink target names. Broken members, unreadable
+subtrees and directory cycles are refused before launch. Parent names outside the
+explicit directory are not staged names and retain their separate path contract.
+
+Remote file contents, remote glob matches and values supplied only by configs/profiles
+are outside this explicit-value preflight.
 
 ---
 
@@ -330,3 +362,9 @@ When a stage specifies `demo: true`, it executes with its bundled test profile d
 - **`detaxizer`:** The test profile filters reads with an empty database, removing all reads and leaving empty FastQ files. For downstream chaining, provide active classification parameters: `"params": {"classification_kraken2": false, "classification_bbduk": true, "fasta_bbduk": "<host fasta>"}`.
 - **`demultiplex`:** Test data consists of human amplicon reads. Downstream stages requiring reference genomes need human references (`fasta`/`gtf`), and paired-end profiles: `"profile": "test_pe,docker"`.
 - **`taxprofiler`:** Test profiling on unrecognized reads fails in unhandled zero-hit modules; enable only resilient profilers (`run_kraken2`, `run_kaiju`) with `"run_profile_standardisation": false`.
+
+### File-only inventories missed empty directories and changed aliases
+- **Status: Fixed for new recorded namespaces.** Output verification previously accepted two trees with identical files but different empty-directory names. Reference handoffs could also accept changed directory shapes or retargeted aliases whose file bytes remained identical.
+- **Behavior:** New bundles record `outputs.inventory.json`. Verification reports missing/extra directories and changed link identities alongside file differences. Old file-only manifests provide byte comparisons, but historical directory agreement remains unverified and cannot return a successful structural check. Live trees without historical manifests remain comparable.
+- **Handoffs:** Published output namespaces and local reference namespaces are verified before the next stage starts. Chain status checks source namespaces and the downstream prelaunch snapshot. Complete run-directory handoffs retain all entries and record execution metadata at the boundary separately from historically published results.
+- **Validation:** Real producer and consumer tasks exercised external references, published directories and complete run directories. Renaming an empty sample directory while retaining reference bytes blocked the consumer; restoring the original namespace allowed resume, and subsequent changes broke lineage. These execution and conservation checks do not establish biological accuracy.

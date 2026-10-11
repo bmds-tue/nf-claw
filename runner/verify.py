@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import provenance
+from runner import outputs, provenance
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -15,19 +15,24 @@ class Comparison:
     changed: list[str] = field(default_factory=list)     # same path, different bytes
     missing: list[str] = field(default_factory=list)     # in the original, absent from the replay
     extra: list[str] = field(default_factory=list)       # in the replay, absent from the original
+    missing_directories: list[str] = field(default_factory=list)
+    extra_directories: list[str] = field(default_factory=list)
+    changed_links: list[str] = field(default_factory=list)
+    unverified_structure: bool = False
 
     @property
     def structurally_equal(self) -> bool:
         """The replay has the same file identities and multiplicities, regardless of contents."""
-        return not self.missing and not self.extra
+        return not (self.missing or self.extra or self.missing_directories
+                    or self.extra_directories or self.unverified_structure)
 
     @property
     def byte_identical(self) -> bool:
         """Every paired file has the same bytes and no file is missing or extra."""
-        return self.structurally_equal and not self.changed
+        return self.structurally_equal and not self.changed and not self.changed_links
 
 
-def _read(outdir: Path, *, recorded: bool) -> dict[str, str]:
+def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, dict] | None]:
     """What a run directory produced, as {relative path: hash}.
 
     The original's recorded snapshot is the reference. The replay is always measured live, even
@@ -36,18 +41,23 @@ def _read(outdir: Path, *, recorded: bool) -> dict[str, str]:
     """
     checksums = outdir / "provenance" / "outputs.sha256"
     try:
-        if recorded and checksums.exists():
-            return provenance.read_checksums(checksums)
+        if recorded and (checksums.exists() or checksums.is_symlink()):
+            hashes = provenance.read_checksums(checksums)
+            index = outdir / "provenance/outputs.inventory.json"
+            inventory = (outputs.read_inventory(index, hashes)
+                         if index.exists() or index.is_symlink() else None)
+            return hashes, inventory
         if not outdir.is_dir():
             raise NfclawError(
                 ErrorCode.ENVIRONMENT, f"not a run directory: {outdir}",
                 fix="Pass the --outdir of a run (the replay's target, and the original it "
                     "reproduces).")
-        return provenance.output_checksums(outdir)
+        hashes, inventory, _ = outputs.snapshot(outdir, provenance._sha256)
+        return hashes, inventory
     except ValueError as exc:
         raise NfclawError(
-            ErrorCode.ENVIRONMENT, f"cannot read checksum manifest {checksums}: {exc}",
-            fix="Restore a valid outputs.sha256 from the original run; do not discard records.") from exc
+            ErrorCode.ENVIRONMENT, f"cannot read the recorded output manifests in {outdir}: {exc}",
+            fix="Restore valid output checksums and namespace records; do not discard records.") from exc
     except OSError as exc:
         where = getattr(exc, "filename", None) or checksums
         reason = getattr(exc, "strerror", None) or exc
@@ -65,8 +75,17 @@ def compare(original: Path, replay: Path) -> Comparison:
     separates the two questions that matter: did the replay produce the same *files* (structural),
     and did any of them come out different (content).
     """
-    before = _read(original, recorded=True)
-    after = _read(replay, recorded=False)
+    before, original_inventory = _read(original, recorded=True)
+    after, replay_inventory = _read(replay, recorded=False)
+    before_dirs = ({name for name, entry in original_inventory.items() if entry["type"] == "directory"}
+                   if original_inventory is not None else set())
+    after_dirs = {name for name, entry in replay_inventory.items() if entry["type"] == "directory"}
+    changed_links = []
+    if original_inventory is not None:
+        for name in original_inventory.keys() & replay_inventory.keys():
+            a, b = original_inventory[name], replay_inventory[name]
+            if any(a.get(key) != b.get(key) for key in ("link_target", "resolved_path")):
+                changed_links.append(name)
     identical, changed = [], []
     # File paths are part of the inventory. Metadata renames are reported for explicit
     # classification, never silently equated with an identical directory structure.
@@ -77,6 +96,10 @@ def compare(original: Path, replay: Path) -> Comparison:
         changed=changed,
         missing=sorted(before),
         extra=sorted(after),
+        missing_directories=sorted(before_dirs - after_dirs),
+        extra_directories=sorted(after_dirs - before_dirs) if original_inventory is not None else [],
+        changed_links=sorted(changed_links),
+        unverified_structure=original_inventory is None,
     )
 
 
@@ -86,22 +109,33 @@ def report(cmp: Comparison) -> str:
         f"changed   : {len(cmp.changed)}   (same file, different bytes)",
         f"missing   : {len(cmp.missing)}   (in the original, not in the replay)",
         f"extra     : {len(cmp.extra)}   (in the replay, not in the original)",
+        f"missing directories : {len(cmp.missing_directories)}",
+        f"extra directories   : {len(cmp.extra_directories)}",
+        f"changed links       : {len(cmp.changed_links)}   (target identities differ)",
         "",
     ]
-    if cmp.structurally_equal:
-        lines.append("The replay produced the same set of files as the original run.")
-        if cmp.changed:
+    if cmp.unverified_structure:
+        lines.append("The original has file checksums but no recorded output namespace. "
+                     "The file comparison is shown, but directory agreement is unverified. "
+                     "Start a fresh run to record its complete output namespace.")
+    elif cmp.structurally_equal:
+        lines.append("The replay produced the same set of files and directories as the original run.")
+        if cmp.changed or cmp.changed_links:
             lines.append(
                 "Changed bytes may reflect timestamps or metadata, but may also reflect different "
-                "scientific results. File structure alone does not establish scientific agreement; "
+                "scientific results. Link identities can differ with task work directories. "
+                "File structure alone does not establish scientific agreement; "
                 "inspect the changed results or use a format-aware comparison.")
         else:
-            lines.append("All compared files are byte-identical. This establishes output agreement, "
+            lines.append("All compared files are byte-identical and recorded link identities match. "
+                         "This establishes output agreement, "
                          "not the biological accuracy of either run.")
     else:
-        lines.append("The replay did NOT produce the same set of files. Check whether the runs "
+        lines.append("The replay did NOT produce the same set of files and directories. Check whether the runs "
                      "completed and used the same inputs and settings.")
-    for label, paths in (("missing", cmp.missing), ("extra", cmp.extra), ("changed", cmp.changed)):
+    for label, paths in (("missing", cmp.missing), ("extra", cmp.extra), ("changed", cmp.changed),
+                         ("missing directories", cmp.missing_directories),
+                         ("extra directories", cmp.extra_directories), ("changed links", cmp.changed_links)):
         if paths:
             lines.append("")
             lines.append(f"{label}:")
