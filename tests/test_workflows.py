@@ -1,6 +1,7 @@
 """Guards on the automation: the workflows hold write tokens and run third-party pipeline code."""
 import os
 import re
+import shlex
 import subprocess
 import pytest
 from pathlib import Path
@@ -42,6 +43,19 @@ def test_jobs_that_run_upstream_code_do_not_keep_a_write_token():
     for name in ("auto-update.yml", "discover-pipelines.yml"):
         text = _text(name)
         assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false"), name
+
+
+@pytest.mark.parametrize("name", ["auto-update.yml", "discover-pipelines.yml"])
+def test_write_capable_test_gates_install_yaml_before_running_the_suite(name):
+    text = _text(name)
+    # PyYAML is optional for the CLI, but required by the full automation gate. The scheduled
+    # update failed on valid merge overrides and recursive-alias controls without this extra.
+    install = re.search(r"- run: (pip install .*)", text)
+    assert install and install.start() < text.index("pytest -q"), name
+    args = shlex.split(install.group(1))
+    editable = args[args.index("-e") + 1]
+    assert editable.startswith(".[") and editable.endswith("]"), name
+    assert {"dev", "yaml"} <= set(editable[2:-1].split(",")), name
 
 
 def test_pages_and_oidc_permissions_are_scoped_to_the_deploy_job():

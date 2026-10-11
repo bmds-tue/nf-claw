@@ -5,6 +5,7 @@ The surfacing pass guarantees every fact the loader captures is rendered downstr
 `Column.fmt` symmetric with `Param.fmt` (both carry file-path/directory-path), so a
 samplesheet directory column is no longer silently flattened to a plain string.
 """
+import json
 import os
 import re
 import shutil
@@ -705,14 +706,59 @@ def test_known_issues_documents_coproid_genome_sheet_and_required_dbs():
     assert "--kraken2_db" in KNOWN_ISSUES
 
 
+def _assert_input_choices_documented(name, tree, skill):
+    from runner import inputs
+
+    # Read the selected release's raw schema independently of the column-group loader.
+    # A release may add or remove groups (ampliseq 3.0.0 removed its legacy input format).
+    ref = inputs.samplesheet_schema(tree)
+    data = json.loads((tree / ref).read_text()) if ref else {}
+    groups = [branch["required"] for branch in data.get("items", {}).get("oneOf", [])
+              if isinstance(branch, dict) and branch.get("required")]
+    section = skill.split("## Inputs\n", 1)[1].split("\n## ", 1)[0]
+    assert ("mutually-exclusive column groups" in section) == bool(groups), name
+    for group in groups:
+        assert "- " + ", ".join(f"`{column}`" for column in group) in section, name
+
+
 def test_generated_skills_surface_input_oneof_exclusivity():
-    # Regression guard: the committed skill.md for every pipeline whose --input schema has
-    # mutually-exclusive column groups must surface the choice (not flatten it into one table).
-    for name in ("createpanelrefs", "ampliseq", "drop"):
-        skill = (REPO / "pipelines" / name / "skill.md").read_text(encoding="utf-8")
-        assert "mutually-exclusive column groups" in skill, name
-    amp = (REPO / "pipelines" / "ampliseq" / "skill.md").read_text(encoding="utf-8")
-    assert "sampleID,forwardReads" in amp and "sample,fastq_1" in amp   # legacy vs standardized
+    checked = 0
+    for pipeline in sorted((REPO / "pipelines").iterdir()):
+        tree = pipeline / "upstream"
+        if not (tree / "nextflow_schema.json").is_file():
+            continue
+        _assert_input_choices_documented(pipeline.name, tree,
+                                        (pipeline / "skill.md").read_text())
+        checked += 1
+    if not checked:
+        pytest.skip("requires initialized pipeline schemas; the drift job initializes all of them")
+
+
+def test_generated_input_choice_gate_tracks_a_release_schema_change(tmp_path):
+    tree = tmp_path / "pipelines" / "fixture" / "upstream"
+    tree.mkdir(parents=True)
+    (tree / "assets").mkdir()
+    (tree / "main.nf").write_text("workflow {}\n")
+    (tree / "nextflow.config").write_text("manifest.name = 'nf-core/fixture'\n")
+    (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "schema": "assets/schema_input.json"}}}))
+    path = tree / "assets/schema_input.json"
+    props = {name: {"type": "string"} for name in ("sampleID", "forwardReads", "sample", "fastq_1")}
+    path.write_text(json.dumps({"items": {"properties": props, "oneOf": [
+        {"required": ["sampleID", "forwardReads"]}, {"required": ["sample", "fastq_1"]}]}}))
+    skill_path, _ = write_skill.generate("fixture", pipelines_dir=tree.parents[1])
+    legacy = skill_path.read_text()
+    _assert_input_choices_documented("fixture", tree, legacy)
+    with pytest.raises(AssertionError):
+        _assert_input_choices_documented("fixture", tree, legacy.replace(
+            "- `sampleID`, `forwardReads`", "- `sampleID`"))
+    # The next release removes the legacy fields and makes the standard ones required.
+    path.write_text(json.dumps({"items": {"properties": {name: props[name]
+        for name in ("sample", "fastq_1")}, "required": ["sample", "fastq_1"]}}))
+    with pytest.raises(AssertionError):
+        _assert_input_choices_documented("fixture", tree, legacy)
+    write_skill.generate("fixture", pipelines_dir=tree.parents[1])
+    _assert_input_choices_documented("fixture", tree, skill_path.read_text())
 
 
 def test_drugresponseeval_skill_has_no_input_flag():
