@@ -14,6 +14,79 @@ from runner import chain, orchestration, resources, runlog, verify
 
 
 @pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_staged_file_alias_names_survive_run_replay_and_reference_handoff(tmp_path, engine):
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True, "pattern": r"\.csv$"},
+        "reference": {"type": "string", "format": "file-path", "exists": True, "pattern": r"\.csv$"},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (upstream / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (upstream / "main.nf").write_text('''process OBSERVE {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ output:
+ path 'observed.txt'
+ script:
+ """
+ printf '%s\\n' ${data.name} > observed.txt
+ shasum -a 256 ${data} >> observed.txt
+ """
+}
+workflow { OBSERVE(Channel.fromPath(params.input)) }
+''')
+    target = tmp_path / "stored.data"
+    target.write_bytes(b"sample,count\nS,17\n")
+    primary, reference = tmp_path / "samples.csv", tmp_path / "reference.csv"
+    primary.symlink_to("stored.data")
+    reference.symlink_to("stored.data")
+    options = dict(repo_root=root, profile="standard", params_file=None,
+                   cli_overrides={"reference": str(reference)}, resume=False, demo=False,
+                   check_only=False, write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    out = tmp_path / "run"
+    orchestration.run_pipeline("fixture", input_path=primary, outdir=out, **options)
+    digest = hashlib.sha256(b"sample,count\nS,17\n").hexdigest()
+    assert (out / "observed.txt").read_text() == f"samples.csv\n{digest}  samples.csv\n"
+    recorded = json.loads((out / "provenance/params.json").read_text())
+    assert recorded["input"] == str(primary) and recorded["reference"] == str(reference)
+    nodes = json.loads((out / "provenance/inputs.inventory.json").read_text())
+    assert nodes[str(primary)]["link_target"] == "stored.data"
+    assert nodes[str(reference)]["link_target"] == "stored.data"
+    replay = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(tmp_path / "replay")],
+                            capture_output=True, text=True, timeout=90)
+    assert replay.returncode == 0, replay.stdout + replay.stderr
+    assert verify.compare(out, tmp_path / "replay").byte_identical
+    spec = chain.parse_spec({"profile": "standard", "nxf_ver": engine, "stages": [
+        {"pipeline": "fixture", "input": str(primary), "params": {"reference": str(reference)}},
+        {"pipeline": "fixture", "id": "consumer", "handoff": {"params": {
+            "input": {"upstream_param": "reference"}}}}]})
+    chained = tmp_path / "chain"
+    result = chain.run_chain(spec, repo_root=root, outdir=chained, timeout_seconds=120)
+    assert result.outcome == "success"
+    assert (chained / "02-consumer/observed.txt").read_text() == f"reference.csv\n{digest}  reference.csv\n"
+    state, problems = chain.status(chained)
+    assert problems == [] and chain.status_exit_code(state, problems) == 0
+    # Identical data cannot hide a retargeted alias from the stored dependency identity.
+    second = tmp_path / "second.data"
+    second.write_bytes(target.read_bytes())
+    reference.unlink()
+    reference.symlink_to("second.data")
+    refused = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(tmp_path / "refused")],
+                             capture_output=True, text=True, timeout=15)
+    assert refused.returncode != 0 and "dependency check failed" in refused.stderr
+    assert not (tmp_path / "refused/observed.txt").exists()
+    assert not (tmp_path / "refused/.nextflow").exists()
+    assert list((tmp_path / "refused").iterdir()) == []
+    state, problems = chain.status(chained)
+    assert problems and chain.status_exit_code(state, problems) == 1
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 def test_real_run_relocated_replay_and_mutated_input_guard(tmp_path, tmp_path_factory):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
@@ -358,7 +431,7 @@ workflow { WAIT() }
 
 
 @pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
-@pytest.mark.parametrize("source", ["external", "published", "bundle"])
+@pytest.mark.parametrize("source", ["external", "external_alias", "published", "bundle"])
 def test_real_chain_refuses_changed_reference_namespace_and_resumes_after_restoration(tmp_path, monkeypatch, source):
     from runner.errors import ErrorCode, NfclawError
     root = tmp_path / "library"
@@ -402,8 +475,12 @@ workflow { CONSUME(file(params.input)) }
     rule = root / "handoffs/producer/consumer.json"
     rule.parent.mkdir(parents=True)
     rule.write_text(json.dumps({"params": {"input": {"upstream_param":
-        {"external": "input", "published": "reference_out", "bundle": "outdir"}[source]}}}))
+        {"external": "input", "external_alias": "input", "published": "reference_out", "bundle": "outdir"}[source]}}}))
     reference = tmp_path / "reference"
+    if source == "external_alias":
+        target = tmp_path / "stored_reference"
+        target.mkdir()
+        reference.symlink_to("stored_reference", target_is_directory=True)
     (reference / "sample_A").mkdir(parents=True)
     (reference / "index.bin").write_bytes(b"unchanged reference bytes")
     spec = chain.parse_spec({"profile": "standard", "nxf_ver": "25.10.4", "stages": [
@@ -417,7 +494,7 @@ workflow { CONSUME(file(params.input)) }
         if not options["check_only"]:
             launches.append(name)
             if name == "producer":
-                affected = reference if source == "external" else options["outdir"] / "reference"
+                affected = reference if source.startswith("external") else options["outdir"] / "reference"
                 (affected / "sample_A").rename(affected / "sample_B")
         return result
 
@@ -429,14 +506,19 @@ workflow { CONSUME(file(params.input)) }
     assert "reference" in str(error.value) or "namespace" in str(error.value)
     assert launches == ["producer"]
     assert not (out / "02-consumer/namespace.txt").exists()
-    affected = reference if source == "external" else out / "01-producer/reference"
-    assert (out / "01-producer/reference" / ("sample_A" if source == "external" else "sample_B")).is_dir()
+    affected = reference if source.startswith("external") else out / "01-producer/reference"
+    assert (out / "01-producer/reference" / ("sample_A" if source.startswith("external") else "sample_B")).is_dir()
     assert (out / "01-producer/reference/index.bin").read_bytes() == b"unchanged reference bytes"
     (affected / "sample_B").rename(affected / "sample_A")
     result = chain.run_chain(None, repo_root=root, outdir=out, resume=True, timeout_seconds=90)
     assert result.outcome == "success" and launches == ["producer", "consumer"]
     expected = ".nextflow\nprovenance\nreference\n" if source == "bundle" else "sample_A\n"
     assert (out / "02-consumer/namespace.txt").read_text() == expected
+    if source == "external_alias":
+        params = json.loads((out / "02-consumer/provenance/params.json").read_text())
+        nodes = json.loads((out / "02-consumer/provenance/inputs.inventory.json").read_text())
+        assert params["input"] == str(reference)
+        assert nodes[str(reference)]["link_target"] == "stored_reference"
     state, problems = chain.status(out)
     assert problems == [] and chain.status_exit_code(state, problems) == 0
     (affected / "sample_A").rename(affected / "sample_C")

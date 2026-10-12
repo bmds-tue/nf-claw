@@ -169,7 +169,9 @@ def test_link_retargeting_with_identical_bytes_is_reported_separately(tmp_path):
 
 
 @pytest.mark.parametrize("mode", ["external", "internal", "alias", "bundle", "file_alias"])
-def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(library, tmp_path, mode):
+@pytest.mark.parametrize("legacy_resolution", [False, True])
+def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(library, tmp_path, mode,
+                                                                              legacy_resolution):
     _, down_tree = _trees(library("mini_up", "mini"))
     data = json.loads((down_tree / "nextflow_schema.json").read_text())
     data["definitions"]["reference_genome_options"]["properties"]["fasta"]["format"] = (
@@ -206,7 +208,8 @@ def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(
         upstream_outdir=up, downstream_tree=down_tree, dest=tmp_path / "handoff")
     hand_path = tmp_path / "handoff.json"
     hand_path.write_text(json.dumps(hand.record))
-    canonical = reference.resolve()
+    from runner.inputs import absolute_local_path
+    canonical = reference.resolve() if legacy_resolution else absolute_local_path(reference)
     record(down, inputs=[canonical], params={"fasta": str(canonical)})
     down_manifest = down / "provenance/run_manifest.json"
     down_data = json.loads(down_manifest.read_text())
@@ -218,6 +221,12 @@ def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(
          "status": "success", "version": "1.0.0", "commit": "deadbeef"},
         {"id": "consumer", "pipeline": "fixture", "index": 2, "outdir": str(down),
          "status": "success", "version": "1.0.0", "commit": "deadbeef", "handoff": str(hand_path)}]}
+    assert chain._integrity_problems(state) == []
+    parameters_path = down / "provenance/params.json"
+    original_parameters = parameters_path.read_text()
+    parameters_path.write_text(original_parameters + "\n")
+    assert any("config checksum" in problem for problem in chain._integrity_problems(state))
+    parameters_path.write_text(original_parameters)
     assert chain._integrity_problems(state) == []
     if mode == "file_alias":
         second = tmp_path / "second.gtf"

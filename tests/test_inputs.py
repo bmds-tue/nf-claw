@@ -126,6 +126,53 @@ def test_path_value_is_accepted(tmp_path):
     assert inputs.resolve(ss, repo).local_path == ss
 
 
+@pytest.mark.parametrize("suffix", ["csv", "tsv", "json", "yaml"])
+def test_samplesheet_alias_retains_its_declared_format(tmp_path, suffix):
+    from runner import parameters, samplesheet, schema
+    if suffix == "yaml":
+        pytest.importorskip("yaml")
+    repo = _pipeline(tmp_path, SAREK)
+    target = tmp_path / "stored.data"
+    target.write_text({"csv": "sample\nS\n", "tsv": "sample\nS\n",
+                       "json": '[{"sample":"S"}]', "yaml": "- sample: S\n"}[suffix])
+    alias = tmp_path / f"sheet.{suffix}"
+    alias.symlink_to(target)
+    result = inputs.resolve(alias, repo)
+    assert result.value == str(alias) and result.local_path == alias
+    assert result.samplesheet_schema == "assets/schema_input.json"
+    assert parameters.validate_params({"input": result.value}, schema.load_param_schema(repo)) == []
+    assert samplesheet.validate(result.local_path, schema.load_input_schema(repo)) == []
+
+
+def test_conditional_schema_and_staged_alias_use_the_same_filename(tmp_path):
+    repo = _pipeline(tmp_path, MHCQUANT)
+    target = tmp_path / "stored.sdrf.tsv"
+    target.write_text("sample\nS\n")
+    alias = tmp_path / "samples.tsv"
+    alias.symlink_to(target)
+    result = inputs.resolve(alias, repo)
+    assert result.value == str(alias)
+    assert result.samplesheet_schema == "assets/schema_input.json"
+
+
+def test_absolute_path_preserves_final_alias_and_kernel_parent_traversal(tmp_path):
+    from runner import provenance
+    (tmp_path / "real" / "nested").mkdir(parents=True)
+    (tmp_path / "route").symlink_to(tmp_path / "real" / "nested", target_is_directory=True)
+    target = tmp_path / "real" / "stored.data"
+    target.write_bytes(b"scientific data")
+    alias = tmp_path / "real" / "reads.fastq"
+    alias.symlink_to("stored.data")
+    requested = tmp_path / "route" / ".." / "reads.fastq"
+    effective = inputs.absolute_local_path(requested)
+    assert effective == alias and effective.read_bytes() == b"scientific data"
+    assert inputs.absolute_local_path(tmp_path / "route" / "..") == tmp_path / "real"
+    hashes, nodes = provenance.snapshot_inputs([effective])
+    assert set(hashes) == {str(alias)}
+    assert nodes[str(alias)] == {"type": "file", "link_target": "stored.data",
+                                "resolved_path": str(target)}
+
+
 def test_no_input_gives_none(tmp_path):
     assert inputs.resolve(None, _pipeline(tmp_path, SAREK)) is None
 

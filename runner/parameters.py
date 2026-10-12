@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from runner.errors import ErrorCode, NfclawError
-from runner.inputs import local_name_issues
+from runner.inputs import absolute_local_path, local_name_issues
 from runner.schema import PATH_FORMATS, Param, ParamSchema, json_scalar
 
 # The nf-core template parameter that suffixes the execution report/timeline/trace/DAG filenames.
@@ -350,7 +350,7 @@ def resolve_path_params(merged: dict[str, Any], schema: ParamSchema) -> dict[str
         # An empty value means "not set" (the pipeline tests its truthiness); resolving it would
         # silently turn it into the caller's working directory.
         if key in refs and isinstance(val, str) and val.strip() and "://" not in val:
-            out[key] = Path(val).expanduser().resolve().as_posix()
+            out[key] = absolute_local_path(val).as_posix()
     return out
 
 

@@ -265,20 +265,23 @@ def recorded_outputs(outdir: Path) -> dict[str, str]:
     return provenance.read_checksums(outdir / "provenance" / "outputs.sha256")
 
 
-def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Path
+def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Path,
+                                  *, destination: Path | None = None
                                   ) -> dict[str, dict[str, str]]:
-    """Match the canonical root supplied by schema-declared downstream path parameters.
+    """Match the absolute root supplied by schema-declared downstream path parameters.
 
-    Root canonicalization removes only the root alias. Nested aliases and their literal targets
-    remain scientific namespace entries; multiple logical paths must never be collapsed.
+    Parent directory canonicalization retains the staged root alias. Nested aliases and their
+    literal targets remain namespace entries; multiple logical paths must never be collapsed.
     """
-    normalized = root.resolve()
+    from runner.inputs import absolute_local_path
+    normalized = destination if destination is not None else absolute_local_path(root)
+    resolved_root = root.resolve()
     result = {}
     for name, entry in inventory.items():
         relative = Path(name).relative_to(root)
         key = str(normalized / relative)
         node = dict(entry)
-        if relative == Path("."):
+        if relative == Path(".") and normalized == resolved_root:
             node.pop("link_target", None)
         if node.get("resolved_path") == key:
             node.pop("resolved_path")

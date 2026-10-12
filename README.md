@@ -20,6 +20,8 @@ A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelin
 
 Explicit local and remote input filenames are validated before launch because pinned task scripts can interpret shell-active names. Unsafe basenames, local directory entries, symlink targets and local matched filenames are refused without silently renaming scientific samples. See [the input rules](AGENTS.md) for supported names and the scope of these checks.
 
+Local path parameters retain the supplied basename, including a symlink's name and format suffix. For example, `sheet.csv` pointing to `stored.data` remains `sheet.csv` for samplesheet validation and Nextflow staging. Parent directories are resolved against the caller's directory; both alias and target names are checked, and provenance records the link identity and target bytes.
+
 ### Navigation
 
 [Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance](#maintain) • [Adding Pipelines](#adding-pipelines) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
