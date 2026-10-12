@@ -1,5 +1,10 @@
 # Known Issues & Troubleshooting
 
+Configured Nextflow engine caches and temporary directories must remain outside declared input
+directories. The launcher can create framework and Java-version cache entries even while probing
+its version. Boundary checks cover `NXF_HOME`, `NXF_DIST`, `NXF_TEMP` and `CAPSULE_CACHE_DIR`
+before metadata probes, including inherited settings and relative paths.
+
 Most run-time failures fall into two categories: **environment** (host, network, or path issues — fixable via `nfclaw run` flags or environment adjustments) and **upstream pipeline defects** (bugs in a specific pinned nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**. Upstream defects, recorded runtime corrections and their validation limits are documented here.
 
 ---
@@ -124,10 +129,15 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 
-### Directory-consuming tasks are incorrectly cached after `--resume`
-- **Status: Fixed for explicitly declared local input directories.** Nextflow keys a directory input on the directory's path, size and timestamp. Nextflow 25.10.4 and 26.04.0 reuse a cached directory-consuming task after an empty directory is renamed, or after a file in a subdirectory is edited in place (verified: the resumed task republished the old bytes), while the root size and timestamp remain unchanged. File checksums cannot detect the rename, and the namespace cannot detect the edit, so nfclaw checks both.
-- **Behavior:** nfclaw records the full directory namespace and the SHA-256 of every file beneath an input directory before launch. Unchanged namespace and content preserve normal resume caching; a changed namespace, changed file content or an unavailable previous inventory preserves the previous run in a sibling `<outdir>.previous-<id>` archive, starts a fresh cache session, and recomputes all tasks. This avoids stale publications and fixed report filename conflicts; prior logs are retained and copied forward. Active engine database locks and dependencies overlapping the run directory block archiving. This also applies when the new launch disables provenance. Remote and indirectly configured directory inputs are outside this preflight's scope.
-- **Validation:** Real tasks enumerated `sample_A` before the change and `sample_B` after resume on both engines, with the root timestamp restored. Unchanged resumes reused the cached task. Sample-specific output files proved that old publications stayed in the archive, while a fixed trace filename was successfully regenerated. Standalone replay refused the changed inventory before launching Nextflow. Editing a nested file to same-size content with both directory timestamps restored made the resumed run recompute and publish the new bytes on both engines, and an unchanged follow-up resume reused the cache.
+### Existing output aliases can expose input data to execution writes
+- **Status: Fixed for explicitly declared local dependencies.** Resolved root paths alone do not establish separation. A run log hard-linked to an external FASTQ shares its bytes, and an output directory can contain a symlink into an external input tree. The production log writer was reproduced appending header text to a hard-linked input fixture.
+- **Behavior:** Before locks, logs or pipeline execution, nfclaw inspects existing output namespaces and compares physical file identities with consumed dependencies. It refuses hard links and symlink routes that permit writes into those inputs, including logical input slots beneath output trees whose targets are external. Declared work/cache trees retain their staged-read policy. Refusal logging leaves multiply linked logs untouched even when parameter validation fails before dependency preflight.
+- **Validation:** Controlled fixtures preserve input bytes and directory timestamps on refusal. Separate controls retain normal staged file/directory aliases, unrelated hard links and cycle-safe traversal. This preflight checks the filesystem state it observes; independent concurrent changes outside nfclaw's output writer lock remain outside its guarantee.
+
+### Local-input tasks can reuse stale data after `--resume`
+- **Status: Fixed for explicitly declared local inputs.** Ordinary Nextflow file and directory cache keys use path, size and timestamp rather than file bytes ([Nextflow caching documentation](https://docs.seqera.io/nextflow/cache-and-resume)). On both Nextflow 25.10.4 and 26.04.0, a same-size FASTQ byte edit with its timestamp restored reused the old digest result. Directory inputs have an additional recursive namespace problem: Nextflow 25.10.4 and 26.04.0 reuse a cached directory-consuming task after an empty directory is renamed, or after a file in a subdirectory is edited in place (verified: the resumed task republished the old bytes), while the root size and timestamp remain unchanged. File checksums cannot detect the rename, and the namespace cannot detect the edit, so nfclaw checks both.
+- **Behavior:** nfclaw records the full directory namespace and the SHA-256 of every declared local input file, including samplesheet data paths, before launch. Unchanged namespace and content preserve normal resume caching; a changed namespace, changed file content or an unavailable previous inventory preserves the previous run in a sibling `<outdir>.previous-<id>` archive, starts a fresh cache session, and recomputes all tasks. This avoids stale publications and fixed report filename conflicts; prior logs are retained and copied forward. Active engine database locks and dependencies overlapping the run directory block archiving. This also applies when the new launch disables provenance. Remote and indirectly configured inputs are outside this preflight's scope. Without a valid historical input snapshot, local-input resumes start fresh because unchanged bytes cannot be established. Whole-file path changes remain subject to Nextflow's own path cache keys.
+- **Validation:** Real tasks enumerated `sample_A` before the change and `sample_B` after resume on both engines, with the root timestamp restored. Unchanged resumes reused the cached task. Sample-specific output files proved that old publications stayed in the archive, while a fixed trace filename was successfully regenerated. Standalone replay refused the changed inventory before launching Nextflow. Editing a nested file to same-size content with both directory timestamps restored made the resumed run recompute and publish the new bytes on both engines, and an unchanged follow-up resume reused the cache. Independent SHA-256 and execution-counter controls also verified same-size FASTQ mutations with the file timestamp restored on both engines: changed bytes recomputed, and unchanged inputs with valid snapshots reused the task. When provenance is disabled and no earlier snapshot exists, subsequent resumes recompute instead of trusting metadata. Shared physical file targets are hashed once while logical aliases remain distinct.
 
 ### `--resume` fails with "Unable to acquire lock on session …"
 - **Symptom:** After a run was interrupted (killed/timed out), re-running with `--resume` fails to acquire the session lock.
@@ -296,6 +306,33 @@ are outside this explicit-value preflight.
   changed input content is refused. These are execution and provenance controls,
   not proofs of biological algorithm accuracy.
 
+### `[samplesheet_invalid]` while generating a samplesheet from `--input` data files
+
+`nfclaw run <name> --input <directory | glob | files>` writes the samplesheet from the files and
+refuses, before anything is written, whatever it cannot decide from them. Each message names the
+files or columns; the fixes:
+
+| Message | Fix |
+|---|---|
+| `needs values nfclaw cannot take from the files` | Set each listed column: `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template). The allowed values are in the message and in skill.md. |
+| `takes reads in several column groups` | Empty the groups your files do not belong in, e.g. `--sheet-set long_reads=` for short reads in mag. |
+| `hold the two reads of one library …, but their names carry no read number` | Their reads pair, but the names use a convention nfclaw does not parse (`_read1`/`_read2`, `_F`/`_R`). Name or link them `<sample>_R1`/`<sample>_R2`. |
+| `read 2 …, but its read 1 file is missing` / `have no mate` | A mate is missing. Restore it, or leave the file out of `--input`. Deliberately mixed single/paired layouts need a hand-written samplesheet. |
+| `fit several samplesheet columns` | Empty the column you do not use (`--sheet-set protein=`), or pass only one kind of file. |
+| `do not all bring the same kinds of files` | A stray file (a VCF beside FastQ files) became a sample. Narrow `--input` with a glob such as `'/data/*.fastq.gz'`. |
+| `Sample names come from the file names, which these do not allow` | nfclaw never renames samples. Rename the files, or link them under names the pipeline accepts. |
+| `would repeat the values of …, which the samplesheet requires to be unique` | Several lanes of a sample in a pipeline that takes one row per sample (ampliseq): merge them first. Or make the row key differ, e.g. `--sheet-set run={lane}` (mag). |
+| `cannot tell whether … are the two reads of one library` | Bare `_1`/`_2` files pair only when their first read names identify one molecule (Illumina, SRA/ENA or `/1`/`/2` names). With generic names (`read1`), name mates `_R1`/`_R2`, or link separate libraries under names not ending in `_1`/`_2`. |
+| `already succeeded, but its --input data now yields a different samplesheet … with files it never analysed` (chain resume) | New data arrived after the stage succeeded, and a resume would skip it. Run the chain on the new data in a fresh `--outdir`. |
+| `contains the run's --outdir` / `work directory` | The scan would take the run's own results (on `--resume`) or every task's files as samples. Keep the data directory apart from both; a single result file published into the work tree remains a valid input. |
+
+Files that match no column (checksums, reports, index reads `_I1`/`_I2`, the demultiplexer's
+`Undetermined_S0` reads) are ignored and listed before launch. `_R1`/`_R2` files are paired as
+named; when their first read names differ (a swapped, truncated or desynchronised mate — what
+fastqrepair repairs) the pre-launch advisory says so. Two FastQ files named `x_1`/`x_2`
+pair only when their first read names show they are mates; otherwise they are two single-end
+samples.
+
 ---
 
 ## Warnings a run prints that are not faults
@@ -405,7 +442,69 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Upstream examples for cache/index-only runs show `--build_only_index --input false`. In raw Nextflow, this causes an nf-schema validation error because `input` is declared as a string path. In `nfclaw run sarek --input false`, nfclaw intercepts `--input false` and leaves `input` unset in `params.json`, allowing index-only runs (`--build_only_index true --download_cache true`) to succeed cleanly without schema errors. For raw Nextflow runs, omit `--input` instead of passing `false`.
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Do not use `--config pipelines/sarek/upstream/conf/test.config` to convert an analysis run into a test run with a custom samplesheet. Extra configs load after initial profile setup, causing validation of default S3 iGenomes paths. Run with `-profile test,docker` instead: `nfclaw run sarek --input samplesheet_sarek.csv --outdir results -profile test,docker`. For bundled test data, use `nfclaw run sarek --demo --outdir results`.
 - **`ampliseq` 3.0.0** — The bundled `test` profile sets its own `process.resourceLimits` (4 CPUs, 15 GB, 1 h); the release has no `--max_memory`/`--max_cpus` parameters (nfclaw rejects them as unknown), so cap a real run with `--limit-cpus`/`--limit-memory`/`--limit-time`. Its `--demo` completed all 130 tasks without a retry on Nextflow 26.04.3 with Docker (Linux amd64); `QIIME2_EXPORT_RELTAX` peaked at 1.2 GB of RSS. This establishes execution of the bundled test, not taxonomic accuracy. 3.0.0 also removed the legacy `sampleID,forwardReads` samplesheet format (use `sample,fastq_1[,fastq_2]`) and renamed `--FW-primer`/`--RV-primer` to `--primer-fwd`/`--primer-rev`; nfclaw rejects the old names.
-  - **Not every output is reproducible between executions.** A `commands.sh` replay of that demo reproduced the ASV sequences, ASV counts, DADA2 statistics and the QIIME2 classifier's `qiime2/taxonomy/taxonomy.tsv` byte for byte, and the taxonomy-filtered abundance table had the same 38 ASVs and counts (only its row order differed). Two results did change. **DADA2 taxonomy:** 3 of 241 ASVs changed label and 34 changed bootstrap confidence. Four isolated reruns of the same `DADA2_TAXONOMY` task (identical inputs and container, the module's `set.seed(100)`, `multithread` 4 and `FALSE`) all differed, by 4–6 labels per pair. The cause is in dada2 itself (1.38.0 here, unchanged in 1.40.0): its bootstrap subsampling uses R's random numbers, but `assignTaxonomy` breaks ties between equally scoring genera with a generator seeded from `std::random_device` ([source](https://github.com/benjjneb/dada2/blob/b61fe2e90115be08e78a01a16af89fd21402ca42/src/taxonomy.cpp#L80-L105)), which no R seed controls; GTDB references sharing a 16S region make such ties common. **Rarefaction:** `QIIME2_DIVERSITY_CORE` rarefies to the smallest sample depth with no seed, so every rarefied diversity result differs. Treat DADA2 labels whose confidence is near `--dada-min-boot` as uncertain; where reproducible labels are required, the QIIME2 classifier's taxonomy (`--qiime-ref-taxonomy`) reproduced exactly in this measurement. Compare replays per ASV rather than expecting `nfclaw verify --strict` to pass. `nfclaw run` announces both steps before launch (detected in the pinned task scripts; not announced when `--skip-taxonomy`, `--skip-dada-taxonomy`, `--skip-qiime`, `--skip-qiime-downstream` or `--skip-diversity-indices` skips them).
+  - **Reproducibility:** DADA2 taxonomy ties and QIIME2 rarefaction can change results on fresh runs despite `--seed`. See [verified findings and workarounds](#ampliseq-300-taxonomy-and-rarefaction-reproducibility).
+
+### AmpliSeq 3.0.0: taxonomy and rarefaction reproducibility
+
+Scope: the pinned AmpliSeq commit `992e6df34065067185b5e34665b5861b6827981d`; source inspection and
+a small C++ tie-breaking check, not a new end-to-end demo replay.
+
+- **DADA2 claim confirmed, with precise wording.** The
+  [1.38.0](https://bioconductor.posit.co/packages/3.22/bioc/src/contrib/dada2_1.38.0.tar.gz) and
+  [1.40.0](https://bioconductor.posit.co/packages/3.23/bioc/src/contrib/dada2_1.40.0.tar.gz) release
+  archives contain identical `src/taxonomy.cpp`:
+  [`get_best_genus()`](https://github.com/benjjneb/dada2/blob/b61fe2e90115be08e78a01a16af89fd21402ca42/src/taxonomy.cpp#L73-L110)
+  seeds `std::mt19937` from `std::random_device` and randomly chooses among equal scores. This is
+  entropy-seeded randomness, without a user-controllable seed. The function is called for both the
+  full query and bootstrap replicates; bootstrap subsampling separately uses R's `Rcpp::runif`.
+  AmpliSeq's [taxonomy
+  module](https://github.com/nf-core/ampliseq/blob/992e6df34065067185b5e34665b5861b6827981d/modules/local/dada2_taxonomy/main.nf#L29-L40)
+  calls `set.seed()` using `params.seed` (default 100), but that controls only R's RNG. Neither
+  changing `--seed` nor using one thread controls the C++ ties.
+
+- **QIIME2 claim depends on version and action.** The [2024.10 rarefy
+  interface](https://docs.qiime2.org/2024.10/plugins/available/feature-table/rarefy/) has no seed
+  parameter; [`feature-table rarefy` in
+  2025.4](https://amplicon-docs.qiime2.org/en/2025.4/references/plugins/feature-table.html) exposes
+  `random_seed`. AmpliSeq 3.0.0 specifies QIIME2 2026.4, whose [core-metrics
+  interface](https://amplicon-docs.qiime2.org/en/2026.4/references/plugins/diversity/) also exposes
+  it and [forwards it to
+  rarefy](https://github.com/qiime2/q2-diversity/blob/2026.4.0/q2_diversity/_core_metrics.py#L14-L46).
+  The [AmpliSeq core
+  module](https://github.com/nf-core/ampliseq/blob/992e6df34065067185b5e34665b5861b6827981d/modules/local/qiime2_diversity_core/main.nf#L35-L60)
+  omits `--p-random-seed` and does not consume `params.seed` or `ext.args`: its sampling remains
+  uncontrolled by AmpliSeq's `--seed`. Its separate `alpha-rarefaction` action [has no seed argument
+  and repeatedly calls rarefy without
+  one](https://github.com/qiime2/q2-diversity/blob/2026.4.0/q2_diversity/_alpha/_visualizer.py#L289-L333).
+
+- **Implications and limits.** Fresh executions can change taxonomy labels, bootstrap confidence and
+  assignments near `--dada-min-boot`, and rarefied counts, diversity metrics and downstream
+  analyses. These mechanisms do not imply changed ASV inference, that every output must differ, or
+  that GTDB ties are common: their frequency and scientific impact depend on the inputs/reference
+  and were not established here. Previously reported demo measurements were 3 of 241 changed labels,
+  34 changed bootstrap confidences and 4–6 label differences per pair across four isolated reruns (4
+  threads and `FALSE`). ASV sequences/counts, DADA2 statistics and QIIME2 taxonomy matched; the
+  filtered table retained 38 ASVs/counts with changed row order. These observations were not
+  independently repeated in this audit and are not general guarantees.
+
+- **Workarounds.** Retain original taxonomy and rarefied tables for downstream reuse (the core
+  task's `diversity_core/rarefied_table.qza` stays in its work directory, outside the published
+  module outputs); `--resume` can reuse valid cached tasks but does not make a fresh replay
+  deterministic. Alternatively, use `--skip-dada-taxonomy true` with a suitable
+  `--qiime-ref-taxonomy` classifier (the prior demo's repeatability does not establish universal
+  accuracy or determinism). For controlled diversity calculations, skip pipeline diversity with
+  `--skip-diversity-indices true`, retain the matching feature table, tree and metadata, and run
+  QIIME2 2026.4 `core-metrics-phylogenetic` separately with `--p-random-seed 100`. Skip the independent curves with
+  `--skip-alpha-rarefaction true` if needed. Seeds constrain sampling with the same inputs/software;
+  they do not guarantee byte-identical QZA/QZV archives or all downstream statistics. Compare
+  exported scientific values by ASV/sample; `nfclaw verify` checks structure and `--strict`
+  additionally checks bytes, neither guarantees analytical accuracy.
+
+- **nf-claw behavior.** The runner currently announces taxonomy/core-metrics variability before
+  launch through `runner/reproducibility.py`; it adds no seed correction. Detection scans module
+  text and explicit skip parameters, without checking tool versions or resolving config/profile
+  overrides; it does not detect alpha-rarefaction separately. An advisory therefore identifies a
+  potential source of variability, not proof that a particular run changed.
 
 ---
 
@@ -421,3 +520,8 @@ When a stage specifies `demo: true`, it executes with its bundled test profile d
 - **Behavior:** New bundles record `outputs.inventory.json`. Verification reports missing/extra directories and changed link identities alongside file differences. Old file-only manifests provide byte comparisons, but historical directory agreement remains unverified and cannot return a successful structural check. Live trees without historical manifests remain comparable.
 - **Handoffs:** Published output namespaces and local reference namespaces are verified before the next stage starts. Chain status checks source namespaces and the downstream prelaunch snapshot. Complete run-directory handoffs retain all entries and record execution metadata at the boundary separately from historically published results.
 - **Validation:** Real producer and consumer tasks exercised external references, published directories and complete run directories. Renaming an empty sample directory while retaining reference bytes blocked the consumer; restoring the original namespace allowed resume, and subsequent changes broke lineage. These execution and conservation checks do not establish biological accuracy.
+
+### Enum preflight confused JSON types and rounded large integers
+- **Status: Fixed.** Enum documentation text was also used for validation, so numeric `1` could match the string enum `"1"`, and converting enum entries to floating point could make `9007199254740992.0` match the distinct integer `9007199254740993`. A matching enum also bypassed independent type, pattern and numeric constraints.
+- **Behavior:** Preflight retains typed enum values, distinguishes booleans from numbers and compares numbers without converting integer enum entries to floats. Independent constraints still apply to enum members. Whole-number CLI tokens for number parameters retain their integer precision. Enum-only schemas may contain mixed JSON types; genuinely equivalent `1` and `1.0` remain accepted, consistent with [JSON Schema enum semantics](https://json-schema.org/understanding-json-schema/reference/enum) and [numeric semantics](https://json-schema.org/understanding-json-schema/reference/numeric). Version-dependent treatment of unset values remains delegated to nf-schema.
+- **Validation:** Regression controls cover scalar and nested enum types, large integers, empty enums, conflicting independent constraints and CLI conversion. An independent JSON Schema validator agreed on 840 decisions. Every enum in the pinned library was checked for conflicts with its declared independent constraints; none were found. These controls verify preflight decisions rather than biological accuracy or arbitrary-precision support throughout Nextflow.

@@ -249,7 +249,7 @@ def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tm
             manifest["unverified_dependency_inventories"] = ["inputs"]
         path.write_text(json.dumps(manifest))
     digests, inventory = provenance.snapshot_inputs([source])
-    warning = orchestration._directory_resume_warning(tmp_path / "out", inventory, digests)
+    warning = orchestration._input_resume_warning(tmp_path / "out", inventory, digests)
     assert warning and "fresh Nextflow cache session" in warning
 
 
@@ -264,12 +264,12 @@ def test_resume_checks_file_membership_within_directories_but_preserves_unrelate
         input_paths=[source, standalone])
     standalone.rename(tmp_path / "new-table.tsv")
     _, inventory = provenance.snapshot_inputs([source, tmp_path / "new-table.tsv"])
-    digests = orchestration._directory_file_digests(inventory, None)
-    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, digests) is None
+    digests = orchestration._input_file_digests(inventory, None)
+    assert orchestration._input_resume_warning(tmp_path / "out", inventory, digests) is None
     (source / "new_reads.txt").write_text("reads\n")
     _, inventory = provenance.snapshot_inputs([source])
-    digests = orchestration._directory_file_digests(inventory, None)
-    assert "inventory changed" in orchestration._directory_resume_warning(
+    digests = orchestration._input_file_digests(inventory, None)
+    assert "inventory changed" in orchestration._input_resume_warning(
         tmp_path / "out", inventory, digests)
 
 
@@ -286,17 +286,19 @@ def test_resume_detects_changed_bytes_beneath_an_input_directory(tmp_path):
         submodule=SubmoduleStatus("fixture", tmp_path / "up", True, True, "1.0.0", "deadbeef", ()),
         input_paths=[source, standalone])
     _, inventory = provenance.snapshot_inputs([source, standalone])
-    unchanged = orchestration._directory_file_digests(inventory, None)
-    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, unchanged) is None
-    standalone.write_text("new\n")      # a standalone file's change is Nextflow's own cache key
+    unchanged = orchestration._input_file_digests(inventory, None)
+    assert orchestration._input_resume_warning(tmp_path / "out", inventory, unchanged) is None
+    standalone.write_text("new\n")      # file bytes may change without a changed cache key
     _, inventory = provenance.snapshot_inputs([source, standalone])
-    digests = orchestration._directory_file_digests(inventory, None)
-    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, digests) is None
+    digests = orchestration._input_file_digests(inventory, None)
+    assert "content of a local input file changed" in \
+        orchestration._input_resume_warning(tmp_path / "out", inventory, digests)
+    standalone.write_text("old\n")
     reads.write_text("BBBB\n")
     _, inventory = provenance.snapshot_inputs([source, standalone])
-    digests = orchestration._directory_file_digests(inventory, None)
+    digests = orchestration._input_file_digests(inventory, None)
     assert "content of a file inside an input directory changed" in \
-        orchestration._directory_resume_warning(tmp_path / "out", inventory, digests)
+        orchestration._input_resume_warning(tmp_path / "out", inventory, digests)
 
 
 def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_aliases(tmp_path, monkeypatch):
@@ -387,5 +389,31 @@ def test_resume_rejects_namespace_that_disagrees_with_historical_directory_hashe
     path.write_text(json.dumps(previous))
     removed.unlink()
     hashes, namespace = provenance.snapshot_inputs([source])
-    warning = orchestration._directory_resume_warning(tmp_path / "out", namespace, hashes)
+    warning = orchestration._input_resume_warning(tmp_path / "out", namespace, hashes)
     assert warning and "fresh Nextflow cache session" in warning
+
+
+def test_resume_hashes_shared_file_targets_once_and_reuses_snapshot(tmp_path, monkeypatch):
+    import hashlib
+    from runner import orchestration, replay_guard
+
+    source = tmp_path / 'reads.fastq'
+    source.write_bytes(b'@R1\nACGT\n+\nIIII\n')
+    alias = tmp_path / 'alias.fastq'
+    alias.symlink_to(source)
+    _, namespace = replay_guard._capture_input_inventory([source, alias])
+    calls = []
+    original = provenance._sha256
+
+    def observed(path):
+        calls.append(path)
+        return original(path)
+
+    monkeypatch.setattr(provenance, '_sha256', observed)
+    expected = hashlib.sha256(source.read_bytes()).hexdigest()
+    hashes = orchestration._input_file_digests(namespace, None)
+    assert hashes == {str(source): expected, str(alias): expected}
+    assert calls == [source]
+    calls.clear()
+    assert orchestration._input_file_digests(namespace, hashes) == hashes
+    assert calls == []

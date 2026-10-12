@@ -30,7 +30,7 @@ def test_validate_params_boolean_enum_uses_json_literals(tmp_path):
     (tmp_path / "nextflow_schema.json").write_text(json.dumps(
         {"definitions": {"g": {"properties": {"flag": {"type": "boolean", "enum": [False]}}}}}))
     ps = schema.load_param_schema(tmp_path)
-    assert parameters.validate_params({"flag": "false"}, ps) == []   # CLI string, schema-literal → ok
+    assert parameters.validate_params(parameters.coerce_to_schema({"flag": "false"}, ps), ps) == []
     assert parameters.validate_params({"flag": False}, ps) == []     # native bool from a params-file → ok
     assert parameters.validate_params({"flag": "False"}, ps)         # Python casing → rejected
     assert parameters.validate_params({"flag": "true"}, ps)          # not in enum → rejected

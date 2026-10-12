@@ -38,6 +38,8 @@ The samplesheet is a CSV with this header (the columns the schema requires); fil
 group,sample,path,ref,method
 ```
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `ref` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `group` (matching ^\S+$); `path` (string); `method` (one of ont, pacbio). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

@@ -33,6 +33,9 @@ class Param:
     deprecated: bool = False
     # A path format alone does not require an existing input: output/cache directories use it too.
     exists: bool | None = None
+    # Keep JSON values separately from their documentation text: "1", 1 and true differ.
+    enum_values: tuple[Any, ...] | None = None
+    type_declared: bool = True
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,11 @@ class Column:
     max_length: int | None = None
     deprecated: bool = False
     meta: tuple[str, ...] = ()
+    # What samplesheet generation (runner.sheetgen) reads beyond validation: the schema's default,
+    # and the patterns of the column's anyOf/oneOf branches — atacseq declares fastq_2's FastQ
+    # pattern only inside `anyOf` (beside an empty-string branch, which is left out here).
+    default: Any = None
+    alternatives: tuple[str, ...] = ()
 
     @property
     def is_path(self) -> bool:
@@ -113,12 +121,16 @@ class InputSchema:
     # the runner can fail malformed tabular inputs before launching Nextflow.
     dependent_required: tuple[tuple[str, tuple[str, ...]], ...] = ()
     any_of_dependent_required: tuple[tuple[tuple[str, tuple[str, ...]], ...], ...] = ()
+    # `items.anyOf` branches that require columns (mag: short_reads_1 or long_reads), and nf-schema's
+    # `uniqueEntries` column combinations (top level or inside a top-level `allOf`). Read by
+    # samplesheet generation, which must not write a sheet nf-schema would then reject.
+    any_of_required: tuple[tuple[str, ...], ...] = ()
+    unique_entries: tuple[tuple[str, ...], ...] = ()
 
 
 def json_scalar(value: Any) -> str:
     """A JSON scalar in its JSON literal form — `true`/`false`, not Python's `True`/`False`.
-    Used wherever a schema value becomes text (enum capture, default rendering, the runner's
-    enum check) so generated docs and validation match the schema byte-for-byte."""
+    Used for enum documentation and default rendering. Validation retains typed enum values."""
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
@@ -189,6 +201,11 @@ def load_param_schema(repo: Path) -> ParamSchema:
                 max_length=pobj.get("maxLength"),
                 deprecated=bool(pobj.get("deprecated", False)),
                 exists=pobj.get("exists") if isinstance(pobj.get("exists"), bool) else None,
+                enum_values=tuple(enum) if isinstance(enum, list) else None,
+                type_declared=bool(pobj.get("type") or any(
+                    isinstance(v, dict) and v.get("type")
+                    for variants in (pobj.get("anyOf"), pobj.get("oneOf"))
+                    if isinstance(variants, list) for v in variants)),
             )
     return ParamSchema(
         title=str(data.get("title") or repo.name),
@@ -218,11 +235,19 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 one_of.append(tuple(str(r) for r in req))
     dependent_required = _dependent_required(items.get("dependentRequired"))
     any_of_dependent_required: list[tuple[tuple[str, tuple[str, ...]], ...]] = []
+    any_of_required: list[tuple[str, ...]] = []
     for branch in items.get("anyOf") or []:
         if isinstance(branch, dict):
             deps = _dependent_required(branch.get("dependentRequired"))
             if deps:
                 any_of_dependent_required.append(deps)
+            req = branch.get("required")
+            if isinstance(req, list) and req:
+                any_of_required.append(tuple(str(r) for r in req))
+    unique_entries = [entry for entry in (
+        [data.get("uniqueEntries")]
+        + [part.get("uniqueEntries") for part in data.get("allOf") or [] if isinstance(part, dict)])
+        if isinstance(entry, list) and entry and all(isinstance(c, str) for c in entry)]
     cols: list[Column] = []
     if isinstance(props, dict):
         for cname, cobj in props.items():
@@ -245,13 +270,27 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 max_length=cobj.get("maxLength"),
                 deprecated=bool(cobj.get("deprecated", False)),
                 meta=tuple(key for key in meta if isinstance(key, str)) if isinstance(meta, list) else (),
+                default=cobj.get("default"),
+                alternatives=_branch_patterns(cobj),
             ))
     return InputSchema(
         columns=tuple(cols),
         one_of=tuple(one_of),
         dependent_required=dependent_required,
         any_of_dependent_required=tuple(any_of_dependent_required),
+        any_of_required=tuple(any_of_required),
+        unique_entries=tuple(tuple(entry) for entry in unique_entries),
     )
+
+
+def _branch_patterns(obj: dict) -> tuple[str, ...]:
+    """The string patterns of a column's anyOf/oneOf branches, in schema order."""
+    out: list[str] = []
+    for key in ("anyOf", "oneOf"):
+        for branch in obj.get(key) or []:
+            if isinstance(branch, dict) and isinstance(branch.get("pattern"), str):
+                out.append(branch["pattern"])
+    return tuple(dict.fromkeys(out))
 
 
 def _dependent_required(obj: Any) -> tuple[tuple[str, tuple[str, ...]], ...]:

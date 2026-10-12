@@ -66,7 +66,8 @@ def fake_runs(monkeypatch, finished_run):
         from runner import inputs, provenance, schema
         from pathlib import Path
         path_params = schema.load_param_schema(kw["repo_root"] / "pipelines" / name / "upstream").reference_path_params()
-        candidates = [kw["input_path"]] + [value for key, value in kw["cli_overrides"].items()
+        given = kw["input_path"] if isinstance(kw["input_path"], list) else [kw["input_path"]]
+        candidates = given + [value for key, value in kw["cli_overrides"].items()
                                                  if key in path_params and isinstance(value, str)]
         sources = [inputs.absolute_local_path(value) for value in candidates if value and Path(value).exists()]
         for key, value in {"input": kw["input_path"], **kw["cli_overrides"]}.items():
@@ -713,3 +714,167 @@ def test_status_exit_codes_follow_nfclaw_status(library, fake_runs, tmp_path):
     assert chain.status_exit_code(state, problems) == 0
     assert chain.status_exit_code(state, ["a broken link"]) == 1
     assert chain.status_exit_code({**state, "log_state": "running"}, []) == 3
+
+
+# --- a stage whose samplesheet nfclaw generates from data files ------------------------------------
+
+def test_spec_sheet_set_and_input_lists_are_validated():
+    spec = chain.parse_spec({"stages": [{"pipeline": "rnaseq", "input": ["/d/a.fq.gz", "/d/b.fq.gz"],
+                                         "sheet_set": {"strandedness": "auto", "status": 1}}]})
+    assert spec.stages[0].input == ["/d/a.fq.gz", "/d/b.fq.gz"]
+    assert spec.stages[0].sheet_set == {"strandedness": "auto", "status": "1"}
+    for bad, msg in (({"input": []}, "'input' list"), ({"input": ["/a", 3]}, "'input' list"),
+                     ({"sheet_set": ["x"]}, "'sheet_set' must map"),
+                     ({"sheet_set": []}, "'sheet_set' must map"),
+                     ({"sheet_set": ""}, "'sheet_set' must map"),
+                     ({"sheet_set": {"x": {"y": 1}}}, "sheet_set")):
+        with pytest.raises(NfclawError, match=msg):
+            chain.parse_spec({"stages": [{"pipeline": "rnaseq", **bad}]})
+
+
+def test_fingerprints_without_sheet_set_are_those_of_earlier_chains(library):
+    # A succeeded stage is frozen by its fingerprint: adding a spec key must not change the
+    # fingerprint of a stage that does not use it, or every recorded chain would refuse to resume.
+    import hashlib
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    spec = _spec()
+    p = chain.plan(spec, repo_root=root)[1]
+    opts = chain.options(spec, p.stage)
+    body = {"fingerprint_version": chain.FINGERPRINT_VERSION, "pipeline": "mini",
+            "pipeline_version": None, "commit": p.tree.commit, "input": None, "input_sha256": None,
+            "params": p.params, "params_file": None, "demo": False, "handoff": p.rule.sha256(),
+            "options": chain._options_json({"profile": opts.profile, "nxf_ver": opts.nxf_ver,
+                                            "nxf_env": opts.nxf_env, "configs": opts.configs,
+                                            "limits": opts.limits}),
+            "config_sha256": {}}
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
+    assert chain.fingerprint(p, spec) == hashlib.sha256(text.encode()).hexdigest()
+    other = chain.parse_spec({"stages": [{"pipeline": "mini_up", "input": "/data/ids.csv"},
+                                         {"pipeline": "mini", "params": {"aligner": "hisat2"},
+                                          "sheet_set": {"sample": "{sample}"}}]})
+    assert chain.fingerprint(chain.plan(other, repo_root=root)[1], other) != chain.fingerprint(p, spec)
+
+
+def test_a_first_stage_takes_data_files_and_sheet_columns(library, fake_runs, tmp_path):
+    import sheetgen_schemas as S
+    from test_sheetgen import pair
+    root = library("mini")
+    S.make_pipeline(root, S.RNASEQ, "rna")
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    spec = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data),
+                                         "sheet_set": {"strandedness": "auto"}}]})
+    out = tmp_path / "c"
+    assert chain.run_chain(spec, repo_root=root, outdir=out).outcome == "success"
+    (check,), (call,) = fake_runs.checks, fake_runs.calls
+    assert check["input_path"] == call["input_path"] == str(data)
+    assert check["sheet_set"] == call["sheet_set"] == {"strandedness": "auto"}
+    recorded = json.loads((out / "chain" / "chain.json").read_text())["stages"][0]
+    assert recorded["sheet_set"] == {"strandedness": "auto"} and recorded["input"] == str(data)
+    again = chain.parse_spec(json.loads((out / "chain" / "chain.json").read_text()))
+    assert again.stages[0].sheet_set == {"strandedness": "auto"}
+
+
+def test_a_chain_check_generates_the_first_stages_samplesheet(library, tmp_path, monkeypatch):
+    # Not faked: the real check-only run generates and validates the sheet, and a missing column
+    # stops the chain before any stage launches.
+    import sheetgen_schemas as S
+    from test_sheetgen import pair
+    monkeypatch.setattr(chain, "_probe_config", lambda spec, p, **kw: [])
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    root = library("mini")
+    S.make_pipeline(root, S.RNASEQ, "rna")
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    ok = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data),
+                                       "sheet_set": {"strandedness": "auto"}}]})
+    res = chain.run_chain(ok, repo_root=root, outdir=tmp_path / "c", check_only=True)
+    assert res.outcome == "checked" and "--input" in res.commands[0][1]
+    missing = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data)}]})
+    with pytest.raises(NfclawError, match="needs values"):
+        chain.run_chain(missing, repo_root=root, outdir=tmp_path / "d", check_only=True)
+    assert not (tmp_path / "c").exists() and not (tmp_path / "d").exists()
+
+
+def test_sheet_set_on_a_handed_over_stage_is_refused_before_anything_runs(library, tmp_path,
+                                                                          monkeypatch):
+    monkeypatch.setattr(chain, "_probe_config", lambda spec, p, **kw: [])
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    ids = tmp_path / "ids.csv"
+    ids.write_text("SRR1\n")
+    spec = chain.parse_spec({"stages": [{"pipeline": "mini_up", "input": str(ids)},
+                                        {"pipeline": "mini", "sheet_set": {"sample": "{sample}"}}]})
+    with pytest.raises(NfclawError, match="a chain stage's sheet_set"):
+        chain.run_chain(spec, repo_root=root, outdir=tmp_path / "c", check_only=True)
+    assert not (tmp_path / "c").exists()
+
+
+def _generated_stage(library, tmp_path, fake_runs, data_input):
+    """A one-stage chain whose samplesheet is generated from `data_input`, run to success with a
+    bundle that records the generated sheet as a real run would."""
+    import sheetgen_schemas as S
+    from runner import sheetgen
+    root = library("mini")
+    up = S.make_pipeline(root, S.RNASEQ, "rna")
+    spec = chain.parse_spec({"stages": [{"pipeline": "rna", "input": data_input,
+                                         "sheet_set": {"strandedness": "auto"}}]})
+    out = tmp_path / "c"
+    real_fake = chain.orchestration.run_pipeline
+
+    def recording(name, **kw):
+        res = real_fake(name, **kw)
+        if not kw["check_only"]:
+            source = sheetgen.detect(kw["input_path"], up)
+            generated = sheetgen.generate(source, up, pipeline=name, assignments=kw["sheet_set"],
+                                          outdir=kw["outdir"], work_dir=tmp_path / "work")
+            sheetgen.write(generated, kw["outdir"] / "provenance")
+            manifest = kw["outdir"] / "provenance" / "run_manifest.json"
+            manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
+                                            "generated_samplesheet": {"file": generated.filename}}))
+        return res
+
+    chain.orchestration.run_pipeline = recording
+    try:
+        assert chain.run_chain(spec, repo_root=root, outdir=out).outcome == "success"
+    finally:
+        chain.orchestration.run_pipeline = real_fake
+    return root, spec, out
+
+
+def test_resume_refuses_a_succeeded_stage_whose_data_now_yields_another_sheet(
+        library, fake_runs, tmp_path):
+    from test_sheetgen import pair
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    root, spec, out = _generated_stage(library, tmp_path, fake_runs, str(data))
+    # Unchanged data: the succeeded stage stays frozen and the chain resumes.
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+    pair(data, "B_R1.fastq.gz", "B_R2.fastq.gz")
+    with pytest.raises(NfclawError, match="does not match the chain being resumed") as err:
+        chain.run_chain(spec, repo_root=root, outdir=out, resume=True)
+    assert "added: B" in str(err.value)
+
+
+def test_resume_tolerates_the_deleted_data_of_a_succeeded_stage(library, fake_runs, tmp_path):
+    from test_sheetgen import pair
+    data = tmp_path / "reads"
+    a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    root, spec, out = _generated_stage(library, tmp_path, fake_runs, [str(a1), str(a2)])
+    a1.unlink()
+    a2.unlink()
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+
+
+def test_resume_tolerates_data_removed_from_a_kept_directory(library, fake_runs, tmp_path):
+    from test_sheetgen import pair
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    pair(data, "B_R1.fastq.gz", "B_R2.fastq.gz")
+    root, spec, out = _generated_stage(library, tmp_path, fake_runs, str(data))
+    for f in data.glob("B_*"):
+        f.unlink()
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+    for f in data.glob("A_*"):
+        f.unlink()
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"

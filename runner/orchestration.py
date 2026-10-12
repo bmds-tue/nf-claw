@@ -10,8 +10,8 @@ from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
-                    reproducibility, resources, resume_safety, runlog, samplesheet, submodule,
-                    versions)
+                    reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
+                    submodule, versions)
 from runner import schema as schema_mod
 from runner.replay_guard import _capture_input_inventory
 from runner.errors import ErrorCode, NfclawError
@@ -47,28 +47,31 @@ def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str
             if Path(name) in roots or any(parent in roots for parent in Path(name).parents)}
 
 
-def _directory_file_digests(inventory: dict[str, dict[str, str]],
+def _input_file_digests(inventory: dict[str, dict[str, str]],
                             known: dict[str, str] | None) -> dict[str, str]:
-    """SHA-256 of every file beneath an input directory (from `known` when already hashed)."""
+    """SHA-256 of every local input file (from `known` when already hashed)."""
     digests = {}
-    for name, entry in _directory_nodes(inventory).items():
+    physical_digests = {}
+    for name, entry in inventory.items():
         if entry["type"] == "file":
-            digests[name] = (known or {}).get(name) or provenance._sha256(
-                Path(entry.get("resolved_path", name)))
+            if known is not None and name in known:
+                digests[name] = known[name]
+            else:
+                physical = Path(entry.get("resolved_path", name))
+                if physical not in physical_digests:
+                    physical_digests[physical] = provenance._sha256(physical)
+                digests[name] = physical_digests[physical]
     return digests
 
 
-def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
+def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                               current_digests: dict[str, str]) -> str | None:
-    """Nextflow's ordinary directory cache key omits the recursive namespace and content.
+    """Guard resume against metadata-preserving input changes, including directory members.
 
-    Its key for a directory input is the directory's path, size and modification time: renaming,
-    adding or editing a file in a subdirectory changes none of them, so -resume reuses the task
-    and republishes results computed from the old data (verified on 25.10.4). A new session is
-    necessary when anything beneath an input directory changed: public engine directives offer no
-    way to add a namespace or content fingerprint to every directory consumer's task hash.
-    Unchanged directories retain normal cache reuse. `current_digests` holds the SHA-256 of every
-    file beneath an input directory, compared with the previous launch's recorded snapshot.
+    Ordinary file and directory cache keys omit file content. A changed local input's bytes
+    require a fresh session because size/mtime can be unchanged. Directory namespaces also
+    need comparison because nested additions/renames can leave directory metadata unchanged.
+    Unchanged inputs retain normal cache reuse. Already captured SHA-256 values are reused.
     """
     current_nodes = _directory_nodes(current)
     try:
@@ -82,9 +85,9 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
         previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
                                                      relative=False)
     except (OSError, ValueError, TypeError):
-        if not current_nodes:
+        if not current:
             return None
-        reason = "the earlier input-directory inventory is unavailable or invalid"
+        reason = "the earlier local-input inventory is unavailable or invalid"
     else:
         directory_roots = [Path(name) for name, entry in current_nodes.items() if entry["type"] == "directory"]
         files = {name for name, entry in current_nodes.items() if entry["type"] == "file"}
@@ -92,16 +95,32 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                             if any(Path(name).is_relative_to(root) for root in directory_roots)}
         if current_nodes != _directory_nodes(previous):
             reason = "the input-directory inventory changed"
-        elif files != historical_files or files != current_digests.keys():
+        elif files != historical_files:
             reason = "the input-directory namespace and content records disagree"
-        elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
+        elif ({name for name, entry in current.items() if entry["type"] == "file"}
+              != current_digests.keys()
+              or {name for name, entry in previous.items() if entry["type"] == "file"}
+              != previous_digests.keys()):
+            reason = "the local-input namespace and content records disagree"
+        elif any(previous_digests.get(name) != current_digests[name] for name in files):
             reason = "the content of a file inside an input directory changed"
+        elif any(previous_digests[name] != digest for name, digest in current_digests.items()
+                 if name in previous_digests):
+            reason = "the content of a local input file changed"
         else:
             return None
     return (f"--resume starts a fresh Nextflow cache session because {reason}. "
-            "Directory metadata alone cannot establish unchanged task inputs; all tasks will "
+            "File and directory metadata alone cannot establish unchanged task inputs; all tasks will "
             "be recomputed to prevent stale results. An existing output directory will be "
             "preserved in a sibling archive before launching.")
+
+
+def work_directory(nxf_overlay: dict[str, str], repo_root: Path) -> Path:
+    """The Nextflow work directory a run uses: NXF_WORK (the run's overlay wins over the shell) or
+    the repository's work directory — resolved before Nextflow changes cwd to the outdir, so a
+    relative value has one meaning in preflight, execution, provenance and a chain's checks."""
+    return Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
+                or repo_root / "work").expanduser().resolve()
 
 
 @dataclass
@@ -118,6 +137,8 @@ class RunResult:
     # process so the command stays runnable; a caller that only validates (a chain) removes it.
     staging: Path | None = None
     local_dependencies: tuple[Path, ...] = ()  # check-only: chain-wide write separation
+    # The samplesheet nfclaw generated from the data files --input named (runner.sheetgen).
+    generated_samplesheet: Path | None = None
 
 
 def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
@@ -133,13 +154,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  on_warning: Callable[[str], None] | None = None,
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
-                 resolved_tree: SubmoduleStatus | None = None) -> RunResult:
+                 resolved_tree: SubmoduleStatus | None = None,
+                 sheet_set: dict[str, str] | None = None) -> RunResult:
     """Validate, launch and record one pipeline run.
 
     Two arguments exist for a chain (runner.chain) and change nothing otherwise: `chain_link` is
     recorded in the run's manifest (which chain this stage belongs to, which run fed it), and
     `deferred_params` — for `check_only` alone — names parameters a handoff will supply once the
-    stage feeding this one has run, so they count as neither missing nor invalid yet."""
+    stage feeding this one has run, so they count as neither missing nor invalid yet.
+
+    When the input names data files where the pipeline takes a samplesheet, the samplesheet is
+    generated first (runner.sheetgen); `sheet_set` holds the column values the caller assigned."""
     outdir = outdir.expanduser().resolve()
     if deferred_params and not check_only:
         raise ValueError("deferred_params is only meaningful with check_only")
@@ -191,26 +216,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # The Nextflow work directory for this run: NXF_WORK (overlay wins over the shell) if set,
     # else the repository work directory. Resolve it before Nextflow changes cwd to the outdir,
     # so a relative user value has one stable meaning in preflight, execution and provenance.
-    work_dir = Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
-                    or repo_root / "work").expanduser().resolve()
-    # A resource ceiling only exists if the engine enforces it; say so before anything runs.
-    if limits is not None and not limits.is_empty():
-        engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
-        if engine is not None and not engine_version.supports_resource_limits(engine):
-            raise NfclawError(
-                ErrorCode.PARAMS_INVALID,
-                f"--limit-cpus/--limit-memory/--limit-time need Nextflow 24.04.0 or newer "
-                f"(process.resourceLimits); this run would use Nextflow {engine}, which ignores "
-                "the setting and would apply no ceiling at all.",
-                fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
-                    "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
-        if engine is None:
-            raise NfclawError(
-                ErrorCode.PARAMS_INVALID,
-                "The Nextflow version could not be determined, so the requested resource "
-                "ceiling cannot be verified (process.resourceLimits needs 24.04.0+).",
-                fix="Select a concrete supported engine with --nxf-ver, or restore the engine's "
-                    "version probe before requesting --limit-*.")
+    work_dir = work_directory(nxf_overlay, repo_root)
     param_schema = schema_mod.load_param_schema(st.path)
 
     # Read the params file once; it is merged below, and it may be what supplies `input`.
@@ -227,7 +233,23 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # handoff will write does not exist yet, so it is neither resolved nor pre-checked.
     raw_input = (None if "input" in deferred_params
                  else input_path if input_path is not None else file_params.get("input"))
-    resolved_input = inputs.resolve(raw_input, st.path)
+    # Data files where the pipeline takes a samplesheet — a directory, a glob, one or several files:
+    # generate the samplesheet its schema describes (runner.sheetgen). It is validated here like a
+    # hand-written one, before anything is written, and staged beside the params file below; until
+    # then `input` names that staged location, which the parameter checks treat as any sheet path.
+    sheet = None
+    if (source := sheetgen.detect(raw_input, st.path)) is not None:
+        sheet = sheetgen.generate(source, st.path, pipeline=name, assignments=sheet_set or {},
+                                  outdir=outdir, work_dir=work_dir)
+    elif sheet_set:
+        raise NfclawError(ErrorCode.PARAMS_INVALID,
+                          "--sheet-set (a chain stage's sheet_set) sets columns of a samplesheet "
+                          "nfclaw generates, but --input does not name data files to generate one "
+                          "from.",
+                          fix="Pass the data files (a directory, glob or files) as --input, or set "
+                              "the values in your own samplesheet.")
+    resolved_input = (inputs.ResolvedInput(str(outdir / "provenance" / sheet.filename), None, None)
+                      if sheet is not None else inputs.resolve(raw_input, st.path))
     sheet_inputs = []
     if resolved_input is not None and resolved_input.local_path is not None:
         input_schema = (schema_mod.load_input_schema(st.path, resolved_input.samplesheet_schema)
@@ -296,44 +318,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                           fix="Use parameter names and allowed values from reference.md.",
                           details={"issues": param_errors})
 
-    # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
-    # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
-    warnings = list(st.notes)
-    warnings += _resume_advisory(outdir, st) if resume else []
-    # Advisory only: preflight has confirmed nextflow is on PATH, so compare the installed
-    # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
-    # and enforces this itself at launch; we just surface it earlier with a clear message.
-    warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
-    # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
-    # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
-    warnings += plugin_compat.check(st.path)
-    # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
-    # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
-    # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
-    warnings += plugin_compat.known_plugin_warnings(st.path)
-    # Also advisory: steps whose results are measured to vary between executions of identical
-    # input, so differences between runs or replays are expected rather than investigated.
-    warnings += reproducibility.advisories(st.path, merged)
-    repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
-    repair_input = resolved_input.local_path if resolved_input is not None else None
-    if repair_compat:
-        try:
-            fastqrepair_compat.paired_input_roles(repair_input)
-        except (OSError, ValueError, csv.Error) as exc:
-            raise NfclawError(
-                ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
-                fix="Use one row per sample, distinct staged mate names, and matching compression formats.") from exc
-    if repair_compat:
-        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
-                        "record boundaries, pass the declared quality offset to BBMap, and keep "
-                        "singleton reads, logs and mate reports in distinct publications. "
-                        "Pinned source stays unchanged; generated task recipes and the complete "
-                        "splitter implementation are recorded in the compatibility config.")
-    # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
-    # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
-    if on_warning is not None:
-        for w in warnings:
-            on_warning(w)
 
     # Read dependencies before creating or modifying the output directory. The sheet
     # can become unreadable or malformed after its earlier validation; do not launch
@@ -381,10 +365,25 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # A local --input is an input whatever its declared format (mhcquant's carries none).
     if resolved_input is not None and resolved_input.local_path is not None:
         prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
+    # A generated samplesheet is a file nfclaw writes for the run (recorded with the configs, below);
+    # every local path it names is an input — whether or not its column declares a path format.
     prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
-                                    *sheet_dependencies]))
+                                    *sheet_dependencies,
+                                    *(sheet.files if sheet is not None else ())]))
     local_dependencies = tuple(dict.fromkeys([*prov_inputs, st.path, *extra_configs,
                                               *([params_file] if params_file else [])]))
+    repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
+    repair_input = resolved_input.local_path if resolved_input is not None else None
+    if repair_compat:
+        try:
+            if sheet is not None:
+                fastqrepair_compat.paired_row_roles(sheet.rows)
+            else:
+                fastqrepair_compat.paired_input_roles(repair_input)
+        except (OSError, ValueError, csv.Error) as exc:
+            raise NfclawError(
+                ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
+                fix="Use one row per sample, distinct staged mate names, and matching compression formats.") from exc
     writes = [("--outdir", outdir, True),
               ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
               ("Nextflow work directory", work_dir, False),
@@ -395,7 +394,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                for key, value in resolved.items()
                if key in output_only_dirs and isinstance(value, str) and value
                and not inputs.is_remote_url(value)]
-    generated = ["params.json", "logs", "logs/run.log", "logs/stdout.txt", "logs/stderr.txt"]
+    generated = ["params.json", "logs", "logs/run.log", "logs/stdout.txt", "logs/stderr.txt",
+                 *([sheet.filename] if sheet is not None else [])]
     if limits is not None and not limits.is_empty():
         generated.append("resource_limits.config")
     if repair_compat:
@@ -406,7 +406,65 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     writes += [("generated run file", outdir / "provenance" / path, True) for path in generated]
     if check_only:
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
+    writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    # A resource ceiling only exists if the engine enforces it; say so before anything runs.
+    if limits is not None and not limits.is_empty():
+        engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
+        if engine is not None and not engine_version.supports_resource_limits(engine):
+            raise NfclawError(
+                ErrorCode.PARAMS_INVALID,
+                f"--limit-cpus/--limit-memory/--limit-time need Nextflow 24.04.0 or newer "
+                f"(process.resourceLimits); this run would use Nextflow {engine}, which ignores "
+                "the setting and would apply no ceiling at all.",
+                fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
+                    "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
+        if engine is None:
+            raise NfclawError(
+                ErrorCode.PARAMS_INVALID,
+                "The Nextflow version could not be determined, so the requested resource "
+                "ceiling cannot be verified (process.resourceLimits needs 24.04.0+).",
+                fix="Select a concrete supported engine with --nxf-ver, or restore the engine's "
+                    "version probe before requesting --limit-*.")
+
+    # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
+    # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
+    warnings = list(st.notes)
+    warnings += _resume_advisory(outdir, st) if resume else []
+    # Advisory only: preflight has confirmed nextflow is on PATH, so compare the installed
+    # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
+    # and enforces this itself at launch; we just surface it earlier with a clear message.
+    warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
+    # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
+    # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
+    warnings += plugin_compat.check(st.path)
+    # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
+    # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
+    # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
+    warnings += plugin_compat.known_plugin_warnings(st.path)
+    # Also advisory: steps whose results are measured to vary between executions of identical
+    # input, so differences between runs or replays are expected rather than investigated.
+    warnings += reproducibility.advisories(st.path, merged)
+    if sheet is not None:
+        # What the generated samplesheet holds and where it is, before the run starts (a --check
+        # stages it in a temp directory: the result and the printed command name it).
+        warnings.append(sheet.summary + ("" if check_only else
+                                         f" It is staged as {resolved_input.value}."))
+        warnings += sheet.notes
+        if resume and (note := sheetgen.resume_note(outdir / "provenance" / sheet.filename, sheet)):
+            warnings.append(note)
+    if repair_compat:
+        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
+                        "record boundaries, pass the declared quality offset to BBMap, and keep "
+                        "singleton reads, logs and mate reports in distinct publications. "
+                        "Pinned source stays unchanged; generated task recipes and the complete "
+                        "splitter implementation are recorded in the compatibility config.")
+    # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
+    # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
+    if on_warning is not None:
+        for w in warnings:
+            on_warning(w)
+
     issues = preflight.check_environment(profile=composed_profile, output_dir=outdir,
                                          submodule=st, repo_root=repo_root, resume=resume,
                                          work_dir=work_dir, allow_spaces=allow_spaces,
@@ -448,13 +506,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                     _capture_input_inventory(prov_inputs)[1])
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
-                                  f"cannot inspect local input directories before resume: {exc}") from exc
+                                  f"cannot inspect local inputs before resume: {exc}") from exc
             try:
-                resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
+                resume_digests = _input_file_digests(resume_inventory, input_snapshot)
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
-                                  f"cannot read local input directories before resume: {exc}") from exc
-            if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
+                                  f"cannot read local inputs before resume: {exc}") from exc
+            if warning := _input_resume_warning(outdir, resume_inventory, resume_digests):
                 effective_resume = False
                 warnings.append(warning)
                 if on_warning is not None:
@@ -486,6 +544,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                   f"({exc.filename or outdir})",
                                   fix="Pass an --outdir in a directory you can write to.") from exc
             staging = outdir / "provenance"
+        sheet_path = None
+        if sheet is not None:
+            # The bytes validated above, staged beside the params file that names them.
+            sheet_path = sheetgen.write(sheet, staging)
+            resolved["input"] = str(sheet_path)
         params_file_out = parameters.write_params_file(resolved, staging / "params.json")
 
         # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
@@ -498,7 +561,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
         if repair_compat:
             extra_configs.insert(0, fastqrepair_compat.write_config(
-                staging / "fastqrepair_compat.config", input_path=repair_input))
+                staging / "fastqrepair_compat.config", input_path=sheet_path or repair_input))
 
         # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
         # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a
@@ -514,10 +577,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # Pass the work dir explicitly so it stays off the outdir (shared, content-hashed — fine),
         # and any extra `-c` configs. nfclaw launches Nextflow from the outdir (below) so each run
         # gets its own .nextflow/ state, but the work dir must not move into the results.
-        cmd, cmd_str = nextflow_command.build(upstream=st.path, profile=composed_profile,
-                                              params_file=params_file_out, resume=effective_resume,
-                                              work_dir=work_dir, extra_configs=tuple(extra_configs))
-        replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
+        cmd, cmd_str = nextflow_command.build(
+            upstream=st.path, profile=composed_profile, params_file=params_file_out,
+            resume=effective_resume, work_dir=work_dir, extra_configs=tuple(extra_configs),
+            bundle_params={"input": sheet_path} if sheet_path else None)
+        replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out,
+                                              *([sheet_path] if sheet_path else [])]))
         if write_provenance and not check_only:
             try:
                 config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
@@ -530,7 +595,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         if check_only:
             return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
                              outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging,
-                             local_dependencies=local_dependencies)
+                             local_dependencies=local_dependencies,
+                             generated_samplesheet=sheet_path)
+
+        generation_record = None
+        if sheet is not None:
+            generation_record = {**sheet.record, "file": sheet.filename,
+                                 "sha256": provenance._sha256(sheet_path)}
 
         def record(outcome: str) -> None:
             provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
@@ -541,7 +612,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              config_inventory=config_inventory,
                              pipeline_checksums=pipeline_snapshot,
                              unverified_local_paths=unverified_paths,
-                             nextflow_version=run_log.nextflow_version or "")
+                             nextflow_version=run_log.nextflow_version or "",
+                             generated_samplesheet=generation_record)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -598,4 +670,5 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             run_log.finish()
         return RunResult(command=cmd_str, outdir=outdir, checked_only=False,
                          outputs_report=report, warnings=warnings,
-                         log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay)
+                         log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay,
+                         generated_samplesheet=sheet_path)

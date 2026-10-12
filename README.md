@@ -24,7 +24,7 @@ Local path parameters retain the supplied basename, including a symlink's name a
 
 LF/CR in local input paths or resolved targets are refused because Nextflow can turn them into shell lines. Samplesheet paths crossing a directory symlink with `..` must use an explicit parent path: Nextflow may otherwise select different data. Ordinary parent traversal is supported; wildcard parents followed by `..` are refused. Local colon parents remain local dependencies. Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode separators without losing file identities.
 
-Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Boundary refusals leave input data and existing run logs untouched.
+Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Existing output symlinks and hard links receive the same separation check; declared work/cache trees can still hold staged read aliases. Boundary refusals leave input data and existing run logs untouched. Refusal logging also leaves multiply linked logs untouched.
 
 ### Navigation
 
@@ -87,6 +87,19 @@ nfclaw status results
 # Validates parameters, schemas, and paths without creating or modifying --outdir
 nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker --check
 ```
+
+### Samplesheet from Data Files
+
+```bash
+# Pass the data files instead of a samplesheet: a directory (searched recursively), a quoted glob,
+# or files (--input once per file).
+# nfclaw writes the samplesheet the pinned release's schema describes; set the columns no file
+# name determines with --sheet-set (each skill.md lists them). --check previews the sheet.
+nfclaw run rnaseq --input /data/fastq --sheet-set strandedness=auto --outdir results --check
+nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' --outdir results
+```
+
+Sample names come from the file names and are never altered (a name the pipeline cannot take is refused, naming the file). FastQ mates are paired by `_R1`/`_R2` (an advisory flags first read names that disagree) and by `_1`/`_2` only when their first read names show they are mates, so numbered single-end replicates are not mistaken for mates; Illumina lane numbers fill a `lane` column. Values no file determines (strandedness, patient, condition, …) come only from `--sheet-set COLUMN=VALUE` — a constant or a `{sample}`/`{lane}` template — or the schema's own defaults: a gap is refused with the column's allowed values, and so is an ambiguous or stray file. The sheet passes the same checks as a hand-written one, is staged as `<outdir>/provenance/samplesheet.csv` and recorded in the provenance bundle, and a replay reuses it rather than re-scanning the directory.
 
 Sample, patient, genome and database identifiers become upstream shell arguments and filenames. They must start with a letter, digit or underscore and use only letters, digits, combining marks, dots, underscores or hyphens; choose explicit safe aliases for other names. The runner preserves accepted identities exactly. CSV/TSV and flat JSON/YAML records receive these guards, duplicate-field checks and absolute local-path checks (including globs). YAML preflight requires the optional `pip install -e ".[yaml]"` dependency. Explicitly supplied auxiliary tables (for example `--genome-sheet` and `--databases`) receive their own declared schema checks too. Declared local data paths in these records are hashed for replay; nested input structures still rely on the pinned nf-schema validation.
 
@@ -170,8 +183,9 @@ unavailable version probe cannot establish that a requested ceiling will be enfo
 By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
-For declared local directory inputs, `--resume` retains the cache only when the recorded
-directory namespace and the bytes of every file beneath it are unchanged. A changed
+For declared local inputs, `--resume` retains the cache only when recorded file bytes
+and recursive directory namespaces are unchanged, including data named by samplesheets.
+Size and timestamp alone cannot establish unchanged scientific data. A changed
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
