@@ -1,5 +1,10 @@
 # Known Issues & Troubleshooting
 
+Configured Nextflow engine caches and temporary directories must remain outside declared input
+directories. The launcher can create framework and Java-version cache entries even while probing
+its version. Boundary checks cover `NXF_HOME`, `NXF_DIST`, `NXF_TEMP` and `CAPSULE_CACHE_DIR`
+before metadata probes, including inherited settings and relative paths.
+
 Most run-time failures fall into two categories: **environment** (host, network, or path issues — fixable via `nfclaw run` flags or environment adjustments) and **upstream pipeline defects** (bugs in a specific pinned nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**. Upstream defects, recorded runtime corrections and their validation limits are documented here.
 
 ---

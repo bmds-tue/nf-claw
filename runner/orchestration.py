@@ -187,21 +187,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # so a relative user value has one stable meaning in preflight, execution and provenance.
     work_dir = Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
                     or repo_root / "work").expanduser().resolve()
-    # A resource ceiling only exists if the engine enforces it; say so before anything runs.
-    limit_note = None
-    if limits is not None and not limits.is_empty():
-        engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
-        if engine is not None and not engine_version.supports_resource_limits(engine):
-            raise NfclawError(
-                ErrorCode.PARAMS_INVALID,
-                f"--limit-cpus/--limit-memory/--limit-time need Nextflow 24.04.0 or newer "
-                f"(process.resourceLimits); this run would use Nextflow {engine}, which ignores "
-                "the setting and would apply no ceiling at all.",
-                fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
-                    "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
-        if engine is None:
-            limit_note = ("The Nextflow version could not be determined, so it is not confirmed "
-                          "that it enforces --limit-* (process.resourceLimits needs 24.04.0+).")
     param_schema = schema_mod.load_param_schema(st.path)
 
     # Read the params file once; it is merged below, and it may be what supplies `input`.
@@ -284,38 +269,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                           fix="Use parameter names and allowed values from reference.md.",
                           details={"issues": param_errors})
 
-    # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
-    # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
-    warnings = list(st.notes)
-    warnings += _resume_advisory(outdir, st) if resume else []
-    # Advisory only: preflight has confirmed nextflow is on PATH, so compare the installed
-    # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
-    # and enforces this itself at launch; we just surface it earlier with a clear message.
-    warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
-    # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
-    # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
-    warnings += plugin_compat.check(st.path)
-    # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
-    # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
-    # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
-    warnings += plugin_compat.known_plugin_warnings(st.path)
-    # Also advisory: steps whose results are measured to vary between executions of identical
-    # input, so differences between runs or replays are expected rather than investigated.
-    warnings += reproducibility.advisories(st.path, merged)
-    warnings += [limit_note] if limit_note else []
-    repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
-    if repair_compat:
-        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
-                        "record boundaries, pass the declared quality offset to BBMap, and keep "
-                        "singleton reads, logs and mate reports in distinct publications. "
-                        "Pinned source stays unchanged; generated task recipes and the complete "
-                        "splitter implementation are recorded in the compatibility config.")
-    # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
-    # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
-    if on_warning is not None:
-        for w in warnings:
-            on_warning(w)
-
     # Read dependencies before creating or modifying the output directory. The sheet
     # can become unreadable or malformed after its earlier validation; do not launch
     # with a silently truncated dependency inventory or leak an unclassified error.
@@ -366,6 +319,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                     *sheet_dependencies]))
     local_dependencies = tuple(dict.fromkeys([*prov_inputs, st.path, *extra_configs,
                                               *([params_file] if params_file else [])]))
+    repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     writes = [("--outdir", outdir, True),
               ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
               ("Nextflow work directory", work_dir, False),
@@ -383,7 +337,55 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     writes += [("generated run file", outdir / "provenance" / path, True) for path in generated]
     if check_only:
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
+    writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    # A resource ceiling only exists if the engine enforces it; say so before anything runs.
+    limit_note = None
+    if limits is not None and not limits.is_empty():
+        engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
+        if engine is not None and not engine_version.supports_resource_limits(engine):
+            raise NfclawError(
+                ErrorCode.PARAMS_INVALID,
+                f"--limit-cpus/--limit-memory/--limit-time need Nextflow 24.04.0 or newer "
+                f"(process.resourceLimits); this run would use Nextflow {engine}, which ignores "
+                "the setting and would apply no ceiling at all.",
+                fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
+                    "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
+        if engine is None:
+            limit_note = ("The Nextflow version could not be determined, so it is not confirmed "
+                          "that it enforces --limit-* (process.resourceLimits needs 24.04.0+).")
+
+    # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
+    # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
+    warnings = list(st.notes)
+    warnings += _resume_advisory(outdir, st) if resume else []
+    # Advisory only: preflight has confirmed nextflow is on PATH, so compare the installed
+    # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
+    # and enforces this itself at launch; we just surface it earlier with a clear message.
+    warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
+    # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
+    # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
+    warnings += plugin_compat.check(st.path)
+    # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
+    # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
+    # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
+    warnings += plugin_compat.known_plugin_warnings(st.path)
+    # Also advisory: steps whose results are measured to vary between executions of identical
+    # input, so differences between runs or replays are expected rather than investigated.
+    warnings += reproducibility.advisories(st.path, merged)
+    warnings += [limit_note] if limit_note else []
+    if repair_compat:
+        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
+                        "record boundaries, pass the declared quality offset to BBMap, and keep "
+                        "singleton reads, logs and mate reports in distinct publications. "
+                        "Pinned source stays unchanged; generated task recipes and the complete "
+                        "splitter implementation are recorded in the compatibility config.")
+    # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
+    # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
+    if on_warning is not None:
+        for w in warnings:
+            on_warning(w)
+
     issues = preflight.check_environment(profile=composed_profile, output_dir=outdir,
                                          submodule=st, repo_root=repo_root, resume=resume,
                                          work_dir=work_dir, allow_spaces=allow_spaces,

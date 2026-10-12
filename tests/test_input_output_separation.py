@@ -7,6 +7,59 @@ from runner import chain, cli, input_safety, locking, orchestration, runlog
 from runner.errors import NfclawError
 
 
+@pytest.mark.parametrize("name", ["NXF_HOME", "NXF_DIST", "NXF_TEMP", "CAPSULE_CACHE_DIR"])
+@pytest.mark.parametrize("inherited", [False, True])
+def test_engine_cache_writes_are_separated_before_version_probes(tmp_path, monkeypatch, name, inherited):
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "index.bin").write_bytes(b"fixed scientific input")
+    cache = data / "engine_cache"
+    overlay = {name: str(cache)}
+    if inherited:
+        monkeypatch.setenv(name, str(cache))
+        overlay = {}
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw",
+                        lambda: pytest.fail("engine version probe ran before cache boundary validation"))
+    monkeypatch.setattr(orchestration.execution, "run", lambda *_, **__: pytest.fail("engine launched"))
+    before = (data.stat().st_mtime_ns, orchestration.provenance.snapshot_inputs([data]))
+    with pytest.raises(NfclawError, match="overlaps local dependency") as error:
+        run(root, data, tmp_path / "results", nxf_env=overlay, nxf_ver=None,
+            limits=orchestration.resources.parse(2, None, None))
+    assert error.value.details["unsafe_write_boundary"]
+    assert (data.stat().st_mtime_ns, orchestration.provenance.snapshot_inputs([data])) == before
+
+
+def test_safe_engine_cache_permits_version_checks_without_changing_inputs(tmp_path, monkeypatch):
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "index.bin").write_bytes(b"fixed scientific input")
+    probes = []
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw",
+                        lambda: probes.append(True) or "nextflow version 25.10.4")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **_: [])
+    before = (data.stat().st_mtime_ns, orchestration.provenance.snapshot_inputs([data]))
+    checked = run(root, data, tmp_path / "results", check_only=True, nxf_ver=None,
+                  nxf_env={"NXF_HOME": str(tmp_path / "engine_cache")},
+                  limits=orchestration.resources.parse(2, None, None))
+    assert checked.checked_only and probes and "resource_limits.config" in checked.command
+    assert (data.stat().st_mtime_ns, orchestration.provenance.snapshot_inputs([data])) == before
+
+
+def test_relative_engine_cache_is_checked_from_the_execution_directory(tmp_path, monkeypatch):
+    import os
+
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    out = tmp_path / "results"
+    monkeypatch.setattr(orchestration.execution, "run", lambda *_, **__: pytest.fail("engine launched"))
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        run(root, data, out, nxf_env={"NXF_HOME": os.path.relpath(data / "cache", out)})
+    assert not (data / "cache").exists() and not out.exists()
+
+
 def tree(tmp_path, *, table=False):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
