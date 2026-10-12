@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.11"
       # The YAML extra lets the final gate run the YAML params/samplesheet tests, as tests.yml does.
-      - run: pip install -e ".[yaml]"
+      - run: pip install -e ".[dev,yaml]" "pytest>=8,<10"
       - run: python -m librarian.update_pipelines --repo-root .
       - run: python -m librarian.write_catalog
       - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
@@ -53,7 +53,6 @@ jobs:
       # complete local gates must pass here before this write-capable job opens or merges a PR.
       - name: Unit tests + final drift gate
         run: |
-          pip install "pytest>=8,<10"
           pytest -q
           python -m librarian.check_drift
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
