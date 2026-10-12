@@ -408,7 +408,7 @@ a small C++ tie-breaking check, not a new end-to-end demo replay.
   `--qiime-ref-taxonomy` classifier (the prior demo's repeatability does not establish universal
   accuracy or determinism). For controlled diversity calculations, skip pipeline diversity with
   `--skip-diversity-indices true`, retain the matching feature table, tree and metadata, and run
-  QIIME2 2026.4 core-metrics separately with `--p-random-seed 100`. Skip the independent curves with
+  QIIME2 2026.4 `core-metrics-phylogenetic` separately with `--p-random-seed 100`. Skip the independent curves with
   `--skip-alpha-rarefaction true` if needed. Seeds constrain sampling with the same inputs/software;
   they do not guarantee byte-identical QZA/QZV archives or all downstream statistics. Compare
   exported scientific values by ASV/sample; `nfclaw verify` checks structure and `--strict`
@@ -419,6 +419,7 @@ a small C++ tie-breaking check, not a new end-to-end demo replay.
   text and explicit skip parameters, without checking tool versions or resolving config/profile
   overrides; it does not detect alpha-rarefaction separately. An advisory therefore identifies a
   potential source of variability, not proof that a particular run changed.
+
 ---
 
 ### Chains: what a `demo: true` stage hands over
