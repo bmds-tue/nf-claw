@@ -96,10 +96,10 @@ class SubmoduleStatus:
 def _git(path: Path, *args: str) -> str:
     try:
         out = subprocess.run(["git", *args], cwd=str(path), capture_output=True,
-                             text=True, timeout=_GIT_TIMEOUT, check=True)
+                             timeout=_GIT_TIMEOUT, check=True)
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return ""
-    return out.stdout.strip()
+    return os.fsdecode(out.stdout).rstrip("\n")
 
 
 def _own_head(path: Path) -> str | None:
@@ -110,7 +110,8 @@ def _own_head(path: Path) -> str | None:
     first confirm the tree is its own repository (a cloned submodule or a version worktree)."""
     if not path.is_dir():
         return None
-    out = _git(path, "rev-parse", "--show-toplevel", "HEAD").splitlines()
+    # The final LF separates HEAD from the full path, which can itself contain separators.
+    out = _git(path, "rev-parse", "--show-toplevel", "HEAD").rsplit("\n", 1)
     if len(out) != 2:
         return None
     try:

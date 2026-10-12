@@ -1,0 +1,128 @@
+"""Independent Git output is the oracle for source identity and tracked-file selection."""
+import hashlib
+import shutil
+import subprocess
+
+import pytest
+
+from runner import replay_guard, submodule
+
+
+@pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\u0085', '\v', '\f', '\x1c', '\x1d', '\x1e', 'Å', '\n', '\r'])
+def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separator):
+    repo = tmp_path / ('parent' + separator + 'part') / 'upstream'
+    repo.mkdir(parents=True)
+    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    tracked = b'nextflow.enable.dsl=2\n'
+    (repo / 'main.nf').write_bytes(tracked)
+    subprocess.run(['git', '-C', str(repo), 'add', 'main.nf'], check=True)
+    subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Audit',
+                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'], check=True)
+    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip()
+    (repo / 'untracked-data.txt').write_bytes(b'not pipeline source\n')
+    assert submodule._own_head(repo) == expected
+    assert replay_guard.pipeline_head(repo) == expected
+    assert replay_guard.hash_pipeline(repo) == {'main.nf': hashlib.sha256(tracked).hexdigest()}
+    # A nested directory must never borrow the enclosing tree's source identity.
+    nested = repo / 'nested'
+    nested.mkdir()
+    assert submodule._own_head(nested) is None
+    assert replay_guard.pipeline_head(nested) is None
+
+
+@pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
+@pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
+@pytest.mark.parametrize('separator', ['\u2028', '\u0085', '\v', '\f'])
+def test_native_git_revision_and_tracked_source_replay(tmp_path, engine, separator):
+    import json
+    from runner import orchestration, provenance
+
+    root = tmp_path / ('library' + separator + 'part')
+    repo = root / 'pipelines/fixture/upstream'
+    repo.mkdir(parents=True)
+    (repo.parent / 'skill.md').write_text('---\nname: fixture\n---\n')
+    (repo / 'nextflow_schema.json').write_text(json.dumps({'properties': {
+        'input': {'type': 'string', 'format': 'file-path', 'exists': True},
+        'outdir': {'type': 'string', 'format': 'directory-path'}}}))
+    (repo / 'nextflow.config').write_text('nextflow.enable.dsl=2\n')
+    (repo / 'main.nf').write_text('''process DIGEST {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path reads
+ output:
+ path 'digest.txt'
+ script:
+ """
+ shasum -a 256 ${reads} > digest.txt
+ """
+}
+workflow { DIGEST(file(params.input)) }
+''')
+    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    subprocess.run(['git', '-C', str(repo), 'add', '.'], check=True)
+    subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Audit',
+                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'], check=True)
+    subprocess.run(['git', '-C', str(repo), 'tag', '1.0.0'], check=True)
+    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip()
+    scratch = repo / 'untracked-data.txt'
+    scratch.write_text('untracked scratch data\n')
+    data = tmp_path / 'reads.fastq'
+    payload = b'@R1\nACGT\n+\nIIII\n'
+    data.write_bytes(payload)
+    outdir = tmp_path / 'result'
+    orchestration.run_pipeline('fixture', repo_root=root, input_path=data, outdir=outdir,
+        profile='', params_file=None, cli_overrides={}, resume=False, demo=False,
+        check_only=False, write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    bundle = outdir / 'provenance'
+    manifest = json.loads((bundle / 'run_manifest.json').read_text())
+    assert manifest['commit'] == expected
+    assert set(provenance.read_checksums(bundle / 'pipeline.sha256')) == {
+        'main.nf', 'nextflow.config', 'nextflow_schema.json'}
+    digest = hashlib.sha256(payload).hexdigest()
+    assert (outdir / 'digest.txt').read_text().split()[0] == digest
+    scratch.write_text('changed scratch, still not consumed or tracked\n')
+    replay = tmp_path / 'replay'
+    completed = subprocess.run(['bash', str(bundle / 'commands.sh'), str(replay)],
+        capture_output=True, text=True, timeout=90)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert (replay / 'digest.txt').read_text().split()[0] == digest
+    # A working-tree source mutation, with HEAD unchanged, must still stop standalone replay.
+    script = repo / 'main.nf'
+    script.write_text(script.read_text() + '\n// changed tracked source\n')
+    refused = tmp_path / 'refused'
+    changed = subprocess.run(['bash', str(bundle / 'commands.sh'), str(refused)],
+        capture_output=True, text=True, timeout=30)
+    assert changed.returncode != 0
+    assert 'changed' in changed.stdout + changed.stderr
+    assert not (refused / '.nextflow').exists()
+
+
+def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_path):
+    from pathlib import Path
+    from runner import fastqrepair_compat, orchestration
+
+    source = Path(__file__).resolve().parents[1] / 'pipelines/fastqrepair/upstream'
+    if submodule._own_head(source) is None:
+        pytest.skip('requires the pinned fastqrepair source clone')
+    root = tmp_path / 'library\u2028part'
+    tree = root / 'pipelines/fastqrepair/upstream'
+    tree.parent.mkdir(parents=True)
+    subprocess.run(['git', 'clone', '-q', '--shared', '--no-hardlinks', str(source), str(tree)], check=True)
+    subprocess.run(['git', '-C', str(tree), 'checkout', '-q', fastqrepair_compat.SUPPORTED_COMMIT], check=True)
+    (tree.parent / 'skill.md').write_text('---\nname: fastqrepair\n---\n')
+    reads = tmp_path / 'reads.fastq'
+    reads.write_bytes(b'@R1\nACGT\n+\nIIII\n')
+    sheet = tmp_path / 'samples.csv'
+    sheet.write_text(f'sample,fastq_1\nS1,{reads}\n')
+    out = tmp_path / 'result'
+    result = orchestration.run_pipeline('fastqrepair', repo_root=root, input_path=sheet,
+        outdir=out, profile='', params_file=None, cli_overrides={}, resume=False,
+        demo=False, check_only=True, write_provenance=True, timeout_seconds=90, nxf_ver='25.10.4')
+    try:
+        assert submodule.resolve_at('fastqrepair', tree).commit == fastqrepair_compat.SUPPORTED_COMMIT
+        assert any('recorded corrections for fastqrepair' in warning for warning in result.warnings)
+        assert 'fastqrepair_compat.config' in result.command
+        assert not out.exists()
+    finally:
+        if result.staging:
+            shutil.rmtree(result.staging)
