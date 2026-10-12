@@ -20,6 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         source: [plain, gzip]
+        control: [suffixed, unsuffixed, single, single-end, skip-pairing, phred64]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -31,7 +32,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
-      - run: pip install -e .
+      - run: pip install -e ".[dev]"
       - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
         with:
           distribution: temurin
@@ -42,27 +43,45 @@ jobs:
         run: |
           source_args=()
           if [ '${{ matrix.source }}' = gzip ]; then source_args+=(--gzip); fi
+          if [ '${{ matrix.control }}' != suffixed ]; then source_args+=(--unsuffixed); fi
+          if [ '${{ matrix.control }}' = single ]; then source_args+=(--single-record); fi
+          if [ '${{ matrix.control }}' = single-end ]; then source_args+=(--single-end); fi
           python scripts/check_fastqrepair_pairs.py fixture "$RUNNER_TEMP/paired-fixture" "${source_args[@]}"
       - name: Execute the pinned repair with perturbed task arrival order
         run: |
+          splits=2
+          if [ '${{ matrix.control }}' = single ]; then splits=1; fi
+          run_args=()
+          if [ '${{ matrix.control }}' = skip-pairing ]; then run_args+=(--skip-bbmap-repair true); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then run_args+=(--qin 64); fi
           nfclaw run fastqrepair --input "$RUNNER_TEMP/paired-fixture/samples.csv" \
             --outdir "$RUNNER_TEMP/paired-run" -profile docker --nxf-ver 25.10.4 \
             --config "$RUNNER_TEMP/paired-fixture/arrival.config" \
-            --num-splits 2 --limit-cpus 2 --limit-memory 2.GB --limit-time 15.min --timeout 900
+            --num-splits "$splits" --limit-cpus 2 --limit-memory 2.GB --limit-time 15.min --timeout 900 "${run_args[@]}"
           source_args=()
           if [ '${{ matrix.source }}' = gzip ]; then source_args+=(--gzip); fi
+          if [ '${{ matrix.control }}' != suffixed ]; then source_args+=(--unsuffixed); fi
+          if [ '${{ matrix.control }}' = single ]; then source_args+=(--single-record); fi
+          if [ '${{ matrix.control }}' = single-end ]; then source_args+=(--single-end); fi
+          if [ '${{ matrix.control }}' = skip-pairing ]; then source_args+=(--skip-pairing); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then source_args+=(--phred64); fi
           python scripts/check_fastqrepair_pairs.py check "$RUNNER_TEMP/paired-run" "${source_args[@]}"
       - name: Re-execute and verify exact read conservation and mate identity
         run: |
           "$RUNNER_TEMP/paired-run/provenance/commands.sh" "$RUNNER_TEMP/paired-replay"
           source_args=()
           if [ '${{ matrix.source }}' = gzip ]; then source_args+=(--gzip); fi
+          if [ '${{ matrix.control }}' != suffixed ]; then source_args+=(--unsuffixed); fi
+          if [ '${{ matrix.control }}' = single ]; then source_args+=(--single-record); fi
+          if [ '${{ matrix.control }}' = single-end ]; then source_args+=(--single-end); fi
+          if [ '${{ matrix.control }}' = skip-pairing ]; then source_args+=(--skip-pairing); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then source_args+=(--phred64); fi
           python scripts/check_fastqrepair_pairs.py check "$RUNNER_TEMP/paired-replay" --source-run "$RUNNER_TEMP/paired-run" "${source_args[@]}"
       - name: Retain source reads, task commands, outputs and provenance
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: fastqrepair-pair-evidence-${{ matrix.source }}
+          name: fastqrepair-pair-evidence-${{ matrix.source }}-${{ matrix.control }}
           path: |
             ${{ runner.temp }}/paired-fixture
             ${{ runner.temp }}/paired-run

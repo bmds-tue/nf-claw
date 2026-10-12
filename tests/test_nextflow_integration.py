@@ -195,7 +195,8 @@ def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_pa
 
     fastqrepair_compat.write_config(tmp_path / "compat.config")
     (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\nparams.outdir = 'wrong'\n")
-    report = (fastqrepair_compat._zero_report().replace("Total lines: 0", "Total lines: 12")
+    report = (fastqrepair_compat._zero_report().replace("(not applicable)", "(0.0%)")
+              .replace("Total lines: 0", "Total lines: 12")
               .replace("Well-formed lines: 0 (0.0%)", "Well-formed lines: 12 (100.0%)")
               .replace("Clean reads: 0", "Clean reads: 3"))
     (tmp_path / "chunk.report").write_text(report)

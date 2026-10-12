@@ -190,7 +190,7 @@ def test_recorded_helper_executes_without_installed_runner_modules(tmp_path):
     config = compat.write_config(tmp_path / "recorded.config").read_text()
     assert compat.recipe_digest()[:16] in config
     assert "import runner" not in config
-    assert json.dumps(compat._command() + " patch repair .command.sh") in config
+    assert json.dumps(compat._command() + " patch repair .command.sh --mate-orders e30=") in config
 
 
 WIPER_RECIPE = ('#!/usr/bin/env bash -C -e -u -o pipefail\nwipertools \\\n    fastqwiper \\\n'
@@ -225,6 +225,17 @@ def test_placeholder_chunk_yields_an_empty_output_and_zero_report(tmp_path):
         (*compat._FIELDS, "fixed"), 0)
     # The real tool never ran for the placeholder; its version is still recorded.
     assert (tmp_path / "wipertools.args").read_text() == "fastqwiper\n--version\n"
+
+
+def test_placeholder_report_does_not_claim_defined_percentages_with_zero_denominator(tmp_path):
+    text = compat._zero_report()
+    assert "(not applicable)" in text and "%" not in text
+    path = tmp_path / "zero.report"
+    path.write_text(text)
+    assert not any(compat._parse_report(path).values())
+    path.write_text(text.replace("Total lines: 0", "Total lines: 4"))
+    with pytest.raises(ValueError, match="report|undefined"):
+        compat._parse_report(path)
 
 
 def test_real_chunk_reaches_fastqwiper_with_every_argument(tmp_path):
@@ -286,3 +297,84 @@ def test_report_gathering_runs_from_the_recorded_recipe(tmp_path):
     assert result.returncode == 0, result.stderr
     assert "of which 24 fixed" in (tmp_path / "sample.report").read_text()
     assert f"nfclaw_record_reportgather: nfclaw-fastqrepair-compat-sha256:{compat.recipe_digest()}" in result.stdout
+
+
+def test_unsuffixed_mates_follow_samplesheet_order_in_the_actual_repair_command(tmp_path):
+    script = tmp_path / ".command.sh"
+    script.write_text('repair.sh \\\n    in=right_gather__nfclaw_0123456789abcdef.fastq.gz in2=left_gather__nfclaw_0123456789abcdef.fastq.gz \\\n'
+                      '    out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz out2=S__nfclaw_0123456789abcdef_2_repaired.fastq.gz \\\n'
+                      '    threads=1\n    qin=64 \\\n    &> repair.log\n')
+    compat.patch_task("repair", script, mate_orders={"S": ["left", "right"]})
+    text = script.read_text()
+    assert "in=left_gather" in text and "in2=right_gather" in text
+    assert "threads=1 \\\n" in text
+
+
+def test_mate_map_uses_declared_streams_and_refuses_collapsed_raw_names(tmp_path):
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text("sample,fastq_1,fastq_2\nS,/data/left.fastq,/data/right.fastq\n")
+    assert compat.paired_input_roles(sheet) == {"S": ["left", "right"]}
+    sheet.write_text("sample,fastq_1,fastq_2\nS,/data/left.fastq.gz,/data/right.fastq.gz\n")
+    assert compat.paired_input_roles(sheet) == {"S": ["S_recovered_1", "S_recovered_2"]}
+    sheet.write_text("sample,fastq_1,fastq_2\nS,/left/reads.fastq,/right/reads.fastq\n")
+    with pytest.raises(ValueError, match="same|identit"):
+        compat.paired_input_roles(sheet)
+
+
+def test_raw_mate_identifiers_cannot_collapse_across_fastq_extensions(tmp_path):
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text("sample,fastq_1,fastq_2\nS,/data/reads.fastq,/data/reads.fq\n")
+    with pytest.raises(ValueError, match="identit|same"):
+        compat.paired_input_roles(sheet)
+
+
+def test_multiple_rows_cannot_overwrite_a_single_end_sample_publication(tmp_path):
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text("sample,fastq_1,fastq_2\nS,/data/left.fastq,\nS,/data/right.fastq,\n")
+    with pytest.raises(ValueError, match="more than once|identit"):
+        compat.paired_input_roles(sheet)
+
+
+@pytest.mark.parametrize("sample", ["WIPE_HOOK", "WIPER_HOOK", "REPORTGATHER_HOOK", "MATE_ORDERS",
+                                    "REPAIR_HOOK", "SCATTER_HOOK", "RECIPE"])
+def test_configuration_preserves_literal_template_words_in_scientific_identifiers(tmp_path, sample):
+    import json
+    import re
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text(f"sample,fastq_1,fastq_2\n{sample},/data/left.fastq,/data/right.fastq\n")
+    config = compat.write_config(tmp_path / "recorded.config", input_path=sheet).read_text()
+    # The JSON literals are consumed by Groovy's JSON parser, and must still name
+    # the supplied scientific samples rather than expanded template instructions.
+    blocks = re.findall(r"parseText\(\[(.*?)\]\.join\(''\)\)", config)
+    assert blocks
+    for block in blocks:
+        roles = json.loads("".join(json.loads("[" + block + "]")))
+        assert roles == {sample: ["left", "right"]}
+
+
+def test_profile_fallback_cannot_infer_all_mates_from_the_first_header(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    names = ["left.fastq.gz", "right.fastq.gz"]
+    for name, mate in zip(names, (1, 2)):
+        with gzip.open(name, "wt") as stream:
+            stream.write(f"@first/{mate}\nACGT\n+\nIIII\n@second\nTGCA\n+\nHHHH\n")
+    script = 'in=left.fastq.gz in2=right.fastq.gz out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz'
+    with pytest.raises(ValueError, match="mate order|explicit local"):
+        compat._ordered_inputs(script, {})
+
+
+@pytest.mark.parametrize("problem", [None, "opposite", "conflicting", "truncated"])
+def test_profile_fallback_requires_consistent_labels_on_every_complete_record(tmp_path, monkeypatch, problem):
+    monkeypatch.chdir(tmp_path)
+    for name, role in (("left.fastq", 2), ("right.fastq", 1)):
+        label = 3 - role if problem == "opposite" else role
+        header = f"@second/{label}" + (f" {3 - label}:N:0:1" if problem == "conflicting" else "")
+        content = f"@first/{role}\nACGT\n+\nIIII\n{header}\nTGCA\n+\nHHHH\n"
+        (tmp_path / name).write_text(content[:-4] if problem == "truncated" else content)
+    script = 'in=left.fastq in2=right.fastq out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz'
+    if problem is None:
+        corrected = compat._ordered_inputs(script, {})
+        assert "in=right.fastq in2=left.fastq" in corrected
+    else:
+        with pytest.raises(ValueError, match="mate order|explicit local"):
+            compat._ordered_inputs(script, {})
