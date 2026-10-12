@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from runner import chain, handoff, provenance
+from runner import chain, consumption, handoff, provenance
 from runner.errors import NfclawError
 from runner.inputs import absolute_local_path
 from test_handoff import _rule, _trees
@@ -119,6 +119,25 @@ def test_lineage_refuses_extra_glob_members_consumed_then_removed(library, tmp_p
     state = _linked_state(up, down, evidence, tmp_path / "link", [tmp_path / "snapshot/input.csv", pattern])
     extra.unlink()
     assert chain._integrity_problems(state), "glob membership must use recorded consumption, not live matches"
+
+
+@pytest.mark.parametrize("pattern", ["*.fa", "**/*.fa"])
+def test_glob_consumption_does_not_include_separately_declared_hidden_references(tmp_path, pattern):
+    up = tmp_path / "up"
+    up.mkdir()
+    data, hidden = up / "ordinary.fa", up / ".reference.fa"
+    data.write_bytes(b">ordinary\nACGT\n")
+    hidden.write_bytes(b">reference\nTGCA\n")
+    record(up)
+    evidence = handoff.consumption_evidence([up / pattern], up)
+    hashes, nodes = provenance.snapshot_inputs([up / pattern, hidden])
+    assert consumption.agrees(evidence, hashes, nodes)
+    hidden_folder = up / ".hidden"
+    hidden_folder.mkdir()
+    nested = hidden_folder / "ordinary.fa"
+    nested.write_bytes(data.read_bytes())
+    hashes, nodes = provenance.snapshot_inputs([up / pattern, nested])
+    assert consumption.agrees(evidence, hashes, nodes)
 
 
 def test_scalar_handoff_preserves_parent_resolution_and_final_basename(library, tmp_path):

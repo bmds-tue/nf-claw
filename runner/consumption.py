@@ -16,7 +16,10 @@ def _matches(path: Path, pattern: Path) -> bool:
         if j == len(patterns):
             return i == len(parts)
         if patterns[j] == "**":
-            return match(i, j + 1) or i < len(parts) and match(i + 1, j)
+            return (match(i, j + 1) or i < len(parts) and not parts[i].startswith(".")
+                    and match(i + 1, j))
+        if i < len(parts) and parts[i].startswith(".") and not patterns[j].startswith("."):
+            return False
         return (i < len(parts) and fnmatch.fnmatchcase(parts[i], patterns[j])
                 and match(i + 1, j + 1))
 
