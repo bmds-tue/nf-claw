@@ -673,11 +673,12 @@ def test_resource_limits_become_a_config_passed_to_nextflow(tmp_path, monkeypatc
 
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
     res = orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
-        limits=resources.parse(4, "15.GB", "1.h"))
+        nxf_ver="25.10.4", limits=resources.parse(4, "15.GB", "1.h"))
     cfg = pathlib.Path(re.search(r"-c (\S+)", res.command).group(1))
     assert cfg.name == "resource_limits.config"
     assert cfg.is_file() and "resourceLimits" in cfg.read_text()
@@ -704,11 +705,12 @@ def test_an_explicit_config_still_overrides_the_generated_ceiling(tmp_path, monk
     mine = tmp_path / "mine.config"
     mine.write_text("process { resourceLimits = [ cpus: 2 ] }\n")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
     res = orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
-        configs=[str(mine)], limits=resources.parse(4, None, None))
+        nxf_ver="25.10.4", configs=[str(mine)], limits=resources.parse(4, None, None))
     generated = re.search(r"-c (\S*resource_limits\.config)", res.command).group(1)
     assert res.command.index(generated) < res.command.index(str(mine))
 
