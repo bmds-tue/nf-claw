@@ -395,7 +395,8 @@ def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini",
-                            command_str=f"sh -c 'echo started; echo $$ > {pidfile}; exec sleep 30'",
+                            command_str=(f"sh -c 'echo started; echo $$ > {pidfile}.tmp; "
+                                         f"mv {pidfile}.tmp {pidfile}; exec sleep 30'"),
                             submodule=_st(tmp_path / "up"), input_paths=[])
     target = tmp_path / "fresh"
     for bash in ("/bin/bash", "bash"):                       # macOS ships bash 3.2 as /bin/bash

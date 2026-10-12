@@ -641,6 +641,11 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
             "formats. Without a local samplesheet, every gathered read must consistently identify "
             "its mate; ambiguous identity is refused. Paired runs that skip BBMap require a local "
             "samplesheet and publish both mates separately.\n\n"
+            "**Quality encoding.** The native quality-offset control validates Phred+64 "
+            "input converted to Phred+33 by BBMap. Historical Solexa log-odds quality "
+            "scores require a separate score conversion before use; changing the ASCII "
+            "offset alone is insufficient. See [Cock et al. (2010)]"
+            "(https://doi.org/10.1093/nar/gkp1137) for the encoding and score definitions.\n\n"
         )
     reference = _reference_section(ps)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""

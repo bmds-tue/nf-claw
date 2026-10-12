@@ -81,7 +81,8 @@ def read_fastq(path: Path) -> dict[str, tuple[str, str]]:
 
 def check_run(run: Path, *, source_run: Path | None = None, compressed: bool = False,
               unsuffixed: bool = False, single_record: bool = False,
-              single_end: bool = False, skip_pairing: bool = False) -> dict[str, int]:
+              single_end: bool = False, skip_pairing: bool = False,
+              phred64: bool = False) -> dict[str, int]:
     # A commands.sh replay supervises Nextflow directly; identity remains in the
     # guarded source bundle, while the replay records its own engine log/outcome.
     identity = source_run or run
@@ -91,6 +92,8 @@ def check_run(run: Path, *, source_run: Path | None = None, compressed: bool = F
                          "nextflow": "nextflow version 25.10.4", "outcome": "success"}
     if any(manifest.get(key) != value for key, value in expected_identity.items()):
         raise ValueError("unvalidated pipeline, engine or run outcome")
+    if phred64 and json.loads((identity / "provenance/params.json").read_text()).get("qin") != 64:
+        raise ValueError("Phred+64 control must declare its input quality offset")
     if source_run is not None:
         log = run / "provenance/logs/run.log"
         if runlog.read_state(log).state != "success":
@@ -121,6 +124,9 @@ def check_run(run: Path, *, source_run: Path | None = None, compressed: bool = F
             ids = {key for key in ids if key.startswith("pairA/")}
         records = read_fastq(outputs / filename)
         expected = {key.rsplit("/", 1)[0] if unsuffixed else key: READS[key] for key in ids}
+        if phred64 and not single_end and not skip_pairing:
+            expected = {key: (sequence, "".join(chr(ord(char) - 64 + 33) for char in quality))
+                        for key, (sequence, quality) in expected.items()}
         if records != expected:
             raise ValueError(f"read identities, mate orientation, sequences or qualities changed: {filename}")
         counts[filename] = len(records)
@@ -176,6 +182,7 @@ def main() -> None:
     check.add_argument("--single-record", action="store_true")
     check.add_argument("--single-end", action="store_true")
     check.add_argument("--skip-pairing", action="store_true")
+    check.add_argument("--phred64", action="store_true")
     args = parser.parse_args()
     if args.command == "fixture":
         write_fixture(args.directory, compressed=args.compressed,
@@ -183,7 +190,7 @@ def main() -> None:
     else:
         print(check_run(args.run, source_run=args.source_run, compressed=args.compressed,
                         unsuffixed=args.unsuffixed, single_record=args.single_record,
-                        single_end=args.single_end, skip_pairing=args.skip_pairing))
+                        single_end=args.single_end, skip_pairing=args.skip_pairing, phred64=args.phred64))
         print("Known pairs and singletons retain their exact sequences, qualities and mate identity.")
 
 

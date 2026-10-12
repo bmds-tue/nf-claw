@@ -165,3 +165,20 @@ def test_single_record_fixture_declares_exactly_one_unsuffixed_pair(tmp_path, co
     suffix = ".fastq.gz" if compressed else ".fastq"
     for name, role in (("left", 1), ("right", 2)):
         assert read_fastq(source / (name + suffix)) == {"pairA": READS[f"pairA/{role}"]}
+
+
+@pytest.mark.parametrize("correct", [False, True])
+def test_phred64_oracle_checks_numeric_scores_instead_of_ascii_character_identity(tmp_path, correct):
+    run = _run(tmp_path)
+    (run / "provenance/params.json").write_text('{"qin":64}')
+    if correct:
+        for filename, ids in EXPECTED.items():
+            with gzip.open(run / "repaired" / filename, "wt", encoding="ascii") as stream:
+                for name in ids:
+                    sequence, encoded = READS[name]
+                    converted = "".join(chr(ord(char) - 64 + 33) for char in encoded)
+                    stream.write(f"@{name}\n{sequence}\n+\n{converted}\n")
+        assert sum(check_run(run, phred64=True).values()) == 6
+    else:
+        with pytest.raises(ValueError, match="qualities"):
+            check_run(run, phred64=True)

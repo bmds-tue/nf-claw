@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         source: [plain, gzip]
-        control: [suffixed, unsuffixed, single, single-end, skip-pairing]
+        control: [suffixed, unsuffixed, single, single-end, skip-pairing, phred64]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -56,6 +56,7 @@ jobs:
           if [ '${{ matrix.control }}' = single ]; then splits=1; fi
           run_args=()
           if [ '${{ matrix.control }}' = skip-pairing ]; then run_args+=(--skip-bbmap-repair true); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then run_args+=(--qin 64); fi
           nfclaw run fastqrepair --input "$RUNNER_TEMP/paired-fixture/samples.csv" \
             --outdir "$RUNNER_TEMP/paired-run" -profile docker --nxf-ver 25.10.4 \
             --config "$RUNNER_TEMP/paired-fixture/arrival.config" \
@@ -66,6 +67,7 @@ jobs:
           if [ '${{ matrix.control }}' = single ]; then source_args+=(--single-record); fi
           if [ '${{ matrix.control }}' = single-end ]; then source_args+=(--single-end); fi
           if [ '${{ matrix.control }}' = skip-pairing ]; then source_args+=(--skip-pairing); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then source_args+=(--phred64); fi
           python scripts/check_fastqrepair_pairs.py check "$RUNNER_TEMP/paired-run" "${source_args[@]}"
       - name: Re-execute and verify exact read conservation and mate identity
         run: |
@@ -76,6 +78,7 @@ jobs:
           if [ '${{ matrix.control }}' = single ]; then source_args+=(--single-record); fi
           if [ '${{ matrix.control }}' = single-end ]; then source_args+=(--single-end); fi
           if [ '${{ matrix.control }}' = skip-pairing ]; then source_args+=(--skip-pairing); fi
+          if [ '${{ matrix.control }}' = phred64 ]; then source_args+=(--phred64); fi
           python scripts/check_fastqrepair_pairs.py check "$RUNNER_TEMP/paired-replay" --source-run "$RUNNER_TEMP/paired-run" "${source_args[@]}"
       - name: Retain source reads, task commands, outputs and provenance
         if: always()
