@@ -300,10 +300,11 @@ def pipeline_head(repo: Path) -> str | None:
     """HEAD only when repo is the exact working-tree root, never a surrounding repository."""
     try:
         result = subprocess.run(["git", "-C", str(repo), "rev-parse", "--show-toplevel", "HEAD"],
-                                capture_output=True, text=True, check=True, timeout=30)
+                                capture_output=True, check=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return None
-    lines = result.stdout.strip().splitlines()
+    # Decode raw filesystem bytes without newline translation; only the last LF frames HEAD.
+    lines = os.fsdecode(result.stdout).rstrip("\n").rsplit("\n", 1)
     if len(lines) == 2 and Path(lines[0]).resolve() == repo.resolve():
         return lines[1]
     return None

@@ -68,4 +68,4 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: ./.github/actions/setup-nextflow
-      - run: pytest -q tests/test_nextflow_integration.py
+      - run: pytest -q tests/test_nextflow_integration.py tests/test_git_path_identity.py
