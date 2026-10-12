@@ -54,9 +54,12 @@ every node fits, and the explorers page, group and search rather than render eve
 
 ## Develop
 
+Use the current patch release of Node.js 24 LTS, matching CI and deployment builds.
+[Node.js 20 is end-of-life](https://nodejs.org/en/about/eol) and receives no security fixes.
+
 ```bash
 cd website
-npm install
+npm ci
 npm run dev        # http://localhost:3000
 ```
 
