@@ -62,12 +62,14 @@ _FASTQ_SUFFIX = re.compile(r"\.f(?:ast)?q(?:\.gz)?$", re.IGNORECASE)
 # bcl2fastq / BCL Convert: <sample>_S<n>[_L<lane>]_<R|I><read>_<chunk>
 _ILLUMINA = re.compile(r"^(?P<sample>.+)_S(?P<number>\d+)(?:_L(?P<lane>\d{3}))?_(?P<kind>[RI])"
                        r"(?P<read>\d)_(?P<chunk>\d{3})$")
-# An explicit read token: <sample>[_L<lane>]{_|.}R<read>[_<chunk>]. Index reads are recognised only
-# in the demultiplexer's full form above: `Patient_I1` may well be a sample.
-_TOKEN = re.compile(r"^(?P<sample>.+?)(?:_L(?P<lane>\d{3}))?[._](?P<kind>[Rr])(?P<read>\d)"
+# An explicit read token: <sample>[_L<lane>]{_|.|-}R<read>[_<chunk>]. Index reads are recognised
+# only in the demultiplexer's full form above: `Patient_I1` may well be a sample.
+_TOKEN = re.compile(r"^(?P<sample>.+?)(?:_L(?P<lane>\d{3}))?[._-](?P<kind>[Rr])(?P<read>\d)"
                     r"(?:_(?P<chunk>\d{3}))?$")
-# A bare read number: <sample>{_|.}<1|2> — mates only when their reads say so.
-_BARE = re.compile(r"^(?P<sample>.+)[._](?P<read>[12])$")
+# A bare read number: <sample>{_|.|-}<1|2> — mates only when their reads say so.
+_BARE = re.compile(r"^(?P<sample>.+)[._-](?P<read>[12])$")
+# Characters that mark read 1/read 2 in naming conventions nfclaw does not parse (`_read1`, `_F`).
+_READ_MARKS = {"1": "2", "F": "R", "f": "r"}
 _COMPRESSION = (".gz", ".bz2", ".xz", ".zst", ".zip")
 _INDEXES = (".bai", ".crai", ".csi", ".tbi", ".pbi", ".fai")
 _SHOWN = 5                      # file names quoted in one message
@@ -574,6 +576,7 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
         else:
             (path,) = slot.values()
             units.append(_Unit(_read_stem(path.name), None, None, [path]))
+    _refuse_unnamed_mates(units)
     if any(len(u.reads) == 2 for u in units):
         if not paired_ok:
             raise _bad("the samplesheet takes single-end reads in one column, but the files hold "
@@ -587,6 +590,37 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                            "deliberately single-end library can be linked under a name without "
                            "a read number (x.fastq.gz); otherwise write the samplesheet yourself.")
     return units
+
+
+def _refuse_unnamed_mates(units: list[_Unit]) -> None:
+    """Two would-be single-end files whose names differ only by a read mark (`_read1`/`_read2`,
+    `_F`/`_R`) and whose first reads are mates are one library under a naming nfclaw does not
+    parse: taking them for two samples would analyse it twice, as single-end."""
+    singles = [u.reads[0] for u in units if len(u.reads) == 1]
+    partners: dict[tuple[Path, str], dict[str, Path]] = {}
+    for path in singles:
+        stem = _read_stem(path.name)
+        for i, char in enumerate(stem):
+            if char in _READ_MARKS or char in _READ_MARKS.values():
+                key = (path.parent, f"{stem[:i]}\0{stem[i + 1:]}")
+                partners.setdefault(key, {})[char] = path
+    names: dict[Path, str | None] = {}
+
+    def read_name(path: Path) -> str | None:
+        if path not in names:
+            names[path] = _first_read_name(path)
+        return names[path]
+
+    for marks in partners.values():
+        for first, second in _READ_MARKS.items():
+            if first in marks and second in marks:
+                a, b = read_name(marks[first]), read_name(marks[second])
+                if a and b and _mates(a, b):
+                    raise _bad(f"{marks[first].name} and {marks[second].name} hold the two reads of "
+                               "one library (their read names pair), but their names carry no read "
+                               "number nfclaw recognises",
+                               fix="Name (or link) them <sample>_R1 / <sample>_R2 so they are "
+                                   "analysed as one paired-end library.")
 
 
 def _confirm(first: Path, second: Path, notes: list[str]) -> None:

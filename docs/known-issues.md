@@ -258,6 +258,7 @@ files or columns; the fixes:
 | `needs values nfclaw cannot take from the files` | Set each listed column: `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template). The allowed values are in the message and in skill.md. |
 | `takes reads in several column groups` | Empty the groups your files do not belong in, e.g. `--sheet-set long_reads=` for short reads in mag. |
 | `named as mates, but their first read names differ` | The `_R1`/`_R2` files do not belong together (swapped or truncated mate). Restore the right files. |
+| `hold the two reads of one library …, but their names carry no read number` | Their reads pair, but the names use a convention nfclaw does not parse (`_read1`/`_read2`, `_F`/`_R`). Name or link them `<sample>_R1`/`<sample>_R2`. |
 | `read 2 …, but its read 1 file is missing` / `have no mate` | A mate is missing. Restore it, or leave the file out of `--input`. Deliberately mixed single/paired layouts need a hand-written samplesheet. |
 | `fit several samplesheet columns` | Empty the column you do not use (`--sheet-set protein=`), or pass only one kind of file. |
 | `do not all bring the same kinds of files` | A stray file (a VCF beside FastQ files) became a sample. Narrow `--input` with a glob such as `'/data/*.fastq.gz'`. |

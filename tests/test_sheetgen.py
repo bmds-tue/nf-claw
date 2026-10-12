@@ -691,3 +691,31 @@ def test_an_empty_directory_and_crlf_fastq(tmp_path):
     (data / "A_1.fastq").write_bytes(b"@r1/1\r\nACGT\r\n+\r\nIIII\r\n")
     (data / "A_2.fastq").write_bytes(b"@r1/2\r\nACGT\r\n+\r\nIIII\r\n")
     assert rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))[0]["sample"] == "A"
+
+
+def test_hyphenated_read_tokens_pair(tmp_path):
+    data = tmp_path / "data"
+    pair(data, "S1-R1.fastq.gz", "S1-R2.fastq.gz")
+    pair(data, "S2-1.fastq.gz", "S2-2.fastq.gz", "other:1")
+    got = rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
+    assert [(r["sample"], Path(r["fastq_2"]).name) for r in got] == [
+        ("S1", "S1-R2.fastq.gz"), ("S2", "S2-2.fastq.gz")]
+
+
+@pytest.mark.parametrize("r1, r2", [("S_read1.fq.gz", "S_read2.fq.gz"),
+                                    ("S_F.fastq.gz", "S_R.fastq.gz")])
+def test_mates_under_an_unknown_naming_are_refused_not_split(tmp_path, r1, r2):
+    # Their names carry no read number nfclaw recognises, but their reads pair: taking them for two
+    # single-end samples would analyse one library as two.
+    data = tmp_path / "data"
+    pair(data, r1, r2)
+    err = refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    assert r1 in str(err) and "_R1" in err.fix
+
+
+def test_similar_names_of_different_libraries_stay_single_end(tmp_path):
+    data = tmp_path / "data"
+    fq(data / "S_read1.fq.gz", "M1:1:FC:1:1101:100:200 1:N:0:1")
+    fq(data / "S_read2.fq.gz", "M1:1:FC:1:1101:555:666 1:N:0:1")
+    got = rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
+    assert [r["sample"] for r in got] == ["S_read1", "S_read2"]
