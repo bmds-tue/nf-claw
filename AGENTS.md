@@ -100,6 +100,8 @@ Invoke `commands.sh` by an absolute or relative path. Moving a bundle preserves 
 
 Trust `skill.md` / `reference.md` over your own memory — they are generated from the pinned commit. To set any parameter beyond the essentials, look it up in `pipelines/<name>/reference.md` (the complete list, with allowed values and value constraints) — do not invent a flag or value. `nfclaw run` rejects unknown flags, invalid allowed values and unambiguous scalar/shape errors before it starts; `nf-schema` remains authoritative for the complete schema (especially conditionals and complex constraints) at runtime. Only read `upstream/` for deep dives.
 
+Numeric values supplied through CLI flags, JSON/YAML parameter files and chain specs retain their decimal value when nfclaw writes the parameters Nextflow reads. Decimal notation and scientific notation do not round large integers or underflow small nonzero values to zero. Schema enum/boundary comparisons and numeric CSV/TSV column checks use the emitted decimal value. JSON/YAML nested numeric parameters and recorded chain specs retain it too. Integer values beyond Nextflow's signed 64-bit JSON parser range use decimal notation to prevent wraparound. NaN and infinity remain refused. Nextflow, nf-schema and each scientific tool still determine their own supported ranges and arithmetic precision.
+
 ---
 
 ## To chain pipelines (A, then B, then C)

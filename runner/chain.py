@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import json
 import os
 import re
 import shutil
@@ -31,6 +30,7 @@ from runner import (discovery, engine_version, execution, handoff, inputs, input
                     versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
+from runner import exact_json as json
 from runner.errors import ErrorCode, NfclawError
 from runner.probes import capture
 from runner.submodule import SubmoduleStatus

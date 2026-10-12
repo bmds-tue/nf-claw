@@ -126,6 +126,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   ```
   If your shell trips over substitution (`syntax error near unexpected token ')'`), hardcode numeric ids (`id -u` / `id -g`): `docker { runOptions = "-u 1000:1000" }`.
 
+### Numeric parameters can change before Nextflow receives them
+- **Status: Fixed at the wrapper boundary.** Binary-float conversion changed `9007199254740993e0` into `9007199254740992`, changed `0.1000000000000000000001` into `0.1`, and underflowed `1e-9999` to zero. Converting the float `1e23` directly to an integer also emitted `99999999999999991611392` rather than the JSON value `100000000000000000000000`.
+- **Behavior:** CLI flags and JSON/YAML parameters retain their decimal value, including nested values and chain records. Precise values are emitted as JSON numbers without quoting or expansion of extreme exponents into digit strings. Plain JSON integer literals outside the signed 64-bit range also wrapped in the tested engines, so those values are emitted with a decimal point to retain their value in Nextflow. Schema enum/type/boundary checks and numeric CSV/TSV bounds compare that emitted value. Non-finite values remain refused. Pipeline engines, validation plugins and scientific tools retain their own numerical ranges and arithmetic precision.
+- **Validation:** Independent decimal-text controls check serialization, enum and boundary decisions, YAML aliases, and chain records/fingerprints. Native tasks on Nextflow 25.10.4 and 26.04.0 observe the original numbers from CLI, JSON and YAML and preserve them in standalone replay. Separate nf-schema 2.5.1 and 2.7.2 controls on both engines accept the exact integer enum and exact decimal bounds without changing task-observed values.
+
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import json
 import os
 import platform
 import re
@@ -11,6 +10,8 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from runner import exact_json as json
 from runner.inputs import is_remote_url
 
 from runner.outputs import result_files

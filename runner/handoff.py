@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import json
 import os
 import re
 from collections import Counter
@@ -30,6 +29,7 @@ from typing import Any, Mapping
 from runner import inputs, parameters, provenance, samplesheet
 from runner import outputs as output_mod
 from runner import schema as schema_mod
+from runner import exact_json as json
 from runner.errors import ErrorCode, NfclawError
 from runner.outputs import is_result
 

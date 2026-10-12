@@ -13,6 +13,106 @@ import pytest
 from runner import chain, orchestration, resources, runlog, verify
 
 
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("source_kind", ["cli", "json", "yaml"])
+def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_path, engine, source_kind):
+    from decimal import Decimal
+
+    if source_kind == "yaml":
+        pytest.importorskip("yaml")
+    root = tmp_path / "library"
+    tree = root / "pipelines/fixture/upstream"
+    tree.mkdir(parents=True)
+    (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (tree / "nextflow_schema.json").write_text('''{"properties": {
+      "choice": {"type":"integer", "enum":[9007199254740993]},
+      "count": {"type":"integer", "enum":[1e23]},
+      "values": {"type":"object"},
+      "outdir": {"type":"string", "format":"directory-path"}}}''')
+    (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    (tree / "main.nf").write_text('''process OBSERVE {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ val values
+ output:
+ path 'observed.json'
+ script:
+ def text = groovy.json.JsonOutput.toJson(values.collectEntries { key, value -> [key, value.toString()] })
+ """
+ cat > observed.json <<'NFCLAW_VALUES'
+ ${text}
+ NFCLAW_VALUES
+ """
+}
+workflow { OBSERVE(params.values + [choice: params.choice, count: params.count]) }
+''')
+    tokens = {"tiny": "1e-9999", "large": "1e9999", "precise": "0.1000000000000000000001",
+              "whole_decimal": "100000000000000000000001e0"}
+    choice = "9007199254740993e0"
+    raw_values = ",".join(json.dumps(key) + ":" + value for key, value in tokens.items())
+    params_path = tmp_path / "params.json"
+    params_path.write_text('{"choice":' + choice + ',"count":1e23,"values":{' + raw_values + '}}')
+    expected = {**tokens, "choice": choice, "count": "1e23"}
+
+    def observe(outdir):
+        observed = json.loads((outdir / "observed.json").read_text())
+        assert observed.keys() == expected.keys()
+        assert {key: Decimal(value) for key, value in observed.items()} == {
+            key: Decimal(value) for key, value in expected.items()}
+
+    # Independent direct-Nextflow control: these decimal values are supported by the engine.
+    if source_kind == "cli":
+        raw = tmp_path / "raw"
+        raw.mkdir()
+        result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(params_path),
+            "--outdir", str(raw), "-ansi-log", "false"], cwd=raw,
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        observe(raw)
+        # Plain integer literals beyond signed-long range wrap in these engines. The decimal
+        # notation above is a separate direct control; the wrapper must avoid this corruption.
+        import ctypes
+        overflowing = tmp_path / "overflowing.json"
+        overflowing.write_text(params_path.read_text().replace('"count":1e23',
+                                                               '"count":100000000000000000000000'))
+        raw_wrapped = tmp_path / "raw_wrapped"
+        raw_wrapped.mkdir()
+        result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(overflowing),
+            "--outdir", str(raw_wrapped), "-ansi-log", "false"], cwd=raw_wrapped,
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        wrapped = json.loads((raw_wrapped / "observed.json").read_text())["count"]
+        assert Decimal(wrapped) == ctypes.c_longlong(10 ** 23).value
+        assert Decimal(wrapped) != Decimal("1e23")
+
+    overrides = {}
+    if source_kind == "cli":
+        overrides["choice"] = choice
+        overrides["count"] = "100000000000000000000000"
+        # An object comes from the JSON params file; its nested numbers also need preservation.
+    elif source_kind == "yaml":
+        params_path = tmp_path / "params.yaml"
+        params_path.write_text("choice: 9007199254740993.0\ncount: 1.0e+23\nvalues:\n  tiny: 1.0e-9999\n"
+                               "  large: 1.0e+9999\n  precise: 0.1000000000000000000001\n"
+                               "  whole_decimal: 100000000000000000000001.0\n")
+    out = tmp_path / "original"
+    orchestration.run_pipeline("fixture", repo_root=root, input_path=None, outdir=out, profile="",
+        params_file=params_path, cli_overrides=overrides, resume=False, demo=False, check_only=False,
+        write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    observe(out)
+    recorded = json.loads((out / "provenance/params.json").read_text(), parse_float=Decimal)
+    assert recorded["choice"] == Decimal(choice)
+    assert recorded["count"] == Decimal("1e23")
+    assert recorded["values"] == {key: Decimal(value) for key, value in tokens.items()}
+    replay = tmp_path / "replay"
+    result = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(replay)],
+                            capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    observe(replay)
+    assert verify.compare(out, replay).byte_identical
+
+
 def _path_route_fixture(tmp_path):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
