@@ -118,6 +118,11 @@ def _typed(col: Column) -> bool:
             and any(_EXTENSION.search(p) for p in pats))
 
 
+def file_columns(sheet: InputSchema) -> tuple[str, ...]:
+    """The columns whose patterns name a file type: data files, whatever format the schema declares."""
+    return tuple(c.name for c in sheet.columns if c.name and _typed(c))
+
+
 def _matches(col: Column, path: Path) -> bool:
     """A file fits a column when one of its patterns accepts both the absolute path (the value
     nf-schema checks) and the bare file name — so a pattern matching a directory name is no match."""
