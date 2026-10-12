@@ -361,12 +361,14 @@ def resolve_path_params(merged: dict[str, Any], schema: ParamSchema) -> dict[str
 
 def _finite(value: Any) -> bool:
     """False for a NaN/Infinity anywhere in `value` (JSON has no literal for either)."""
-    if isinstance(value, float):
-        return math.isfinite(value)
-    if isinstance(value, Mapping):
-        return all(_finite(v) for v in value.values())
-    if isinstance(value, (list, tuple)):
-        return all(_finite(v) for v in value)
+    pending, seen = [value], set()
+    while pending:
+        item = pending.pop()
+        if isinstance(item, float) and not math.isfinite(item):
+            return False
+        if isinstance(item, (Mapping, list, tuple)) and id(item) not in seen:
+            seen.add(id(item))
+            pending.extend(item.values() if isinstance(item, Mapping) else item)
     return True
 
 
