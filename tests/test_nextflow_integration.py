@@ -936,3 +936,74 @@ workflow { DIGEST(Channel.fromPath(params.input)) }
     state, problems = chain.status(out)
     assert state["outcome"] != "success" and problems
     assert chain.status_exit_code(state, problems) == 1
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4"])
+def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(tmp_path, engine):
+    from runner import fastqrepair_compat
+    sheet = tmp_path / "cohort.csv"
+    sheet.write_text("sample,fastq_1,fastq_2\n" + "".join(
+        f"S{index},/data/left.fastq,/data/right.fastq\n" for index in range(10000)))
+    config = fastqrepair_compat.write_config(tmp_path / "recorded.config", input_path=sheet)
+    pipeline = tmp_path / "pipeline"
+    pipeline.mkdir()
+    (pipeline / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    # Nextflow stringifies meta-dependent closures; embedding even fragmented
+    # cohort data inside such a closure overflows one JVM string constant.
+    result = subprocess.run(["nextflow", "-c", str(config), "config", str(pipeline), "-flat"],
+                            cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    # Exercise first/last keys through real task closures, using an argument
+    # recorder in place of BBMap. This validates transport and command order;
+    # the separate native scientific controls execute the real repair tools.
+    left, right = (tmp_path / f"{role}_gather__nfclaw_0123456789abcdef.fastq.gz"
+                   for role in ("left", "right"))
+    left.write_bytes(b"")
+    right.write_bytes(b"")
+    (pipeline / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nparams.publish_dir_mode='copy'\n")
+    (pipeline / "main.nf").write_text(r'''process BBMAP_REPAIR {
+    input:
+    tuple val(meta), path(left), path(right)
+    output:
+    path '*.repair.sh.log'
+    script:
+    """
+    repair.sh() { printf '%s\\n' "\$@"; }
+    repair.sh \\
+        threads=1
+        qin=33 \\
+        in=${right} in2=${left} \\
+        out=${task.ext.prefix}_1_repaired.fastq.gz \\
+        &> ${task.ext.prefix}.repair.sh.log
+    """
+}
+workflow {
+    Channel.of(tuple([id:'S0', single_end:false], file(params.left), file(params.right)),
+               tuple([id:'S9999', single_end:false], file(params.left), file(params.right)))
+        | BBMAP_REPAIR
+}
+''')
+    out, work = tmp_path / "results", tmp_path / "work"
+    executed = subprocess.run(["nextflow", "run", str(pipeline), "-c", str(config),
+                               "--left", str(left), "--right", str(right),
+                               "--outdir", str(out), "-work-dir", str(work)],
+                              cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                              capture_output=True, text=True, timeout=120)
+    assert executed.returncode == 0, executed.stdout + executed.stderr
+    import base64
+    import re
+    selections = []
+    for wrapper in work.rglob(".command.run"):
+        payloads = re.findall(r"--mate-orders ([A-Za-z0-9+/=]+)", wrapper.read_text())
+        assert len(payloads) == 1
+        selections.append(json.loads(base64.b64decode(payloads[0])))
+    assert sorted(selections, key=lambda item: next(iter(item))) == [
+        {"S0": ["left", "right"]}, {"S9999": ["left", "right"]}]
+    for sample in ("S0", "S9999"):
+        arguments = (out / "repaired" / f"{sample}.repair.sh.log").read_text().splitlines()
+        assert arguments[:2] == ["threads=1", "qin=33"]
+        assert arguments[2:4] == [f"in={left.name}", f"in2={right.name}"]

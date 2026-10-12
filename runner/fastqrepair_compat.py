@@ -151,7 +151,7 @@ def scatter(path: Path, splits: int, prefix: str, folder: Path, *,
 
 def _zero_report() -> str:
     return "FASTQWIPER REPORT:\n\n" + "".join(
-        f"{field}: 0" + (" (0.0%)" if field in _PERCENT else "")
+        f"{field}: 0" + (" (not applicable)" if field in _PERCENT else "")
         + (" of which 0 fixed" if field == "Bad headers or misplaced lines" else "") + "\n"
         for field in _FIELDS)
 
@@ -177,19 +177,23 @@ def wipe(argv: list[str]) -> None:
 
 def _parse_report(path: Path) -> dict[str, int]:
     counts: dict[str, int] = {}
+    undefined = False
     for line in path.read_text().splitlines():
         for field in _FIELDS:
             if line.startswith(field + ":"):
-                rest = r" \(\d+(?:\.\d+)?%\)" if field in _PERCENT else ""
+                rest = r" \((?:\d+(?:\.\d+)?%|not applicable)\)" if field in _PERCENT else ""
                 fixed = r" of which (\d+) fixed" if field == "Bad headers or misplaced lines" else ""
                 match = re.fullmatch(re.escape(field) + r": (\d+)" + rest + fixed, line)
                 if field in counts or not match:
                     raise ValueError(f"{path}: unrecognized fastqwiper report line: {line!r}")
                 counts[field] = int(match[1])
+                undefined |= "(not applicable)" in line
                 if fixed:
                     counts["fixed"] = int(match[2])
     if len(counts) != len(_FIELDS) + 1:
         raise ValueError(f"{path}: incomplete fastqwiper report")
+    if undefined and any(counts.values()):
+        raise ValueError(f"{path}: undefined rates are only valid for a zero-count placeholder report")
     return counts
 
 
@@ -329,14 +333,15 @@ def write_config(target: Path, *, input_path: Path | None = None) -> Path:
     orders = paired_input_roles(input_path)
     encoded = base64.b64encode(json.dumps(orders, sort_keys=True).encode()).decode()
     repair_hook = json.dumps(command + " patch repair .command.sh --mate-orders " + encoded)
-    # Keep a large cohort map out of process argv. Groovy selects only this task's
-    # sample, and bounded string literals avoid the JVM constant-size ceiling.
+    # Parse a cohort map once, outside meta-dependent closures: Nextflow stringifies
+    # those closures, so even fragmented table literals inside them overflow the
+    # JVM constant-size ceiling. Each task receives only its sample's role pair.
     serialized = json.dumps(orders, sort_keys=True)
     fragments = ", ".join(json.dumps(serialized[index:index + 8000])
                           for index in range(0, len(serialized), 8000))
     order_expression = f"new groovy.json.JsonSlurper().parseText([{fragments}].join(''))"
     if orders:
-        repair_hook = ("{\n            def roles = " + order_expression + "\n"
+        repair_hook = ("{\n            def roles = nfclawMateRoles\n"
                        "            def pair = roles[meta.id]\n"
                        "            def selection = pair == null ? [:] : [(meta.id): pair]\n"
                        "            return " + json.dumps(command + " patch repair .command.sh")
@@ -346,6 +351,7 @@ def write_config(target: Path, *, input_path: Path | None = None) -> Path:
     reportgather_hook = json.dumps(command + " patch reportgather .command.sh")
     salt = (hashlib.sha256(_source() + encoded.encode()).hexdigest()[:16] if orders else recipe_digest()[:16])
     config = """// nfclaw runtime correction for fastqrepair 1.1.1; pinned source is unchanged.
+def nfclawMateRoles = new java.util.LinkedHashMap(MATE_ORDERS)
 process {
     withName: 'WIPERTOOLS_FASTQSCATTER' {
         beforeScript = SCATTER_HOOK
@@ -359,7 +365,7 @@ process {
                 if (filename == 'versions.yml') return null
                 if (!meta.single_end && !params.skip_bbmap_repair) return null
                 if (meta.single_end) return "${meta.sample_id}.fastq.gz"
-                def roles = MATE_ORDERS
+                def roles = nfclawMateRoles
                 def pair = roles[meta.sample_id]
                 if (pair == null || !pair.contains(meta.id))
                     throw new IllegalStateException("Cannot publish unverified mate identity; supply an explicit local samplesheet")

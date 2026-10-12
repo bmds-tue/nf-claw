@@ -227,6 +227,17 @@ def test_placeholder_chunk_yields_an_empty_output_and_zero_report(tmp_path):
     assert (tmp_path / "wipertools.args").read_text() == "fastqwiper\n--version\n"
 
 
+def test_placeholder_report_does_not_claim_defined_percentages_with_zero_denominator(tmp_path):
+    text = compat._zero_report()
+    assert "(not applicable)" in text and "%" not in text
+    path = tmp_path / "zero.report"
+    path.write_text(text)
+    assert not any(compat._parse_report(path).values())
+    path.write_text(text.replace("Total lines: 0", "Total lines: 4"))
+    with pytest.raises(ValueError, match="report|undefined"):
+        compat._parse_report(path)
+
+
 def test_real_chunk_reaches_fastqwiper_with_every_argument(tmp_path):
     env = _fake_wipertools(tmp_path)
     _write(tmp_path / "source_000.fastq.gz", b"@r\nACGT\n+\nIIII\n")
