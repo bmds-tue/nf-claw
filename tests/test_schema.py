@@ -112,3 +112,41 @@ def test_config_param_defaults_reads_the_params_block(tmp_path):
 
 def test_config_param_defaults_without_a_config(tmp_path):
     assert schema.config_param_defaults(tmp_path) == {}
+
+
+def test_input_schema_captures_what_samplesheet_generation_needs(tmp_path):
+    # Generating a samplesheet from data files needs more of the schema than validating one: the
+    # patterns a column accepts inside anyOf/oneOf branches (atacseq declares fastq_2's FastQ pattern
+    # only there), defaults, required column alternatives and nf-schema's uniqueEntries.
+    import json
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "schema_input.json").write_text(json.dumps({
+        "uniqueEntries": ["sample"],
+        "allOf": [{"uniqueEntries": ["fastq_1"]}, {"uniqueEntries": ["sample", "run"]}],
+        "items": {
+            "properties": {
+                "sample": {"type": "string", "pattern": "^\\S+$"},
+                "run": {"type": "string"},
+                "fastq_1": {"type": "string", "pattern": "^\\S+\\.f(ast)?q\\.gz$"},
+                "fastq_2": {"anyOf": [{"type": "string", "pattern": "^\\S+\\.f(ast)?q\\.gz$"},
+                                      {"type": "string", "maxLength": 0}]},
+                "pbi": {"oneOf": [{"type": "string", "pattern": "^\\S+\\.bam\\.pbi$"},
+                                  {"type": "string", "pattern": "^none$"}]},
+                "strand": {"type": "string", "enum": ["yes", "no"], "default": "no"},
+                "long_reads": {"type": "string", "format": "file-path"},
+            },
+            "required": ["sample", "strand"],
+            "anyOf": [{"required": ["fastq_1"]}, {"required": ["long_reads"]},
+                      {"dependentRequired": {"run": ["fastq_1"]}}],
+        },
+    }))
+    insch = schema.load_input_schema(tmp_path)
+    cols = {c.name: c for c in insch.columns}
+    assert cols["fastq_2"].pattern is None
+    assert cols["fastq_2"].alternatives == ("^\\S+\\.f(ast)?q\\.gz$",)
+    assert cols["pbi"].alternatives == ("^\\S+\\.bam\\.pbi$", "^none$")
+    assert cols["fastq_1"].alternatives == ()
+    assert cols["strand"].default == "no" and cols["sample"].default is None
+    assert insch.any_of_required == (("fastq_1",), ("long_reads",))
+    assert insch.any_of_dependent_required == ((("run", ("fastq_1",)),),)
+    assert insch.unique_entries == (("sample",), ("fastq_1",), ("sample", "run"))
