@@ -22,6 +22,8 @@ Explicit local and remote input filenames are validated before launch because pi
 
 Local path parameters retain the supplied basename, including a symlink's name and format suffix. For example, `sheet.csv` pointing to `stored.data` remains `sheet.csv` for samplesheet validation and Nextflow staging. Parent directories are resolved against the caller's directory; both alias and target names are checked, and provenance records the link identity and target bytes.
 
+LF/CR in local input paths or resolved targets are refused because Nextflow can turn them into shell lines. Samplesheet paths crossing a directory symlink with `..` must use an explicit parent path: Nextflow may otherwise select different data. Ordinary parent traversal is supported; wildcard parents followed by `..` are refused. Local colon parents remain local dependencies. Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode separators without losing file identities.
+
 Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Boundary refusals leave input data and existing run logs untouched.
 
 ### Navigation

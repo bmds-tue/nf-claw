@@ -340,7 +340,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     unverified_paths = {}
     for key, value in resolved.items():
         if key not in refs or key in {"input", "outdir"} or not isinstance(value, str) \
-                or not value or "://" in value:
+                or not value or inputs.is_remote_url(value):
             continue
         path = Path(value)
         try:

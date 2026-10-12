@@ -81,16 +81,51 @@ def host_identity() -> str | None:
             if identity is not None else None)
 
 
+def checksum_text(checksums: dict[str, str]) -> str:
+    """GNU checksum records: escape backslashes, LF and CR with a marked digest line."""
+    lines = []
+    for name, digest in sorted(checksums.items()):
+        escaped = name.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
+        marker = "\\" if escaped != name else ""
+        lines.append(f"{marker}{digest}  {escaped}\n")
+    return "".join(lines)
+
+
 def read_checksums(path: Path, *, relative: bool = True) -> dict[str, str]:
     """Read a manifest; malformed/duplicate paths raise ValueError, I/O retains OSError."""
     out: dict[str, str] = {}
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    # Only LF separates records. Unicode line separators are valid filesystem characters.
+    with path.open(encoding="utf-8", newline="") as stream:
+        records = stream.read().split("\n")
+    if records and records[-1] == "":
+        records.pop()
+    for number, line in enumerate(records, start=1):
+        if line.endswith("\r"):
+            line = line[:-1]  # CRLF records; literal terminal CR is escaped by the writer.
+        marked = line.startswith("\\")
+        if marked:
+            line = line[1:]
         digest, separator, name = line.partition("  ")
+        if marked:
+            decoded = []
+            position = 0
+            escapes = {"\\": "\\", "n": "\n", "r": "\r"}
+            while position < len(name):
+                char = name[position]
+                if char == "\\":
+                    position += 1
+                    if position == len(name) or name[position] not in escapes:
+                        raise ValueError(f"invalid checksum escape in {path} at line {number}")
+                    char = escapes[name[position]]
+                decoded.append(char)
+                position += 1
+            name = "".join(decoded)
         parts = name.split("/")
         absolute = name.startswith("/")
         valid_path = bool(name) and "\x00" not in name and not any(
-            p in (".", "..", "") for p in (parts[1:] if absolute else parts)
-        ) and not (relative and absolute)
+            p in (".", "") or p == ".." and not absolute
+            for p in (parts[1:] if absolute else parts)
+        ) and (not absolute if relative else absolute)
         if not separator or not re.fullmatch(r"[0-9a-fA-F]{64}", digest) or not valid_path:
             raise ValueError(f"invalid checksum record in {path} at line {number}")
         if name in out:
@@ -236,7 +271,7 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
 
     def absolute_name(value):
         return (isinstance(value, str) and value.startswith("/") and "\x00" not in value
-                and (value == "/" or not any(part in ("", ".", "..") for part in value.split("/")[1:])))
+                and (value == "/" or not any(part in ("", ".") for part in value.split("/")[1:])))
 
     for name, entry in data.items():
         if (not absolute_name(name)

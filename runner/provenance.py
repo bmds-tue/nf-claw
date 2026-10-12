@@ -11,12 +11,14 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from runner.inputs import is_remote_url
 
 from runner.outputs import result_files
 from runner import outputs
 from runner.engine_version import version_text
 from runner.probes import capture
 from runner.replay_guard import (MissingInputSource as MissingInputSource,
+                                 checksum_text as checksum_text,
                                  hash_inputs as hash_inputs, hash_pipeline as hash_pipeline,
                                  input_files as input_files,
                                  snapshot_inputs as snapshot_inputs,
@@ -55,14 +57,14 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
         for row in serialized_rows(path) or []:
             for column in columns:
                 value = row.get(column)
-                if isinstance(value, str) and value and "://" not in value:
+                if isinstance(value, str) and value and not is_remote_url(value):
                     paths.add(Path(value))
         return sorted(paths)
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream, delimiter=delimiter_for(path), strict=True):
             for column in columns:
                 value = (row.get(column) or "").strip()
-                if value and "://" not in value:
+                if value and not is_remote_url(value):
                     paths.add(Path(value))
     return sorted(paths)
 
@@ -257,8 +259,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         manifest["pipeline_git_head"] = (
             submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
         pipeline_hashes = hash_pipeline(submodule.path) if pipeline_checksums is None else pipeline_checksums
-        _atomic_text(prov / "pipeline.sha256", "".join(
-            f"{digest}  {path}\n" for path, digest in sorted(pipeline_hashes.items())))
+        _atomic_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
     # params.json is itself a scientific dependency. Direct recording callers get its guard too;
     # the runner supplies a prelaunch config snapshot containing it, preserving the bytes used.
     params = prov / "params.json"
@@ -284,16 +285,14 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
                 inventory = {}
                 if paths:
                     manifest.setdefault("unverified_dependency_inventories", []).append(kind)
-        lines = [f"{digest}  {path}" for path, digest in sorted(hashes.items())]
-        _atomic_text(prov / f"{kind}.sha256", "\n".join(lines) + ("\n" if lines else ""))
+        _atomic_text(prov / f"{kind}.sha256", checksum_text(hashes))
         _atomic_text(prov / f"{kind}.sources.json", json.dumps(
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
         _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     _atomic_bytes(prov / "replay_guard.py", Path(__file__).with_name("replay_guard.py").read_bytes())
 
     output_hashes, output_inventory, _ = outputs.snapshot(outdir, _sha256)
-    out_lines = [f"{digest}  {rel}" for rel, digest in output_hashes.items()]
-    _atomic_text(prov / "outputs.sha256", "\n".join(out_lines) + ("\n" if out_lines else ""))
+    _atomic_text(prov / "outputs.sha256", checksum_text(output_hashes))
     _atomic_text(prov / "outputs.inventory.json", json.dumps(
         {"version": 1, "entries": output_inventory}, indent=2, sort_keys=True) + "\n")
 

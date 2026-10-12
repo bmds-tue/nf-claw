@@ -13,7 +13,9 @@ when the parameter is declared a file (rangeland ships the template file but tak
 """
 from __future__ import annotations
 
+import glob
 import json
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -28,6 +30,11 @@ _FILE_URI_ISSUE = ("file: URI inputs are local dependencies; use an absolute fil
                    "so staged filenames and local data can be validated and recorded for replay")
 # Keywords that describe a value without constraining it; anything else in an `if` is not decided.
 _ANNOTATIONS = ("description", "errorMessage", "title", "$comment", "help_text", "fa_icon")
+
+
+def is_remote_url(value: str) -> bool:
+    """A URI scheme must start the value; ':/' within a local parent is not a protocol."""
+    return re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", value) is not None
 
 
 def absolute_local_path(value: str | Path) -> Path:
@@ -113,7 +120,32 @@ def samplesheet_parameters(repo: Path) -> tuple[str, ...]:
     return tuple(dict.fromkeys(names))
 
 
-def local_name_issues(value: str, fmt: str) -> list[str]:
+def local_route_issues(value: str | Path, *, resolve_parent: bool = False) -> list[str]:
+    """Validate the path Nextflow puts in its unquoted local staging command.
+
+    Nextflow removes '..' lexically. Across a directory symlink that can select a different
+    file from the filesystem route checked by preflight. Scalar path parameters can resolve
+    their parent first; samplesheet paths are forwarded as written and must be unambiguous.
+    """
+    path = Path(value).expanduser().absolute()
+    if "\x00" in str(path):
+        return ["local input path contains a NUL character"]
+    for index, part in enumerate(path.parts):
+        if part == ".." and any(glob.has_magic(p) or "{" in p for p in path.parts[:index]):
+            return ["local input pattern traverses '..' after a wildcard; supply an explicit "
+                    "absolute parent directory so normalization cannot change the selected files"]
+    staged = absolute_local_path(path) if resolve_parent else Path(os.path.normpath(path))
+    if any("\n" in str(p) or "\r" in str(p) for p in (staged, staged.resolve())):
+        return ["unsafe local input filename or parent path has a line break that Nextflow puts into its staging shell "
+                "command; use a safely named parent path"]
+    if not resolve_parent and ".." in path.parts and path.exists() and path.resolve() != staged.resolve():
+        return ["local input path crosses a directory symlink with '..'; Nextflow's lexical "
+                "normalization selects different data. Use the actual absolute parent directory "
+                "while retaining the intended basename"]
+    return []
+
+
+def local_name_issues(value: str, fmt: str, *, resolve_parent: bool = False) -> list[str]:
     """Staged names passed into task shell scripts, including explicit remote basenames.
 
     Parent directories are not staged under their original names; this guards the basename.
@@ -135,7 +167,7 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
                         or unicodedata.category(char).startswith("M") for char in name))
 
     pattern = fmt == "file-path-pattern"
-    if "://" in value:
+    if is_remote_url(value):
         # urlsplit silently removes tabs/newlines. Refuse those before parsing, rather than
         # checking a different URL from the one supplied to Nextflow.
         if any(ord(char) < 32 or ord(char) == 127 for char in value):
@@ -157,22 +189,32 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
     class UnsafeName(ValueError):
         pass
 
+    class UnsafeRoute(ValueError):
+        pass
+
     def check_name(name: str, *, is_pattern=False):
         if not safe_name(name, pattern=is_pattern):
             raise UnsafeName(name)
 
     def check_path(item: Path):
+        if issues := local_route_issues(item):
+            raise UnsafeRoute(issues)
         check_name(item.name)
         check_name(item.resolve().name)
 
     try:
+        if issues := local_route_issues(path, resolve_parent=resolve_parent):
+            return issues
+        inspected = absolute_local_path(path) if resolve_parent else path
         check_name(path.name, is_pattern=pattern)
         check_name(path.resolve().name, is_pattern=pattern)
-        if pattern or path.is_dir():
+        if pattern or inspected.is_dir() or glob.has_magic(str(inspected)) or "{" in str(inspected):
             try:
-                inspect_input_paths([path], check_path)
+                inspect_input_paths([inspected], check_path)
             except MissingInputSource:
                 pass
+    except UnsafeRoute as exc:
+        return exc.args[0]
     except UnsafeName as exc:
         return [f"unsafe local input filename {str(exc)!r} in {value!r}; use a renamed or copied "
                 "input with literal filename characters (letters, digits, combining marks, "
@@ -266,7 +308,7 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
         raise NfclawError(ErrorCode.PARAMS_INVALID, _FILE_URI_ISSUE)
     if not text.strip():
         return ResolvedInput(text, None, None)           # "not set": never the caller's directory
-    if "://" in text:
+    if is_remote_url(text):
         param = input_param(repo, param_name) or {}
         parts = _applicable(param, text) or []
         fmt = next((part["format"] for part in parts if part.get("format") in PATH_FORMATS),
@@ -289,6 +331,17 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
     path_like = sheet is not None or any(p.get("format") in PATH_FORMATS for p in declared)
     if not (isinstance(raw, Path) or path_like or Path(text).expanduser().exists()):
         return ResolvedInput(text, None, None)
+    if "\x00" in text:
+        from runner.errors import ErrorCode, NfclawError
+        raise NfclawError(ErrorCode.PARAMS_INVALID, "Local input path contains a NUL character.")
+    # Parent resolution cannot interpret a wildcard followed by '..': refuse before it
+    # can silently remove the selection pattern, even when the schema leaves format implicit.
+    if any(part == ".." and any(glob.has_magic(p) or "{" in p for p in Path(text).parts[:index])
+           for index, part in enumerate(Path(text).parts)):
+        from runner.errors import ErrorCode, NfclawError
+        raise NfclawError(ErrorCode.PARAMS_INVALID,
+                          "Input pattern traverses '..' after a wildcard.",
+                          fix="Supply an explicit absolute parent directory for the input pattern.")
     local = absolute_local_path(text)
     return ResolvedInput(str(local), local, sheet,
                          must_exist=any(p.get("exists") is True for p in declared))

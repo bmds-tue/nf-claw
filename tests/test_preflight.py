@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 
 from runner import preflight
 from runner.submodule import SubmoduleStatus
@@ -206,3 +207,14 @@ def test_unwritable_work_dir_is_flagged_with_the_nxf_work_fix(tmp_path, monkeypa
                                        submodule=_st(tmp_path / "up"), repo_root=tmp_path / "repo",
                                        resume=False, work_dir=tmp_path / "elsewhere" / "work")
     assert not any("work directory" in i for i in fine), fine
+# LF and CR can become separate shell lines in generated Nextflow scripts. The space override
+# must not authorize them in launch paths.
+@pytest.mark.parametrize("separator", ["\n", "\r"])
+@pytest.mark.parametrize("allow_spaces", [False, True])
+def test_launch_path_line_breaks_are_refused_even_with_the_space_override(tmp_path, separator, allow_spaces):
+    for field in ("repo_root", "output_dir", "work_dir"):
+        paths = {"repo_root": tmp_path / "repo", "output_dir": tmp_path / "out",
+                 "work_dir": tmp_path / "work"}
+        paths[field] = tmp_path / f"parent{separator}next" / field
+        assert any("line break" in issue for issue in preflight._space_issues(
+            **paths, allow_spaces=allow_spaces))

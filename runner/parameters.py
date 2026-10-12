@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from runner.errors import ErrorCode, NfclawError
-from runner.inputs import absolute_local_path, local_name_issues
+from runner.inputs import absolute_local_path, is_remote_url, local_name_issues
 from runner.schema import PATH_FORMATS, Param, ParamSchema, json_scalar
 
 # The nf-core template parameter that suffixes the execution report/timeline/trace/DAG filenames.
@@ -75,7 +75,7 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema) -> list[
             param = schema.params[key]
             if key != "outdir" and param.fmt in PATH_FORMATS and isinstance(value, str) and value.strip():
                 errors.extend(f"parameter '{flag}': {issue}"
-                              for issue in local_name_issues(value, param.fmt))
+                              for issue in local_name_issues(value, param.fmt, resolve_parent=True))
             if param.enum and not _in_enum(value, param.enum):
                 errors.append(f"parameter '{flag}={value}' is not allowed; "
                               f"must be one of: {', '.join(param.enum)}")
@@ -349,7 +349,7 @@ def resolve_path_params(merged: dict[str, Any], schema: ParamSchema) -> dict[str
     for key, val in out.items():
         # An empty value means "not set" (the pipeline tests its truthiness); resolving it would
         # silently turn it into the caller's working directory.
-        if key in refs and isinstance(val, str) and val.strip() and "://" not in val:
+        if key in refs and isinstance(val, str) and val.strip() and not is_remote_url(val):
             out[key] = absolute_local_path(val).as_posix()
     return out
 

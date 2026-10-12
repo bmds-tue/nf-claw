@@ -273,6 +273,29 @@ are outside this explicit-value preflight.
   filename and content oracles. Previously computed task files beneath a shared
   work tree remain legitimate downstream inputs; consuming the whole work tree is refused.
 
+### Staging routes and checksum records disagreed about local data
+- **Status: Fixed.** Native controls on Nextflow 25.10.4 and 26.04.0 showed that a
+  newline or carriage return in a source parent becomes a separate shell line, and
+  `directory_symlink/../reads.fastq` can select a different file after Nextflow's
+  lexical normalization. Local input paths and resolved targets containing LF/CR
+  are refused. Samplesheet routes with differing filesystem and lexical meanings
+  are refused; scalar path parameters resolve their parent before staging while
+  retaining the basename. Wildcard parents followed by `..` are refused before
+  resolution, and glob matches receive the same route checks. LF/CR in launch,
+  output or work paths cannot be enabled with `--allow-spaces`.
+- Ordinary absolute parent traversal remains supported. Its logical dependency
+  keys and resolved identity are retained; relative checksum keys cannot traverse
+  outside a bundle. Checksum records use the [GNU escaped filename format](https://www.gnu.org/software/coreutils/manual/html_node/cksum-output-modes.html)
+  for backslashes, LF and CR. Readers split records only at LF, so Unicode line
+  separators remain filename characters, and reject invalid escapes and decoded
+  duplicate keys. Plain legacy records and CRLF record endings remain supported.
+- An absolute local parent such as `/path/data://reads.fastq` was also mistaken for a
+  remote URL and omitted from input checksums. URI detection now requires a scheme
+  at the start of the value. Native execution and relocated replay controls check
+  supported backslash/Unicode parents and local colon parents, then confirm that
+  changed input content is refused. These are execution and provenance controls,
+  not proofs of biological algorithm accuracy.
+
 ---
 
 ## Warnings a run prints that are not faults

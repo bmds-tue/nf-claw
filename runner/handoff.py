@@ -444,7 +444,7 @@ def _write_sheet(dest: Path, header: list[str], rows: list[dict[str, str]]) -> P
 def _absolute(value: str, root: Path) -> str:
     """A samplesheet path made absolute against the upstream outdir: Nextflow would otherwise resolve
     a relative one against the downstream's launch directory (its own --outdir)."""
-    if "://" in value or Path(value).is_absolute():
+    if inputs.is_remote_url(value) or Path(value).is_absolute():
         return value
     return os.path.normpath(root / value)
 
@@ -588,7 +588,7 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
         raise _Unresolved(f"the {rule.upstream} run did not set "
                           f"{_flag(src.spec['upstream_param'])}")
     extra: dict[str, Any] = {}
-    if isinstance(value, str) and "://" not in value:
+    if isinstance(value, str) and not inputs.is_remote_url(value):
         target_param = schema_mod.load_param_schema(downstream_tree).params.get(target)
         if target_param is not None and target_param.fmt in ("file-path", "directory-path"):
             value = _absolute(value, upstream_outdir)
