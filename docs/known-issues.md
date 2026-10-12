@@ -1,5 +1,10 @@
 # Known Issues & Troubleshooting
 
+Configured Nextflow engine caches and temporary directories must remain outside declared input
+directories. The launcher can create framework and Java-version cache entries even while probing
+its version. Boundary checks cover `NXF_HOME`, `NXF_DIST`, `NXF_TEMP` and `CAPSULE_CACHE_DIR`
+before metadata probes, including inherited settings and relative paths.
+
 Most run-time failures fall into two categories: **environment** (host, network, or path issues — fixable via `nfclaw run` flags or environment adjustments) and **upstream pipeline defects** (bugs in a specific pinned nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**. Upstream defects, recorded runtime corrections and their validation limits are documented here.
 
 ---
@@ -405,7 +410,69 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Upstream examples for cache/index-only runs show `--build_only_index --input false`. In raw Nextflow, this causes an nf-schema validation error because `input` is declared as a string path. In `nfclaw run sarek --input false`, nfclaw intercepts `--input false` and leaves `input` unset in `params.json`, allowing index-only runs (`--build_only_index true --download_cache true`) to succeed cleanly without schema errors. For raw Nextflow runs, omit `--input` instead of passing `false`.
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Do not use `--config pipelines/sarek/upstream/conf/test.config` to convert an analysis run into a test run with a custom samplesheet. Extra configs load after initial profile setup, causing validation of default S3 iGenomes paths. Run with `-profile test,docker` instead: `nfclaw run sarek --input samplesheet_sarek.csv --outdir results -profile test,docker`. For bundled test data, use `nfclaw run sarek --demo --outdir results`.
 - **`ampliseq` 3.0.0** — The bundled `test` profile sets its own `process.resourceLimits` (4 CPUs, 15 GB, 1 h); the release has no `--max_memory`/`--max_cpus` parameters (nfclaw rejects them as unknown), so cap a real run with `--limit-cpus`/`--limit-memory`/`--limit-time`. Its `--demo` completed all 130 tasks without a retry on Nextflow 26.04.3 with Docker (Linux amd64); `QIIME2_EXPORT_RELTAX` peaked at 1.2 GB of RSS. This establishes execution of the bundled test, not taxonomic accuracy. 3.0.0 also removed the legacy `sampleID,forwardReads` samplesheet format (use `sample,fastq_1[,fastq_2]`) and renamed `--FW-primer`/`--RV-primer` to `--primer-fwd`/`--primer-rev`; nfclaw rejects the old names.
-  - **Not every output is reproducible between executions.** A `commands.sh` replay of that demo reproduced the ASV sequences, ASV counts, DADA2 statistics and the QIIME2 classifier's `qiime2/taxonomy/taxonomy.tsv` byte for byte, and the taxonomy-filtered abundance table had the same 38 ASVs and counts (only its row order differed). Two results did change. **DADA2 taxonomy:** 3 of 241 ASVs changed label and 34 changed bootstrap confidence. Four isolated reruns of the same `DADA2_TAXONOMY` task (identical inputs and container, the module's `set.seed(100)`, `multithread` 4 and `FALSE`) all differed, by 4–6 labels per pair. The cause is in dada2 itself (1.38.0 here, unchanged in 1.40.0): its bootstrap subsampling uses R's random numbers, but `assignTaxonomy` breaks ties between equally scoring genera with a generator seeded from `std::random_device` ([source](https://github.com/benjjneb/dada2/blob/b61fe2e90115be08e78a01a16af89fd21402ca42/src/taxonomy.cpp#L80-L105)), which no R seed controls; GTDB references sharing a 16S region make such ties common. **Rarefaction:** `QIIME2_DIVERSITY_CORE` rarefies to the smallest sample depth with no seed, so every rarefied diversity result differs. Treat DADA2 labels whose confidence is near `--dada-min-boot` as uncertain; where reproducible labels are required, the QIIME2 classifier's taxonomy (`--qiime-ref-taxonomy`) reproduced exactly in this measurement. Compare replays per ASV rather than expecting `nfclaw verify --strict` to pass. `nfclaw run` announces both steps before launch (detected in the pinned task scripts; not announced when `--skip-taxonomy`, `--skip-dada-taxonomy`, `--skip-qiime`, `--skip-qiime-downstream` or `--skip-diversity-indices` skips them).
+  - **Reproducibility:** DADA2 taxonomy ties and QIIME2 rarefaction can change results on fresh runs despite `--seed`. See [verified findings and workarounds](#ampliseq-300-taxonomy-and-rarefaction-reproducibility).
+
+### AmpliSeq 3.0.0: taxonomy and rarefaction reproducibility
+
+Scope: the pinned AmpliSeq commit `992e6df34065067185b5e34665b5861b6827981d`; source inspection and
+a small C++ tie-breaking check, not a new end-to-end demo replay.
+
+- **DADA2 claim confirmed, with precise wording.** The
+  [1.38.0](https://bioconductor.posit.co/packages/3.22/bioc/src/contrib/dada2_1.38.0.tar.gz) and
+  [1.40.0](https://bioconductor.posit.co/packages/3.23/bioc/src/contrib/dada2_1.40.0.tar.gz) release
+  archives contain identical `src/taxonomy.cpp`:
+  [`get_best_genus()`](https://github.com/benjjneb/dada2/blob/b61fe2e90115be08e78a01a16af89fd21402ca42/src/taxonomy.cpp#L73-L110)
+  seeds `std::mt19937` from `std::random_device` and randomly chooses among equal scores. This is
+  entropy-seeded randomness, without a user-controllable seed. The function is called for both the
+  full query and bootstrap replicates; bootstrap subsampling separately uses R's `Rcpp::runif`.
+  AmpliSeq's [taxonomy
+  module](https://github.com/nf-core/ampliseq/blob/992e6df34065067185b5e34665b5861b6827981d/modules/local/dada2_taxonomy/main.nf#L29-L40)
+  calls `set.seed()` using `params.seed` (default 100), but that controls only R's RNG. Neither
+  changing `--seed` nor using one thread controls the C++ ties.
+
+- **QIIME2 claim depends on version and action.** The [2024.10 rarefy
+  interface](https://docs.qiime2.org/2024.10/plugins/available/feature-table/rarefy/) has no seed
+  parameter; [`feature-table rarefy` in
+  2025.4](https://amplicon-docs.qiime2.org/en/2025.4/references/plugins/feature-table.html) exposes
+  `random_seed`. AmpliSeq 3.0.0 specifies QIIME2 2026.4, whose [core-metrics
+  interface](https://amplicon-docs.qiime2.org/en/2026.4/references/plugins/diversity/) also exposes
+  it and [forwards it to
+  rarefy](https://github.com/qiime2/q2-diversity/blob/2026.4.0/q2_diversity/_core_metrics.py#L14-L46).
+  The [AmpliSeq core
+  module](https://github.com/nf-core/ampliseq/blob/992e6df34065067185b5e34665b5861b6827981d/modules/local/qiime2_diversity_core/main.nf#L35-L60)
+  omits `--p-random-seed` and does not consume `params.seed` or `ext.args`: its sampling remains
+  uncontrolled by AmpliSeq's `--seed`. Its separate `alpha-rarefaction` action [has no seed argument
+  and repeatedly calls rarefy without
+  one](https://github.com/qiime2/q2-diversity/blob/2026.4.0/q2_diversity/_alpha/_visualizer.py#L289-L333).
+
+- **Implications and limits.** Fresh executions can change taxonomy labels, bootstrap confidence and
+  assignments near `--dada-min-boot`, and rarefied counts, diversity metrics and downstream
+  analyses. These mechanisms do not imply changed ASV inference, that every output must differ, or
+  that GTDB ties are common: their frequency and scientific impact depend on the inputs/reference
+  and were not established here. Previously reported demo measurements were 3 of 241 changed labels,
+  34 changed bootstrap confidences and 4–6 label differences per pair across four isolated reruns (4
+  threads and `FALSE`). ASV sequences/counts, DADA2 statistics and QIIME2 taxonomy matched; the
+  filtered table retained 38 ASVs/counts with changed row order. These observations were not
+  independently repeated in this audit and are not general guarantees.
+
+- **Workarounds.** Retain original taxonomy and rarefied tables for downstream reuse (the core
+  task's `diversity_core/rarefied_table.qza` stays in its work directory, outside the published
+  module outputs); `--resume` can reuse valid cached tasks but does not make a fresh replay
+  deterministic. Alternatively, use `--skip-dada-taxonomy true` with a suitable
+  `--qiime-ref-taxonomy` classifier (the prior demo's repeatability does not establish universal
+  accuracy or determinism). For controlled diversity calculations, skip pipeline diversity with
+  `--skip-diversity-indices true`, retain the matching feature table, tree and metadata, and run
+  QIIME2 2026.4 `core-metrics-phylogenetic` separately with `--p-random-seed 100`. Skip the independent curves with
+  `--skip-alpha-rarefaction true` if needed. Seeds constrain sampling with the same inputs/software;
+  they do not guarantee byte-identical QZA/QZV archives or all downstream statistics. Compare
+  exported scientific values by ASV/sample; `nfclaw verify` checks structure and `--strict`
+  additionally checks bytes, neither guarantees analytical accuracy.
+
+- **nf-claw behavior.** The runner currently announces taxonomy/core-metrics variability before
+  launch through `runner/reproducibility.py`; it adds no seed correction. Detection scans module
+  text and explicit skip parameters, without checking tool versions or resolving config/profile
+  overrides; it does not detect alpha-rarefaction separately. An advisory therefore identifies a
+  potential source of variability, not proof that a particular run changed.
 
 ---
 
