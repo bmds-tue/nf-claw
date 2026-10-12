@@ -40,8 +40,13 @@ jobs:
       # auto-merged. Quoting the array preserves every validated pipeline slug as one argument.
       - name: Validate updated pipelines through Nextflow
         run: |
-          mapfile -t updated < <(
-            git diff --cached --name-only --diff-filter=AM \
+          set -euo pipefail
+          staged=$(git diff --cached --name-only --diff-filter=AM)
+          updated=()
+          while IFS= read -r name; do
+            [ -z "$name" ] || updated+=("$name")
+          done < <(
+            printf '%s\n' "$staged" \
               | sed -nE 's#^pipelines/([A-Za-z0-9._-]+)/upstream$#\1#p'
           )
           if (( ${#updated[@]} )); then
