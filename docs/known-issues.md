@@ -167,17 +167,21 @@ Matching file inventories alone does not establish analytical agreement. Check b
 nfclaw verify results.replay --against results
 ```
 It hashes the replay's live files and compares them with the original recorded checksums
-**by path**, reporting `identical` / `changed` / `missing` / `extra`. Missing or extra
+**by path**, reporting `identical` / `changed` / `missing` / `extra` / `renamed`. Missing or extra
 files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
 `dumpParametersToJSON()` independently names `pipeline_info/params_<timestamp>.json`.
-Its replay produces a missing/extra metadata pair even when the analysis outputs
-match. A resumed run can also retain reports from earlier attempts. Classify these
-differences explicitly; do not erase metadata or treat all missing/extra files as
-proof that the analysis changed. The upstream tree is preserved, and the verifier
-reports the actual inventory without silently excluding these files.
+Every faithful replay therefore has a differently named file, so comparing exact paths
+failed every replay of the modern template (demo 1.2.0, ampliseq 3.0.0) and the failure
+no longer distinguished a broken replay. `nfclaw verify` pairs these run-metadata names
+(and the execution report/timeline/trace/DAG of releases without `trace_report_suffix`)
+one to one, lists each pair under `renamed` as `original -> replay`, and compares its
+bytes like any other file. The pairing is explicit, never silent; any other dated path —
+possibly a scientific result — keeps its exact identity. A resumed run can retain reports
+from earlier attempts: several candidates for one name are never paired by guess and stay
+missing or extra for explicit classification.
 
 **Do not diff the two `outputs.sha256` files directly.** Each line is `hash  path`, so a file whose
 content merely changed has a different line in each bundle and shows up as *both* "missing" and
