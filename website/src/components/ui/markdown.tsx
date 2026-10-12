@@ -17,12 +17,10 @@ const LINK_CLASS =
 /** A link target a rendered document may use: web or mail URLs, or a site/repository-relative path.
  *  react-markdown already empties other schemes; this keeps a `javascript:` target out even if that
  *  default ever changes, since pipeline docs carry text from upstream schemas. */
-export function safeHref(href: string | undefined): string | undefined {
-  if (!href) return undefined;
+export function isSafeHref(href: string | undefined): href is string {
+  if (!href) return false;
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href)?.[1]?.toLowerCase();
-  return scheme === undefined || scheme === "http" || scheme === "https" || scheme === "mailto"
-    ? href
-    : undefined;
+  return scheme === undefined || scheme === "http" || scheme === "https" || scheme === "mailto";
 }
 
 /** Fence languages rendered with shell accents (program, flags, placeholders, comments). */
@@ -103,9 +101,13 @@ export function Markdown({
       h4: ({ children }) => <h4 className="mb-2 mt-6 text-base font-semibold text-fog">{children}</h4>,
       p: ({ children }) => <p className="my-4 leading-[1.75] text-fog-muted">{children}</p>,
       a: ({ href, children }) => {
-        const resolved = links ? resolveDocLink(safeHref(href), links) : null;
-        const target = safeHref(resolved?.href ?? href);
-        if (resolved?.internal && target) {
+        const resolved = links && isSafeHref(href) ? resolveDocLink(href, links) : null;
+        const target = resolved?.href ?? href;
+        if (!isSafeHref(target)) {
+          // Not a target this site links to: keep the text, drop the link.
+          return <span className="font-medium text-fog">{children}</span>;
+        }
+        if (resolved?.internal) {
           return (
             <Link href={target} className={LINK_CLASS}>
               {children}
