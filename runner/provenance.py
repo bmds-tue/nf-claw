@@ -67,6 +67,38 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     return sorted(paths)
 
 
+def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
+    """Local data a samplesheet names outside its path-format fields.
+
+    Some pinned schemas type data columns by their pattern alone (hic's `fastq_1`, phaseimpute's
+    `vcf`), and some parsers read columns the schema leaves undeclared (hgtseq's `input1`). Their
+    bytes are part of the run's inputs too: record an existing absolute value of a file-typed
+    column (file or directory) and an existing absolute regular file in any other column. Relative
+    and remote values are not guessed at, and a missing file stays the pipeline's own error.
+    """
+    from runner import sheetgen
+
+    declared = {column.name for column in schema.columns if column.fmt in PATH_FORMATS}
+    typed = set(sheetgen.file_columns(schema))
+    if path.suffix.lower() in (".csv", ".tsv"):
+        with path.open(newline="", encoding="utf-8-sig") as stream:
+            rows = list(csv.DictReader(stream, delimiter=delimiter_for(path), strict=True))
+    else:
+        rows = serialized_rows(path) or []
+    paths: set[Path] = set()
+    for row in rows:
+        for column, value in (row.items() if isinstance(row, dict) else ()):
+            if column in declared or not isinstance(value, str):
+                continue
+            value = value.strip()
+            if not value or "://" in value or not Path(value).is_absolute():
+                continue
+            candidate = Path(value)
+            if candidate.is_file() or (column in typed and candidate.is_dir()):
+                paths.add(candidate)
+    return sorted(paths)
+
+
 def _atomic_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:
     """Replace one bundle file without exposing a truncated write."""
     temporary = None

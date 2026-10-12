@@ -305,6 +305,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     for sheet_path, sheet_schema in sheet_inputs:
         try:
             sheet_dependencies.extend(provenance.samplesheet_input_paths(sheet_path, sheet_schema))
+            sheet_dependencies.extend(provenance.samplesheet_file_paths(sheet_path, sheet_schema))
         except (csv.Error, UnicodeDecodeError) as exc:
             raise NfclawError(
                 ErrorCode.SAMPLESHEET_INVALID,

@@ -919,6 +919,36 @@ def test_local_input_without_a_path_format_is_still_hashed_into_provenance(tmp_p
     assert str(tmp_path / "study.sdrf.tsv") in hashed
 
 
+def test_samplesheet_data_without_a_path_format_is_hashed_into_provenance(tmp_path, monkeypatch):
+    # Columns typed by pattern alone (hic, nanoseq, phaseimpute) and columns a custom parser reads
+    # without declaring them (hgtseq's input1) name data the run consumes: hash them as inputs.
+    import json
+    root = _make_pipeline_with_input(tmp_path, {
+        "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
+    schema = tmp_path / "pipelines/inp/upstream/assets/schema_input.json"
+    data = json.loads(schema.read_text())
+    data["items"]["properties"]["fastq_2"] = {"type": "string", "pattern": r"^\S+\.f(ast)?q\.gz$"}
+    schema.write_text(json.dumps(data))
+    files = {}
+    for name in ("A_1.fastq.gz", "A_2.fastq.gz", "A_input1.fastq.gz"):
+        files[name] = tmp_path / name
+        files[name].write_text(name)
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text("sample,fastq_1,fastq_2,input1\n"
+                     f"A,{files['A_1.fastq.gz']},{files['A_2.fastq.gz']},{files['A_input1.fastq.gz']}\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
+    monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda *a, **k: "")
+    orchestration.run_pipeline(
+        "inp", repo_root=root, input_path=str(sheet), outdir=tmp_path / "out",
+        profile="docker", params_file=None, cli_overrides={}, resume=False,
+        demo=False, check_only=False, write_provenance=True, timeout_seconds=None)
+    hashed = orchestration.provenance.read_checksums(
+        tmp_path / "out/provenance/inputs.sha256", relative=False)
+    for path in files.values():
+        assert hashed[str(path)] == orchestration.provenance._sha256(path)
+
+
 # --- dev: running unreleased development code -------------------------------------------------
 
 def _git(path, *args):
