@@ -586,8 +586,9 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
         if odd := [u for u in units if u.flag]:
             raise _bad("the other samples are paired-end, but these files have no mate: "
                        + _shown([u.reads[0].name for u in odd]),
-                       fix="Restore the missing mates (or leave these files out of --input); "
-                           "write the samplesheet yourself for deliberately mixed layouts.")
+                       fix="Restore the missing mates, or leave these files out of --input. A "
+                           "deliberately single-end library can be linked under a name without "
+                           "a read number (x.fastq.gz); otherwise write the samplesheet yourself.")
     return units
 
 
