@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from runner.errors import ErrorCode, NfclawError
-from runner.inputs import local_name_issues
+from runner.inputs import local_name_issues, shell_path_issues
 from runner.schema import PATH_FORMATS, Param, ParamSchema, json_scalar
 
 # The nf-core template parameter that suffixes the execution report/timeline/trace/DAG filenames.
@@ -46,7 +46,9 @@ def _reject_cycles(value: Any) -> None:
                            (item.values() if isinstance(item, Mapping) else item))
 
 
-def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema) -> list[str]:
+def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema, *,
+                    output_only_dirs: frozenset[str] = frozenset(),
+                    shell_paths: frozenset[str] = frozenset()) -> list[str]:
     """Deterministic, schema-driven validation of agent-supplied flags (errors, not heuristics).
 
     Settles the two classes the schema makes unambiguous: unknown flags (not in the schema)
@@ -75,7 +77,10 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema) -> list[
             param = schema.params[key]
             if key != "outdir" and param.fmt in PATH_FORMATS and isinstance(value, str) and value.strip():
                 errors.extend(f"parameter '{flag}': {issue}"
-                              for issue in local_name_issues(value, param.fmt))
+                              for issue in local_name_issues(
+                                  value, param.fmt, inspect_contents=key not in output_only_dirs))
+                if key in shell_paths:
+                    errors.extend(f"parameter '{flag}': {issue}" for issue in shell_path_issues(value))
             if param.enum and not _in_enum(value, param.enum):
                 errors.append(f"parameter '{flag}={value}' is not allowed; "
                               f"must be one of: {', '.join(param.enum)}")

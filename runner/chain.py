@@ -707,6 +707,8 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                             "index": stage.index, "upstream": None}
     if prev is not None:
         dest = record / "handoffs" / stage.dirname
+        if dest.exists():
+            dest = dest / "attempts" / uuid.uuid4().hex
         _say(log, f"{stage.dirname}: preparing its input from {prev.stage.dirname} "
                   f"({p.rule.origin})")
         try:
@@ -867,10 +869,9 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 problems.append(f"{sid}: its recorded {key} does not match its stage manifest")
         try:
             outputs = _digests(down / "provenance" / "outputs.sha256")
-            historical_nodes = output_mod.read_inventory(
-                down / "provenance/outputs.inventory.json", outputs)
+            historical_nodes = output_mod.recorded_inventory(down, outputs)
             live, current_nodes, _ = output_mod.snapshot(down, _sha)
-            if historical_nodes != current_nodes:
+            if historical_nodes is not None and historical_nodes != current_nodes:
                 problems.append(f"{sid}: its published output namespace changed since the recorded run; "
                                 + output_mod.namespace_difference(historical_nodes, current_nodes))
         except (OSError, ValueError) as exc:
@@ -936,7 +937,7 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
             try:
                 down_in = _digests(down / "provenance" / "inputs.sha256", relative=False)
                 if any(isinstance(item, dict) and ("directory_reference" in item or "input_inventory" in item) for item in params.values()):
-                    down_nodes = provenance.read_input_inventory(down / "provenance/inputs.inventory.json")
+                    down_nodes = handoff.recorded_input_inventory(down)
             except (OSError, ValueError) as exc:
                 problems.append(f"{sid}: cannot verify its input checksums: {exc}")
         for name, item in params.items():
@@ -994,11 +995,19 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
             if dependencies and "directory_reference" not in item:
                 try:
                     up_in = _digests(up_dir / "provenance/inputs.sha256", relative=False)
-                    up_nodes = provenance.read_input_inventory(up_dir / "provenance/inputs.inventory.json")
+                    up_nodes = handoff.recorded_input_inventory(up_dir, allow_legacy=True)
                     for value, digest in dependencies.items():
                         if not isinstance(value, str) or not Path(value).is_absolute():
                             raise ValueError("external reference is not an absolute path")
                         path = Path(value)
+                        if up_nodes is None:
+                            if ("input_inventory" in item or up_in.get(value) != digest or _sha(path) != digest):
+                                problems.append(f"{sid}: --{name}: legacy external reference {value} changed "
+                                                "or has no matching upstream checksum")
+                            if succeeded and down_in.get(value) != digest:
+                                problems.append(f"{sid}: --{name}: legacy external reference {value} is not "
+                                                "the input this stage hashed")
+                            continue
                         actual, nodes = provenance.snapshot_inputs([path])
                         expected_nodes = {value: up_nodes[value]} if value in up_nodes else {}
                         if (up_in.get(value) != digest or actual != {value: digest}

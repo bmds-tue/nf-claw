@@ -99,7 +99,7 @@ def samplesheet_parameters(repo: Path) -> tuple[str, ...]:
     return tuple(dict.fromkeys(names))
 
 
-def local_name_issues(value: str, fmt: str) -> list[str]:
+def local_name_issues(value: str, fmt: str, *, inspect_contents: bool = True) -> list[str]:
     """Staged names passed into task shell scripts, including explicit remote basenames.
 
     Parent directories are not staged under their original names; this guards the basename.
@@ -109,6 +109,9 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
     Remote basenames retain percent escapes in Nextflow; do not decode or rewrite scientific
     inputs. HTTP/FTP providers remove the query suffix, but retain a standalone fragment in the
     staged name. Object-store paths such as S3 retain both as literal key characters.
+    HTTP/FTP providers stage literal names even for a schema pattern. Audited output-only
+    directories can disable descendant inspection, while their own and symlink target names
+    always retain the literal guard.
     """
     if value.strip().lower().startswith("file:"):
         return [_FILE_URI_ISSUE]
@@ -129,12 +132,13 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
         try:
             parsed = urlsplit(value)
             remote_path = value.split("://", 1)[1].partition("/")[2]
-            if parsed.scheme.lower() in {"http", "https", "ftp"}:
+            literal_transport = parsed.scheme.lower() in {"http", "https", "ftp"}
+            if literal_transport:
                 remote_path = remote_path.split("?", 1)[0]
             name = remote_path.rstrip("/").rsplit("/", 1)[-1]
         except ValueError as exc:
             return [f"cannot inspect remote input filename: {exc}"]
-        if not safe_name(name, pattern=pattern):
+        if not safe_name(name, pattern=pattern and not literal_transport):
             return [f"unsafe remote input filename {name!r}; use a safely named remote object "
                     "or download it to a safely named local file"]
         return []
@@ -154,7 +158,7 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
     try:
         check_name(path.name, is_pattern=pattern)
         check_name(path.resolve().name, is_pattern=pattern)
-        if pattern or path.is_dir():
+        if inspect_contents and (pattern or path.is_dir()):
             try:
                 inspect_input_paths([path], check_path)
             except MissingInputSource:
@@ -165,6 +169,20 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
                 "dots, underscores, hyphens, plus, @, %, =, commas, colons or interior ~)"]
     except (OSError, RuntimeError) as exc:
         return [f"cannot inspect local input filenames for {value!r}: {exc}"]
+    return []
+
+
+def shell_path_issues(value: str) -> list[str]:
+    """Audited parameters interpolated as whole unquoted paths rather than staged basenames."""
+    try:
+        candidates = [value, str(Path(value).expanduser().resolve())]
+    except (OSError, RuntimeError, ValueError) as exc:
+        return [f"cannot inspect local input path {value!r}: {exc}"]
+    allowed = "/._-+@%=,:~"
+    if any(not all(char.isalnum() or char in allowed or unicodedata.category(char).startswith("M")
+                   for char in path) for path in candidates):
+        return [f"unsafe local input path {value!r}; the pinned task uses the complete path "
+                "as an unquoted argument, so all parent folders and symlink targets must be safely named"]
     return []
 
 

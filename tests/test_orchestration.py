@@ -1451,5 +1451,41 @@ def test_resource_limits_on_the_installed_engine_are_judged_by_its_version(tmp_p
     assert not any("could not be determined" in w for w in res.warnings)
     # An engine that cannot be identified is not assumed to enforce the ceiling: the run says so.
     monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
-    res = orchestration.run_pipeline("mini", **kwargs)
-    assert any("could not be determined" in w for w in res.warnings)
+    with pytest.raises(NfclawError, match="could not be determined"):
+        orchestration.run_pipeline("mini", **kwargs)
+
+
+def test_preplanned_tree_cannot_run_a_different_clean_commit(tmp_path, monkeypatch):
+    from runner.errors import NfclawError
+    root, up = _pinned_git_pipeline(tmp_path)
+    planned = submodule.resolve("mini", root / "pipelines")
+    _git(up, "checkout", "-q", "1.0.0")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    with pytest.raises(NfclawError, match="pipeline code"):
+        _check_pinned(root, tmp_path, resolved_tree=planned)
+
+
+def test_preplanned_git_identity_must_still_be_verifiable(tmp_path, monkeypatch):
+    from runner.errors import NfclawError
+    root, _ = _pinned_git_pipeline(tmp_path)
+    planned = submodule.resolve("mini", root / "pipelines")
+    monkeypatch.setattr(submodule, "_git", lambda *a: "")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    with pytest.raises(NfclawError, match="pipeline code"):
+        _check_pinned(root, tmp_path, resolved_tree=planned)
+
+
+def test_unidentified_engine_cannot_launch_with_a_requested_resource_ceiling(tmp_path, monkeypatch):
+    from runner import resources
+    from runner.errors import NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
+    launches = []
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: launches.append(a))
+    with pytest.raises(NfclawError, match="version could not be determined"):
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+            params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
+            write_provenance=False, timeout_seconds=10, limits=resources.parse(2, None, None))
+    assert not launches and not (tmp_path / "out").exists()

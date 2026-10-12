@@ -211,6 +211,12 @@ def tree_issues(st: SubmoduleStatus, pin_doc: Path | None) -> list[str]:
     files, because provenance names it by its release and commit."""
     issues: list[str] = []
     pinned = _committed_pin(pin_doc) if pin_doc is not None else None
+    actual_head = _own_head(st.path)
+    if st.commit and actual_head != st.commit:
+        issues.append(f"{st.path}: pipeline code identity changed or cannot be verified; "
+                      f"resolved {st.commit}, current Git HEAD {actual_head or 'unavailable'}")
+    elif pinned and not actual_head:
+        issues.append(f"{st.path}: cannot verify the Git identity of the documented pipeline code")
     if pinned and st.commit and st.commit != pinned["commit"]:
         found = _git(st.path, "describe", "--tags", "--always") or st.commit[:12]
         issues.append(

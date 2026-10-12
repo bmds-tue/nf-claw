@@ -104,6 +104,18 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 
 Missing local path parameters without an upstream `exists: true` constraint are delegated to Nextflow: they may be output/cache destinations. They produce a warning and an `unverified_local_paths` manifest entry rather than a false input checksum. Required missing inputs are refused. Remote data, profile-only references, indirect configuration includes, container digests and data referenced by non-tabular input formats are not comprehensively frozen.
 
+`runner/path_roles.json` records output-only directory roles proven from exact upstream commits.
+The generic consumer requires the expected pipeline identity, an unchanged directory schema and
+a clean matching source checkout. These destinations keep their filename checks and parameter
+checksums, while unrelated existing children are excluded from input inspection and snapshots.
+Unlisted paths, changed releases and reused `storeDir` caches retain their input guards. Audited
+whole-path shell arguments also check parent folders and resolved symlink paths.
+
+Archive operations prepare replacements before moving the run, retain ordinary relative links,
+rebase links through outdir aliases and external publications, and roll back recoverable failures
+and cancellation. A verified result inventory is rebased with its publication links, preserving
+the archive's file checksums and logical namespace.
+
 ### 2.6 Replay & Replay Guard
 - **`provenance/commands.sh`**: Standalone reproduction script that re-runs the recorded execution — same pinned code, local inputs, parameters, configs and observed engine — into a fresh output directory (default `<outdir>.replay`). Replaying in place is rejected to avoid output collisions with existing published artifacts. Outputs are reproduced only as far as the pipeline's tools are deterministic: a multithreaded or unseeded stochastic step can produce different results from identical inputs (measured for ampliseq 3.0.0 in [known-issues](known-issues.md#pipeline-specific-run-notes)). Compare replays with `nfclaw verify` and a format-aware inspection of changed files.
 - **`provenance/replay_guard.py`**: A zero-dependency script executed by `commands.sh` prior to launching Nextflow. Verifies that local inputs, referenced samplesheets, external configs, and pipeline git commits match the hashes in `provenance/*.sha256`. If inputs have drifted or disappeared, replay halts immediately.
