@@ -152,6 +152,24 @@ class Plan:
     columns: Mapping[str, Column] = field(default_factory=dict)
 
 
+def _reachable(names: list[str], columns: Mapping[str, Column]) -> tuple[str, ...]:
+    """The data columns a file can be given to by its name alone. Columns declaring the same
+    patterns as another cannot (sarek's `spring_1`/`spring_2`, rnaseq's genome and transcriptome
+    BAM), unless exactly one of them is a file column nf-schema stages — nanostring's `RCC_FILE`
+    — while the other merely holds a name (`RCC_FILE_NAME`)."""
+    same: dict[frozenset[str], list[str]] = {}
+    for name in names:
+        same.setdefault(frozenset(_patterns(columns[name])), []).append(name)
+    out = set()
+    for group in same.values():
+        files = [n for n in group if columns[n].fmt in schema_mod.PATH_FORMATS]
+        if len(group) == 1:
+            out.update(group)
+        elif len(files) == 1:
+            out.update(files)
+    return tuple(n for n in names if n in out)
+
+
 def _id_column(sheet: InputSchema, skip: set[str]) -> str | None:
     best: tuple[int, int, str] | None = None
     for order, col in enumerate(sheet.columns):
@@ -185,7 +203,7 @@ def plan(sheet: InputSchema, input_param: Param | None,
     # An emptied read column leaves its group: emptying `fastq_2` makes the pair single-end.
     groups = [g for g in (tuple(n for n in grp if n not in empty)
                           for grp in _read_groups(read_cols)) if g]
-    data = tuple(n for n in typed if n not in read_cols and n not in empty)
+    data = _reachable([n for n in typed if n not in read_cols and n not in empty], columns)
     lane = next((n for n in columns if n.casefold() == "lane" and n not in empty), None)
     suffix = _suffix(input_param)
     problem = None
@@ -226,28 +244,27 @@ def describe(sheet: InputSchema, input_param: Param | None) -> str:
     p = plan(sheet, input_param)
     if not p.columns:
         return ""
-    lead = ("**From data files.** `--input` may also name the data files themselves — a "
-            "directory (searched recursively), a glob or a list of files — and nfclaw writes this "
-            "samplesheet")
-    if p.problem and p.read_groups and len(p.read_groups) > 1:
-        return (f"{lead} once you choose the read columns: {p.problem}. Required columns no file "
-                "determines are set with `--sheet-set COLUMN=VALUE`; preview the result with "
-                "`--check`.\n")
+    lead = ("**From data files.** `--input` may also be the data files — a directory (searched "
+            "recursively), a glob or several files — from which nfclaw writes this samplesheet")
+    tail = (" Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.\n")
+    if p.problem and len(p.read_groups) > 1:
+        return (f"{lead} once you choose the read columns: {p.problem}. Set the required columns "
+                f"no file determines with `--sheet-set COLUMN=VALUE`.{tail}")
     if p.problem:
         return f"**From data files.** nfclaw cannot generate this samplesheet: {p.problem}.\n"
     fills = []
     if p.id_column:
-        fills.append(f"`{p.id_column}` from the file names")
+        fills.append(f"`{p.id_column}` from file names")
     if len(p.reads) == 2:
-        fills.append(f"`{p.reads[0]}`/`{p.reads[1]}` from FastQ files, paired by their read "
-                      "number (`_R1`/`_R2`, `_1`/`_2`) and confirmed by their read names")
+        fills.append(f"`{p.reads[0]}`/`{p.reads[1]}` from FastQ files (mates paired by "
+                     "`_R1`/`_R2` or `_1`/`_2` and confirmed by read name)")
     elif p.reads:
         fills.append(f"`{p.reads[0]}` from FastQ files (single-end)")
     if p.lane_column and p.reads:
-        fills.append(f"`{p.lane_column}` from Illumina lane numbers (`_L002` → 2; 1 without one)")
+        fills.append(f"`{p.lane_column}` from Illumina lane numbers (`_L002` → 2, else 1)")
     if p.data_columns:
         fills.append(", ".join(f"`{n}`" for n in p.data_columns)
-                     + " from files their patterns accept, grouped by name")
+                     + " from files matching their patterns, by sample name")
     filled = {p.id_column, *p.reads, *p.data_columns} | ({p.lane_column} if p.reads else set())
     needs, defaults = [], []
     for col in sheet.columns:
@@ -266,11 +283,10 @@ def describe(sheet: InputSchema, input_param: Param | None) -> str:
         text += " Schema defaults fill " + ", ".join(defaults) + "."
     if needs:
         text += (" Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a "
-                 "constant, or a template using `{sample}`/`{lane}`): " + "; ".join(needs) + ".")
+                 "constant or a `{sample}`/`{lane}` template): " + "; ".join(needs) + ".")
     else:
-        text += " Other columns can be set with `--sheet-set COLUMN=VALUE`."
-    return text + (" Preview the generated sheet with `--check`; the run records it in "
-                   "`<outdir>/provenance/` and replays it from there.\n")
+        text += " Set other columns with `--sheet-set COLUMN=VALUE`."
+    return text + tail
 
 
 # --- detecting data files in --input ------------------------------------------------------------

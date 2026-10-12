@@ -804,7 +804,7 @@ def _rendered(tmp_path, spec):
 def test_inputs_say_what_generating_the_samplesheet_fills_and_needs(tmp_path):
     import sheetgen_schemas as S
     inputs, paragraph = _rendered(tmp_path, S.RNASEQ)
-    assert "`fastq_1`/`fastq_2` from FastQ files" in paragraph and "`sample` from the file names" in paragraph
+    assert "`fastq_1`/`fastq_2` from FastQ files" in paragraph and "`sample` from file names" in paragraph
     assert "`--sheet-set COLUMN=VALUE`" in paragraph
     assert "`strandedness` (one of forward, reverse, unstranded, auto)" in paragraph
     # The website reads the first table and the csv/tsv blocks of this section: the paragraph adds

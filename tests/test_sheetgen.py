@@ -614,3 +614,14 @@ def test_a_number_typed_identity_does_not_take_sample_names(tmp_path):
                               "pattern": "^\\S+\\.(raw|mzML)$"},
     }, "required": ["ID", "Sample", "ReplicateFileName"]}}}
     assert plan_of(tmp_path, spec).id_column == "Sample"
+
+
+def test_columns_no_file_can_reach_are_not_offered(tmp_path):
+    # Two columns with one pattern (spring_1/spring_2) cannot be told apart by a file name.
+    spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "sample": {"type": "string", "meta": ["id"]},
+        "spring_1": {"type": "string", "format": "file-path", "pattern": "^\\S+\\.spring$"},
+        "spring_2": {"type": "string", "format": "file-path", "pattern": "^\\S+\\.spring$"},
+        "bam": {"type": "string", "format": "file-path", "pattern": "^\\S+\\.bam$"},
+    }, "required": ["sample"]}}}
+    assert plan_of(tmp_path, spec).data_columns == ("bam",)

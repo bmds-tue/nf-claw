@@ -247,6 +247,29 @@ explicit directory are not staged names and retain their separate path contract.
 Remote file contents, remote glob matches and values supplied only by configs/profiles
 are outside this explicit-value preflight.
 
+### `[samplesheet_invalid]` while generating a samplesheet from `--input` data files
+
+`nfclaw run <name> --input <directory | glob | files>` writes the samplesheet from the files and
+refuses, before anything is written, whatever it cannot decide from them. Each message names the
+files or columns; the fixes:
+
+| Message | Fix |
+|---|---|
+| `needs values nfclaw cannot take from the files` | Set each listed column: `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template). The allowed values are in the message and in skill.md. |
+| `takes reads in several column groups` | Empty the groups your files do not belong in, e.g. `--sheet-set long_reads=` for short reads in mag. |
+| `named as mates, but their first read names differ` | The `_R1`/`_R2` files do not belong together (swapped or truncated mate). Restore the right files. |
+| `read 2 …, but its read 1 file is missing` / `have no mate` | A mate is missing. Restore it, or leave the file out of `--input`. Deliberately mixed single/paired layouts need a hand-written samplesheet. |
+| `fit several samplesheet columns` | Empty the column you do not use (`--sheet-set protein=`), or pass only one kind of file. |
+| `do not all bring the same kinds of files` | A stray file (a VCF beside FastQ files) became a sample. Narrow `--input` with a glob such as `'/data/*.fastq.gz'`. |
+| `Sample names come from the file names, which these do not allow` | nfclaw never renames samples. Rename the files, or link them under names the pipeline accepts. |
+| `would repeat the values of …, which the samplesheet requires to be unique` | Several lanes of a sample in a pipeline that takes one row per sample (ampliseq): merge them first. Or make the row key differ, e.g. `--sheet-set run={lane}` (mag). |
+| `contains the run's --outdir` | `--input` would rescan the run's own results on `--resume`. Keep data and `--outdir` apart. |
+
+Files that match no column (checksums, reports, index reads `_I1`/`_I2`, the demultiplexer's
+`Undetermined_S0` reads) are ignored and listed before launch. Two FastQ files named `x_1`/`x_2`
+pair only when their first read names show they are mates; otherwise they are two single-end
+samples.
+
 ---
 
 ## Warnings a run prints that are not faults
