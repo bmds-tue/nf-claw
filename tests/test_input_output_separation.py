@@ -51,6 +51,34 @@ def run(root, data, out, **kwargs):
 
 
 @pytest.mark.parametrize("check_only", [False, True])
+@pytest.mark.parametrize("alias", [False, True])
+def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, monkeypatch, check_only, alias):
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "index.bin"
+    source.write_bytes(b"fixed scientific input")
+    destination = data / "cache"
+    if alias:
+        link = tmp_path / "destination_alias"
+        link.symlink_to(data, target_is_directory=True)
+        destination = link / "cache"
+    monkeypatch.setattr(orchestration.path_roles, "output_only_directories",
+                        lambda *args: frozenset({"future_cache"}))
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("engine launched"))
+    before = data.stat().st_mtime_ns
+    out = tmp_path / "out"
+    with pytest.raises(NfclawError, match="overlaps local dependency") as error:
+        run(root, data, out, check_only=check_only, cli_overrides={"future_cache": str(destination)})
+    assert error.value.details["unsafe_write_boundary"]
+    assert source.read_bytes() == b"fixed scientific input"
+    assert data.stat().st_mtime_ns == before
+    assert not destination.exists() and not out.exists()
+    assert not (tmp_path / ".out.nfclaw.lock").exists()
+
+
+@pytest.mark.parametrize("check_only", [False, True])
 @pytest.mark.parametrize("write_provenance", [False, True])
 @pytest.mark.parametrize("source", ["input", "params_file", "auxiliary", "samplesheet", "nested_alias"])
 def test_overlapping_outputs_are_refused_without_changing_the_data(

@@ -369,3 +369,23 @@ def test_replay_cannot_write_into_a_retargeted_directory_alias_before_refusing_i
                             capture_output=True, text=True, timeout=15)
     assert result.returncode != 0 and "overlaps recorded input" in result.stderr
     assert provenance.snapshot_inputs([second]) == before
+
+
+def test_resume_rejects_namespace_that_disagrees_with_historical_directory_hashes(tmp_path):
+    import json
+    from runner import orchestration
+
+    source = tmp_path / "data"
+    source.mkdir()
+    (source / "keep.txt").write_bytes(b"kept")
+    removed = source / "removed.txt"
+    removed.write_bytes(b"removed")
+    bundle = record(tmp_path, source)
+    path = bundle / "inputs.inventory.json"
+    previous = json.loads(path.read_text())
+    del previous[str(removed)]
+    path.write_text(json.dumps(previous))
+    removed.unlink()
+    hashes, namespace = provenance.snapshot_inputs([source])
+    warning = orchestration._directory_resume_warning(tmp_path / "out", namespace, hashes)
+    assert warning and "fresh Nextflow cache session" in warning

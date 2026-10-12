@@ -157,6 +157,10 @@ nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
+Resource ceilings require an identified Nextflow engine of version 24.04.0 or newer. An
+unavailable version probe cannot establish that a requested ceiling will be enforced; use
+`--nxf-ver` to select a concrete supported engine.
+
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
 ---

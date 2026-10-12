@@ -177,6 +177,20 @@ def namespace_difference(expected: dict, current: dict) -> str:
     return f"missing: {missing}; extra: {extra}; type or link changed: {changed}"
 
 
+def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
+    """Older file-only chains keep their checksum checks; declared new records stay mandatory."""
+    path = outdir / "provenance/outputs.inventory.json"
+    manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+    if not isinstance(manifest, dict):
+        raise ValueError("invalid run manifest")
+    if "output_inventory_version" in manifest and (
+            type(manifest["output_inventory_version"]) is not int or manifest["output_inventory_version"] != 1):
+        raise ValueError("unsupported output inventory version")
+    if not path.exists() and "output_inventory_version" not in manifest:
+        return None
+    return read_inventory(path, checksums)
+
+
 def collect(outdir: Path) -> OutputsReport:
     pinfo = outdir / "pipeline_info"
     paths = sorted(result_files(outdir))

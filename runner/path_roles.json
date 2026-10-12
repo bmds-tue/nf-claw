@@ -1,0 +1,38 @@
+{
+  "13547eaa7345dab4ac97db49775ae8284af4113d": {
+    "temp_dir": {
+      "pipeline": "pathogensurveillance",
+      "shell_path": true,
+      "source": ["conf/modules.config:221", "conf/modules.config:437", "conf/modules.config:580"],
+      "use": "FastQC --dir, Picard --TMP_DIR and fasterq --temp destinations"
+    }
+  },
+  "20364830237171928c79e59651142460379d1459": {
+    "outdir_vep_cache": {
+      "pipeline": "pacvar",
+      "source": ["conf/modules/ensemblvep.config:18-20"],
+      "use": "publishDir destination for downloaded VEP cache"
+    }
+  },
+  "8e8debdb0e7208218a4a2f852de7c741a69ca448": {
+    "outdir_cache": {
+      "pipeline": "rnadnavar",
+      "source": ["conf/modules/prepare_resources/prepare_cache.config:22-24"],
+      "use": "publishDir destination for downloaded annotation cache"
+    }
+  },
+  "a0e4641409eb7aed4b325e543d20577f9c08e437": {
+    "outdir_cache": {
+      "pipeline": "rnavar",
+      "source": ["conf/modules/prepare_cache.config:14-16", "conf/modules/prepare_cache.config:23-25"],
+      "use": "publishDir destinations for downloaded annotation caches"
+    }
+  },
+  "8ccac7ad37b05dd792447763bf9671b719824587": {
+    "outdir_cache": {
+      "pipeline": "sarek",
+      "source": ["conf/modules/download_cache.config:21-23", "conf/modules/download_cache.config:31-33"],
+      "use": "publishDir destinations for downloaded annotation caches"
+    }
+  }
+}

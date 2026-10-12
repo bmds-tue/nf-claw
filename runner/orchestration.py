@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
-                    input_safety, outputs, parameters, plugin_compat, preflight, provenance,
+                    input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
                     reproducibility, resources, resume_safety, runlog, samplesheet, submodule,
                     versions)
 from runner import schema as schema_mod
@@ -86,8 +86,14 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             return None
         reason = "the earlier input-directory inventory is unavailable or invalid"
     else:
+        directory_roots = [Path(name) for name, entry in current_nodes.items() if entry["type"] == "directory"]
+        files = {name for name, entry in current_nodes.items() if entry["type"] == "file"}
+        historical_files = {name for name in previous_digests
+                            if any(Path(name).is_relative_to(root) for root in directory_roots)}
         if current_nodes != _directory_nodes(previous):
             reason = "the input-directory inventory changed"
+        elif files != historical_files or files != current_digests.keys():
+            reason = "the input-directory namespace and content records disagree"
         elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
             reason = "the content of a file inside an input directory changed"
         else:
@@ -188,7 +194,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     work_dir = Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
                     or repo_root / "work").expanduser().resolve()
     # A resource ceiling only exists if the engine enforces it; say so before anything runs.
-    limit_note = None
     if limits is not None and not limits.is_empty():
         engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
         if engine is not None and not engine_version.supports_resource_limits(engine):
@@ -200,8 +205,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 fix="Run on Nextflow 24.04.0+ (--nxf-ver), or cap resources the way this release "
                     "documents (e.g. its --max-cpus/--max-memory/--max-time parameters).")
         if engine is None:
-            limit_note = ("The Nextflow version could not be determined, so it is not confirmed "
-                          "that it enforces --limit-* (process.resourceLimits needs 24.04.0+).")
+            raise NfclawError(
+                ErrorCode.PARAMS_INVALID,
+                "The Nextflow version could not be determined, so the requested resource "
+                "ceiling cannot be verified (process.resourceLimits needs 24.04.0+).",
+                fix="Select a concrete supported engine with --nxf-ver, or restore the engine's "
+                    "version probe before requesting --limit-*.")
     param_schema = schema_mod.load_param_schema(st.path)
 
     # Read the params file once; it is merged below, and it may be what supplies `input`.
@@ -267,7 +276,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # re-evaluate `now()` on every launch, so replaying the bundle reproduces the run's outputs
     # rather than writing a second, differently-named set of reports beside them.
     merged = parameters.pin_report_suffix(merged, param_schema)
-    param_errors = parameters.validate_params(merged, param_schema)
+    output_only_dirs = path_roles.output_only_directories(st, param_schema)
+    param_errors = parameters.validate_params(
+        merged, param_schema, output_only_dirs=output_only_dirs,
+        shell_paths=path_roles.shell_path_directories(st, param_schema))
     composed_profile = nextflow_command.compose_profile(profile, demo=demo)
     # A missing required parameter can only be judged up front when nothing but the values merged
     # above can supply one. A `test` or institutional profile, or a --config file, can assign params
@@ -302,7 +314,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
     warnings += reproducibility.advisories(st.path, merged)
-    warnings += [limit_note] if limit_note else []
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
@@ -339,7 +350,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     prov_inputs = []
     unverified_paths = {}
     for key, value in resolved.items():
-        if key not in refs or key in {"input", "outdir"} or not isinstance(value, str) \
+        if key not in refs or key in {"input", "outdir"} or key in output_only_dirs or not isinstance(value, str) \
                 or not value or inputs.is_remote_url(value):
             continue
         path = Path(value)
@@ -372,6 +383,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
               ("run provenance directory", outdir / "provenance", True),
               ("Nextflow state directory", outdir / ".nextflow", True),
               ("Nextflow log", runlog.nextflow_log_path(outdir, nxf_overlay), True)]
+    writes += [(f"--{key.replace('_', '-')}", Path(value), True)
+               for key, value in resolved.items()
+               if key in output_only_dirs and isinstance(value, str) and value
+               and not inputs.is_remote_url(value)]
     generated = ["params.json", "logs", "logs/run.log", "logs/stdout.txt", "logs/stderr.txt"]
     if limits is not None and not limits.is_empty():
         generated.append("resource_limits.config")

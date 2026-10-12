@@ -240,6 +240,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "redacted_nextflow_env": redacted_env,
         "os": platform.platform(),
         "dependency_inventory_version": 1,
+        "output_inventory_version": 1,
         "provenance_real_path": str(prov.resolve()),
     }
     concrete_pin = (isinstance(nxf_env.get("NXF_VER"), str) and re.fullmatch(

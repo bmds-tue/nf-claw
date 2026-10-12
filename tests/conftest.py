@@ -89,7 +89,8 @@ def finished_run():
         (prov / "outputs.inventory.json").write_text(json.dumps(
             {"version": 1, "entries": outputs.snapshot(outdir)[1]}))
         (prov / "run_manifest.json").write_text(json.dumps(
-            {"pipeline": "x", "version": "1.0.0", "commit": "c" * 40, "outcome": "success"}))
+            {"pipeline": "x", "version": "1.0.0", "commit": "c" * 40, "outcome": "success",
+             "output_inventory_version": 1, "dependency_inventory_version": 1}))
         return outdir
     return make
 
