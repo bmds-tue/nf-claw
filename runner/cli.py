@@ -70,7 +70,11 @@ def _collect_overrides(extras: list[str]) -> dict:
             name = tok.split("=", 1)[0]
             hint = (f" Nextflow's `{name}` is `{nextflow[name]}` for nfclaw." if name in nextflow
                     else " nfclaw sets Nextflow's own single-dash options itself."
-                    if tok.startswith("-") and not tok.startswith("--") else "")
+                    if tok.startswith("-") and not tok.startswith("--")
+                    # What an unquoted glob expands to: several data files after one --input.
+                    else " For several --input data files, quote the glob (--input "
+                         "'/data/*.fastq.gz'), pass their directory, or repeat --input."
+                    if Path(tok).expanduser().exists() else "")
             raise NfclawError(
                 ErrorCode.PARAMS_INVALID,
                 f"unexpected extra argument: {tok!r}",
@@ -254,11 +258,13 @@ def _main(argv: list[str] | None = None) -> int:
     # reach Nextflow. Full flag names and single-dash `-profile` are unaffected.
     p_run = sub.add_parser("run", allow_abbrev=False)
     p_run.add_argument("name")
-    # One value as before (a samplesheet, a directory, an accession, `false`), or several data
-    # files — what a shell glob expands to — from which nfclaw generates the samplesheet.
-    p_run.add_argument("--input", nargs="+",
-                       help="a samplesheet; or the data files themselves (a directory, a glob, one "
-                            "or several files) to generate the samplesheet from")
+    # One value as before (a samplesheet, a directory, an accession, `false`), or — repeated — the
+    # data files nfclaw generates the samplesheet from. Repeated rather than multi-valued: a value
+    # list would swallow a pipeline name written after it (`run --input s.csv rnaseq`).
+    p_run.add_argument("--input", action="append",
+                       help="a samplesheet; or the data files themselves — a directory, a quoted "
+                            "glob, or a file (repeat --input for several) — to generate the "
+                            "samplesheet from")
     p_run.add_argument("--sheet-set", dest="sheet_set", action="append", default=[],
                        metavar="COLUMN=VALUE",
                        help="a column of the samplesheet nfclaw generates from --input data files "

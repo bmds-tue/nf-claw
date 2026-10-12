@@ -313,9 +313,12 @@ def plan(spec: ChainSpec, *, repo_root: Path) -> list[Planned]:
         ps = schema_mod.load_param_schema(trees[i].path)
         # Data files to generate the stage's samplesheet from are made absolute as given (a link
         # keeps the name its sample is called by); any other input as `nfclaw run` resolves it.
-        source = sheetgen.detect(s.input, trees[i].path)
-        if source is not None:
-            value = list(source.values) if isinstance(s.input, list) else source.values[0]
+        # Whether listed files still exist matters only to a stage that runs (its own check refuses
+        # them), not to one that already succeeded and is frozen.
+        if isinstance(s.input, list):
+            value = [sheetgen.absolute(v) for v in s.input]
+        elif (source := sheetgen.detect(s.input, trees[i].path)) is not None:
+            value = source.values[0]
         else:
             resolved = inputs.resolve(s.input, trees[i].path)
             value = resolved.value if resolved else None
@@ -541,7 +544,37 @@ def _probe_config(spec: ChainSpec, p: Planned, *, timeout_seconds: float | None 
             f"configuration{hint}:\n" + "\n".join(f"      {line}" for line in report)]
 
 
-def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec) -> None:
+def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> str | None:
+    """For a succeeded stage whose samplesheet nfclaw generated from data files: how that data now
+    yields a different samplesheet. A changed definition is caught by the fingerprint, which names
+    only the data's path; this catches changed data, as an input file's checksum does for a
+    hand-written sheet. Data that is gone is no change: a frozen stage never reads it again."""
+    stage_dir = Path(entry["outdir"])
+    manifest = _read_json(stage_dir / "provenance" / "run_manifest.json")
+    record = manifest.get("generated_samplesheet") if isinstance(manifest, dict) else None
+    if not isinstance(record, dict) or not isinstance(record.get("file"), str):
+        return None
+    try:
+        source = sheetgen.detect(p.input, p.tree.path)
+    except NfclawError:
+        return None
+    if source is None or not sheetgen.present(source):
+        return None
+    opts = options(spec, p.stage)
+    work_dir = Path(opts.nxf_env.get("NXF_WORK") or os.environ.get("NXF_WORK")
+                    or repo_root / "work").expanduser().resolve()
+    try:
+        generated = sheetgen.generate(source, p.tree.path, pipeline=p.stage.pipeline,
+                                      assignments=p.stage.sheet_set, outdir=stage_dir,
+                                      work_dir=work_dir)
+    except NfclawError as exc:
+        return f"its --input data no longer yields a samplesheet: {exc.message}"
+    changes = sheetgen.sheet_changes(stage_dir / "provenance" / record["file"], generated)
+    return f"its --input data now yields a different samplesheet ({changes})" if changes else None
+
+
+def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
+                  repo_root: Path | None = None) -> None:
     problems = []
     if not isinstance(state.get("stages"), list) or any(
             not _valid_entry(s) for s in state["stages"]):
@@ -561,6 +594,8 @@ def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec) -> None:
             problems.append(f"stage '{old.get('id')}' already succeeded with a different definition "
                             "(its code, run options, input, params or handoff changed — including "
                             "what the handoff to the next stage sets on it)")
+        elif repo_root is not None and (change := _data_change(planned[i], old, spec, repo_root)):
+            problems.append(f"stage '{old.get('id')}' already succeeded, but {change}")
     if problems:
         raise NfclawError(ErrorCode.PARAMS_INVALID,
                           "This spec does not match the chain being resumed.",
@@ -597,7 +632,7 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
                                                             "to continue that chain")]})
     planned = plan(spec, repo_root=repo_root)
     if state is not None:
-        _check_frozen(state, planned, spec)
+        _check_frozen(state, planned, spec, repo_root)
     done = {s.get("id") for s in (state or {}).get("stages", []) if s.get("status") == "success"}
     # A real run says each stage's advisories when that stage launches; only --check says them here.
     todo = [p for p in planned if p.stage.id not in done]
@@ -656,7 +691,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                                   f"the chain record in {outdir} changed before launch",
                                   fix="Restore the recorded chain before resuming it.")
             state = current
-            _check_frozen(state, planned, spec)
+            _check_frozen(state, planned, spec, repo_root)
             if issues := _integrity_problems(state, only_succeeded=True):
                 raise NfclawError(
                     ErrorCode.ENVIRONMENT, "The succeeded stages of this chain no longer verify.",

@@ -267,12 +267,15 @@ def test_numbered_single_end_replicates_are_not_mistaken_for_mates(tmp_path):
     assert g.record["single_end"] == 2
 
 
-def test_explicit_mates_that_disagree_are_refused(tmp_path):
+def test_explicit_mates_that_disagree_are_paired_as_named_and_said(tmp_path):
+    # `_R1`/`_R2` names state the pairing. Read names that disagree are announced before launch —
+    # fastqrepair exists to repair exactly such desynchronised mates — but do not undo the names.
     data = tmp_path / "data"
-    fq(data / "A_R1.fastq.gz", "r:1 1:N:0:1")
-    fq(data / "A_R2.fastq.gz", "r:9 2:N:0:1")
-    err = refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
-    assert "A_R1.fastq.gz" in str(err) and "read names" in str(err)
+    fq(data / "A_R1.fastq.gz", "NS5:185:HK:1:11101:16144:1046 2:N:0:1")
+    fq(data / "A_R2.fastq.gz", "NS5:185:HK:1:11101:8952:1046 2:N:0:1")
+    g = gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    assert rows(g)[0]["fastq_2"].endswith("A_R2.fastq.gz")
+    assert any("A_R1.fastq.gz" in n and "read names differ" in n for n in g.notes)
 
 
 def test_orphan_read_two_and_a_missing_mate_are_refused(tmp_path):
@@ -696,7 +699,7 @@ def test_an_empty_directory_and_crlf_fastq(tmp_path):
 def test_hyphenated_read_tokens_pair(tmp_path):
     data = tmp_path / "data"
     pair(data, "S1-R1.fastq.gz", "S1-R2.fastq.gz")
-    pair(data, "S2-1.fastq.gz", "S2-2.fastq.gz", "other:1")
+    pair(data, "S2-1.fastq.gz", "S2-2.fastq.gz", "M2:1:FC:1:1101:300:400")
     got = rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
     assert [(r["sample"], Path(r["fastq_2"]).name) for r in got] == [
         ("S1", "S1-R2.fastq.gz"), ("S2", "S2-2.fastq.gz")]
@@ -719,3 +722,67 @@ def test_similar_names_of_different_libraries_stay_single_end(tmp_path):
     fq(data / "S_read2.fq.gz", "M1:1:FC:1:1101:555:666 1:N:0:1")
     got = rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
     assert [r["sample"] for r in got] == ["S_read1", "S_read2"]
+
+
+# --- review findings ----------------------------------------------------------------------------
+
+def test_an_identity_template_can_make_a_file_derived_name_acceptable(tmp_path):
+    # ampliseq's `sample` must start with a letter: `S{sample}` makes `1234` acceptable, and the
+    # check judges the value written, not the raw file name.
+    data = tmp_path / "data"
+    pair(data, "1234_R1.fastq.gz", "1234_R2.fastq.gz")
+    assert "1234" in str(refused(tmp_path, S.AMPLISEQ, [data]))
+    assert rows(gen(tmp_path, S.AMPLISEQ, [data], {"sample": "S{sample}"}))[0]["sample"] == "S1234"
+
+
+def test_generic_read_names_are_no_evidence(tmp_path):
+    # Simulators and renumbering write `@read1` in every file: equal names prove nothing.
+    bare = tmp_path / "bare"
+    fq(bare / "ctrl_1.fastq.gz", "read1")
+    fq(bare / "ctrl_2.fastq.gz", "read1")
+    err = refused(tmp_path, S.RNASEQ, [bare], {"strandedness": "auto"})
+    assert "ctrl_1.fastq.gz" in str(err) and "_R1" in err.fix
+    numbered = tmp_path / "numbered"
+    fq(numbered / "tumor1.fastq.gz", "read1")
+    fq(numbered / "tumor2.fastq.gz", "read1")
+    g = gen(tmp_path, S.RNASEQ, [numbered], {"strandedness": "auto"})
+    assert [r["sample"] for r in rows(g)] == ["tumor1", "tumor2"]
+    assert any("tumor1.fastq.gz" in n and "_R1" in n for n in g.notes)
+
+
+@pytest.mark.parametrize("suffix, opener", [(".bz2", "bz2"), (".xz", "lzma")])
+def test_other_compressed_fastq_is_read(tmp_path, suffix, opener):
+    import importlib
+    spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "sample": {"type": "string", "meta": ["id"]},
+        "fastq_1": {"type": "string", "format": "file-path",
+                    "pattern": "^\\S+\\.f(ast)?q(\\.gz|\\.bz2|\\.xz)?$"},
+        "fastq_2": {"type": "string", "format": "file-path",
+                    "pattern": "^\\S+\\.f(ast)?q(\\.gz|\\.bz2|\\.xz)?$"},
+    }, "required": ["sample", "fastq_1"]}}}
+    data = tmp_path / "data"
+    data.mkdir()
+    module = importlib.import_module(opener)
+    for read in (1, 2):
+        (data / f"S_R{read}.fastq{suffix}").write_bytes(
+            module.compress(f"@M1:1:FC:1:1:1:1 {read}:N:0:1\nACGT\n+\nIIII\n".encode()))
+    assert [r["sample"] for r in rows(gen(tmp_path, spec, [data]))] == ["S"]
+
+
+def test_skill_paragraph_does_not_offer_a_choice_when_generation_is_impossible(tmp_path):
+    spec = dict(S.MAG, input=dict(S.MAG["input"], pattern="^\\S+\\.ya?ml$"))
+    up = S.make_pipeline(tmp_path, spec)
+    text = sheetgen.describe(schema_mod.load_input_schema(up),
+                             schema_mod.load_param_schema(up).params["input"])
+    assert "cannot generate" in text and "once you choose" not in text
+
+
+def test_many_samples_stay_fast(tmp_path):
+    import time
+    data = tmp_path / "data"
+    data.mkdir()
+    for n in range(3000):
+        (data / f"s{n:05d}.fastq.gz").write_bytes(b"")
+    started = time.monotonic()
+    g = gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    assert g.record["samples"] == 3000 and time.monotonic() - started < 20

@@ -25,10 +25,12 @@ instead of re-scanning a directory whose contents may have changed.
 """
 from __future__ import annotations
 
+import bz2
 import csv
 import glob
 import gzip
 import io
+import lzma
 import os
 import re
 import tempfile
@@ -58,7 +60,10 @@ _IDENTITY_NAMES = ("id", "sampleid", "samplename")
 _PLACEHOLDER = re.compile(r"\{([^{}]*)\}")
 _TEMPLATE_KEYS = ("sample", "lane")
 
-_FASTQ_SUFFIX = re.compile(r"\.f(?:ast)?q(?:\.gz)?$", re.IGNORECASE)
+_FASTQ_SUFFIX = re.compile(r"\.f(?:ast)?q(?:\.(?:gz|bz2|xz|zst))?$", re.IGNORECASE)
+# Read names that identify a molecule: Illumina's instrument:run:flowcell:lane:tile:x:y and the
+# SRA/ENA spot names. Generic names (`read1`, written by simulators or renumbering) prove nothing.
+_ACCESSION = re.compile(r"^[SED]RR\d+\.\d+")
 # bcl2fastq / BCL Convert: <sample>_S<n>[_L<lane>]_<R|I><read>_<chunk>
 _ILLUMINA = re.compile(r"^(?P<sample>.+)_S(?P<number>\d+)(?:_L(?P<lane>\d{3}))?_(?P<kind>[RI])"
                        r"(?P<read>\d)_(?P<chunk>\d{3})$")
@@ -152,6 +157,7 @@ class Plan:
     suffix: str | None                         # ".csv" / ".tsv": a file name --input accepts
     problem: str | None                        # why no samplesheet can be generated (None: it can)
     columns: Mapping[str, Column] = field(default_factory=dict)
+    choice: bool = False                       # the only problem: which read group to fill
 
 
 def _reachable(names: list[str], columns: Mapping[str, Column]) -> tuple[str, ...]:
@@ -208,29 +214,31 @@ def plan(sheet: InputSchema, input_param: Param | None,
     data = _reachable([n for n in typed if n not in read_cols and n not in empty], columns)
     lane = next((n for n in columns if n.casefold() == "lane" and n not in empty), None)
     suffix = _suffix(input_param)
-    problem = None
     with_required = [g for g in groups if any(columns[n].required for n in g)]
     reads: tuple[str, ...] = ()
+    choice = None
     if len(with_required) == 1:
         reads = with_required[0]
     elif len(groups) == 1:
         reads = groups[0]
     elif groups:
         shown = "; ".join(" + ".join(g) for g in groups)
-        problem = (f"the samplesheet takes reads in several column groups ({shown}) and file names "
-                   "cannot tell which yours belong in; leave the groups you do not use empty, e.g. "
-                   + " ".join(f"--sheet-set {n}=" for g in groups[1:] for n in g))
+        choice = (f"the samplesheet takes reads in several column groups ({shown}) and file names "
+                  "cannot tell which yours belong in; leave the groups you do not use empty, e.g. "
+                  + " ".join(f"--sheet-set {n}=" for g in groups[1:] for n in g))
+    # What makes generation impossible outright comes before the choice of a read group.
+    problem = None
     if not columns:
         problem = "the samplesheet takes one value per line, not data files"
-    elif not reads and not data and problem is None:
+    elif not groups and not data:
         problem = ("the samplesheet declares no file type nfclaw could match files against (no "
                    "column's pattern names a file extension)")
-    elif suffix is None and problem is None:
+    elif suffix is None:
         problem = (f"--input must match {input_param.pattern}, which accepts no CSV or TSV "
                    "samplesheet")
     return Plan(id_column=_id_column(sheet, set(read_cols) | set(data)), reads=reads,
                 read_groups=tuple(groups), data_columns=data, lane_column=lane, suffix=suffix,
-                problem=problem, columns=columns)
+                problem=problem or choice, columns=columns, choice=problem is None and bool(choice))
 
 
 def _allowed(col: Column) -> str:
@@ -247,9 +255,10 @@ def describe(sheet: InputSchema, input_param: Param | None) -> str:
     if not p.columns:
         return ""
     lead = ("**From data files.** `--input` may also be the data files — a directory (searched "
-            "recursively), a glob or several files — from which nfclaw writes this samplesheet")
+            "recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw "
+            "writes this samplesheet")
     tail = (" Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.\n")
-    if p.problem and len(p.read_groups) > 1:
+    if p.choice:
         return (f"{lead} once you choose the read columns: {p.problem}. Set the required columns "
                 f"no file determines with `--sheet-set COLUMN=VALUE`.{tail}")
     if p.problem:
@@ -259,7 +268,7 @@ def describe(sheet: InputSchema, input_param: Param | None) -> str:
         fills.append(f"`{p.id_column}` from file names")
     if len(p.reads) == 2:
         fills.append(f"`{p.reads[0]}`/`{p.reads[1]}` from FastQ files (mates paired by "
-                     "`_R1`/`_R2` or `_1`/`_2` and confirmed by read name)")
+                     "`_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates)")
     elif p.reads:
         fills.append(f"`{p.reads[0]}` from FastQ files (single-end)")
     if p.lane_column and p.reads:
@@ -486,13 +495,19 @@ def _parse_read(path: Path) -> _Read:
 
 def _first_read_name(path: Path) -> str | None:
     """The name of a FastQ file's first read (None for an empty file)."""
+    suffix = path.suffix.lower()
+    opener = {".gz": gzip.open, ".bz2": bz2.open, ".xz": lzma.open}.get(suffix, open)
+    if suffix == ".zst":
+        raise _bad(f"cannot read the read names of zstd-compressed {path.name} (the Python standard "
+                   "library has no zstd reader)",
+                   fix="Name mates _R1/_R2 (their names alone then pair them, with a note), or "
+                       "write the samplesheet yourself.")
     try:
-        opener = gzip.open if path.name.lower().endswith(".gz") else open
         with opener(path, "rb") as fh:
             line = fh.readline(1 << 16)
-    except (OSError, EOFError, zlib.error) as exc:
+    except (OSError, EOFError, zlib.error, lzma.LZMAError) as exc:
         raise _bad(f"cannot read FastQ file {path}: {exc}",
-                   fix="Restore a valid (gzip-compressed if named .gz) FastQ file.") from exc
+                   fix="Restore a valid FastQ file (compressed as its name says).") from exc
     if not line:
         return None
     text = line.decode("utf-8", "replace").rstrip("\r\n")
@@ -507,6 +522,13 @@ def _mates(first: str, second: str) -> bool:
     """Illumina and SRA mates share their read name; older tools suffix it /1 and /2 (or .1/.2)."""
     return first == second or (len(first) == len(second) > 2 and first[:-1] == second[:-1]
                                and first[-2] in "/._" and first[-1] == "1" and second[-1] == "2")
+
+
+def _strong(first: str, second: str) -> bool:
+    """Whether two read names that pair also identify one molecule: suffixed mates, an Illumina
+    name (instrument:run:flowcell:lane:tile:x:y) or an SRA/ENA spot. Equal generic names (`read1`
+    in every file a simulator or a renumbering wrote) are no evidence either way."""
+    return first != second or first.count(":") >= 4 or bool(_ACCESSION.match(first))
 
 
 @dataclass
@@ -564,6 +586,12 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                     raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
                                "reads of one library: an empty file has no read names to compare",
                                fix="Name them _R1/_R2, or write the samplesheet yourself.")
+                if _mates(first, second) and not _strong(first, second):
+                    raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
+                               f"reads of one library: both start with the generic read name "
+                               f"{first!r}, which identifies no molecule",
+                               fix="Name mates _R1/_R2, or link separate libraries under names "
+                                   "that do not end in _1/_2.")
                 if _mates(first, second):
                     units.append(_Unit(sample, None, None, [slot[1], slot[2]]))
                     continue
@@ -576,7 +604,7 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
         else:
             (path,) = slot.values()
             units.append(_Unit(_read_stem(path.name), None, None, [path]))
-    _refuse_unnamed_mates(units)
+    _refuse_unnamed_mates(units, notes)
     if any(len(u.reads) == 2 for u in units):
         if not paired_ok:
             raise _bad("the samplesheet takes single-end reads in one column, but the files hold "
@@ -592,7 +620,7 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
     return units
 
 
-def _refuse_unnamed_mates(units: list[_Unit]) -> None:
+def _refuse_unnamed_mates(units: list[_Unit], notes: list[str]) -> None:
     """Two would-be single-end files whose names differ only by a read mark (`_read1`/`_read2`,
     `_F`/`_R`) and whose first reads are mates are one library under a naming nfclaw does not
     parse: taking them for two samples would analyse it twice, as single-end."""
@@ -615,7 +643,12 @@ def _refuse_unnamed_mates(units: list[_Unit]) -> None:
         for first, second in _READ_MARKS.items():
             if first in marks and second in marks:
                 a, b = read_name(marks[first]), read_name(marks[second])
-                if a and b and _mates(a, b):
+                if a and b and _mates(a, b) and not _strong(a, b):
+                    notes.append(f"{marks[first].name} and {marks[second].name} start with the same "
+                                 f"generic read name ({a!r}); they are taken for two single-end "
+                                 "samples. If they are the two reads of one library, name them "
+                                 "<sample>_R1 / <sample>_R2.")
+                elif a and b and _mates(a, b):
                     raise _bad(f"{marks[first].name} and {marks[second].name} hold the two reads of "
                                "one library (their read names pair), but their names carry no read "
                                "number nfclaw recognises",
@@ -629,9 +662,11 @@ def _confirm(first: Path, second: Path, notes: list[str]) -> None:
         notes.append(f"Paired {first.name} with {second.name} by name only: an empty file has no "
                      "read names to compare.")
     elif not _mates(a, b):
-        raise _bad(f"{first.name} and {second.name} are named as mates, but their first read names "
-                   f"differ ({a!r}, {b!r})",
-                   fix="Check that the files belong together (a swapped or truncated mate?).")
+        # The names state the pairing; desynchronised mates are what some pipelines repair
+        # (fastqrepair). Said before launch, never silently, and never undone by guessing.
+        notes.append(f"{first.name} and {second.name} are paired as their names say, but their first "
+                     f"read names differ ({a!r}, {b!r}): check that they belong together (a "
+                     "swapped, truncated or desynchronised mate).")
 
 
 # --- other data files ---------------------------------------------------------------------------
@@ -718,9 +753,7 @@ def _check_assignments(assignments: Mapping[str, str], p: Plan) -> None:
 
 
 def _value_issues(col: Column, value: str) -> list[str]:
-    issues = samplesheet._value_issues(0, col, value)
-    return [i.split(": ", 1)[1].replace(f"'{col.name}' ", "", 1) if ": " in i else i
-            for i in issues]
+    return samplesheet.value_problems(col, value)
 
 
 # --- building the sheet -----------------------------------------------------------------------------
@@ -799,14 +832,21 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                    fix="Check --input, and the file names and extensions the columns accept.")
     notes: list[str] = []
     units = _read_units(reads, notes, paired_ok=len(p.reads) == 2) if reads else []
-    samples = sorted({u.sample for u in units} | {s for s, _ in data})
-    _check_names(samples, units, data, p, pipeline)
-    _check_shapes(samples, units, data)
+    # Each sample's read sets and other files, grouped once (a plate can hold thousands).
+    sample_units: dict[str, list[_Unit]] = {}
+    for unit in units:
+        sample_units.setdefault(unit.sample, []).append(unit)
+    sample_data: dict[str, dict[str, str]] = {}
+    for (sample, col), path in sorted(data.items()):
+        sample_data.setdefault(sample, {})[col] = str(path)
+    samples = sorted(set(sample_units) | set(sample_data))
+    _check_paths([path for u in units for path in u.reads] + list(data.values()))
+    _check_shapes(samples, sample_units, sample_data)
     rows: list[dict[str, str]] = []
     row_sample: list[tuple[str, int]] = []
     for sample in samples:
-        attached = {col: str(path) for (s, col), path in sorted(data.items()) if s == sample}
-        mine = sorted((u for u in units if u.sample == sample),
+        attached = sample_data.get(sample, {})
+        mine = sorted(sample_units.get(sample, []),
                       key=lambda u: (u.lane or 0, u.chunk or 0, str(u.reads[0])))
         for unit in mine or [None]:
             row: dict[str, str] = {}
@@ -829,6 +869,7 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     lane_column = next((n for n in p.columns if n.casefold() == "lane"), None)
     if lane_column and units:
         _check_lanes(rows, row_sample, lane_column)
+    _check_identities(rows, p, pipeline)
     defaults = {}
     for col in sheet.columns:
         if (col.name and col.required and col.name not in assignments
@@ -841,7 +882,7 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     filled = {k for r in rows for k, v in r.items() if v}
     keep = filled | {c.name for c in sheet.columns if c.name and c.required} | set(p.reads)
     header = [c.name for c in sheet.columns if c.name in keep]
-    delimiter = "\t" if p.suffix == ".tsv" else ","
+    delimiter = samplesheet.delimiter_for(Path(GENERATED_STEM + p.suffix))
     _check_cells(rows, delimiter)
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=delimiter, lineterminator="\n")
@@ -874,36 +915,49 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                      record=record)
 
 
-def _check_names(samples: list[str], units: list[_Unit], data: dict, p: Plan,
-                 pipeline: str) -> None:
-    def origin(sample: str) -> str:
-        paths = [str(u.reads[0]) for u in units if u.sample == sample]
-        paths += [str(path) for (s, _), path in data.items() if s == sample]
-        return Path(paths[0]).name if paths else sample
+def _check_paths(paths: list[Path]) -> None:
+    issues = [f"{path}: {issue}" for path in paths
+              for issue in inputs.local_name_issues(str(path), "file-path")]
+    if issues:
+        raise _bad("These input files have names the pipelines' tasks cannot stage safely.",
+                   fix="Rename them or link them under plain names (letters, digits, dots, "
+                       "underscores, hyphens).", issues=issues)
 
-    issues = []
-    for path in [path for u in units for path in u.reads] + list(data.values()):
-        issues += [f"{path}: {i}" for i in inputs.local_name_issues(str(path), "file-path")]
-    id_col = p.columns.get(p.id_column) if p.id_column else None
-    for sample in samples:
-        if not samplesheet._safe_identifier(sample):
-            issues.append(f"sample name {sample!r} (from {origin(sample)}) must start with a "
-                          "letter, digit or underscore and contain only letters, digits, dots, "
-                          "underscores or hyphens")
-        elif id_col is not None and id_col.pattern and not _search(id_col.pattern, sample):
-            issues.append(f"sample name {sample!r} (from {origin(sample)}) does not match the "
-                          f"{pipeline} '{id_col.name}' pattern {id_col.pattern}")
+
+def _check_identities(rows: list[dict[str, str]], p: Plan, pipeline: str) -> None:
+    """The sample names written — from file names, or a --sheet-set template around them — must be
+    safe identifiers that the identity column's pattern accepts. Never altered: refused, naming the
+    file they came from."""
+    if not p.id_column:
+        return
+    column = p.columns[p.id_column]
+    issues: dict[str, str] = {}
+    for row in rows:
+        value = row.get(p.id_column, "")
+        origin = next((Path(v).name for c, v in row.items()
+                       if c in (*p.reads, *p.data_columns) and v), "?")
+        if value in issues:
+            continue
+        if not samplesheet._safe_identifier(value):
+            issues[value] = (f"sample name {value!r} (from {origin}) must start with a letter, "
+                             "digit or underscore and contain only letters, digits, dots, "
+                             "underscores or hyphens")
+        elif column.pattern and not _search(column.pattern, value):
+            issues[value] = (f"sample name {value!r} (from {origin}) does not match the {pipeline} "
+                             f"'{column.name}' pattern {column.pattern}")
     if issues:
         raise _bad("Sample names come from the file names, which these do not allow.",
-                   fix="Give the files (or links to them) names that fit; nfclaw never renames "
-                       "samples.", issues=issues)
+                   fix=f"Give the files (or links to them) names that fit, or wrap them in a "
+                       f"template that does (--sheet-set {p.id_column}=S{{sample}}); nfclaw never "
+                       "renames samples.", issues=list(issues.values()))
 
 
-def _check_shapes(samples: list[str], units: list[_Unit], data: dict) -> None:
+def _check_shapes(samples: list[str], sample_units: dict[str, list[_Unit]],
+                  sample_data: dict[str, dict[str, str]]) -> None:
     shapes: dict[tuple[str, ...], list[str]] = {}
     for sample in samples:
-        kinds = (("FastQ reads",) if any(u.sample == sample for u in units) else ()) + tuple(
-            sorted(col for (s, col) in data if s == sample))
+        kinds = (("FastQ reads",) if sample in sample_units else ()) + tuple(
+            sorted(sample_data.get(sample, {})))
         shapes.setdefault(kinds, []).append(sample)
     if len(shapes) > 1:
         raise _bad("The samples do not all bring the same kinds of files, which suggests stray "
@@ -1011,25 +1065,44 @@ def write(generated: Generated, directory: Path) -> Path:
     return path
 
 
-def resume_note(previous: Path, generated: Generated) -> str | None:
-    """On --resume: say how the regenerated sheet differs from the one the previous launch used."""
+def sheet_changes(previous: Path, generated: Generated) -> str | None:
+    """How `generated` differs from the samplesheet at `previous` (None when identical or when
+    there is none): the samples added and removed, or that only files or values changed."""
     try:
         before = previous.read_text(encoding="utf-8")
     except OSError:
         return None
     if before == generated.text:
         return None
-    note = ("--resume regenerated the samplesheet from --input, and it differs from the one the "
-            "previous launch used")
-    if generated.id_column:
-        delimiter = "\t" if generated.suffix == ".tsv" else ","
-        try:
-            old = {r.get(generated.id_column) or "" for r in
-                   csv.DictReader(io.StringIO(before), delimiter=delimiter)}
-        except csv.Error:
-            old = set()
-        new = {r[generated.id_column] for r in generated.rows}
-        changes = [f"{label}: {_shown(sorted(names))}"
-                   for label, names in (("added", new - old), ("removed", old - new)) if names]
-        note += " (" + ("; ".join(changes) if changes else "same samples, other files or values") + ")"
-    return note + ". Nextflow reuses only the tasks whose inputs are unchanged."
+    if not generated.id_column:
+        return "other samples, files or values"
+    try:
+        old = {r.get(generated.id_column) or "" for r in
+               csv.DictReader(io.StringIO(before), delimiter=samplesheet.delimiter_for(previous))}
+    except csv.Error:
+        old = set()
+    new = {r[generated.id_column] for r in generated.rows}
+    changes = [f"{label}: {_shown(sorted(names))}"
+               for label, names in (("added", new - old), ("removed", old - new)) if names]
+    return "; ".join(changes) or "same samples, other files or values"
+
+
+def resume_note(previous: Path, generated: Generated) -> str | None:
+    """On --resume: say how the regenerated sheet differs from the one the previous launch used."""
+    changes = sheet_changes(previous, generated)
+    if changes is None:
+        return None
+    return ("--resume regenerated the samplesheet from --input, and it differs from the one the "
+            f"previous launch used ({changes}). Nextflow reuses only the tasks whose inputs are "
+            "unchanged.")
+
+
+def absolute(value: str) -> str:
+    """A local --input value made absolute as given (a link keeps its name); a remote one as is."""
+    return value if "://" in value else str(_absolute(value))
+
+
+def present(source: Source) -> bool:
+    """Whether any data the source names still exists (a directory, a file, a glob match)."""
+    return any(Path(v).exists() or (_has_magic(v) and any(
+        glob.glob(p, recursive=True) for p in _glob_patterns(v))) for v in source.values)

@@ -774,7 +774,7 @@ def test_run_takes_data_files_and_sheet_columns(tmp_path, monkeypatch, capsys):
                             generated_samplesheet=Path("/stage/samplesheet.csv")))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", "a_R1.fq.gz",
-                     "a_R2.fq.gz", "--sheet-set", "strandedness=auto", "--sheet-set",
+                     "--input", "a_R2.fq.gz", "--sheet-set", "strandedness=auto", "--sheet-set",
                      "seq_center=", "--genome", "GRCh38", "--check"]) == 0
     assert captured["input_path"] == ["a_R1.fq.gz", "a_R2.fq.gz"]
     assert captured["sheet_set"] == {"strandedness": "auto", "seq_center": ""}
@@ -795,16 +795,22 @@ def test_a_malformed_sheet_column_is_refused_before_anything_runs(tmp_path, monk
     assert not (tmp_path / "out").exists()
 
 
-def test_several_input_values_end_at_the_next_option(tmp_path, monkeypatch):
+def test_input_before_the_pipeline_name_still_parses(tmp_path, monkeypatch, capsys):
+    # Options may precede the pipeline name; an --input value must not swallow it.
     from runner import orchestration
     captured = {}
     monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
+                        lambda *a, **k: captured.update(name=a[0], **k) or orchestration.RunResult(
                             "CMD", Path("/o"), True, None))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
-    assert cli.main(["run", "x", "--input", "a.fq.gz", "b.fq.gz", "-profile", "singularity",
-                     "--outdir", str(tmp_path / "out"), "--skip-qc", "true"]) == 0
+    assert cli.main(["run", "--input", "sheet.csv", "rnaseq", "--outdir", str(tmp_path / "o")]) == 0
+    assert captured["name"] == "rnaseq" and captured["input_path"] == "sheet.csv"
+    # Several data files: --input once per file (or a quoted glob, or their directory).
+    assert cli.main(["run", "rnaseq", "--input", "a.fq.gz", "--input", "b.fq.gz",
+                     "--outdir", str(tmp_path / "o")]) == 0
     assert captured["input_path"] == ["a.fq.gz", "b.fq.gz"]
-    assert captured["profile"] == "singularity" and captured["cli_overrides"] == {"skip_qc": "true"}
-    assert cli.main(["run", "x", "--input=sheet.csv", "--outdir", str(tmp_path / "out")]) == 0
-    assert captured["input_path"] == "sheet.csv"
+    # What an unquoted shell glob expands to is explained, not taken for a pipeline parameter.
+    (tmp_path / "b.fq.gz").write_text("x")
+    assert cli.main(["run", "rnaseq", "--input", "a.fq.gz", str(tmp_path / "b.fq.gz"),
+                     "--outdir", str(tmp_path / "o")]) == 1
+    assert "quote the glob" in capsys.readouterr().err
