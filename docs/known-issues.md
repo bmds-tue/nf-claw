@@ -124,6 +124,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 
+### Directory-consuming tasks are incorrectly cached after `--resume`
+- **Status: Fixed for explicitly declared local input directories.** Nextflow keys a directory input on the directory's path, size and timestamp. Nextflow 25.10.4 and 26.04.0 reuse a cached directory-consuming task after an empty directory is renamed, or after a file in a subdirectory is edited in place (verified: the resumed task republished the old bytes), while the root size and timestamp remain unchanged. File checksums cannot detect the rename, and the namespace cannot detect the edit, so nfclaw checks both.
+- **Behavior:** nfclaw records the full directory namespace and the SHA-256 of every file beneath an input directory before launch. Unchanged namespace and content preserve normal resume caching; a changed namespace, changed file content or an unavailable previous inventory preserves the previous run in a sibling `<outdir>.previous-<id>` archive, starts a fresh cache session, and recomputes all tasks. This avoids stale publications and fixed report filename conflicts; prior logs are retained and copied forward. Active engine database locks and dependencies overlapping the run directory block archiving. This also applies when the new launch disables provenance. Remote and indirectly configured directory inputs are outside this preflight's scope.
+- **Validation:** Real tasks enumerated `sample_A` before the change and `sample_B` after resume on both engines, with the root timestamp restored. Unchanged resumes reused the cached task. Sample-specific output files proved that old publications stayed in the archive, while a fixed trace filename was successfully regenerated. Standalone replay refused the changed inventory before launching Nextflow. Editing a nested file to same-size content with both directory timestamps restored made the resumed run recompute and publish the new bytes on both engines, and an unchanged follow-up resume reused the cache.
+
 ### `--resume` fails with "Unable to acquire lock on session …"
 - **Symptom:** After a run was interrupted (killed/timed out), re-running with `--resume` fails to acquire the session lock.
 - **Why:** A hard kill leaves Nextflow's session lock behind; Nextflow refuses to resume because it cannot determine whether the lock is stale or held by a live process.
@@ -163,7 +168,7 @@ nfclaw verify results.replay --against results
 ```
 It hashes the replay's live files and compares them with the original recorded checksums
 **by path**, reporting `identical` / `changed` / `missing` / `extra`. Missing or extra
-files fail the structural check; add `--strict` to fail on any changed bytes as well.
+files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
@@ -197,7 +202,7 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 
 ### Replay dependency guard failures (`provenance/replay_guard.py`)
 - **Symptom:** Running `<outdir>/provenance/commands.sh` aborts with `nfclaw replay: dependency check failed: ...` before Nextflow is launched.
-- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests.
+- **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), external Nextflow configs (`-c`), and tracked pipeline source commits match their recorded SHA-256 manifests. New bundles also check directory namespaces, empty directories, entry types and symlink identities against `inputs.inventory.json` and `configs.inventory.json`. A checksum-only prelaunch snapshot cannot certify the original directory namespace and is refused.
 - **Fix:** Restore the original input files or external configs to match the recorded checksums in `<outdir>/provenance/inputs.sha256` and `configs.sha256`. If intentional changes were made, launch a new run into a new `--outdir` instead of replaying.
 
 ### Replay refuses an unobserved engine or malformed environment names
@@ -210,6 +215,33 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
   from the pinned pipeline's documented engine requirement. Do not guess which
   engine an earlier unobserved run used. Private URI credentials are omitted from
   exported replay values; supply any needed credentials through your environment.
+
+---
+
+### An explicit remote input has an unsafe staged filename
+
+Nextflow can retain literal shell characters in a remote basename. A task deriving a
+prefix from that name can interpolate shell syntax even when its input path object is
+escaped. For example, a local HTTP fixture named `reads$(id).txt` produced
+`printf '%s\n' reads$(id) > name.txt` on Nextflow 25.10.4 and executed command
+substitution. nfclaw now refuses explicit unsafe remote names in path parameters and
+CSV/TSV or flat JSON/YAML path fields before launching. Use a safely named remote
+object or download the data into a safely named local file; sample identities are
+preserved.
+
+Percent escapes remain literal in the staged name and are not decoded by this guard.
+HTTP query suffixes are excluded from the filename check so signed URLs remain
+usable. A standalone HTTP fragment remains in the staged name and is checked. S3
+paths retain both query and fragment characters in their object keys.
+The local HTTP integration oracle checks actual staged names and bytes on Nextflow
+25.10.4 and 26.04.0 without interpolating their names into executable script text.
+Local directory inputs and directory glob matches are inspected recursively, including
+empty subdirectories and resolved symlink target names. Broken members, unreadable
+subtrees and directory cycles are refused before launch. Parent names outside the
+explicit directory are not staged names and retain their separate path contract.
+
+Remote file contents, remote glob matches and values supplied only by configs/profiles
+are outside this explicit-value preflight.
 
 ---
 
@@ -320,7 +352,7 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Upstream examples for cache/index-only runs show `--build_only_index --input false`. In raw Nextflow, this causes an nf-schema validation error because `input` is declared as a string path. In `nfclaw run sarek --input false`, nfclaw intercepts `--input false` and leaves `input` unset in `params.json`, allowing index-only runs (`--build_only_index true --download_cache true`) to succeed cleanly without schema errors. For raw Nextflow runs, omit `--input` instead of passing `false`.
 - **`sarek` 3.10.0 (`sarek` 3.9.0)** — Do not use `--config pipelines/sarek/upstream/conf/test.config` to convert an analysis run into a test run with a custom samplesheet. Extra configs load after initial profile setup, causing validation of default S3 iGenomes paths. Run with `-profile test,docker` instead: `nfclaw run sarek --input samplesheet_sarek.csv --outdir results -profile test,docker`. For bundled test data, use `nfclaw run sarek --demo --outdir results`.
 - **`ampliseq` 3.0.0** — The bundled `test` profile sets its own `process.resourceLimits` (4 CPUs, 15 GB, 1 h); the release has no `--max_memory`/`--max_cpus` parameters (nfclaw rejects them as unknown), so cap a real run with `--limit-cpus`/`--limit-memory`/`--limit-time`. Its `--demo` completed all 130 tasks without a retry on Nextflow 26.04.3 with Docker (Linux amd64); `QIIME2_EXPORT_RELTAX` peaked at 1.2 GB of RSS. This establishes execution of the bundled test, not taxonomic accuracy. 3.0.0 also removed the legacy `sampleID,forwardReads` samplesheet format (use `sample,fastq_1[,fastq_2]`) and renamed `--FW-primer`/`--RV-primer` to `--primer-fwd`/`--primer-rev`; nfclaw rejects the old names.
-  - **Not every output is reproducible between executions.** A `commands.sh` replay of that demo reproduced the ASV sequences, ASV counts and DADA2 statistics byte for byte, but changed the DADA2 taxonomy of 3 of 241 ASVs (and the bootstrap confidence of 34), and every rarefaction-based QIIME2 diversity result. Four isolated reruns of the same `DADA2_TAXONOMY` task (dada2 1.38.0, identical inputs and container, the module's `set.seed(100)`, with `multithread` 4 and also `FALSE`) all differed from each other: between 4 and 6 of 241 ASVs changed label, mostly near the `--dada-min-boot` threshold, so the seed does not fix this bootstrap. `QIIME2_DIVERSITY_CORE` rarefies to the smallest sample depth with no seed. Treat taxonomic labels with bootstrap confidence near `--dada-min-boot`, and single rarefactions, as variable; compare replays per ASV rather than expecting `nfclaw verify --strict` to pass.
+  - **Not every output is reproducible between executions.** A `commands.sh` replay of that demo reproduced the ASV sequences, ASV counts, DADA2 statistics and the QIIME2 classifier's `qiime2/taxonomy/taxonomy.tsv` byte for byte, and the taxonomy-filtered abundance table had the same 38 ASVs and counts (only its row order differed). Two results did change. **DADA2 taxonomy:** 3 of 241 ASVs changed label and 34 changed bootstrap confidence. Four isolated reruns of the same `DADA2_TAXONOMY` task (identical inputs and container, the module's `set.seed(100)`, `multithread` 4 and `FALSE`) all differed, by 4–6 labels per pair. The cause is in dada2 itself (1.38.0 here, unchanged in 1.40.0): its bootstrap subsampling uses R's random numbers, but `assignTaxonomy` breaks ties between equally scoring genera with a generator seeded from `std::random_device` ([source](https://github.com/benjjneb/dada2/blob/b61fe2e90115be08e78a01a16af89fd21402ca42/src/taxonomy.cpp#L80-L105)), which no R seed controls; GTDB references sharing a 16S region make such ties common. **Rarefaction:** `QIIME2_DIVERSITY_CORE` rarefies to the smallest sample depth with no seed, so every rarefied diversity result differs. Treat DADA2 labels whose confidence is near `--dada-min-boot` as uncertain; where reproducible labels are required, the QIIME2 classifier's taxonomy (`--qiime-ref-taxonomy`) reproduced exactly in this measurement. Compare replays per ASV rather than expecting `nfclaw verify --strict` to pass.
 
 ---
 
@@ -330,3 +362,9 @@ When a stage specifies `demo: true`, it executes with its bundled test profile d
 - **`detaxizer`:** The test profile filters reads with an empty database, removing all reads and leaving empty FastQ files. For downstream chaining, provide active classification parameters: `"params": {"classification_kraken2": false, "classification_bbduk": true, "fasta_bbduk": "<host fasta>"}`.
 - **`demultiplex`:** Test data consists of human amplicon reads. Downstream stages requiring reference genomes need human references (`fasta`/`gtf`), and paired-end profiles: `"profile": "test_pe,docker"`.
 - **`taxprofiler`:** Test profiling on unrecognized reads fails in unhandled zero-hit modules; enable only resilient profilers (`run_kraken2`, `run_kaiju`) with `"run_profile_standardisation": false`.
+
+### File-only inventories missed empty directories and changed aliases
+- **Status: Fixed for new recorded namespaces.** Output verification previously accepted two trees with identical files but different empty-directory names. Reference handoffs could also accept changed directory shapes or retargeted aliases whose file bytes remained identical.
+- **Behavior:** New bundles record `outputs.inventory.json`. Verification reports missing/extra directories and changed link identities alongside file differences. Old file-only manifests provide byte comparisons, but historical directory agreement remains unverified and cannot return a successful structural check. Live trees without historical manifests remain comparable.
+- **Handoffs:** Published output namespaces and local reference namespaces are verified before the next stage starts. Chain status checks source namespaces and the downstream prelaunch snapshot. Complete run-directory handoffs retain all entries and record execution metadata at the boundary separately from historically published results.
+- **Validation:** Real producer and consumer tasks exercised external references, published directories and complete run directories. Renaming an empty sample directory while retaining reference bytes blocked the consumer; restoring the original namespace allowed resume, and subsequent changes broke lineage. These execution and conservation checks do not establish biological accuracy.

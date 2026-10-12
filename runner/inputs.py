@@ -19,6 +19,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from runner.schema import PATH_FORMATS, iter_param_groups
 
@@ -99,17 +100,19 @@ def samplesheet_parameters(repo: Path) -> tuple[str, ...]:
 
 
 def local_name_issues(value: str, fmt: str) -> list[str]:
-    """Literal local names passed into task shell scripts, including resolved glob matches.
+    """Staged names passed into task shell scripts, including explicit remote basenames.
 
     Parent directories are not staged under their original names; this guards the basename.
-    Also check resolved symlink targets because path-parameter resolution follows symlinks.
-    Missing glob matches remain the runtime schema's responsibility.
+    Also check directory contents and resolved symlink targets: downstream workflows can select
+    children as separate inputs or derive prefixes from their names.
+    Missing glob matches and remote inventories remain the runtime schema's responsibility.
+    Remote basenames retain percent escapes in Nextflow; do not decode or rewrite scientific
+    inputs. HTTP/FTP providers remove the query suffix, but retain a standalone fragment in the
+    staged name. Object-store paths such as S3 retain both as literal key characters.
     """
     if value.strip().lower().startswith("file:"):
         return [_FILE_URI_ISSUE]
-    if "://" in value:
-        return []
-    from runner.replay_guard import MissingInputSource, input_files
+    from runner.replay_guard import MissingInputSource, inspect_input_paths
 
     def safe_name(name: str, *, pattern=False) -> bool:
         extra = "._-+@%=,:~" + ("*?[]{}" if pattern else "")
@@ -117,22 +120,51 @@ def local_name_issues(value: str, fmt: str) -> list[str]:
                 and all(char.isalnum() or char in extra
                         or unicodedata.category(char).startswith("M") for char in name))
 
-    path = Path(value).expanduser()
     pattern = fmt == "file-path-pattern"
+    if "://" in value:
+        # urlsplit silently removes tabs/newlines. Refuse those before parsing, rather than
+        # checking a different URL from the one supplied to Nextflow.
+        if any(ord(char) < 32 or ord(char) == 127 for char in value):
+            return ["remote input URL contains control characters"]
+        try:
+            parsed = urlsplit(value)
+            remote_path = value.split("://", 1)[1].partition("/")[2]
+            if parsed.scheme.lower() in {"http", "https", "ftp"}:
+                remote_path = remote_path.split("?", 1)[0]
+            name = remote_path.rstrip("/").rsplit("/", 1)[-1]
+        except ValueError as exc:
+            return [f"cannot inspect remote input filename: {exc}"]
+        if not safe_name(name, pattern=pattern):
+            return [f"unsafe remote input filename {name!r}; use a safely named remote object "
+                    "or download it to a safely named local file"]
+        return []
+    path = Path(value).expanduser()
+
+    class UnsafeName(ValueError):
+        pass
+
+    def check_name(name: str, *, is_pattern=False):
+        if not safe_name(name, pattern=is_pattern):
+            raise UnsafeName(name)
+
+    def check_path(item: Path):
+        check_name(item.name)
+        check_name(item.resolve().name)
+
     try:
-        names = [(path.name, pattern), (path.resolve().name, pattern)]
-        if pattern:
+        check_name(path.name, is_pattern=pattern)
+        check_name(path.resolve().name, is_pattern=pattern)
+        if pattern or path.is_dir():
             try:
-                names.extend((item.name, False) for item in input_files([path]))
+                inspect_input_paths([path], check_path)
             except MissingInputSource:
                 pass
+    except UnsafeName as exc:
+        return [f"unsafe local input filename {str(exc)!r} in {value!r}; use a renamed or copied "
+                "input with literal filename characters (letters, digits, combining marks, "
+                "dots, underscores, hyphens, plus, @, %, =, commas, colons or interior ~)"]
     except (OSError, RuntimeError) as exc:
         return [f"cannot inspect local input filenames for {value!r}: {exc}"]
-    for name, is_pattern in names:
-        if not safe_name(name, pattern=is_pattern):
-            return [f"unsafe local input filename {name!r} in {value!r}; use a renamed or copied "
-                    "input with literal filename characters (letters, digits, combining marks, "
-                    "dots, underscores, hyphens, plus, @, %, =, commas, colons or interior ~)"]
     return []
 
 
@@ -221,6 +253,14 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
     if not text.strip():
         return ResolvedInput(text, None, None)           # "not set": never the caller's directory
     if "://" in text:
+        param = input_param(repo, param_name) or {}
+        parts = _applicable(param, text) or []
+        fmt = next((part["format"] for part in parts if part.get("format") in PATH_FORMATS),
+                   "file-path")
+        if issues := local_name_issues(text, fmt):
+            from runner.errors import ErrorCode, NfclawError
+            raise NfclawError(ErrorCode.PARAMS_INVALID, "Input filename failed validation.",
+                              details={"issues": issues})
         return ResolvedInput(text, None, None)
     if param_name == "input" and text.strip().lower() == "false":
         return ResolvedInput(False, None, None)

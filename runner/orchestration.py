@@ -10,8 +10,9 @@ from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     outputs, parameters, plugin_compat, preflight, provenance,
-                    resources, runlog, samplesheet, submodule, versions)
+                    resources, resume_safety, runlog, samplesheet, submodule, versions)
 from runner import schema as schema_mod
+from runner.replay_guard import _capture_input_inventory
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import single_writer
 from runner.submodule import SubmoduleStatus
@@ -36,6 +37,64 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
             f"(commit {prev_commit[:12]}); this launch executes {st.version} (commit "
             f"{st.commit[:12]}). Nextflow reuses only tasks whose code and inputs are unchanged, "
             "so tasks touched by the change re-run and the results combine both commits."]
+
+
+def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    """The input directories and every entry beneath them."""
+    roots = {Path(name) for name, entry in inventory.items() if entry["type"] == "directory"}
+    return {name: entry for name, entry in inventory.items()
+            if Path(name) in roots or any(parent in roots for parent in Path(name).parents)}
+
+
+def _directory_file_digests(inventory: dict[str, dict[str, str]],
+                            known: dict[str, str] | None) -> dict[str, str]:
+    """SHA-256 of every file beneath an input directory (from `known` when already hashed)."""
+    digests = {}
+    for name, entry in _directory_nodes(inventory).items():
+        if entry["type"] == "file":
+            digests[name] = (known or {}).get(name) or provenance._sha256(
+                Path(entry.get("resolved_path", name)))
+    return digests
+
+
+def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
+                              current_digests: dict[str, str]) -> str | None:
+    """Nextflow's ordinary directory cache key omits the recursive namespace and content.
+
+    Its key for a directory input is the directory's path, size and modification time: renaming,
+    adding or editing a file in a subdirectory changes none of them, so -resume reuses the task
+    and republishes results computed from the old data (verified on 25.10.4). A new session is
+    necessary when anything beneath an input directory changed: public engine directives offer no
+    way to add a namespace or content fingerprint to every directory consumer's task hash.
+    Unchanged directories retain normal cache reuse. `current_digests` holds the SHA-256 of every
+    file beneath an input directory, compared with the previous launch's recorded snapshot.
+    """
+    current_nodes = _directory_nodes(current)
+    try:
+        previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
+        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+        if (not isinstance(manifest, dict)
+                or type(manifest.get("dependency_inventory_version")) is not int
+                or manifest["dependency_inventory_version"] != 1
+                or "inputs" in manifest.get("unverified_dependency_inventories", [])):
+            raise ValueError("previous namespace was not captured")
+        previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
+                                                     relative=False)
+    except (OSError, ValueError, TypeError):
+        if not current_nodes:
+            return None
+        reason = "the earlier input-directory inventory is unavailable or invalid"
+    else:
+        if current_nodes != _directory_nodes(previous):
+            reason = "the input-directory inventory changed"
+        elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
+            reason = "the content of a file inside an input directory changed"
+        else:
+            return None
+    return (f"--resume starts a fresh Nextflow cache session because {reason}. "
+            "Directory metadata alone cannot establish unchanged task inputs; all tasks will "
+            "be recomputed to prevent stale results. An existing output directory will be "
+            "preserved in a sibling archive before launching.")
 
 
 @dataclass
@@ -264,7 +323,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # can become unreadable or malformed after its earlier validation; do not launch
     # with a silently truncated dependency inventory or leak an unclassified error.
     sheet_dependencies = []
-    for sheet_path, sheet_schema in ([] if check_only else sheet_inputs):
+    for sheet_path, sheet_schema in ([] if check_only and not resume else sheet_inputs):
         try:
             sheet_dependencies.extend(provenance.samplesheet_input_paths(sheet_path, sheet_schema))
         except (csv.Error, UnicodeDecodeError) as exc:
@@ -277,6 +336,85 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 ErrorCode.ENVIRONMENT,
                 f"Cannot read samplesheet dependencies: {sheet_path}: {exc}",
                 fix="Restore the samplesheet and make it readable before launching.") from exc
+
+    resolved = parameters.resolve_path_params(merged, param_schema)
+    refs = param_schema.reference_path_params()
+    prov_inputs = []
+    unverified_paths = {}
+    for key, value in resolved.items():
+        if key not in refs or key in {"input", "outdir"} or not isinstance(value, str) \
+                or not value or "://" in value:
+            continue
+        path = Path(value)
+        if (write_provenance and not check_only) or resume:
+            try:
+                provenance.input_files([path])
+            except provenance.MissingInputSource:
+                if param_schema.params[key].exists is True:
+                    prov_inputs.append(path)  # Required input: the snapshot below reports failure.
+                else:
+                    # Schema path formats describe both inputs and destinations. An absent path
+                    # without an existence assertion may be created by the workflow; leave that
+                    # judgment to Nextflow, and record the lack of an input snapshot explicitly.
+                    unverified_paths[key] = value
+                continue
+            except OSError as exc:
+                raise NfclawError(
+                    ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
+                    fix="Make the input data and configuration files readable before launching.") from exc
+        prov_inputs.append(path)
+    # A local --input is an input whatever its declared format (mhcquant's carries none).
+    if resolved_input is not None and resolved_input.local_path is not None:
+        prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
+    prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
+                                    *sheet_dependencies]))
+    # Capture the local dependency content the launch sees, before a long analysis can change it.
+    # The replay guard uses these snapshots, rather than hashing a potentially changed input only
+    # after the run has finished. Remote references and runtime downloads remain upstream inputs.
+    input_snapshot = config_snapshot = pipeline_snapshot = None
+    input_inventory = config_inventory = None
+    if write_provenance and not check_only:
+        try:
+            input_snapshot, input_inventory = provenance.snapshot_inputs(prov_inputs)
+        except OSError as exc:
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
+                fix="Make the input data and configuration files readable before launching.") from exc
+        if unverified_paths:
+            warning = ("Local path parameters absent before launch were not input-snapshotted: "
+                       + ", ".join(sorted(unverified_paths))
+                       + ". Their schemas do not require existing paths; Nextflow validates "
+                       "their use. Provenance records these paths as unverified.")
+            warnings.append(warning)
+            if on_warning is not None:
+                on_warning(warning)
+
+    effective_resume = resume
+    if resume:
+        try:
+            resume_inventory = (input_inventory if input_inventory is not None else
+                                _capture_input_inventory(prov_inputs)[1])
+        except OSError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"cannot inspect local input directories before resume: {exc}") from exc
+        try:
+            resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
+        except OSError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"cannot read local input directories before resume: {exc}") from exc
+        if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
+            effective_resume = False
+            warnings.append(warning)
+            if on_warning is not None:
+                on_warning(warning)
+
+            if not check_only and outdir.exists():
+                archive = resume_safety.archive_previous_run(outdir, resume_inventory,
+                                                            [st.path, *extra_configs])
+                warning = f"Preserved the previous run in {archive}; this output directory starts fresh."
+                warnings.append(warning)
+                if on_warning is not None:
+                    on_warning(warning)
 
     # Where the files nfclaw generates for the run (params file, resource-limits config) are staged.
     # A real run stages them in its own provenance bundle. `--check` must not: it validates and
@@ -296,7 +434,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                               f"({exc.filename or outdir})",
                               fix="Pass an --outdir in a directory you can write to.") from exc
         staging = outdir / "provenance"
-    resolved = parameters.resolve_path_params(merged, param_schema)
     params_file_out = parameters.write_params_file(resolved, staging / "params.json")
 
     # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
@@ -327,70 +464,29 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # and any extra `-c` configs. nfclaw launches Nextflow from the outdir (below) so each run
     # gets its own .nextflow/ state, but the work dir must not move into the results.
     cmd, cmd_str = nextflow_command.build(upstream=st.path, profile=composed_profile,
-                                          params_file=params_file_out, resume=resume,
+                                          params_file=params_file_out, resume=effective_resume,
                                           work_dir=work_dir, extra_configs=tuple(extra_configs))
+    replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
+    if write_provenance and not check_only:
+        try:
+            config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
+            pipeline_snapshot = provenance.hash_pipeline(st.path)
+        except OSError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"cannot snapshot local run dependencies: {exc}",
+                              fix="Make the configuration and pipeline files readable before launching.") from exc
+
     if check_only:
         return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
                          outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging)
-
-    refs = param_schema.reference_path_params()
-    prov_inputs = []
-    unverified_paths = {}
-    for key, value in resolved.items():
-        if key not in refs or key in {"input", "outdir"} or not isinstance(value, str) \
-                or not value or "://" in value:
-            continue
-        path = Path(value)
-        if write_provenance:
-            try:
-                provenance.input_files([path])
-            except provenance.MissingInputSource:
-                if param_schema.params[key].exists is True:
-                    prov_inputs.append(path)  # Required input: the snapshot below reports failure.
-                else:
-                    # Schema path formats describe both inputs and destinations. An absent path
-                    # without an existence assertion may be created by the workflow; leave that
-                    # judgment to Nextflow, and record the lack of an input snapshot explicitly.
-                    unverified_paths[key] = value
-                continue
-            except OSError as exc:
-                raise NfclawError(
-                    ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                    fix="Make the input data and configuration files readable before launching.") from exc
-        prov_inputs.append(path)
-    # A local --input is an input whatever its declared format (mhcquant's carries none).
-    if resolved_input is not None and resolved_input.local_path is not None:
-        prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
-    prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
-                                    *sheet_dependencies]))
-    # Capture the local dependency content the launch sees, before a long analysis can change it.
-    # The replay guard uses these snapshots, rather than hashing a potentially changed input only
-    # after the run has finished. Remote references and runtime downloads remain upstream inputs.
-    input_snapshot = config_snapshot = pipeline_snapshot = None
-    replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
-    if write_provenance:
-        try:
-            input_snapshot = provenance.hash_inputs(prov_inputs)
-            config_snapshot = provenance.hash_inputs(list(replay_configs))
-            pipeline_snapshot = provenance.hash_pipeline(st.path)
-        except OSError as exc:
-            raise NfclawError(
-                ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                fix="Make the input data and configuration files readable before launching.") from exc
-        if unverified_paths:
-            warning = ("Local path parameters absent before launch were not input-snapshotted: "
-                       + ", ".join(sorted(unverified_paths))
-                       + ". Their schemas do not require existing paths; Nextflow validates "
-                       "their use. Provenance records these paths as unverified.")
-            warnings.append(warning)
-            if on_warning is not None:
-                on_warning(warning)
 
     def record(outcome: str) -> None:
         provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
                          input_paths=prov_inputs, env_extra=nxf_overlay, outcome=outcome,
                          chain=chain_link, input_checksums=input_snapshot,
+                         input_inventory=input_inventory,
                          config_paths=replay_configs, config_checksums=config_snapshot,
+                         config_inventory=config_inventory,
                          pipeline_checksums=pipeline_snapshot,
                          unverified_local_paths=unverified_paths,
                          nextflow_version=run_log.nextflow_version or "")

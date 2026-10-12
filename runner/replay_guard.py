@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -118,8 +119,8 @@ class MissingInputSource(FileNotFoundError):
     """A top-level source is absent, distinct from an incomplete source inventory."""
 
 
-def input_files(paths: list[Path]) -> list[Path]:
-    """Expand explicit files, directories and globs, with cycle-safe symlink traversal."""
+def _input_inventory(paths: list[Path], visit: Callable[[Path], None] | None,
+                     retain_files: bool) -> list[Path]:
     files: set[Path] = set()
 
     def walk(directory: Path, ancestors: frozenset[Path]) -> None:
@@ -129,10 +130,13 @@ def input_files(paths: list[Path]) -> list[Path]:
         with os.scandir(directory) as entries:
             for entry in sorted(entries, key=lambda e: e.name):
                 item = directory / entry.name
+                if visit is not None:
+                    visit(item)
                 if entry.is_dir(follow_symlinks=True):
                     walk(item, ancestors | {real})
                 elif entry.is_file(follow_symlinks=True):
-                    files.add(item)
+                    if retain_files:
+                        files.add(item)
                 else:
                     raise FileNotFoundError(f"input is missing or not a regular file: {item}")
 
@@ -149,8 +153,11 @@ def input_files(paths: list[Path]) -> list[Path]:
         if not matches:
             raise MissingInputSource(f"input pattern matches no files: {source}")
         for path in matches:
+            if visit is not None:
+                visit(path)
             if path.is_file():
-                files.add(path)
+                if retain_files:
+                    files.add(path)
             elif path.is_dir():
                 # Track ancestors per branch, not a global set of resolved directories: a second
                 # published alias is a second logical input path and can change sample multiplicity.
@@ -160,9 +167,98 @@ def input_files(paths: list[Path]) -> list[Path]:
     return sorted(files)
 
 
+def input_files(paths: list[Path]) -> list[Path]:
+    """Expand explicit files, directories and globs, with cycle-safe symlink traversal."""
+    return _input_inventory(paths, None, True)
+
+
+def inspect_input_paths(paths: list[Path], visit: Callable[[Path], None]) -> None:
+    """Visit matched paths and every directory entry, including empty directories.
+
+    Uses the same traversal and error handling as the replay inventory, without retaining a second
+    file list or reading data bytes. A visitor can refuse an unsafe staged name immediately.
+    """
+    _input_inventory(paths, visit, False)
+
+
 def hash_inputs(paths: list[Path]) -> dict[str, str]:
     """Content snapshot of local sources, including directory and glob contents."""
     return {str(path): _sha256(path) for path in input_files(paths)}
+
+
+def _capture_input_inventory(paths: list[Path]) -> tuple[list[Path], dict[str, dict[str, str]]]:
+    inventory = {}
+
+    def record(path: Path):
+        if path.is_dir():
+            entry = {"type": "directory"}
+        elif path.is_file():
+            entry = {"type": "file"}
+        else:
+            raise FileNotFoundError(f"input is missing or not a regular file: {path}")
+        if path.is_symlink():
+            entry["link_target"] = os.readlink(path)
+        resolved = str(path.resolve())
+        if resolved != str(path):
+            entry["resolved_path"] = resolved
+        inventory[str(path)] = entry
+
+    files = _input_inventory(paths, record, True)
+    return files, dict(sorted(inventory.items()))
+
+
+def snapshot_inputs(paths: list[Path]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    """Capture file bytes and the logical input namespace, including empty directory aliases."""
+    files, inventory = _capture_input_inventory(paths)
+    digests = {}
+    checksums = {}
+    for path in files:
+        real = Path(inventory[str(path)].get("resolved_path", str(path)))
+        if real not in digests:
+            digests[real] = _sha256(real)
+        checksums[str(path)] = digests[real]
+    return checksums, inventory
+
+
+def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
+    """Read a namespace record without silently accepting duplicate or malformed entries."""
+    def unique(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError(f"duplicate inventory key {key!r} in {path}")
+            obj[key] = value
+        return obj
+
+    data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique)
+    if not isinstance(data, dict):
+        raise ValueError(f"invalid input inventory in {path}")
+
+    def absolute_name(value):
+        return (isinstance(value, str) and value.startswith("/") and "\x00" not in value
+                and (value == "/" or not any(part in ("", ".", "..") for part in value.split("/")[1:])))
+
+    for name, entry in data.items():
+        if (not absolute_name(name)
+                or not isinstance(entry, dict) or entry.get("type") not in ("file", "directory")
+                or set(entry) - {"type", "link_target", "resolved_path"}
+                or ("resolved_path" in entry and not absolute_name(entry["resolved_path"]))
+                or ("link_target" in entry and (not isinstance(entry["link_target"], str)
+                                                or not entry["link_target"] or "\x00" in entry["link_target"]))):
+            raise ValueError(f"invalid input inventory entry {name!r} in {path}")
+    return data
+
+
+def check_replay_destination(bundle: Path, target: Path) -> None:
+    """Refuse writing locks, logs or results into a recorded scientific input directory."""
+    inventory = read_input_inventory(bundle / "inputs.inventory.json")
+    target = target.expanduser().resolve()
+    for name, entry in inventory.items():
+        if entry["type"] == "directory":
+            roots = {Path(entry.get("resolved_path", name)), Path(name).resolve()}
+            if any(target.is_relative_to(root) for root in roots):
+                raise ValueError(f"replay output directory {target} overlaps recorded input "
+                                 f"directory {name}; choose a separate output directory")
 
 
 def pipeline_head(repo: Path) -> str | None:
@@ -198,6 +294,13 @@ def verify_dependencies(bundle: Path) -> None:
     manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("outcome"), str):
         raise ValueError(f"provenance bundle is incomplete: {bundle}")
+    if type(manifest.get("dependency_inventory_version")) is not int \
+            or manifest["dependency_inventory_version"] != 1:
+        raise ValueError("dependency inventory version is missing or unsupported; "
+                         "a fresh run with complete directory provenance is required")
+    unverified = manifest.get("unverified_dependency_inventories", [])
+    if not isinstance(unverified, list) or any(kind not in ("inputs", "configs") for kind in unverified):
+        raise ValueError("invalid unverified dependency inventories in the run manifest")
     if manifest.get("unverified_engine"):
         raise ValueError("the engine version was neither observed nor pinned; "
                          "replay on a moving default is refused")
@@ -225,13 +328,33 @@ def verify_dependencies(bundle: Path) -> None:
         recorded_bundle = None
         if kind == "configs" and isinstance(manifest.get("outdir"), str):
             recorded_bundle = Path(manifest["outdir"]) / "provenance"
+            original_real = manifest.get("provenance_real_path")
+            if not isinstance(original_real, str) or not Path(original_real).is_absolute():
+                raise ValueError("the recorded provenance directory identity is missing or invalid")
         current_files = {}
+        current_inventory = {}
         for source in sources:
             path = Path(source)
             relocated = path
             if recorded_bundle is not None and path.is_relative_to(recorded_bundle):
                 relocated = bundle / path.relative_to(recorded_bundle)
-            for current in input_files([relocated]):
+            files, nodes = _capture_input_inventory([relocated])
+            for name, entry in nodes.items():
+                current = Path(name)
+                logical = (recorded_bundle / current.relative_to(bundle)
+                           if relocated != path else current)
+                if relocated != path:
+                    real = Path(entry.get("resolved_path", name))
+                    current_real = bundle.resolve()
+                    if real.is_relative_to(current_real):
+                        rebased = str(Path(original_real) / real.relative_to(current_real))
+                        entry = dict(entry)
+                        if rebased != str(logical):
+                            entry["resolved_path"] = rebased
+                        else:
+                            entry.pop("resolved_path", None)
+                current_inventory[str(logical)] = entry
+            for current in files:
                 logical = (recorded_bundle / current.relative_to(bundle)
                            if relocated != path else current)
                 current_files[str(logical)] = current
@@ -239,9 +362,26 @@ def verify_dependencies(bundle: Path) -> None:
         extra = sorted(current_files.keys() - expected.keys())
         if missing or extra:
             raise ValueError(f"{kind} inventory changed; missing: {missing}; extra: {extra}")
+        digests = {}
         for name, path in current_files.items():
-            if _sha256(path) != expected[name]:
+            real = path.resolve()
+            if real not in digests:
+                digests[real] = _sha256(real)
+            if digests[real] != expected[name]:
                 raise ValueError(f"recorded {kind} content changed: {name}")
+        if kind in unverified:
+            raise ValueError(f"prelaunch {kind} directory inventory was not captured; "
+                             "start a fresh run")
+        inventory = read_input_inventory(bundle / f"{kind}.inventory.json")
+        if {name for name, entry in inventory.items() if entry["type"] == "file"} != expected.keys():
+            raise ValueError(f"{kind} inventory disagrees with its recorded file checksums")
+        if inventory != current_inventory:
+            missing = sorted(inventory.keys() - current_inventory.keys())
+            extra = sorted(current_inventory.keys() - inventory.keys())
+            changed = sorted(name for name in inventory.keys() & current_inventory.keys()
+                             if inventory[name] != current_inventory[name])
+            raise ValueError(f"{kind} directory inventory changed; missing: {missing}; "
+                             f"extra: {extra}; type or link changed: {changed}")
 
 
 def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> None:
@@ -369,6 +509,10 @@ def lock_replay(target: Path, script: Path) -> None:
     import fcntl
 
     target = target.expanduser().resolve()
+    # This precedes parent creation and the sibling lock: either would otherwise alter an input
+    # directory before the dependency guard has even run. Non-bundle lock fixtures remain valid.
+    if (script.parent / "run_manifest.json").exists():
+        check_replay_destination(script.parent, target)
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = target.parent / f".{target.name}.nfclaw.lock"
     fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)

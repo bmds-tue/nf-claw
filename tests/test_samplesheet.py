@@ -513,3 +513,68 @@ def test_real_remote_data_and_local_colon_names_remain_supported(tmp_path):
     from runner.inputs import local_name_issues
     assert local_name_issues("https://example.org/reads.fastq.gz", "file-path") == []
     assert local_name_issues(str(tmp_path / "file:reads.fastq.gz"), "file-path") == []
+
+
+@pytest.mark.parametrize("scheme", ["https", "http", "ftp", "s3", "gs", "az"])
+@pytest.mark.parametrize("filename", ["reads$(id).fastq.gz", "reads`id`.fastq.gz",
+                                     "reads;true.fastq.gz", "-reads.fastq.gz",
+                                     "~reads.fastq.gz", "reads with spaces.fastq.gz"])
+def test_remote_staged_names_cannot_bypass_shell_safety(tmp_path, scheme, filename):
+    import csv
+    sheet = tmp_path / "samples.csv"
+    with sheet.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["sample", "fastq_1"])
+        writer.writerow(["A", f"{scheme}://bucket/{filename}"])
+    assert any("unsafe remote input filename" in issue
+               for issue in samplesheet.validate(sheet, SCH))
+
+
+@pytest.mark.parametrize("extension", ["json", "yaml"])
+def test_remote_staged_name_guard_applies_to_serialized_records(tmp_path, extension):
+    import json
+    data = [{"sample": "A", "fastq_1": "https://example.org/reads$(id).fastq.gz"}]
+    sheet = tmp_path / f"samples.{extension}"
+    if extension == "json":
+        sheet.write_text(json.dumps(data))
+    else:
+        yaml = pytest.importorskip("yaml")
+        sheet.write_text(yaml.safe_dump(data))
+    assert any("unsafe remote input filename" in issue
+               for issue in samplesheet.validate(sheet, SCH))
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.org/reads%20space.fastq.gz",
+    "https://example.org/reads%24%28id%29.fastq.gz",
+    "https://example.org/reads.fastq.gz?token=a+b/c=&signature=$signed#fragment",
+    "https://example.org/parent;name/reads+lane@run%=1,part:2~copy.fastq.gz",
+    "s3://bucket/muestra_é-1.fastq.gz",
+])
+def test_safe_remote_names_keep_percent_escapes_and_transport_metadata(url):
+    from runner.inputs import local_name_issues
+    assert local_name_issues(url, "file-path") == []
+
+
+@pytest.mark.parametrize("url", ["https://example.org/reads\nfile.fastq.gz",
+                                 "https://example.org/reads\tfile.fastq.gz",
+                                 "https://[broken/reads.fastq.gz"])
+def test_unparseable_remote_names_fail_clearly(url):
+    from runner.inputs import local_name_issues
+    assert local_name_issues(url, "file-path")
+
+
+@pytest.mark.parametrize("url", ["s3://bucket/reads.txt?token=x&y=2",
+                                 "s3://bucket/reads.txt#fragment",
+                                 "s3://bucket/reads$(id).txt?token=x"])
+def test_object_store_keys_retain_query_and_fragment_characters(url):
+    from runner.inputs import local_name_issues
+    assert any("unsafe remote input filename" in issue
+               for issue in local_name_issues(url, "file-path"))
+
+
+@pytest.mark.parametrize("scheme", ["https", "http", "ftp"])
+@pytest.mark.parametrize("fragment", ["fragment", "$(id)", "`id`"])
+def test_standalone_remote_fragments_remain_staged_filename_characters(scheme, fragment):
+    from runner.inputs import local_name_issues
+    assert local_name_issues(f"{scheme}://example.org/reads#{fragment}.txt", "file-path")
