@@ -4,6 +4,8 @@ import subprocess
 
 import pytest
 
+import fastqwiper_oracle as oracle
+
 from runner import fastqrepair_compat as compat
 
 
@@ -11,18 +13,25 @@ def _decode(path):
     return gzip.open(path, "rb").read() if path.suffix == ".gz" else path.read_bytes()
 
 
-@pytest.mark.parametrize("compressed", [False, True])
-@pytest.mark.parametrize("count,splits", [(3, 2), (1, 4), (5, 3), (12, 5), (1001, 1001)])
-def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path, compressed, count, splits):
-    content = b"".join(f"@read{i}\nACGT\n+\n@@@@\n".encode() for i in range(count))
-    source = tmp_path / ("reads.fastq.gz" if compressed else "reads.fastq")
-    if compressed:
-        with gzip.open(source, "wb") as handle:
+def _write(path, content):
+    if path.name.endswith(".gz"):
+        with gzip.open(path, "wb") as handle:
             handle.write(content)
     else:
-        source.write_bytes(content)
+        path.write_bytes(content)
+    return path
+
+
+@pytest.mark.parametrize("compressed", [False, True])
+@pytest.mark.parametrize("count,splits", [(3, 2), (2, 4), (5, 3), (12, 5), (1001, 1001)])
+def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path, compressed, count, splits):
+    content = b"".join(f"@read{i}\nACGT\n+\nIIII\n".encode() for i in range(count))
+    source = _write(tmp_path / ("reads.fastq.gz" if compressed else "reads.fastq"), content)
     files = compat.scatter(source, splits, "source", tmp_path / "chunks")
+    # Clean reads are dealt out evenly, as before: every record boundary is a restart.
     assert len(files) == min(count, splits)
+    assert [len(_decode(path).splitlines()) // 4 for path in files] == [
+        count // len(files) + (i < count % len(files)) for i in range(len(files))]
     assert b"".join(_decode(path) for path in sorted(files)) == content
     for path in files:
         lines = _decode(path).splitlines()
@@ -31,13 +40,100 @@ def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path
 
 
 @pytest.mark.parametrize("content", [b"noise\n@r\nACGT\n+\nIIII\n", b"@r\nACGT\n+\nIII\n",
-                                     b"@r\nACGT\n+\n", b"", b"@r\nACGT\n+\nIIII"])
-def test_ambiguous_or_incomplete_input_is_not_discarded_by_splitting(tmp_path, content):
-    source = tmp_path / "damaged.fastq"
-    source.write_bytes(content)
-    files = compat.scatter(source, 4, "source", tmp_path / "chunks")
-    assert b"".join(_decode(path) for path in files) == content
-    assert len(files) == 1
+                                     b"@r\nACGT\n+\n", b"@r\nACGT\n+\nIIII",
+                                     b"@a\nACGT\n+\n@@@@\n@b\nACGT\n+\nI@II\n"])
+@pytest.mark.parametrize("splits", [1, 2, 4])
+def test_input_without_a_restart_is_wiped_whole_beside_a_placeholder(tmp_path, content, splits):
+    # The pinned subworkflow iterates the chunk list (one chunk is a Path, iterated by name
+    # component) and fastqwiper divides by the line count (an empty chunk fails): such input
+    # stays whole in the first chunk, and a zero-byte placeholder completes the list.
+    source = _write(tmp_path / "damaged.fastq", content)
+    files = compat.scatter(source, splits, "source", tmp_path / "chunks")
+    assert [path.name for path in files] == ["source_000.fastq.gz", "source_001.fastq.gz"]
+    assert _decode(files[0]) == content
+    assert files[1].stat().st_size == 0
+
+
+def test_empty_input_is_refused(tmp_path):
+    with pytest.raises(ValueError, match="no FASTQ lines"):
+        compat.scatter(_write(tmp_path / "empty.fastq", b""), 2, "source", tmp_path / "chunks")
+
+
+def _wiped(paths, alphabet):
+    """Wipe each chunk as the patched task does (a placeholder yields nothing) and gather."""
+    reads, totals = [], dict.fromkeys(oracle.FIELDS, 0)
+    for path in sorted(paths):
+        if path.stat().st_size == 0:
+            continue
+        text, counts = oracle.wipe(path, alphabet)
+        reads.append(text)
+        for key, value in counts.items():
+            totals[key] += value
+    return "".join(reads), totals
+
+
+DAMAGE = [
+    b"@r1\nACGT\n+\nIIII\n@r2\nacgt\n+\n@III\n@r3\nACGT\n+\nIIII\n@r4\nACGT\n+\nIIII\n",
+    b"@r1\nACGT\n+\nIIII\n\n\n@r2\nACG\n+\nIIII\n@r3\nAC\n@r4\nACGT\n+\nIIII\n@r5\nTT\n+\nII\n",
+    b"@r1\nACGT\n+\nII\x01I\n@r2\nACGT\n+\nIIII\n@r3\nGG\n+\nII\n@r4\nCC\n+\nII\n@r5\nAA\n+\nII\n",
+    b"@r1\rACGT\r+\rIIII\r@r2\r\nAC\r\n+\r\nII\r\n@r3\nGG\n+\nII\n@r4\x0bGG\n+\nII\n@r5\nGG\n+\nII\n",
+    b"x@r1\nACGT\n+\nIIII\n\x02@r2\nACGT\n+\nIIII\n@r3\nACGT\n+r3\nIIII\n@r4\nNN\n+\nII\n@r5\nAC\n+\nII\n",
+    "@r1\nACGT\n+\nIIII\n@r2\u2028x\nACGT\n+\nIIII\n@r3\nAC\n+\nII\n@r4\nAC\n+\nII\n".encode()
+    + b"\xff\xfe@r5\nAC\n+\nII\n@r6\nAC\n+\nII\n@r7\nAC\n+\nII\n",
+]
+
+
+def _fuzz(seed, records=40):
+    import random
+    rng = random.Random(seed)
+    lines = []
+    for i in range(records):
+        length = rng.randint(1, 8)
+        seq = "".join(rng.choice("ACGTN") for _ in range(length))
+        qual = "".join(rng.choice("#,:F@IJ") for _ in range(length))
+        lines += [f"@read{i}", seq, "+", qual]
+    for _ in range(rng.randint(0, 12)):
+        index = rng.randrange(len(lines) + 1)
+        mutation = rng.choice(("delete", "blank", "noise", "lower", "control", "at", "dup", "cr"))
+        if mutation == "delete" and index < len(lines):
+            del lines[index]
+        elif mutation == "blank":
+            lines.insert(index, rng.choice(("", " ", "\t")))
+        elif mutation == "noise":
+            lines.insert(index, rng.choice(("garbage", "+", "@", "ACGT", "@x@y", "IIII")))
+        elif mutation == "lower" and index < len(lines):
+            lines[index] = lines[index].lower()
+        elif mutation == "control" and index < len(lines):
+            lines[index] = lines[index][:1] + "\x03" + lines[index][1:]
+        elif mutation == "at" and index < len(lines):
+            lines[index] = "@" + lines[index]
+        elif mutation == "dup" and index < len(lines):
+            lines.insert(index, lines[index])
+        elif mutation == "cr" and index < len(lines):
+            lines[index] += "\r"
+    return ("\n".join(lines) + rng.choice(("\n", ""))).encode()
+
+
+@pytest.mark.parametrize("extension", ["fastq.gz", "fastq"])
+@pytest.mark.parametrize("splits", [1, 2, 3, 7])
+@pytest.mark.parametrize("case", range(len(DAMAGE) + 60))
+def test_chunks_wipe_exactly_as_the_whole_file(tmp_path, extension, splits, case):
+    """Gathered chunk wipes equal one whole-file wipe, reads and report, for every alphabet."""
+    content = DAMAGE[case] if case < len(DAMAGE) else _fuzz(case)
+    source = _write(tmp_path / f"reads.{extension}", content)
+    files = compat.scatter(source, splits, "source", tmp_path / "chunks", extension=extension)
+    assert len(files) >= 2
+    assert b"".join(_decode(path) for path in files if path.stat().st_size) == content
+    for alphabet in ("ACGTN", "ACGT", "acgtnACGTN", "ACGTN@"):
+        assert _wiped(files, alphabet) == oracle.wipe(source, alphabet)
+
+
+def test_restarts_are_used_wherever_they_exist(tmp_path):
+    # Records whose quality holds "@" offer no restart before the next header; others do.
+    content = (b"@a\nAC\n+\nI@\n@b\nAC\n+\nII\n@c\nAC\n+\n@I\n@d\nAC\n+\nII\n"
+               b"@e\nAC\n+\nII\n@f\nAC\n+\nII\n")
+    files = compat.scatter(_write(tmp_path / "reads.fastq", content), 10, "source", tmp_path / "chunks")
+    assert [_decode(path).split(b"\n")[0] for path in files] == [b"@a", b"@c", b"@e", b"@f"]
 
 
 def test_changed_source_cannot_claim_a_successful_split(tmp_path, monkeypatch):
@@ -45,8 +141,8 @@ def test_changed_source_cannot_claim_a_successful_split(tmp_path, monkeypatch):
     source.write_bytes(b"@A\nACGT\n+\nIIII\n")
     scan = compat._scan
 
-    def changed_after_scan(path):
-        result = scan(path)
+    def changed_after_scan(path, breaks):
+        result = scan(path, breaks)
         path.write_bytes(b"@A\nTGCA\n+\nHHHH\n")
         return result
 
@@ -73,7 +169,7 @@ def test_repair_quality_offset_and_log_redirection_reach_the_actual_command(tmp_
 def test_unrecognized_task_is_refused_without_modifying_its_recipe(tmp_path):
     path = tmp_path / ".command.sh"
     path.write_text("echo unexpected upstream recipe\n")
-    for operation in ("scatter", "repair"):
+    for operation in ("scatter", "wiper", "reportgather", "repair"):
         with pytest.raises(ValueError, match="unrecognized"):
             compat.patch_task(operation, path)
         assert path.read_text() == "echo unexpected upstream recipe\n"
@@ -97,25 +193,99 @@ def test_recorded_helper_executes_without_installed_runner_modules(tmp_path):
     assert json.dumps(compat._command() + " patch repair .command.sh --mate-orders e30=") in config
 
 
-def test_runtime_single_chunk_preserves_one_read_and_has_list_cardinality(tmp_path):
-    source = tmp_path / "reads.fastq"
-    content = b"@one\nACGT\n+\nIIII\n"
-    source.write_bytes(content)
-    chunks = compat.scatter(source, 1, "source", tmp_path / "chunks", ensure_list=True)
-    assert len(chunks) == 2
-    assert [_decode(path) for path in chunks] == [content, b""]
+WIPER_RECIPE = ('#!/usr/bin/env bash -C -e -u -o pipefail\nwipertools \\\n    fastqwiper \\\n'
+                '    -i {chunk} \\\n    -o {chunk}_wiped.fastq.gz \\\n    -r {chunk}_wiped.report \\\n'
+                '    --alphabet ACGTN\n\ncat <<-END_VERSIONS > versions.yml\n"WIPER":\n'
+                '    wipertools fastqwiper: $(wipertools fastqwiper --version)\nEND_VERSIONS\n')
 
 
-def test_empty_compatibility_chunk_has_zero_bytes_and_truthful_undefined_rates(tmp_path):
-    source = tmp_path / "empty.fastq.gz"
-    with gzip.open(source, "wb"):
-        pass
-    out, report = tmp_path / "wiped.fastq.gz", tmp_path / "empty.report"
-    compat.wiper(["-i", str(source), "-o", str(out), "-r", str(report)])
-    assert _decode(out) == b""
-    assert "Total lines: 0\n" in report.read_text()
-    assert "Clean reads: 0\n" in report.read_text()
-    assert "(not applicable)" in report.read_text()
+def _fake_wipertools(tmp_path):
+    import os
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake = bin_dir / "wipertools"
+    fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > wipertools.args\n'
+                    '[ "$2" = --version ] && echo 1.1.5\nexit 0\n')
+    fake.chmod(0o755)
+    return {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+
+
+def test_placeholder_chunk_yields_an_empty_output_and_zero_report(tmp_path):
+    env = _fake_wipertools(tmp_path)
+    (tmp_path / "source_001.fastq.gz").write_bytes(b"")
+    script = tmp_path / ".command.sh"
+    script.write_text(WIPER_RECIPE.format(chunk="source_001.fastq.gz"))
+    compat.patch_task("wiper", script)
+    result = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert gzip.open(tmp_path / "source_001.fastq.gz_wiped.fastq.gz").read() == b""
+    report = (tmp_path / "source_001.fastq.gz_wiped.report").read_text()
+    assert report == compat._zero_report()
+    assert compat._parse_report(tmp_path / "source_001.fastq.gz_wiped.report") == dict.fromkeys(
+        (*compat._FIELDS, "fixed"), 0)
+    # The real tool never ran for the placeholder; its version is still recorded.
+    assert (tmp_path / "wipertools.args").read_text() == "fastqwiper\n--version\n"
+
+
+def test_real_chunk_reaches_fastqwiper_with_every_argument(tmp_path):
+    env = _fake_wipertools(tmp_path)
+    _write(tmp_path / "source_000.fastq.gz", b"@r\nACGT\n+\nIIII\n")
+    script = tmp_path / ".command.sh"
+    script.write_text(WIPER_RECIPE.format(chunk="source_000.fastq.gz").replace(
+        "versions.yml", "versions.txt"))
+    compat.patch_task("wiper", script)
+    (tmp_path / "wipertools.args").unlink(missing_ok=True)
+    result = subprocess.run(["bash", "-c", script.read_text().split("\n\ncat")[0]], cwd=tmp_path,
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "wipertools.args").read_text().splitlines() == [
+        "fastqwiper", "-i", "source_000.fastq.gz", "-o", "source_000.fastq.gz_wiped.fastq.gz",
+        "-r", "source_000.fastq.gz_wiped.report", "--alphabet", "ACGTN"]
+
+
+def _report(total, fixed, blank=0):
+    return (f"FASTQWIPER REPORT:\n\nTotal lines: {total}\nWell-formed lines: 8 (1.0%)\nClean reads: 2\n"
+            f"Bad headers or misplaced lines: 40 (10.0%) of which {fixed} fixed\nBAD SEQ lines: 5 (1.25%)\n"
+            "BAD '+' lines: 3 (0.75%)\nBAD QUAL lines: 0 (0.0%)\n"
+            f"Reads discarded because len(SEQ) neq len(QUAL): 2\nBlank lines: {blank} (0.25%)\n")
+
+
+def test_reports_are_gathered_exactly(tmp_path):
+    # wipertools reportgather 1.1.5 matched `.+(\d+).+` and kept "2" of "12 fixed".
+    (tmp_path / "a.report").write_text(_report(400, 12, blank=1))
+    (tmp_path / "b.report").write_text(_report(400, 12))
+    (tmp_path / "c.report").write_text(compat._zero_report())
+    compat.gather_reports([tmp_path / "a.report", tmp_path / "b.report", tmp_path / "c.report"],
+                          tmp_path / "all.report")
+    assert (tmp_path / "all.report").read_text() == (
+        "FASTQWIPER REPORT:\n\nTotal lines: 800\nWell-formed lines: 16 (2.0%)\nClean reads: 4\n"
+        "Bad headers or misplaced lines: 80 (10.0%) of which 24 fixed\nBAD SEQ lines: 10 (1.25%)\n"
+        "BAD '+' lines: 6 (0.75%)\nBAD QUAL lines: 0 (0.0%)\n"
+        "Reads discarded because len(SEQ) neq len(QUAL): 4\nBlank lines: 1 (0.12%)\n")
+
+
+@pytest.mark.parametrize("damage", [lambda r: r.replace("Clean reads: 2\n", ""),
+                                    lambda r: r.replace("of which 12 fixed", "of which some fixed"),
+                                    lambda r: r + "Clean reads: 2\n"])
+def test_unrecognized_report_is_refused(tmp_path, damage):
+    (tmp_path / "a.report").write_text(damage(_report(400, 12)))
+    with pytest.raises(ValueError, match="report"):
+        compat.gather_reports([tmp_path / "a.report"], tmp_path / "all.report")
+    assert not (tmp_path / "all.report").exists()
+
+
+def test_report_gathering_runs_from_the_recorded_recipe(tmp_path):
+    (tmp_path / "a.report").write_text(_report(400, 12))
+    (tmp_path / "b.report").write_text(_report(400, 12))
+    script = tmp_path / ".command.sh"
+    script.write_text('wipertools \\\n    reportgather \\\n    -r a.report b.report \\\n'
+                      '    -f sample.report \\\n\n'
+                      'echo "wipertools reportgather: $(wipertools reportgather --version)"\n')
+    compat.patch_task("reportgather", script)
+    result = subprocess.run(["bash", str(script)], cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "of which 24 fixed" in (tmp_path / "sample.report").read_text()
+    assert f"nfclaw_record_reportgather: nfclaw-fastqrepair-compat-sha256:{compat.recipe_digest()}" in result.stdout
 
 
 def test_unsuffixed_mates_follow_samplesheet_order_in_the_actual_repair_command(tmp_path):

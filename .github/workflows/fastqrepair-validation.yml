@@ -7,6 +7,8 @@ on:
       - "pipelines/fastqrepair/upstream"
       - "scripts/check_fastqrepair_pairs.py"
       - "tests/test_fastqrepair_pairs.py"
+      - "scripts/check_fastqrepair_wipe.py"
+      - "tests/test_fastqrepair_wipe.py"
       - ".github/workflows/fastqrepair-validation.yml"
 
 permissions:
@@ -81,6 +83,57 @@ jobs:
             ${{ runner.temp }}/paired-fixture
             ${{ runner.temp }}/paired-run
             ${{ runner.temp }}/paired-replay
+            work/**/.command.*
+          include-hidden-files: true
+          retention-days: 14
+
+  native-wipe:
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [plain, gzip]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NXF_ANSI_LOG: "false"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: ./.github/actions/setup-nextflow
+      - run: git submodule update --init --depth 1 pipelines/fastqrepair/upstream
+      - name: Create damaged, single-read, '@'-quality and repaired-header controls
+        run: |
+          source_args=()
+          if [ '${{ matrix.source }}' = gzip ]; then source_args+=(--gzip); fi
+          python scripts/check_fastqrepair_wipe.py fixture "$RUNNER_TEMP/wipe-fixture" "${source_args[@]}"
+      - name: Repair in three chunks and compare with one whole-file wipe
+        run: |
+          nfclaw run fastqrepair --input "$RUNNER_TEMP/wipe-fixture/samples.csv" \
+            --outdir "$RUNNER_TEMP/wipe-run" -profile docker --nxf-ver 25.10.4 \
+            --num-splits 3 --limit-cpus 2 --limit-memory 2.GB --limit-time 15.min --timeout 900
+          python scripts/check_fastqrepair_wipe.py check "$RUNNER_TEMP/wipe-run"
+      - name: Re-execute and compare again
+        run: |
+          "$RUNNER_TEMP/wipe-run/provenance/commands.sh" "$RUNNER_TEMP/wipe-replay"
+          python scripts/check_fastqrepair_wipe.py check "$RUNNER_TEMP/wipe-replay" --source-run "$RUNNER_TEMP/wipe-run"
+      - name: Retain source reads, task commands, outputs and provenance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fastqrepair-wipe-evidence-${{ matrix.source }}
+          path: |
+            ${{ runner.temp }}/wipe-fixture
+            ${{ runner.temp }}/wipe-run
+            ${{ runner.temp }}/wipe-replay
             work/**/.command.*
           include-hidden-files: true
           retention-days: 14
