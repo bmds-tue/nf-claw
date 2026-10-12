@@ -118,6 +118,11 @@ def _typed(col: Column) -> bool:
             and any(_EXTENSION.search(p) for p in pats))
 
 
+def file_columns(sheet: InputSchema) -> tuple[str, ...]:
+    """The columns whose patterns name a file type: data files, whatever format the schema declares."""
+    return tuple(c.name for c in sheet.columns if c.name and _typed(c))
+
+
 def _matches(col: Column, path: Path) -> bool:
     """A file fits a column when one of its patterns accepts both the absolute path (the value
     nf-schema checks) and the bare file name — so a pattern matching a directory name is no match."""
@@ -534,6 +539,11 @@ def _first_read_name(path: Path) -> str | None:
 
 def _mates(first: str, second: str) -> bool:
     """Illumina and SRA mates share their read name; older tools suffix it /1 and /2 (or .1/.2)."""
+    # SRA accession.spot-id names a molecule, not its read number. Distinct spots
+    # ending in .1 and .2 are different molecules. An additional suffix on the
+    # same spot (e.g. SRR390728.123/1 or SRR390728.123.1) may identify its mate.
+    if first != second and (_ACCESSION.fullmatch(first) or _ACCESSION.fullmatch(second)):
+        return False
     return first == second or (len(first) == len(second) > 2 and first[:-1] == second[:-1]
                                and first[-2] in "/._" and first[-1] == "1" and second[-1] == "2")
 

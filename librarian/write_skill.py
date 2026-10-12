@@ -631,12 +631,21 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         version_note += (
             "**Runtime corrections.** For this exact commit, `nfclaw run` splits FASTQ only "
             "where wiping the chunks equals wiping the whole file, sums the repair reports "
-            "exactly, passes the declared quality offset to BBMap, and publishes singleton "
+            "exactly, preserves the samplesheet's mate order, passes the declared quality offset to BBMap, and publishes singleton "
             "reads, repair logs and mate reports separately. The pinned "
             "source remains unchanged; the generated task corrections and complete splitter "
             "are recorded in `provenance/fastqrepair_compat.config` and reused by replay. "
             "The direct Nextflow command above omits these corrections and can lose valid "
-            "reads or overwrite singleton output. Use `nfclaw run` for this release.\n\n"
+            "reads, swap unsuffixed mates, or overwrite output. Use `nfclaw run` for this release. "
+            "Provide one row per sample, distinct staged mate filenames and matching compression "
+            "formats. Without a local samplesheet, every gathered read must consistently identify "
+            "its mate; ambiguous identity is refused. Paired runs that skip BBMap require a local "
+            "samplesheet and publish both mates separately.\n\n"
+            "**Quality encoding.** The native quality-offset control validates Phred+64 "
+            "input converted to Phred+33 by BBMap. Historical Solexa log-odds quality "
+            "scores require a separate score conversion before use; changing the ASCII "
+            "offset alone is insufficient. See [Cock et al. (2010)]"
+            "(https://doi.org/10.1093/nar/gkp1137) for the encoding and score definitions.\n\n"
         )
     reference = _reference_section(ps)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""

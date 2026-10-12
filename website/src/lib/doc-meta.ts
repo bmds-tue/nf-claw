@@ -35,9 +35,13 @@ export function readingMinutes(md: string): number {
 
 /** URL fragment for a heading — GitHub-style, so links written against GitHub keep working. */
 export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/<[^>]+>/g, "")
+  let plain = text.toLowerCase();
+  // Until stable: removing one tag must not leave another assembled from its neighbours.
+  for (let previous = ""; previous !== plain; ) {
+    previous = plain;
+    plain = plain.replace(/<[^>]+>/g, "");
+  }
+  return plain
     .replace(/[`*~[\]()]/g, "")
     .replace(/[^\p{L}\p{N}\s_-]/gu, "")
     .trim()
