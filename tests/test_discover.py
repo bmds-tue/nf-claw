@@ -74,6 +74,20 @@ def test_new_pipelines_excludes_already_tracked():
     assert [c[0] for c in fresh] == ["demo"]
 
 
+def test_discovery_reports_partial_addition_failure_and_attempts_every_candidate(tmp_path, monkeypatch):
+    sources = tmp_path / "sources.tsv"
+    sources.write_text("")
+    monkeypatch.setattr(dp, "fetch_catalog", lambda: WORKFLOWS)
+    calls = []
+    def add(name, *args):
+        calls.append(name)
+        return name == "rnaseq"
+    monkeypatch.setattr(dp, "add_one", add)
+    assert dp.main(["--repo-root", str(tmp_path), "--limit", "0"]) == 1
+    assert calls == ["demo", "rnaseq"]
+    assert sources.read_text() == "rnaseq\thttps://github.com/nf-core/rnaseq.git\tlatest-release\n"
+
+
 def test_append_source_writes_tab_separated_row(tmp_path):
     src = tmp_path / "sources.tsv"
     src.write_text("# name\turl\tpolicy\nrnaseq\thttps://x\tlatest-release\n", encoding="utf-8")

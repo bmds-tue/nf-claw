@@ -97,7 +97,13 @@ def _rollback(name: str, repo_root: Path) -> None:
 def add_one(name: str, url: str, tag: str, repo_root: Path) -> bool:
     """Add one pipeline submodule pinned to `tag` and generate its context."""
     name = validate_pipeline_name(name)
-    up = repo_root / "pipelines" / name / "upstream"
+    entry = repo_root / "pipelines" / name
+    # A failed add rolls back only a tree this invocation owns. Discovery can encounter
+    # orphaned entries absent from sources.tsv; never remove their research data or links.
+    if entry.exists() or entry.is_symlink():
+        print(f"{name}: ERROR pipeline entry already exists: {entry}; preserved without changes")
+        return False
+    up = entry / "upstream"
     try:
         _run(
             ["git", "-C", str(repo_root), "submodule", "add", "--force", url,
@@ -196,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
             added += 1
             print(f"{name}: added at {tag}")
     print(f"Added {added}/{len(fresh)} pipeline(s).")
-    return 0
+    return 0 if added == len(fresh) else 1
 
 
 if __name__ == "__main__":

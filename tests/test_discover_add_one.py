@@ -9,6 +9,7 @@ This bit pipelines whose default branch had commits after the release. `add_one`
 `bump` (auto-update) share the same pin-to-tag contract, so both are covered here."""
 import subprocess
 from pathlib import Path
+import pytest
 
 from librarian import discover_pipelines as dp
 from librarian import update_pipelines as up_mod
@@ -86,6 +87,34 @@ def test_add_one_pins_gitlink_to_tag(tmp_path, monkeypatch):
 
     assert dp.add_one("mini", (tmp_path / "origin").as_uri(), "1.0.0", repo)
     _assert_pinned_to(repo, "mini", "1.0.0", commits["1.0.0"])
+
+
+@pytest.mark.parametrize("kind", ["directory", "symlink", "broken_symlink"])
+def test_failed_discovery_does_not_delete_a_preexisting_pipeline_entry(tmp_path, monkeypatch, kind):
+    repo = tmp_path / "repo"
+    _make_superproject(repo)
+    entry = repo / "pipelines/mini"
+    entry.parent.mkdir()
+    data = tmp_path / "scientific_data"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"irreplaceable scientific data")
+    if kind == "directory":
+        entry.mkdir()
+        (entry / "notes.txt").write_bytes(b"existing research notes")
+    else:
+        entry.symlink_to(data if kind == "symlink" else tmp_path / "missing", target_is_directory=True)
+    calls = []
+    def fail_add(args, **kwargs):
+        calls.append(args)
+        if "add" in args and "submodule" in args:
+            raise subprocess.CalledProcessError(1, args)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+    monkeypatch.setattr(dp, "_run", fail_add)
+    assert not dp.add_one("mini", "https://github.com/nf-core/mini", "1.0.0", repo)
+    assert entry.is_symlink() if kind != "directory" else (entry / "notes.txt").read_bytes() == b"existing research notes"
+    assert source.read_bytes() == b"irreplaceable scientific data"
+    assert not calls, "An existing pipeline entry must be refused before Git mutations or rollback"
 
 
 def test_bump_pins_gitlink_to_new_tag(tmp_path, monkeypatch):
