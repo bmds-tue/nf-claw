@@ -880,3 +880,59 @@ workflow {
                              cwd=relocated.parent, capture_output=True, text=True, timeout=60)
     assert refused.returncode != 0 and "dependency check failed" in refused.stderr
     assert not (relocated.parent / "refused/B.txt").exists()
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_data(tmp_path, monkeypatch, engine):
+    from runner.errors import NfclawError
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (upstream / "nextflow.config").write_text("nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (upstream / "main.nf").write_text('''process DIGEST {
+    publishDir params.outdir, mode: 'copy'
+    input:
+    path data
+    output:
+    path 'result'
+    script:
+    """
+    mkdir result
+    shasum -a 256 ${data} > result/digest.txt
+    """
+}
+workflow { DIGEST(Channel.fromPath(params.input)) }
+''')
+    initial = tmp_path / "data.txt"
+    initial.write_bytes(b"original scientific data\n")
+    out = tmp_path / "chain"
+    spec = chain.parse_spec({"profile": "standard", "nxf_ver": engine, "stages": [
+        {"id": "producer", "pipeline": "fixture", "input": str(initial)},
+        {"id": "consumer", "pipeline": "fixture", "handoff": {
+            "params": {"input": {"file": "result/digest.txt"}}}}]})
+    real_run = orchestration.run_pipeline
+    altered = b"different data actually consumed\n"
+
+    def mutate_after_handoff(name, **options):
+        if options["check_only"] or options["outdir"] != out / "02-consumer":
+            return real_run(name, **options)
+        produced = out / "01-producer/result/digest.txt"
+        original = produced.read_bytes()
+        produced.write_bytes(altered)
+        try:
+            return real_run(name, **options)
+        finally:
+            produced.write_bytes(original)
+
+    monkeypatch.setattr(orchestration, "run_pipeline", mutate_after_handoff)
+    with pytest.raises(NfclawError, match="lineage"):
+        chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=180)
+    assert (out / "02-consumer/result/digest.txt").read_text().split()[0] == hashlib.sha256(altered).hexdigest()
+    state, problems = chain.status(out)
+    assert state["outcome"] != "success" and problems
+    assert chain.status_exit_code(state, problems) == 1

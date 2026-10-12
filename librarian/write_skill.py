@@ -631,12 +631,16 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         version_note += (
             "**Runtime corrections.** For this exact commit, `nfclaw run` splits FASTQ only "
             "where wiping the chunks equals wiping the whole file, sums the repair reports "
-            "exactly, passes the declared quality offset to BBMap, and publishes singleton "
+            "exactly, preserves the samplesheet's mate order, passes the declared quality offset to BBMap, and publishes singleton "
             "reads, repair logs and mate reports separately. The pinned "
             "source remains unchanged; the generated task corrections and complete splitter "
             "are recorded in `provenance/fastqrepair_compat.config` and reused by replay. "
             "The direct Nextflow command above omits these corrections and can lose valid "
-            "reads or overwrite singleton output. Use `nfclaw run` for this release.\n\n"
+            "reads, swap unsuffixed mates, or overwrite output. Use `nfclaw run` for this release. "
+            "Provide one row per sample, distinct staged mate filenames and matching compression "
+            "formats. Without a local samplesheet, every gathered read must consistently identify "
+            "its mate; ambiguous identity is refused. Paired runs that skip BBMap require a local "
+            "samplesheet and publish both mates separately.\n\n"
         )
     reference = _reference_section(ps)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""

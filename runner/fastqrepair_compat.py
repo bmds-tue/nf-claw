@@ -2,7 +2,7 @@
 
 The pinned repository stays unchanged. Generated task recipes use this standalone
 splitter, wipe placeholder chunks, gather reports exactly, repair a missing shell
-continuation, and preserve distinct publications. The complete helper source is
+continuation, preserve declared mate order, and preserve distinct publications. The complete helper source is
 embedded into the recorded config, so replay does not depend on the installed
 nfclaw version or the original helper path.
 
@@ -121,7 +121,7 @@ def scatter(path: Path, splits: int, prefix: str, folder: Path, *,
     for index in range(n):
         starts.append(starts[-1] + segments // n + (index < segments % n))
     if n == 1:
-        print(f"nfclaw: {path.name} has no line where fastqwiper restarts afresh; wiping it whole "
+        print(f"nfclaw: {path.name} is being wiped in one data chunk "
               "beside an empty placeholder chunk", file=sys.stderr)
     total = max(n, 2)
     width = max(3, len(str(total - 1)))
@@ -229,7 +229,7 @@ def paired_input_roles(path: Path | None) -> dict[str, list[str]]:
     if path is None:
         return {}
     with path.open(newline="", encoding="utf-8-sig") as stream:
-        return paired_row_roles(csv.DictReader(stream, delimiter="\t" if path.suffix == ".tsv" else ","))
+        return paired_row_roles(csv.DictReader(stream, delimiter="\t" if path.suffix.lower() == ".tsv" else ","))
 
 
 def paired_row_roles(rows) -> dict[str, list[str]]:

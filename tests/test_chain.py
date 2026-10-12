@@ -72,7 +72,7 @@ def fake_runs(monkeypatch, finished_run):
         sources = [inputs.absolute_local_path(value) for value in candidates if value and Path(value).exists()]
         for key, value in {"input": kw["input_path"], **kw["cli_overrides"]}.items():
             reference = inputs.samplesheet_schema(kw["repo_root"] / "pipelines" / name / "upstream", key)
-            if value and reference and Path(value).is_file():
+            if isinstance(value, (str, Path)) and value and reference and Path(value).is_file():
                 sheet_schema = schema.load_input_schema(kw["repo_root"] / "pipelines" / name / "upstream", reference)
                 sources.extend(path for path in provenance.samplesheet_input_paths(Path(value), sheet_schema)
                                if path.exists())

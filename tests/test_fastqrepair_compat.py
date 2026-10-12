@@ -324,7 +324,8 @@ def test_multiple_rows_cannot_overwrite_a_single_end_sample_publication(tmp_path
         compat.paired_input_roles(sheet)
 
 
-@pytest.mark.parametrize("sample", ["WIPE_HOOK", "MATE_ORDERS", "REPAIR_HOOK", "SCATTER_HOOK", "RECIPE"])
+@pytest.mark.parametrize("sample", ["WIPE_HOOK", "WIPER_HOOK", "REPORTGATHER_HOOK", "MATE_ORDERS",
+                                    "REPAIR_HOOK", "SCATTER_HOOK", "RECIPE"])
 def test_configuration_preserves_literal_template_words_in_scientific_identifiers(tmp_path, sample):
     import json
     import re

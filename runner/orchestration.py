@@ -97,6 +97,8 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             reason = "the input-directory inventory changed"
         elif files != historical_files:
             reason = "the input-directory namespace and content records disagree"
+        elif current != previous:
+            reason = "the local-input inventory changed"
         elif ({name for name, entry in current.items() if entry["type"] == "file"}
               != current_digests.keys()
               or {name for name, entry in previous.items() if entry["type"] == "file"}
@@ -456,7 +458,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: split FASTQ only "
                         "where wiping the chunks equals wiping the whole file, sum repair reports "
-                        "exactly, pass the declared quality offset to BBMap, and keep "
+                        "exactly, preserve declared mate identity, pass the declared quality offset to BBMap, and keep "
                         "singleton reads, logs and mate reports in distinct publications. "
                         "Pinned source stays unchanged; generated task recipes and the complete "
                         "splitter implementation are recorded in the compatibility config.")
