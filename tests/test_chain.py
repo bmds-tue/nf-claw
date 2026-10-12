@@ -61,6 +61,7 @@ def fake_runs(monkeypatch, finished_run):
         finished_run(kw["outdir"], files)
         manifest = kw["outdir"] / "provenance" / "run_manifest.json"
         manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
+                                        "dependency_inventory_version": 1,
                                         "chain": kw.get("chain_link")}))
         from runner import inputs, provenance, schema
         from pathlib import Path
@@ -68,6 +69,12 @@ def fake_runs(monkeypatch, finished_run):
         candidates = [kw["input_path"]] + [value for key, value in kw["cli_overrides"].items()
                                                  if key in path_params and isinstance(value, str)]
         sources = [inputs.absolute_local_path(value) for value in candidates if value and Path(value).exists()]
+        for key, value in {"input": kw["input_path"], **kw["cli_overrides"]}.items():
+            reference = inputs.samplesheet_schema(kw["repo_root"] / "pipelines" / name / "upstream", key)
+            if value and reference and Path(value).is_file():
+                sheet_schema = schema.load_input_schema(kw["repo_root"] / "pipelines" / name / "upstream", reference)
+                sources.extend(path for path in provenance.samplesheet_input_paths(Path(value), sheet_schema)
+                               if path.exists())
         hashes, inventory = provenance.snapshot_inputs(sources)
         (kw["outdir"] / "provenance/inputs.sha256").write_text("".join(
             f"{digest}  {path}\n" for path, digest in hashes.items()))

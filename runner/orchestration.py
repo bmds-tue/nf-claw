@@ -315,6 +315,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # input, so differences between runs or replays are expected rather than investigated.
     warnings += reproducibility.advisories(st.path, merged)
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
+    repair_input = resolved_input.local_path if resolved_input is not None else None
+    if repair_compat:
+        try:
+            fastqrepair_compat.paired_input_roles(repair_input)
+        except (OSError, ValueError, csv.Error) as exc:
+            raise NfclawError(
+                ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
+                fix="Use one row per sample, distinct staged mate names, and matching compression formats.") from exc
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
                         "record boundaries, pass the declared quality offset to BBMap, and keep "
@@ -490,7 +498,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
         if repair_compat:
             extra_configs.insert(0, fastqrepair_compat.write_config(
-                staging / "fastqrepair_compat.config"))
+                staging / "fastqrepair_compat.config", input_path=repair_input))
 
         # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
         # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a
