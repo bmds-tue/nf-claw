@@ -32,7 +32,11 @@ def compose_profile(profile: str, *, demo: bool = False,
 
 def build(*, upstream: Path, profile: str, params_file: Path,
           resume: bool = False, work_dir: Path | None = None,
-          extra_configs: tuple[Path, ...] = ()) -> tuple[list[str], str]:
+          extra_configs: tuple[Path, ...] = (),
+          bundle_params: dict[str, Path] | None = None) -> tuple[list[str], str]:
+    """`bundle_params` are parameters naming files nfclaw generated beside the params file (the
+    samplesheet it wrote from data files): on the command line as well as in the params file, so a
+    replay of a moved bundle rebases them with the params file instead of reading the old place."""
     cmd = ["nextflow", "run", upstream.as_posix(),
            "-profile", profile,
            "-params-file", params_file.as_posix()]
@@ -40,6 +44,8 @@ def build(*, upstream: Path, profile: str, params_file: Path,
         cmd += ["-work-dir", work_dir.as_posix()]
     for cfg in extra_configs:
         cmd += ["-c", cfg.as_posix()]
+    for name, path in (bundle_params or {}).items():
+        cmd += [f"--{name}", path.as_posix()]
     if resume:
         cmd.append("-resume")
     return cmd, " ".join(shlex.quote(p) for p in cmd)

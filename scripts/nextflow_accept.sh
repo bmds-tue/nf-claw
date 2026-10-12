@@ -13,8 +13,9 @@
 # it could not finish the preview, so it is never accepted for auto-merge.
 #
 # A failure caused by an unreachable remote file (staging, or nf-schema's existence check on a
-# URL) is retried once: hosted test data is occasionally unreachable for a few seconds, and a
-# second identical failure is reported as before.
+# URL) or by a failed plugin download is retried once: hosted test data and plugin releases are
+# occasionally unreachable for a few seconds, and a second identical failure is reported as before
+# (a plugin that still cannot be downloaded is a rejection).
 #
 # Documented upstream defects of an exact pinned commit are listed in
 # scripts/nextflow_accept_exceptions.tsv (pipeline, commit, expected outcome, evidence pattern,
@@ -54,6 +55,12 @@ _run_with_timeout() {
 _remote_failure() {
   grep -qiE '^ERROR[[:space:]]*~[[:space:]]*(No such file or directory|Cannot access remote file|Unable to access (remote )?file):?[[:space:]]+(https?://|s3://|gs://)' "$1" \
     || grep -qiE "the file or directory '(https?|s3|gs)://[^']*' does not exist" "$1"
+}
+
+# A failure to download a plugin the release declares (e.g. an HTTP 5xx from its release host),
+# before Nextflow has read the pipeline.
+_plugin_download_failure() {
+  grep -qE '^ERROR[[:space:]]*~[[:space:]]*Error during download of plugin ' "$1"
 }
 
 names=("$@")
@@ -149,9 +156,17 @@ for name in "${names[@]}"; do
     rm -rf -- "$work" "$out" "$engine_log"
     NXF_VER="$ver" _run_with_timeout "$budget" nextflow -log "$engine_log" run "$up" -profile test,docker \
       -c "$cfg" --outdir "$out" -work-dir "$work" -preview > "$log" 2>&1 && rc=0 || rc=$?
-    if [ "$rc" != 0 ] && [ "$attempt" = 1 ] && _remote_failure "$log"; then
+    transient=""
+    if [ "$rc" != 0 ] && [ "$attempt" = 1 ]; then
+      if _remote_failure "$log"; then
+        transient="a remote file was unreachable"
+      elif _plugin_download_failure "$log"; then
+        transient="a plugin download failed"
+      fi
+    fi
+    if [ -n "$transient" ]; then
       cat "$log"
-      echo "::warning::$name: a remote file was unreachable (exit $rc); retrying the preview once"
+      echo "::warning::$name: $transient (exit $rc); retrying the preview once"
       attempt=2
       sleep "${NFCLAW_ACCEPT_RETRY_DELAY:-30}"
       continue

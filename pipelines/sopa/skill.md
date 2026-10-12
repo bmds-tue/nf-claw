@@ -47,6 +47,8 @@ The samplesheet is a CSV with this header; fill each value per the table above a
 sample,id,data_path,fastq_dir,cytaimage,colorizedimage,darkimage,image,slide,area,manual_alignment,slidefile
 ```
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

@@ -44,7 +44,7 @@ The repository is structured into four distinct, decoupled functional zones:
 | Path | Zone | Function & Responsibility |
 |---|---|---|
 | `pipelines/<name>/` | **Library Content** | Contains `upstream/` (pinned git submodule pointing to an official release tag) plus generated `skill.md` (agent instructions) and `reference.md` (schema parameter reference). |
-| `runner/` | **Execution Engine** | Python runtime (`nfclaw` CLI) providing preflight schema validation, execution locking, signal trapping, provenance capture, and multi-stage chaining. |
+| `runner/` | **Execution Engine** | Python runtime (`nfclaw` CLI) providing preflight schema validation, schema-driven samplesheet generation from data files, execution locking, signal trapping, provenance capture, and multi-stage chaining. |
 | `librarian/` | **Maintenance Automation** | Tools for building context files (`write_skill.py`, `write_catalog.py`), checking schema drift (`check_drift.py`), and tracking upstream releases. |
 | `handoffs/` | **Chaining Rules** | Declarative JSON specifications (`handoffs/<upstream>/<downstream>.json`) defining output-to-input mappings between sequential stages. |
 | `sources.tsv` | **Manifest Registry** | Tab-separated manifest mapping pipeline names to upstream git remotes and version tracking policies (`latest-release`). |

@@ -306,6 +306,33 @@ are outside this explicit-value preflight.
   changed input content is refused. These are execution and provenance controls,
   not proofs of biological algorithm accuracy.
 
+### `[samplesheet_invalid]` while generating a samplesheet from `--input` data files
+
+`nfclaw run <name> --input <directory | glob | files>` writes the samplesheet from the files and
+refuses, before anything is written, whatever it cannot decide from them. Each message names the
+files or columns; the fixes:
+
+| Message | Fix |
+|---|---|
+| `needs values nfclaw cannot take from the files` | Set each listed column: `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template). The allowed values are in the message and in skill.md. |
+| `takes reads in several column groups` | Empty the groups your files do not belong in, e.g. `--sheet-set long_reads=` for short reads in mag. |
+| `hold the two reads of one library …, but their names carry no read number` | Their reads pair, but the names use a convention nfclaw does not parse (`_read1`/`_read2`, `_F`/`_R`). Name or link them `<sample>_R1`/`<sample>_R2`. |
+| `read 2 …, but its read 1 file is missing` / `have no mate` | A mate is missing. Restore it, or leave the file out of `--input`. Deliberately mixed single/paired layouts need a hand-written samplesheet. |
+| `fit several samplesheet columns` | Empty the column you do not use (`--sheet-set protein=`), or pass only one kind of file. |
+| `do not all bring the same kinds of files` | A stray file (a VCF beside FastQ files) became a sample. Narrow `--input` with a glob such as `'/data/*.fastq.gz'`. |
+| `Sample names come from the file names, which these do not allow` | nfclaw never renames samples. Rename the files, or link them under names the pipeline accepts. |
+| `would repeat the values of …, which the samplesheet requires to be unique` | Several lanes of a sample in a pipeline that takes one row per sample (ampliseq): merge them first. Or make the row key differ, e.g. `--sheet-set run={lane}` (mag). |
+| `cannot tell whether … are the two reads of one library` | Bare `_1`/`_2` files pair only when their first read names identify one molecule (Illumina, SRA/ENA or `/1`/`/2` names). With generic names (`read1`), name mates `_R1`/`_R2`, or link separate libraries under names not ending in `_1`/`_2`. |
+| `already succeeded, but its --input data now yields a different samplesheet … with files it never analysed` (chain resume) | New data arrived after the stage succeeded, and a resume would skip it. Run the chain on the new data in a fresh `--outdir`. |
+| `contains the run's --outdir` / `work directory` | The scan would take the run's own results (on `--resume`) or every task's files as samples. Keep the data directory apart from both; a single result file published into the work tree remains a valid input. |
+
+Files that match no column (checksums, reports, index reads `_I1`/`_I2`, the demultiplexer's
+`Undetermined_S0` reads) are ignored and listed before launch. `_R1`/`_R2` files are paired as
+named; when their first read names differ (a swapped, truncated or desynchronised mate — what
+fastqrepair repairs) the pre-launch advisory says so. Two FastQ files named `x_1`/`x_2`
+pair only when their first read names show they are mates; otherwise they are two single-end
+samples.
+
 ---
 
 ## Warnings a run prints that are not faults

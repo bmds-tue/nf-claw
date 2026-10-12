@@ -42,6 +42,8 @@ sample,fastq_1,strandedness,condition
 
 Any of the optional columns above may be appended to the header when your data needs them: `fastq_2`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates). Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `strandedness` (one of forward, reverse, unstranded); `condition` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
