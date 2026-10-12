@@ -28,12 +28,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+/** Apply `strip` until nothing more is removed: one pass can join "<!<!---->--" into "<!--". */
+function stripUntilStable(text: string, strip: (value: string) => string): string {
+  for (let previous = ""; previous !== text; ) {
+    previous = text;
+    text = strip(text);
+  }
+  return text;
+}
+
 function clean(md: string): string {
-  const base = md
-    // Frontmatter only at the very start: with a multiline flag `^` matched any `---` line, so a
-    // horizontal rule deleted everything up to the next `---` (even one inside a table separator).
-    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, "")
-    .replace(/<!--[\s\S]*?-->/g, "") // comments
+  // Frontmatter only at the very start: with a multiline flag `^` matched any `---` line, so a
+  // horizontal rule deleted everything up to the next `---` (even one inside a table separator).
+  const body = md.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, "");
+  const base = stripUntilStable(body, (text) => text.replace(/<!--[\s\S]*?-->/g, "")) // comments
     .replace(/^<p[\s\S]*?<\/p>\s*/i, "") // leading centered logo block
     .trim();
 
