@@ -98,6 +98,14 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             "preserved in a sibling archive before launching.")
 
 
+def work_directory(nxf_overlay: dict[str, str], repo_root: Path) -> Path:
+    """The Nextflow work directory a run uses: NXF_WORK (the run's overlay wins over the shell) or
+    the repository's work directory — resolved before Nextflow changes cwd to the outdir, so a
+    relative value has one meaning in preflight, execution, provenance and a chain's checks."""
+    return Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
+                or repo_root / "work").expanduser().resolve()
+
+
 @dataclass
 class RunResult:
     command: str
@@ -190,8 +198,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # The Nextflow work directory for this run: NXF_WORK (overlay wins over the shell) if set,
     # else the repository work directory. Resolve it before Nextflow changes cwd to the outdir,
     # so a relative user value has one stable meaning in preflight, execution and provenance.
-    work_dir = Path(nxf_overlay.get("NXF_WORK") or os.environ.get("NXF_WORK")
-                    or repo_root / "work").expanduser().resolve()
+    work_dir = work_directory(nxf_overlay, repo_root)
     # A resource ceiling only exists if the engine enforces it; say so before anything runs.
     limit_note = None
     if limits is not None and not limits.is_empty():

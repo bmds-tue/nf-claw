@@ -230,7 +230,8 @@ def parse_spec(data: dict) -> ChainSpec:
                 stage_input and all(isinstance(v, str) and v.strip() for v in stage_input)):
             raise _bad(f"stage '{sid}': an 'input' list must name data files, directories or "
                        "glob patterns")
-        sheet_set = raw.get("sheet_set") or {}
+        sheet_set = raw.get("sheet_set")
+        sheet_set = {} if sheet_set is None else sheet_set
         if not isinstance(sheet_set, dict):
             raise _bad(f"stage '{sid}': 'sheet_set' must map samplesheet columns to values")
         try:
@@ -545,10 +546,11 @@ def _probe_config(spec: ChainSpec, p: Planned, *, timeout_seconds: float | None 
 
 
 def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> str | None:
-    """For a succeeded stage whose samplesheet nfclaw generated from data files: how that data now
-    yields a different samplesheet. A changed definition is caught by the fingerprint, which names
-    only the data's path; this catches changed data, as an input file's checksum does for a
-    hand-written sheet. Data that is gone is no change: a frozen stage never reads it again."""
+    """For a succeeded stage whose samplesheet nfclaw generated from data files: the data files its
+    --input now holds that the stage never analysed. A changed definition is caught by the
+    fingerprint, which names only the data's path; this catches new data, which a resume would
+    otherwise skip without a word. Data removed since is no change: a frozen stage never reads it
+    again, so data that no longer yields a samplesheet at all is not refused either."""
     stage_dir = Path(entry["outdir"])
     manifest = _read_json(stage_dir / "provenance" / "run_manifest.json")
     record = manifest.get("generated_samplesheet") if isinstance(manifest, dict) else None
@@ -560,17 +562,21 @@ def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> s
         return None
     if source is None or not sheetgen.present(source):
         return None
-    opts = options(spec, p.stage)
-    work_dir = Path(opts.nxf_env.get("NXF_WORK") or os.environ.get("NXF_WORK")
-                    or repo_root / "work").expanduser().resolve()
+    work_dir = orchestration.work_directory(options(spec, p.stage).nxf_env, repo_root)
     try:
         generated = sheetgen.generate(source, p.tree.path, pipeline=p.stage.pipeline,
                                       assignments=p.stage.sheet_set, outdir=stage_dir,
                                       work_dir=work_dir)
-    except NfclawError as exc:
-        return f"its --input data no longer yields a samplesheet: {exc.message}"
-    changes = sheetgen.sheet_changes(stage_dir / "provenance" / record["file"], generated)
-    return f"its --input data now yields a different samplesheet ({changes})" if changes else None
+    except NfclawError:
+        return None
+    recorded = stage_dir / "provenance" / record["file"]
+    used = sheetgen.named_paths(recorded)
+    new = [path.name for path in generated.files if str(path) not in used]
+    if not new:
+        return None
+    return (f"its --input data now yields a different samplesheet "
+            f"({sheetgen.sheet_changes(recorded, generated)}) with files it never analysed: "
+            + ", ".join(new[:5]) + (f" and {len(new) - 5} more" if len(new) > 5 else ""))
 
 
 def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
@@ -691,7 +697,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                                   f"the chain record in {outdir} changed before launch",
                                   fix="Restore the recorded chain before resuming it.")
             state = current
-            _check_frozen(state, planned, spec, repo_root)
+            _check_frozen(state, planned, spec)
             if issues := _integrity_problems(state, only_succeeded=True):
                 raise NfclawError(
                     ErrorCode.ENVIRONMENT, "The succeeded stages of this chain no longer verify.",

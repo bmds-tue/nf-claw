@@ -264,7 +264,7 @@ files or columns; the fixes:
 | `Sample names come from the file names, which these do not allow` | nfclaw never renames samples. Rename the files, or link them under names the pipeline accepts. |
 | `would repeat the values of …, which the samplesheet requires to be unique` | Several lanes of a sample in a pipeline that takes one row per sample (ampliseq): merge them first. Or make the row key differ, e.g. `--sheet-set run={lane}` (mag). |
 | `cannot tell whether … are the two reads of one library` | Bare `_1`/`_2` files pair only when their first read names identify one molecule (Illumina, SRA/ENA or `/1`/`/2` names). With generic names (`read1`), name mates `_R1`/`_R2`, or link separate libraries under names not ending in `_1`/`_2`. |
-| `already succeeded, but its --input data now yields a different samplesheet` (chain resume) | The stage's data changed after it succeeded. Run the chain on the new data in a fresh `--outdir`. |
+| `already succeeded, but its --input data now yields a different samplesheet … with files it never analysed` (chain resume) | New data arrived after the stage succeeded, and a resume would skip it. Run the chain on the new data in a fresh `--outdir`. |
 | `contains the run's --outdir` / `work directory` | The scan would take the run's own results (on `--resume`) or every task's files as samples. Keep the data directory apart from both; a single result file published into the work tree remains a valid input. |
 
 Files that match no column (checksums, reports, index reads `_I1`/`_I2`, the demultiplexer's

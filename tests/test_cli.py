@@ -814,3 +814,12 @@ def test_input_before_the_pipeline_name_still_parses(tmp_path, monkeypatch, caps
     assert cli.main(["run", "rnaseq", "--input", "a.fq.gz", str(tmp_path / "b.fq.gz"),
                      "--outdir", str(tmp_path / "o")]) == 1
     assert "quote the glob" in capsys.readouterr().err
+
+
+def test_an_odd_extra_token_is_a_clear_error_not_a_traceback(tmp_path, monkeypatch, capsys):
+    from runner import orchestration
+    monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    for token in ("~nosuchuser_nfclaw/x", "x" * 300):
+        assert cli.main(["run", "rnaseq", "--outdir", str(tmp_path / "o"), token]) == 1
+        assert "unexpected extra argument" in capsys.readouterr().err

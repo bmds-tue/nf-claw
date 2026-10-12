@@ -348,7 +348,9 @@ def detect(raw: Any, repo: Path) -> Source | None:
             # samplesheet check, which explains e.g. an .xlsx handed in by mistake.
             sheet = schema_mod.load_input_schema(repo, resolved.samplesheet_schema)
             p = plan(sheet, schema_mod.load_param_schema(repo).params.get("input")) if sheet else None
-            if p is None or not any(_matches(p.columns[n], path) for n in (*p.reads, *p.data_columns)):
+            accepting = [n for group in p.read_groups for n in group] if p else []
+            if p is None or not any(_matches(p.columns[n], path)
+                                    for n in (*accepting, *p.data_columns)):
                 return None
         return Source((str(path),), resolved.samplesheet_schema)
     for text in texts:
@@ -451,6 +453,12 @@ def discover(source: Source, *, outdir: Path, work_dir: Path) -> list[tuple[Path
             raise _bad(f"--input {text} matches no files",
                        fix="Check the pattern (quote it so the shell does not expand it).")
         for match in map(Path, matches):
+            where = (match if match.is_dir() else match.parent).resolve()
+            if where.is_relative_to(work_dir.resolve()):
+                raise _bad(f"--input {text} matches {match}, inside the run's work directory "
+                           f"({work_dir}): task files are not data to analyse",
+                           fix="Narrow the glob to the data, or keep the work directory outside "
+                               "the tree it searches.")
             if match.is_dir():
                 _walk(match, found, outdir, work_dir)
             elif match.is_file():
@@ -493,11 +501,16 @@ def _parse_read(path: Path) -> _Read:
     return _Read(path, stem, None, None, "", None, None)
 
 
+def _names_readable(path: Path) -> bool:
+    """Whether the standard library can read the file's read names (it has no zstd reader)."""
+    return path.suffix.lower() != ".zst"
+
+
 def _first_read_name(path: Path) -> str | None:
     """The name of a FastQ file's first read (None for an empty file)."""
     suffix = path.suffix.lower()
     opener = {".gz": gzip.open, ".bz2": bz2.open, ".xz": lzma.open}.get(suffix, open)
-    if suffix == ".zst":
+    if not _names_readable(path):
         raise _bad(f"cannot read the read names of zstd-compressed {path.name} (the Python standard "
                    "library has no zstd reader)",
                    fix="Name mates _R1/_R2 (their names alone then pair them, with a note), or "
@@ -581,6 +594,11 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                 units.append(_Unit(sample, lane, chunk, [slot[1]], "lone"))
         elif kind == "bare":
             if len(slot) == 2:
+                if not (_names_readable(slot[1]) and _names_readable(slot[2])):
+                    raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
+                               "reads of one library: zstd-compressed read names cannot be read "
+                               "to compare", fix="Name mates _R1/_R2, or write the samplesheet "
+                                                 "yourself.")
                 first, second = _first_read_name(slot[1]), _first_read_name(slot[2])
                 if first is None or second is None:
                     raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
@@ -605,6 +623,16 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
             (path,) = slot.values()
             units.append(_Unit(_read_stem(path.name), None, None, [path]))
     _refuse_unnamed_mates(units, notes)
+    seen: dict[tuple, _Unit] = {}
+    for unit in units:
+        key = (unit.sample, unit.lane, unit.chunk)
+        if key in seen:
+            raise _bad(f"{seen[key].reads[0].name} and {unit.reads[0].name} both give sample "
+                       f"{unit.sample!r} a read set, with no lane or chunk number to tell them apart "
+                       "(a copy, or a concatenated file?)",
+                       fix="Pass each library once; name several runs of one sample with Illumina "
+                           "lane numbers, or write the samplesheet yourself.")
+        seen[key] = unit
     if any(len(u.reads) == 2 for u in units):
         if not paired_ok:
             raise _bad("the samplesheet takes single-end reads in one column, but the files hold "
@@ -636,7 +664,7 @@ def _refuse_unnamed_mates(units: list[_Unit], notes: list[str]) -> None:
 
     def read_name(path: Path) -> str | None:
         if path not in names:
-            names[path] = _first_read_name(path)
+            names[path] = _first_read_name(path) if _names_readable(path) else None
         return names[path]
 
     for marks in partners.values():
@@ -657,6 +685,10 @@ def _refuse_unnamed_mates(units: list[_Unit], notes: list[str]) -> None:
 
 
 def _confirm(first: Path, second: Path, notes: list[str]) -> None:
+    if not (_names_readable(first) and _names_readable(second)):
+        notes.append(f"Paired {first.name} with {second.name} by name only: zstd-compressed read "
+                     "names cannot be read to compare.")
+        return
     a, b = _first_read_name(first), _first_read_name(second)
     if a is None or b is None:
         notes.append(f"Paired {first.name} with {second.name} by name only: an empty file has no "
@@ -890,8 +922,12 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     writer.writerows([[row.get(h, "") for h in header] for row in rows])
     text = buffer.getvalue()
     _validate(text, p.suffix, sheet, pipeline)
-    files = tuple(dict.fromkeys(Path(row[c]) for row in rows
-                                for c in (*p.reads, *p.data_columns) if row.get(c)))
+    # Every local path the sheet names is an input: the files it was generated from, and paths a
+    # --sheet-set constant, template or schema default wrote into a path column.
+    path_columns = {*p.reads, *p.data_columns} | {
+        c.name for c in sheet.columns if c.name and c.fmt in schema_mod.PATH_FORMATS}
+    files = tuple(dict.fromkeys(Path(row[c]) for row in rows for c in header
+                                if c in path_columns and row.get(c) and "://" not in row[c]))
     paired = sum(1 for u in units if len(u.reads) == 2)
     record = {"version": 1, "sources": list(source.values), "schema": source.sheet,
               "files": len(files), "samples": len(samples), "rows": len(rows),
@@ -1095,6 +1131,16 @@ def resume_note(previous: Path, generated: Generated) -> str | None:
     return ("--resume regenerated the samplesheet from --input, and it differs from the one the "
             f"previous launch used ({changes}). Nextflow reuses only the tasks whose inputs are "
             "unchanged.")
+
+
+def named_paths(sheet: Path) -> set[str]:
+    """The absolute paths a samplesheet names (empty when it cannot be read)."""
+    try:
+        with sheet.open(newline="", encoding="utf-8") as fh:
+            return {value for row in csv.reader(fh, delimiter=samplesheet.delimiter_for(sheet))
+                    for value in row if value.startswith("/")}
+    except (OSError, csv.Error, UnicodeDecodeError):
+        return set()
 
 
 def absolute(value: str) -> str:

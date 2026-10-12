@@ -786,3 +786,65 @@ def test_many_samples_stay_fast(tmp_path):
     started = time.monotonic()
     g = gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
     assert g.record["samples"] == 3000 and time.monotonic() - started < 20
+
+
+# --- second review --------------------------------------------------------------------------------
+
+def _zst_spec():
+    pattern = "^\\S+\\.f(ast)?q(\\.gz|\\.zst)?$"
+    return {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "sample": {"type": "string", "meta": ["id"]},
+        "fastq_1": {"type": "string", "format": "file-path", "pattern": pattern},
+        "fastq_2": {"type": "string", "format": "file-path", "pattern": pattern},
+    }, "required": ["sample", "fastq_1"]}}}
+
+
+def test_zstd_mates_named_r1_r2_pair_by_name_with_a_note(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "a_R1.fastq.zst").write_bytes(b"\x28\xb5\x2f\xfd")
+    (data / "a_R2.fastq.zst").write_bytes(b"\x28\xb5\x2f\xfd")
+    g = gen(tmp_path, _zst_spec(), [data])
+    assert rows(g)[0]["fastq_2"].endswith("a_R2.fastq.zst")
+    assert any("zstd" in n and "by name" in n for n in g.notes)
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    (bare / "x_1.fastq.zst").write_bytes(b"\x28\xb5\x2f\xfd")
+    (bare / "x_2.fastq.zst").write_bytes(b"\x28\xb5\x2f\xfd")
+    err = refused(tmp_path, _zst_spec(), [bare])
+    assert "zstd" in str(err) and "_R1" in err.fix
+
+
+def test_a_lone_fastq_is_data_for_a_schema_with_several_read_groups(tmp_path):
+    up = S.make_pipeline(tmp_path, S.MAG)
+    reads = fq(tmp_path / "s1.fastq.gz", "M1:1:FC:1:1:1:1")
+    assert sheetgen.detect(str(reads), up).values == (str(reads),)
+
+
+def test_paths_a_template_or_constant_writes_are_inputs(tmp_path):
+    data = tmp_path / "data"
+    pair(data, "N1_R1.fastq.gz", "N1_R2.fastq.gz")
+    ref = tmp_path / "bams"
+    ref.mkdir()
+    (ref / "N1.bam").write_bytes(b"x")
+    g = gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto",
+                                         "genome_bam": str(ref / "{sample}.bam")})
+    assert ref / "N1.bam" in g.files
+
+
+def test_a_glob_does_not_reach_into_the_work_tree(tmp_path):
+    pair(tmp_path / "proj" / "reads", "A_R1.fastq.gz", "A_R2.fastq.gz")
+    pair(tmp_path / "proj" / "work" / "ab" / "cdef", "A_trimmed_R1.fastq.gz", "A_trimmed_R2.fastq.gz")
+    up = S.make_pipeline(tmp_path, S.RNASEQ)
+    source = sheetgen.detect(str(tmp_path / "proj" / "**" / "*.fastq.gz"), up)
+    with pytest.raises(NfclawError, match="work directory"):
+        sheetgen.generate(source, up, pipeline="pipe", assignments={"strandedness": "auto"},
+                          outdir=tmp_path / "results", work_dir=tmp_path / "proj" / "work")
+
+
+def test_read_sets_of_one_sample_must_be_told_apart(tmp_path):
+    data = tmp_path / "data"
+    fq(data / "ctrl.fastq.gz", "M1:1:FC:1:1:1:1")
+    fq(data / "ctrl_R1.fastq.gz", "M1:1:FC:1:1:1:9")
+    err = refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    assert "ctrl.fastq.gz" in str(err) and "ctrl_R1.fastq.gz" in str(err)

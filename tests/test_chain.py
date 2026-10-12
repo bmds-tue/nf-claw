@@ -718,6 +718,8 @@ def test_spec_sheet_set_and_input_lists_are_validated():
     assert spec.stages[0].sheet_set == {"strandedness": "auto", "status": "1"}
     for bad, msg in (({"input": []}, "'input' list"), ({"input": ["/a", 3]}, "'input' list"),
                      ({"sheet_set": ["x"]}, "'sheet_set' must map"),
+                     ({"sheet_set": []}, "'sheet_set' must map"),
+                     ({"sheet_set": ""}, "'sheet_set' must map"),
                      ({"sheet_set": {"x": {"y": 1}}}, "sheet_set")):
         with pytest.raises(NfclawError, match=msg):
             chain.parse_spec({"stages": [{"pipeline": "rnaseq", **bad}]})
@@ -854,4 +856,18 @@ def test_resume_tolerates_the_deleted_data_of_a_succeeded_stage(library, fake_ru
     root, spec, out = _generated_stage(library, tmp_path, fake_runs, [str(a1), str(a2)])
     a1.unlink()
     a2.unlink()
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+
+
+def test_resume_tolerates_data_removed_from_a_kept_directory(library, fake_runs, tmp_path):
+    from test_sheetgen import pair
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    pair(data, "B_R1.fastq.gz", "B_R2.fastq.gz")
+    root, spec, out = _generated_stage(library, tmp_path, fake_runs, str(data))
+    for f in data.glob("B_*"):
+        f.unlink()
+    assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+    for f in data.glob("A_*"):
+        f.unlink()
     assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"

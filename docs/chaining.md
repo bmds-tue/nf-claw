@@ -67,7 +67,7 @@ Options set on a stage override or merge with chain-level options:
 | `pipeline` | string | Yes | Name of a tracked pipeline in the library. |
 | `id` | string | No | Unique stage identifier (default: pipeline name; must match `^[a-z0-9][a-z0-9_-]*$`). |
 | `input` | string/array | No | Explicit `--input` for the stage (typically stage 1); overrides a handoff's input if provided. A directory, glob or list of data files makes nfclaw generate the stage's samplesheet, as `nfclaw run` does. |
-| `sheet_set` | object | No | Columns of that generated samplesheet no file name determines (`--sheet-set`), e.g. `{"strandedness": "auto", "patient": "{sample}"}`. Only for a stage whose `input` names data files. On `--resume`, a succeeded stage whose data now yields a different samplesheet is refused, as a changed input file is; data deleted after it succeeded is not needed again. |
+| `sheet_set` | object | No | Columns of that generated samplesheet no file name determines (`--sheet-set`), e.g. `{"strandedness": "auto", "patient": "{sample}"}`. Only for a stage whose `input` names data files. On `--resume`, a succeeded stage whose data now holds files it never analysed is refused — a resume would otherwise skip them without a word; data removed after it succeeded is not needed again. |
 | `params` | object | No | Pipeline-specific parameters (e.g. `{"genome": "GRCh38", "aligner": "star_salmon"}`). Look up allowed flags in the pipeline's `reference.md`. |
 | `params_file` | string | No | Path to an external parameter JSON or YAML file. |
 | `pipeline_version` | string | No | Pinned release tag (e.g. `3.14.0`) or unreleased `dev`. |

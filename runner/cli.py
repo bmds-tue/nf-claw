@@ -74,13 +74,21 @@ def _collect_overrides(extras: list[str]) -> dict:
                     # What an unquoted glob expands to: several data files after one --input.
                     else " For several --input data files, quote the glob (--input "
                          "'/data/*.fastq.gz'), pass their directory, or repeat --input."
-                    if Path(tok).expanduser().exists() else "")
+                    if _existing_path(tok) else "")
             raise NfclawError(
                 ErrorCode.PARAMS_INVALID,
                 f"unexpected extra argument: {tok!r}",
                 fix="Pipeline parameters must be passed as --param value or --param=value." + hint,
             )
     return out
+
+
+def _existing_path(token: str) -> bool:
+    """Whether a stray token names an existing file (what an unquoted glob expands to)."""
+    try:
+        return Path(token).expanduser().exists()
+    except (OSError, RuntimeError, ValueError):            # ~unknownuser, an over-long name
+        return False
 
 
 def _stop_words(exc: BaseException) -> str:
