@@ -442,8 +442,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         if resume and (note := sheetgen.resume_note(outdir / "provenance" / sheet.filename, sheet)):
             warnings.append(note)
     if repair_compat:
-        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
-                        "record boundaries, pass the declared quality offset to BBMap, and keep "
+        warnings.append("Applying recorded corrections for fastqrepair 1.1.1: split FASTQ only "
+                        "where wiping the chunks equals wiping the whole file, sum repair reports "
+                        "exactly, pass the declared quality offset to BBMap, and keep "
                         "singleton reads, logs and mate reports in distinct publications. "
                         "Pinned source stays unchanged; generated task recipes and the complete "
                         "splitter implementation are recorded in the compatibility config.")
