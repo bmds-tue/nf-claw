@@ -572,3 +572,45 @@ def test_a_linked_directory_keeps_its_own_path(tmp_path):
     os.symlink(data, tmp_path / "alias")
     got = rows(gen(tmp_path, S.RNASEQ, [tmp_path / "alias"], {"strandedness": "auto"}))
     assert got[0]["fastq_1"] == str(tmp_path / "alias" / "A_R1.fastq.gz")
+
+
+def test_a_column_that_also_takes_fasta_is_no_read_column(tmp_path):
+    # pairgenomealign's `fasta` takes genomes as FASTA or FastQ: its files are not read pairs.
+    spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "sample": {"type": "string", "pattern": "^\\S+$", "meta": ["id"]},
+        "fasta": {"type": "string", "format": "file-path", "exists": True,
+                  "pattern": "^\\S+\\.f(ast|n)?(a|q)(\\.gz)?$"},
+    }, "required": ["sample", "fasta"]}}}
+    p = plan_of(tmp_path, spec)
+    assert p.reads == () and p.data_columns == ("fasta",)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "genome.fa").write_text(">a\nACGT\n")
+    (data / "other.fasta.gz").write_bytes(gzip.compress(b">b\nACGT\n"))
+    assert [(r["sample"], Path(r["fasta"]).name) for r in rows(gen(tmp_path, spec, [data]))] == [
+        ("genome", "genome.fa"), ("other", "other.fasta.gz")]
+
+
+def test_a_file_column_wins_over_a_name_column_with_the_same_pattern(tmp_path):
+    # nanostring: RCC_FILE is the file, RCC_FILE_NAME a name that merely ends like one.
+    spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "SAMPLE_ID": {"type": "string", "pattern": "^\\S+$", "meta": ["id"]},
+        "RCC_FILE": {"type": "string", "format": "file-path", "pattern": "^\\S+\\.RCC$"},
+        "RCC_FILE_NAME": {"type": "string", "pattern": "^\\S+\\.RCC$"},
+    }, "required": ["SAMPLE_ID", "RCC_FILE"]}}}
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "s1.RCC").write_text("x")
+    assert rows(gen(tmp_path, spec, [data])) == [{"SAMPLE_ID": "s1",
+                                                  "RCC_FILE": str(data / "s1.RCC")}]
+
+
+def test_a_number_typed_identity_does_not_take_sample_names(tmp_path):
+    # mhcquant's `ID` is an integer per replicate; the sample's name belongs in `Sample`.
+    spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
+        "ID": {"type": "integer", "meta": ["id"]},
+        "Sample": {"type": ["string", "integer"], "meta": ["sample"]},
+        "ReplicateFileName": {"type": "string", "format": "path",
+                              "pattern": "^\\S+\\.(raw|mzML)$"},
+    }, "required": ["ID", "Sample", "ReplicateFileName"]}}}
+    assert plan_of(tmp_path, spec).id_column == "Sample"

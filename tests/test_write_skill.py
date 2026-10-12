@@ -789,3 +789,38 @@ def test_engine_pin_older_than_resource_limits_says_limit_flags_are_refused(tmp_
 def test_engine_pin_with_resource_limits_adds_no_caveat(tmp_path):
     text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=24.04.2"))
     assert "--nxf-ver 24.04.2" in text and "resourceLimits" not in text
+
+
+def _rendered(tmp_path, spec):
+    import sheetgen_schemas as S
+    up = S.make_pipeline(tmp_path, spec)
+    st = SubmoduleStatus("pipe", up, True, True, "1.0.0", "c" * 40, ())
+    text, _ = write_skill.render_status(st)
+    inputs = text.split("## Inputs\n", 1)[1].split("\n## ", 1)[0]
+    generated = [p for p in inputs.split("\n\n") if p.startswith("**From data files.**")]
+    return inputs, (generated[0] if generated else None)
+
+
+def test_inputs_say_what_generating_the_samplesheet_fills_and_needs(tmp_path):
+    import sheetgen_schemas as S
+    inputs, paragraph = _rendered(tmp_path, S.RNASEQ)
+    assert "`fastq_1`/`fastq_2` from FastQ files" in paragraph and "`sample` from the file names" in paragraph
+    assert "`--sheet-set COLUMN=VALUE`" in paragraph
+    assert "`strandedness` (one of forward, reverse, unstranded, auto)" in paragraph
+    # The website reads the first table and the csv/tsv blocks of this section: the paragraph adds
+    # neither, and the header block is unchanged.
+    assert "```" not in paragraph and "|" not in paragraph
+    assert "```csv\nsample,fastq_1,strandedness\n```" in inputs
+
+
+def test_inputs_name_the_choice_or_the_reason_generation_needs(tmp_path):
+    import sheetgen_schemas as S
+    _, mag = _rendered(tmp_path / "mag", S.MAG)
+    assert "once you choose the read columns" in mag and "--sheet-set long_reads=" in mag
+    _, airrflow = _rendered(tmp_path / "airrflow", S.AIRRFLOW)
+    assert "cannot generate this samplesheet" in airrflow
+    _, drop = _rendered(tmp_path / "drop", S.DROP)
+    assert "Schema defaults fill `STRAND` = `no`" in drop
+    _, sarek = _rendered(tmp_path / "sarek", S.SAREK)
+    assert "`lane` from Illumina lane numbers" in sarek and "`patient` (matching ^\\S+$)" in sarek
+    assert _rendered(tmp_path / "none", S.NO_SHEET)[1] is None

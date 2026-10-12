@@ -50,7 +50,9 @@ GENERATED_STEM = "samplesheet"
 # A column "names a file type" when its pattern requires an extension that no plain name has.
 _PROBE = "nfclaw_probe"
 _FASTQ_PROBES = ("nfclaw_probe.fastq.gz", "nfclaw_probe.fq.gz", "nfclaw_probe.fastq", "nfclaw_probe.fq")
-_OTHER_PROBE = "nfclaw_probe.bam"
+# A read column takes FastQ only: pairgenomealign's `fasta` takes FastQ or FASTA genomes, and
+# longraredisease's `file_path` FastQ or BAM — one file per sample, not read pairs.
+_NOT_READS_PROBES = ("nfclaw_probe.bam", "nfclaw_probe.fa", "nfclaw_probe.fasta")
 _EXTENSION = re.compile(r"\.(?:[A-Za-z]|\()")
 _IDENTITY_NAMES = ("id", "sampleid", "samplename")
 _PLACEHOLDER = re.compile(r"\{([^{}]*)\}")
@@ -117,7 +119,7 @@ def _matches(col: Column, path: Path) -> bool:
 
 def _is_reads(col: Column) -> bool:
     return (any(_matches(col, Path("/nfclaw") / probe) for probe in _FASTQ_PROBES)
-            and not _matches(col, Path("/nfclaw") / _OTHER_PROBE))
+            and not any(_matches(col, Path("/nfclaw") / probe) for probe in _NOT_READS_PROBES))
 
 
 def _read_groups(names: list[str]) -> list[tuple[str, ...]]:
@@ -153,7 +155,9 @@ class Plan:
 def _id_column(sheet: InputSchema, skip: set[str]) -> str | None:
     best: tuple[int, int, str] | None = None
     for order, col in enumerate(sheet.columns):
-        if not col.name or col.name in skip or not col.is_identifier:
+        # A sample name is text: mhcquant's integer `ID` numbers replicates instead.
+        if (not col.name or col.name in skip or not col.is_identifier
+                or not ("string" in col.type or not col.type)):
             continue
         key = col.name.casefold().replace("_", "")
         rank = (0 if "id" in col.meta else 1 if key == "sample"
@@ -448,8 +452,12 @@ class _Read:
     number: str | None  # the Illumina sample number (S<n>)
 
 
+def _read_stem(name: str) -> str:
+    return _FASTQ_SUFFIX.sub("", name) if _FASTQ_SUFFIX.search(name) else _stem(name)
+
+
 def _parse_read(path: Path) -> _Read:
-    stem = _FASTQ_SUFFIX.sub("", path.name)
+    stem = _read_stem(path.name)
     for rx in (_ILLUMINA, _TOKEN):
         if m := rx.match(stem):
             lane, chunk = m.group("lane"), m.group("chunk")
@@ -545,14 +553,14 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                     units.append(_Unit(sample, None, None, [slot[1], slot[2]]))
                     continue
                 for path in (slot[1], slot[2]):
-                    units.append(_Unit(_FASTQ_SUFFIX.sub("", path.name), None, None, [path],
+                    units.append(_Unit(_read_stem(path.name), None, None, [path],
                                        "unpaired"))
             else:
                 (path,) = slot.values()
-                units.append(_Unit(_FASTQ_SUFFIX.sub("", path.name), None, None, [path], "lone"))
+                units.append(_Unit(_read_stem(path.name), None, None, [path], "lone"))
         else:
             (path,) = slot.values()
-            units.append(_Unit(_FASTQ_SUFFIX.sub("", path.name), None, None, [path]))
+            units.append(_Unit(_read_stem(path.name), None, None, [path]))
     if any(len(u.reads) == 2 for u in units):
         if not paired_ok:
             raise _bad("the samplesheet takes single-end reads in one column, but the files hold "
@@ -710,6 +718,11 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     optional: set[str] = set()
     for path, base in sorted(found, key=lambda item: str(item[0])):
         fits = [n for n in (*p.reads, *p.data_columns) if _matches(p.columns[n], path)]
+        # A column nf-schema treats as a file wins over one that only names a file (nanostring's
+        # RCC_FILE over RCC_FILE_NAME, both ending in .RCC).
+        if any(p.columns[n].fmt in schema_mod.PATH_FORMATS for n in fits):
+            fits = [n for n in fits if p.columns[n].fmt in schema_mod.PATH_FORMATS
+                    or n in p.reads]
         targets = list(dict.fromkeys("reads" if n in p.reads else n for n in fits))
         if not targets:
             ignored.append(os.path.relpath(path, base) if path.is_relative_to(base) else str(path))
