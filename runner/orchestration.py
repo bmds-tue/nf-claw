@@ -9,13 +9,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
-                    outputs, parameters, plugin_compat, preflight, provenance,
+                    input_safety, outputs, parameters, plugin_compat, preflight, provenance,
                     reproducibility, resources, resume_safety, runlog, samplesheet, submodule,
                     versions)
 from runner import schema as schema_mod
 from runner.replay_guard import _capture_input_inventory
 from runner.errors import ErrorCode, NfclawError
-from runner.locking import single_writer
+from runner.locking import output_writer
 from runner.submodule import SubmoduleStatus
 
 
@@ -111,9 +111,9 @@ class RunResult:
     # --check only: the temp directory holding the files the printed command names. It outlives the
     # process so the command stays runnable; a caller that only validates (a chain) removes it.
     staging: Path | None = None
+    local_dependencies: tuple[Path, ...] = ()  # check-only: chain-wide write separation
 
 
-@single_writer
 def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  outdir: Path, profile: str, params_file: Path | None,
                  cli_overrides: dict, resume: bool, demo: bool,
@@ -134,6 +134,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     recorded in the run's manifest (which chain this stage belongs to, which run fed it), and
     `deferred_params` — for `check_only` alone — names parameters a handoff will supply once the
     stage feeding this one has run, so they count as neither missing nor invalid yet."""
+    outdir = outdir.expanduser().resolve()
     if deferred_params and not check_only:
         raise ValueError("deferred_params is only meaningful with check_only")
     pipelines_dir = repo_root / "pipelines"
@@ -283,14 +284,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                           fix="Use parameter names and allowed values from reference.md.",
                           details={"issues": param_errors})
 
-    issues = preflight.check_environment(profile=composed_profile, output_dir=outdir,
-                                         submodule=st, repo_root=repo_root, resume=resume,
-                                         work_dir=work_dir, allow_spaces=allow_spaces,
-                                         check_only=check_only)
-    if issues:
-        raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
-                          details={"issues": issues})
-
     # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
     # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
     warnings = list(st.notes)
@@ -327,7 +320,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # can become unreadable or malformed after its earlier validation; do not launch
     # with a silently truncated dependency inventory or leak an unclassified error.
     sheet_dependencies = []
-    for sheet_path, sheet_schema in ([] if check_only and not resume else sheet_inputs):
+    for sheet_path, sheet_schema in sheet_inputs:
         try:
             sheet_dependencies.extend(provenance.samplesheet_input_paths(sheet_path, sheet_schema))
         except (csv.Error, UnicodeDecodeError) as exc:
@@ -350,204 +343,236 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 or not value or "://" in value:
             continue
         path = Path(value)
-        if (write_provenance and not check_only) or resume:
-            try:
-                provenance.input_files([path])
-            except provenance.MissingInputSource:
-                if param_schema.params[key].exists is True:
-                    prov_inputs.append(path)  # Required input: the snapshot below reports failure.
-                else:
-                    # Schema path formats describe both inputs and destinations. An absent path
-                    # without an existence assertion may be created by the workflow; leave that
-                    # judgment to Nextflow, and record the lack of an input snapshot explicitly.
-                    unverified_paths[key] = value
-                continue
-            except OSError as exc:
-                raise NfclawError(
-                    ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                    fix="Make the input data and configuration files readable before launching.") from exc
+        try:
+            provenance.input_files([path])
+        except provenance.MissingInputSource:
+            if param_schema.params[key].exists is True:
+                prov_inputs.append(path)  # Required input: the snapshot below reports failure.
+            else:
+                # Schema path formats describe both inputs and destinations. An absent path
+                # without an existence assertion may be created by the workflow; leave that
+                # judgment to Nextflow, and record the lack of an input snapshot explicitly.
+                unverified_paths[key] = value
+            continue
+        except OSError as exc:
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
+                fix="Make the input data and configuration files readable before launching.") from exc
         prov_inputs.append(path)
     # A local --input is an input whatever its declared format (mhcquant's carries none).
     if resolved_input is not None and resolved_input.local_path is not None:
         prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
     prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
                                     *sheet_dependencies]))
-    # Capture the local dependency content the launch sees, before a long analysis can change it.
-    # The replay guard uses these snapshots, rather than hashing a potentially changed input only
-    # after the run has finished. Remote references and runtime downloads remain upstream inputs.
-    input_snapshot = config_snapshot = pipeline_snapshot = None
-    input_inventory = config_inventory = None
-    if write_provenance and not check_only:
-        try:
-            input_snapshot, input_inventory = provenance.snapshot_inputs(prov_inputs)
-        except OSError as exc:
-            raise NfclawError(
-                ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                fix="Make the input data and configuration files readable before launching.") from exc
-        if unverified_paths:
-            warning = ("Local path parameters absent before launch were not input-snapshotted: "
-                       + ", ".join(sorted(unverified_paths))
-                       + ". Their schemas do not require existing paths; Nextflow validates "
-                       "their use. Provenance records these paths as unverified.")
-            warnings.append(warning)
-            if on_warning is not None:
-                on_warning(warning)
+    local_dependencies = tuple(dict.fromkeys([*prov_inputs, st.path, *extra_configs,
+                                              *([params_file] if params_file else [])]))
+    writes = [("--outdir", outdir, True),
+              ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
+              ("Nextflow work directory", work_dir, False),
+              ("run provenance directory", outdir / "provenance", True),
+              ("Nextflow state directory", outdir / ".nextflow", True),
+              ("Nextflow log", runlog.nextflow_log_path(outdir, nxf_overlay), True)]
+    generated = ["params.json", "logs", "logs/run.log", "logs/stdout.txt", "logs/stderr.txt"]
+    if limits is not None and not limits.is_empty():
+        generated.append("resource_limits.config")
+    if repair_compat:
+        generated.append("fastqrepair_compat.config")
+    compat_params = plugin_compat.removed_params_in_use(st.path)
+    if compat_params:
+        generated.append("nf_schema_compat.config")
+    writes += [("generated run file", outdir / "provenance" / path, True) for path in generated]
+    if check_only:
+        writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
+    input_safety.check_write_boundaries(local_dependencies, writes)
+    issues = preflight.check_environment(profile=composed_profile, output_dir=outdir,
+                                         submodule=st, repo_root=repo_root, resume=resume,
+                                         work_dir=work_dir, allow_spaces=allow_spaces,
+                                         check_only=check_only)
+    if issues:
+        raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
+                          details={"issues": issues})
 
-    effective_resume = resume
-    if resume:
-        try:
-            resume_inventory = (input_inventory if input_inventory is not None else
-                                _capture_input_inventory(prov_inputs)[1])
-        except OSError as exc:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"cannot inspect local input directories before resume: {exc}") from exc
-        try:
-            resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
-        except OSError as exc:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"cannot read local input directories before resume: {exc}") from exc
-        if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
-            effective_resume = False
-            warnings.append(warning)
-            if on_warning is not None:
-                on_warning(warning)
-
-            if not check_only and outdir.exists():
-                archive = resume_safety.archive_previous_run(outdir, resume_inventory,
-                                                            [st.path, *extra_configs])
-                warning = f"Preserved the previous run in {archive}; this output directory starts fresh."
+    with output_writer(outdir, check_only=check_only):
+        # A competing writer may have completed between validation and lock acquisition.
+        if issue := preflight._outdir_issue(outdir, resume=resume, check_only=check_only):
+            raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
+                              details={"issues": [issue]})
+        # Capture the local dependency content the launch sees, before a long analysis can change it.
+        # The replay guard uses these snapshots, rather than hashing a potentially changed input only
+        # after the run has finished. Remote references and runtime downloads remain upstream inputs.
+        input_snapshot = config_snapshot = pipeline_snapshot = None
+        input_inventory = config_inventory = None
+        if write_provenance and not check_only:
+            try:
+                input_snapshot, input_inventory = provenance.snapshot_inputs(prov_inputs)
+            except OSError as exc:
+                raise NfclawError(
+                    ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
+                    fix="Make the input data and configuration files readable before launching.") from exc
+            if unverified_paths:
+                warning = ("Local path parameters absent before launch were not input-snapshotted: "
+                           + ", ".join(sorted(unverified_paths))
+                           + ". Their schemas do not require existing paths; Nextflow validates "
+                           "their use. Provenance records these paths as unverified.")
                 warnings.append(warning)
                 if on_warning is not None:
                     on_warning(warning)
 
-    # Where the files nfclaw generates for the run (params file, resource-limits config) are staged.
-    # A real run stages them in its own provenance bundle. `--check` must not: it validates and
-    # prints the command *without launching*, so it has to leave `--outdir` exactly as it found it —
-    # creating it, or dropping a provenance/ directory in it, makes the next real run fail the
-    # "--outdir is not empty" guard against a directory that holds no results at all. The staged
-    # files are still written (to a temp directory that outlives the process), so the command
-    # `--check` prints stays runnable as printed.
-    if check_only:
-        staging = Path(tempfile.mkdtemp(prefix="nfclaw-check-"))
-    else:
+        effective_resume = resume
+        if resume:
+            try:
+                resume_inventory = (input_inventory if input_inventory is not None else
+                                    _capture_input_inventory(prov_inputs)[1])
+            except OSError as exc:
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  f"cannot inspect local input directories before resume: {exc}") from exc
+            try:
+                resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
+            except OSError as exc:
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  f"cannot read local input directories before resume: {exc}") from exc
+            if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
+                effective_resume = False
+                warnings.append(warning)
+                if on_warning is not None:
+                    on_warning(warning)
+
+                if not check_only and outdir.exists():
+                    archive = resume_safety.archive_previous_run(outdir, resume_inventory,
+                                                                [st.path, *extra_configs])
+                    warning = f"Preserved the previous run in {archive}; this output directory starts fresh."
+                    warnings.append(warning)
+                    if on_warning is not None:
+                        on_warning(warning)
+
+        # Where the files nfclaw generates for the run (params file, resource-limits config) are staged.
+        # A real run stages them in its own provenance bundle. `--check` must not: it validates and
+        # prints the command *without launching*, so it has to leave `--outdir` exactly as it found it —
+        # creating it, or dropping a provenance/ directory in it, makes the next real run fail the
+        # "--outdir is not empty" guard against a directory that holds no results at all. The staged
+        # files are still written (to a temp directory that outlives the process), so the command
+        # `--check` prints stays runnable as printed.
+        if check_only:
+            staging = Path(tempfile.mkdtemp(prefix="nfclaw-check-"))
+        else:
+            try:
+                outdir.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:            # preflight judged writability; this is the authority
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  f"--outdir could not be created: {exc.strerror or exc} "
+                                  f"({exc.filename or outdir})",
+                                  fix="Pass an --outdir in a directory you can write to.") from exc
+            staging = outdir / "provenance"
+        params_file_out = parameters.write_params_file(resolved, staging / "params.json")
+
+        # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
+        # config passed with `-c`, exactly as nf-core's configuration docs prescribe. It goes *first*
+        # so an explicit `--config` the caller passed still wins, and it lives in the provenance bundle
+        # so `commands.sh` — which carries the same absolute `-c` path — replays the same ceiling.
+        if limits is not None and not limits.is_empty():
+            extra_configs.insert(0, resources.write_config(
+                limits, staging / "resource_limits.config"))
+
+        if repair_compat:
+            extra_configs.insert(0, fastqrepair_compat.write_config(
+                staging / "fastqrepair_compat.config"))
+
+        # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
+        # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a
+        # generated `-c` config, so its inert "not a valid parameter" warning does not clutter the run.
+        # The release tree stays byte-identical (drift-check green) and results are unaffected. Inserted
+        # before any user `--config` so the caller can still override, and staged like the ceiling above
+        # so `commands.sh` replays it. Harmless when the param is absent (e.g. a real run that loads no
+        # test profile): ignoring a name that is never set is a no-op.
+        if compat_params:
+            extra_configs.insert(0, plugin_compat.write_ignore_params_config(
+                compat_params, staging / "nf_schema_compat.config"))
+
+        # Pass the work dir explicitly so it stays off the outdir (shared, content-hashed — fine),
+        # and any extra `-c` configs. nfclaw launches Nextflow from the outdir (below) so each run
+        # gets its own .nextflow/ state, but the work dir must not move into the results.
+        cmd, cmd_str = nextflow_command.build(upstream=st.path, profile=composed_profile,
+                                              params_file=params_file_out, resume=effective_resume,
+                                              work_dir=work_dir, extra_configs=tuple(extra_configs))
+        replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
+        if write_provenance and not check_only:
+            try:
+                config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
+                pipeline_snapshot = provenance.hash_pipeline(st.path)
+            except OSError as exc:
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  f"cannot snapshot local run dependencies: {exc}",
+                                  fix="Make the configuration and pipeline files readable before launching.") from exc
+
+        if check_only:
+            return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
+                             outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging,
+                             local_dependencies=local_dependencies)
+
+        def record(outcome: str) -> None:
+            provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
+                             input_paths=prov_inputs, env_extra=nxf_overlay, outcome=outcome,
+                             chain=chain_link, input_checksums=input_snapshot,
+                             input_inventory=input_inventory,
+                             config_paths=replay_configs, config_checksums=config_snapshot,
+                             config_inventory=config_inventory,
+                             pipeline_checksums=pipeline_snapshot,
+                             unverified_local_paths=unverified_paths,
+                             nextflow_version=run_log.nextflow_version or "")
+
+        # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
+        # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
+        # the cwd only decides where the engine state lands — including Nextflow's own log.
+        # The run is recorded at a fixed place, `<outdir>/provenance/logs/run.log` (see runner.runlog):
+        # nobody launching it, in the foreground or the background, has to redirect it or be told where.
+        # Its last line states the outcome and is written last of all — after the bundle — because it
+        # is what a background run is polled on.
+        logs_dir = outdir / "provenance" / "logs"
+        run_log = runlog.RunLog.open(logs_dir, command=cmd, launch_dir=outdir,
+                                     nextflow_log=runlog.nextflow_log_path(outdir, nxf_overlay),
+                                     notes=warnings, env=nxf_overlay)
         try:
-            outdir.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:            # preflight judged writability; this is the authority
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"--outdir could not be created: {exc.strerror or exc} "
-                              f"({exc.filename or outdir})",
-                              fix="Pass an --outdir in a directory you can write to.") from exc
-        staging = outdir / "provenance"
-    params_file_out = parameters.write_params_file(resolved, staging / "params.json")
-
-    # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
-    # config passed with `-c`, exactly as nf-core's configuration docs prescribe. It goes *first*
-    # so an explicit `--config` the caller passed still wins, and it lives in the provenance bundle
-    # so `commands.sh` — which carries the same absolute `-c` path — replays the same ceiling.
-    if limits is not None and not limits.is_empty():
-        extra_configs.insert(0, resources.write_config(
-            limits, staging / "resource_limits.config"))
-
-    if repair_compat:
-        extra_configs.insert(0, fastqrepair_compat.write_config(
-            staging / "fastqrepair_compat.config"))
-
-    # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
-    # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a
-    # generated `-c` config, so its inert "not a valid parameter" warning does not clutter the run.
-    # The release tree stays byte-identical (drift-check green) and results are unaffected. Inserted
-    # before any user `--config` so the caller can still override, and staged like the ceiling above
-    # so `commands.sh` replays it. Harmless when the param is absent (e.g. a real run that loads no
-    # test profile): ignoring a name that is never set is a no-op.
-    compat_params = plugin_compat.removed_params_in_use(st.path)
-    if compat_params:
-        extra_configs.insert(0, plugin_compat.write_ignore_params_config(
-            compat_params, staging / "nf_schema_compat.config"))
-
-    # Pass the work dir explicitly so it stays off the outdir (shared, content-hashed — fine),
-    # and any extra `-c` configs. nfclaw launches Nextflow from the outdir (below) so each run
-    # gets its own .nextflow/ state, but the work dir must not move into the results.
-    cmd, cmd_str = nextflow_command.build(upstream=st.path, profile=composed_profile,
-                                          params_file=params_file_out, resume=effective_resume,
-                                          work_dir=work_dir, extra_configs=tuple(extra_configs))
-    replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
-    if write_provenance and not check_only:
-        try:
-            config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
-            pipeline_snapshot = provenance.hash_pipeline(st.path)
-        except OSError as exc:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"cannot snapshot local run dependencies: {exc}",
-                              fix="Make the configuration and pipeline files readable before launching.") from exc
-
-    if check_only:
-        return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
-                         outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging)
-
-    def record(outcome: str) -> None:
-        provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
-                         input_paths=prov_inputs, env_extra=nxf_overlay, outcome=outcome,
-                         chain=chain_link, input_checksums=input_snapshot,
-                         input_inventory=input_inventory,
-                         config_paths=replay_configs, config_checksums=config_snapshot,
-                         config_inventory=config_inventory,
-                         pipeline_checksums=pipeline_snapshot,
-                         unverified_local_paths=unverified_paths,
-                         nextflow_version=run_log.nextflow_version or "")
-
-    # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
-    # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
-    # the cwd only decides where the engine state lands — including Nextflow's own log.
-    # The run is recorded at a fixed place, `<outdir>/provenance/logs/run.log` (see runner.runlog):
-    # nobody launching it, in the foreground or the background, has to redirect it or be told where.
-    # Its last line states the outcome and is written last of all — after the bundle — because it
-    # is what a background run is polled on.
-    logs_dir = outdir / "provenance" / "logs"
-    run_log = runlog.RunLog.open(logs_dir, command=cmd, launch_dir=outdir,
-                                 nextflow_log=runlog.nextflow_log_path(outdir, nxf_overlay),
-                                 notes=warnings, env=nxf_overlay)
-    try:
-        try:
-            execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
-                          timeout_seconds=timeout_seconds, env_extra=nxf_overlay,
-                          run_log=run_log)
-        except BaseException:
-            # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
-            # the run once the cause is fixed, and the checksums record what it did manage to
-            # produce. Write it, then re-raise — a provenance error must never replace the real
-            # failure as the cause.
-            if write_provenance:
-                try:
-                    record("failed")
-                except Exception:                     # best effort; must not mask the real failure
-                    pass
-            raise
-        run_log.outcome = "success"
-        try:
-            report = outputs.collect(outdir)
-            if write_provenance:
-                record("success")
-        except BaseException as exc:
-            # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs, an
-            # interrupt): the log's last line must not claim a success the bundle does not back.
-            what = (execution.stop_outcome(exc)
-                    if isinstance(exc, (KeyboardInterrupt, execution.Terminated)) else "failed")
-            run_log.fail(f"{what} after Nextflow succeeded ({type(exc).__name__}: {exc})",
-                         f"nfclaw: {type(exc).__name__}: {exc}")
-            if isinstance(exc, OSError):
-                # Summarising the outputs and writing the bundle reads every result and writes
-                # beside them: a full disk or an unreadable file is a clear error that says the
-                # results exist, not a traceback that reads like the run itself crashed.
-                raise NfclawError(
-                    ErrorCode.ENVIRONMENT,
-                    f"The run succeeded, but its provenance bundle could not be written: "
-                    f"{exc.strerror or exc}" + (f" ({exc.filename})" if exc.filename else ""),
-                    fix=f"The results are in {outdir}. Free disk space or fix the permission, then "
-                        "rerun the same command with --resume: every task is reused from the cache "
-                        "and the bundle is written.") from exc
-            raise
-    finally:
-        run_log.finish()
-    return RunResult(command=cmd_str, outdir=outdir, checked_only=False,
-                     outputs_report=report, warnings=warnings,
-                     log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay)
+            try:
+                execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
+                              timeout_seconds=timeout_seconds, env_extra=nxf_overlay,
+                              run_log=run_log)
+            except BaseException:
+                # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
+                # the run once the cause is fixed, and the checksums record what it did manage to
+                # produce. Write it, then re-raise — a provenance error must never replace the real
+                # failure as the cause.
+                if write_provenance:
+                    try:
+                        record("failed")
+                    except Exception:                     # best effort; must not mask the real failure
+                        pass
+                raise
+            run_log.outcome = "success"
+            try:
+                report = outputs.collect(outdir)
+                if write_provenance:
+                    record("success")
+            except BaseException as exc:
+                # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs, an
+                # interrupt): the log's last line must not claim a success the bundle does not back.
+                what = (execution.stop_outcome(exc)
+                        if isinstance(exc, (KeyboardInterrupt, execution.Terminated)) else "failed")
+                run_log.fail(f"{what} after Nextflow succeeded ({type(exc).__name__}: {exc})",
+                             f"nfclaw: {type(exc).__name__}: {exc}")
+                if isinstance(exc, OSError):
+                    # Summarising the outputs and writing the bundle reads every result and writes
+                    # beside them: a full disk or an unreadable file is a clear error that says the
+                    # results exist, not a traceback that reads like the run itself crashed.
+                    raise NfclawError(
+                        ErrorCode.ENVIRONMENT,
+                        f"The run succeeded, but its provenance bundle could not be written: "
+                        f"{exc.strerror or exc}" + (f" ({exc.filename})" if exc.filename else ""),
+                        fix=f"The results are in {outdir}. Free disk space or fix the permission, then "
+                            "rerun the same command with --resume: every task is reused from the cache "
+                            "and the bundle is written.") from exc
+                raise
+        finally:
+            run_log.finish()
+        return RunResult(command=cmd_str, outdir=outdir, checked_only=False,
+                         outputs_report=report, warnings=warnings,
+                         log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay)

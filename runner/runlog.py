@@ -26,6 +26,7 @@ import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from runner.errors import NfclawError
 
 from runner import nextflow_command
 from runner.replay_guard import host_identity, quote_console
@@ -373,16 +374,28 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
     *previous* attempt's outcome as the log's last line — read by anyone polling a background run as
     the result of the new one. Only ever appended to a run log that already exists: a fresh
     --outdir is left untouched, so the next attempt is not refused as "not empty"."""
+    try:
+        if (not log.is_file() or log.is_symlink()
+                or not log.resolve().is_relative_to(log.parent.parent.parent.resolve())):
+            return
+    except OSError:
+        return
     command = command.replace("\r", "\\r").replace("\n", "\\n")
     error = "| " + error.rstrip("\n").replace("\n", "\n| ")
     lines = [f"==> nfclaw run started {now()}", "    console format: prefixed", f"    command: {command}",
              *host_header(), f"    pid: {os.getpid()}",
              ERROR_MARK, error, f"==> nfclaw run finished {now()}: {outcome}"]
     try:
-        with log.open("a", encoding="utf-8") as fh:
-            fh.write("\n" + "\n".join(lines) + "\n")
+        from runner.locking import output_writer
+        # Validation precedes the main writer lock. A refused attempt must not append status
+        # markers to a live writer's log; use that same lock around this separate append.
+        with output_writer(log.parent.parent.parent):
+            with log.open("a", encoding="utf-8") as fh:
+                fh.write("\n" + "\n".join(lines) + "\n")
     except OSError:
         pass                                             # never mask the refusal itself
+    except NfclawError:
+        pass                                             # a live writer owns its status markers
 
 
 # --- reading a run's state back (`nfclaw status`) -------------------------------------------------
