@@ -253,7 +253,7 @@ def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tm
     assert warning and "fresh Nextflow cache session" in warning
 
 
-def test_resume_checks_file_membership_within_directories_but_preserves_unrelated_file_caching(tmp_path):
+def test_resume_checks_complete_file_membership_to_avoid_stale_publications(tmp_path):
     from runner import orchestration
     source = tmp_path / "data"
     source.mkdir()
@@ -265,7 +265,7 @@ def test_resume_checks_file_membership_within_directories_but_preserves_unrelate
     standalone.rename(tmp_path / "new-table.tsv")
     _, inventory = provenance.snapshot_inputs([source, tmp_path / "new-table.tsv"])
     digests = orchestration._directory_file_digests(inventory, None)
-    assert orchestration._directory_resume_warning(tmp_path / "out", inventory, digests) is None
+    assert "inventory changed" in orchestration._directory_resume_warning(tmp_path / "out", inventory, digests)
     (source / "new_reads.txt").write_text("reads\n")
     _, inventory = provenance.snapshot_inputs([source])
     digests = orchestration._directory_file_digests(inventory, None)

@@ -182,7 +182,10 @@ directory namespace and the bytes of every file beneath it are unchanged. A chan
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
-logs are copied forward. Old sample publications are kept in the archive. Replay targets
+logs are copied forward. Old sample publications are kept in the archive. A changed
+selection of local input files (a sample added, removed or replaced, including in a
+generated samplesheet) also starts a fresh session in a fresh `--outdir`, so a removed
+sample's earlier results cannot remain beside the new ones. Replay targets
 inside a recorded input directory are refused before any lock or log is written.
 
 | Artifact | File Path | Function & Role |
