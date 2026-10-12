@@ -36,6 +36,8 @@ For tabular CSV/TSV input, use this header; fill each value per the table above 
 sample
 ```
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

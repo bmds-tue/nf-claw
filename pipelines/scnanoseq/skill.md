@@ -38,6 +38,8 @@ The samplesheet is a CSV with this header (the columns the schema requires); fil
 sample,fastq,cell_count
 ```
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq` from FastQ files (single-end). Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `cell_count` (integer). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

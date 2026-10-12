@@ -49,6 +49,8 @@ dataset,patient,tumour_sample,cna_caller,vcf,tbi,cna_segments
 
 Any of the optional columns above may be appended to the header when your data needs them: `normal_sample`, `cancer_type`, `tumour_alignment`, `tumour_alignment_index`, `cna_extra`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `vcf`, `tbi`, `tumour_alignment`, `tumour_alignment_index` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `dataset` (string or integer); `patient` (string or integer); `tumour_sample` (string or integer); `cna_caller` (string); `cna_segments` (string). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

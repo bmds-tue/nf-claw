@@ -214,6 +214,27 @@ def test_persistently_unreachable_remote_file_is_staging_unverified(tmp_path):
     assert (tmp_path / "launches.txt").read_text().strip() == "2"
 
 
+PLUGIN_DOWNLOAD = ("* PREVIEW * null [x] DSL2 - revision: b77a479c29\n"
+                   "Downloading plugin nf-prov@1.2.2\n"
+                   "ERROR ~ Error during download of plugin nf-prov\n")
+
+
+def test_failed_plugin_download_is_retried_once(tmp_path):
+    # Observed on a GitHub runner: the plugin's release host answered HTTP 500 once.
+    process, verdict = _accept(tmp_path, PLUGIN_DOWNLOAD, 1, second=("* PREVIEW *\n", 0))
+    assert process.returncode == 0, process.stdout
+    assert verdict == "mini\taccepted\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+    assert "a plugin download failed (exit 1); retrying the preview once" in process.stdout
+
+
+def test_persistently_failing_plugin_download_is_rejected(tmp_path):
+    process, verdict = _accept(tmp_path, PLUGIN_DOWNLOAD, 1, second=(PLUGIN_DOWNLOAD, 1))
+    assert process.returncode != 0
+    assert verdict == "mini\trejected\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+
+
 def test_ordinary_failure_is_not_retried(tmp_path):
     process, verdict = _accept(tmp_path, "ERROR ~ Invalid sample metadata\n", 1,
                                second=("* PREVIEW *\n", 0))

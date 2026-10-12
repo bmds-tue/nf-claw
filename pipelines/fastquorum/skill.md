@@ -47,6 +47,8 @@ sample,fastq_1,read_structure
 
 Any of the optional columns above may be appended to the header when your data needs them: `library_id`, `lane`, `flowcell`, `fastq_2`, `fastq_3`, `fastq_4`, `umi_file`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates); `lane` from Illumina lane numbers (`_L002` → 2, else 1). Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `read_structure` (matching ^.*$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

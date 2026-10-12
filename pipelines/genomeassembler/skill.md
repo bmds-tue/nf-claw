@@ -93,6 +93,8 @@ sample
 
 Any of the optional columns above may be appended to the header when your data needs them: `group`, `ref_fasta`, `ref_gff`, `use_ref`, `strategy`, `assembler`, `assembly_scaffolding_order`, `genome_size`, `flye_mode`, `flye_args`, `hifiasm_args`, `assembler_ont`, `assembler_ont_args`, `assembler_hifi`, `assembler_hifi_args`, `ontreads`, `ont_collect`, `ont_adapters`, `ont_fastplong_args`, `hifireads`, `hifi_adapters`, `hifi_fastplong_args`, `jellyfish`, `jellyfish_k`, `jellyfish_size`, `polish`, `polish_pilon`, `polish_dorado`, `polish_medaka`, `medaka_model`, `scaffold_longstitch`, `scaffold_links`, `scaffold_ragtag`, `scaffold_hic`, `hic_aligner`, `merqury`, `qc_reads`, `busco`, `busco_db`, `busco_lineage`, `quast`, `ref_map_bam`, `assembly`, `assembly_map_bam`, `csi_index_size`, `lift_annotations`, `use_short_reads`, `shortread_trim`, `meryl_k`, `shortread_F`, `shortread_R`, `paired`, `hic_trim`, `hic_F`, `hic_R`.
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

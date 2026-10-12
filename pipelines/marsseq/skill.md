@@ -41,6 +41,8 @@ The samplesheet is a CSV with this header (the columns the schema requires); fil
 batch,fastq_1,fastq_2,amp_batches,seq_batches,well_cells
 ```
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates). Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `batch` (matching ^\S+$); `amp_batches` (matching ^\S+.xlsx$); `seq_batches` (matching ^\S+.xlsx$); `well_cells` (matching ^\S+.xlsx$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

@@ -761,3 +761,65 @@ def test_nextflow_style_single_dash_options_name_the_nfclaw_flag(token, hint):
     with pytest.raises(NfclawError) as exc:
         cli._collect_overrides([token])
     assert hint in exc.value.fix
+
+
+def test_run_takes_data_files_and_sheet_columns(tmp_path, monkeypatch, capsys):
+    # A shell glob expands into several --input values; --sheet-set columns are nfclaw's own,
+    # never forwarded to the pipeline as parameters.
+    from runner import orchestration
+    captured = {}
+    monkeypatch.setattr(orchestration, "run_pipeline",
+                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
+                            "CMD", Path("/o"), True, None,
+                            generated_samplesheet=Path("/stage/samplesheet.csv")))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", "a_R1.fq.gz",
+                     "--input", "a_R2.fq.gz", "--sheet-set", "strandedness=auto", "--sheet-set",
+                     "seq_center=", "--genome", "GRCh38", "--check"]) == 0
+    assert captured["input_path"] == ["a_R1.fq.gz", "a_R2.fq.gz"]
+    assert captured["sheet_set"] == {"strandedness": "auto", "seq_center": ""}
+    assert captured["cli_overrides"] == {"genome": "GRCh38"}
+    assert "samplesheet: /stage/samplesheet.csv (generated from --input)" in capsys.readouterr().out
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", "dir"]) == 0
+    assert captured["input_path"] == "dir" and captured["sheet_set"] == {}
+
+
+def test_a_malformed_sheet_column_is_refused_before_anything_runs(tmp_path, monkeypatch, capsys):
+    from runner import orchestration
+    monkeypatch.setattr(orchestration, "run_pipeline",
+                        lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", "d",
+                     "--sheet-set", "strandedness"]) == 1
+    assert "--sheet-set expects COLUMN=VALUE" in capsys.readouterr().err
+    assert not (tmp_path / "out").exists()
+
+
+def test_input_before_the_pipeline_name_still_parses(tmp_path, monkeypatch, capsys):
+    # Options may precede the pipeline name; an --input value must not swallow it.
+    from runner import orchestration
+    captured = {}
+    monkeypatch.setattr(orchestration, "run_pipeline",
+                        lambda *a, **k: captured.update(name=a[0], **k) or orchestration.RunResult(
+                            "CMD", Path("/o"), True, None))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "--input", "sheet.csv", "rnaseq", "--outdir", str(tmp_path / "o")]) == 0
+    assert captured["name"] == "rnaseq" and captured["input_path"] == "sheet.csv"
+    # Several data files: --input once per file (or a quoted glob, or their directory).
+    assert cli.main(["run", "rnaseq", "--input", "a.fq.gz", "--input", "b.fq.gz",
+                     "--outdir", str(tmp_path / "o")]) == 0
+    assert captured["input_path"] == ["a.fq.gz", "b.fq.gz"]
+    # What an unquoted shell glob expands to is explained, not taken for a pipeline parameter.
+    (tmp_path / "b.fq.gz").write_text("x")
+    assert cli.main(["run", "rnaseq", "--input", "a.fq.gz", str(tmp_path / "b.fq.gz"),
+                     "--outdir", str(tmp_path / "o")]) == 1
+    assert "quote the glob" in capsys.readouterr().err
+
+
+def test_an_odd_extra_token_is_a_clear_error_not_a_traceback(tmp_path, monkeypatch, capsys):
+    from runner import orchestration
+    monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    for token in ("~nosuchuser_nfclaw/x", "x" * 300):
+        assert cli.main(["run", "rnaseq", "--outdir", str(tmp_path / "o"), token]) == 1
+        assert "unexpected extra argument" in capsys.readouterr().err
