@@ -198,6 +198,17 @@ def test_parent_traversal_route_matches_the_normalized_parameter_but_not_raw_tab
     assert inputs.absolute_local_path(source).read_bytes() == b"actual data"
 
 
+@pytest.mark.parametrize("parent_kind", ["symlink", "missing"])
+def test_missing_filesystem_route_cannot_select_an_existing_lexical_decoy(tmp_path, parent_kind):
+    (tmp_path / "reads.fastq").write_bytes(b"wrong decoy")
+    if parent_kind == "symlink":
+        (tmp_path / "real/nested").mkdir(parents=True)
+        (tmp_path / "route").symlink_to("real/nested", target_is_directory=True)
+    source = tmp_path / "route/../reads.fastq"
+    assert not source.exists()
+    assert any("different data" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+
+
 @pytest.mark.parametrize("fmt", ["file-path", "file-path-pattern"])
 def test_parent_glob_matches_receive_staging_route_checks(tmp_path, fmt):
     parent = tmp_path / "data\nnext"

@@ -138,7 +138,8 @@ def local_route_issues(value: str | Path, *, resolve_parent: bool = False) -> li
     if any("\n" in str(p) or "\r" in str(p) for p in (staged, staged.resolve())):
         return ["unsafe local input filename or parent path has a line break that Nextflow puts into its staging shell "
                 "command; use a safely named parent path"]
-    if not resolve_parent and ".." in path.parts and path.exists() and path.resolve() != staged.resolve():
+    if not resolve_parent and ".." in path.parts and (
+            path.resolve() != staged.resolve() or path.exists() != staged.exists()):
         return ["local input path crosses a directory symlink with '..'; Nextflow's lexical "
                 "normalization selects different data. Use the actual absolute parent directory "
                 "while retaining the intended basename"]
