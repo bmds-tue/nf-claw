@@ -10,7 +10,8 @@ from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     outputs, parameters, plugin_compat, preflight, provenance,
-                    resources, resume_safety, runlog, samplesheet, submodule, versions)
+                    reproducibility, resources, resume_safety, runlog, samplesheet, submodule,
+                    versions)
 from runner import schema as schema_mod
 from runner.replay_guard import _capture_input_inventory
 from runner.errors import ErrorCode, NfclawError
@@ -305,6 +306,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
     # log message arrives explained rather than re-investigated as a wrapper or samplesheet fault.
     warnings += plugin_compat.known_plugin_warnings(st.path)
+    # Also advisory: steps whose results are measured to vary between executions of identical
+    # input, so differences between runs or replays are expected rather than investigated.
+    warnings += reproducibility.advisories(st.path, merged)
     warnings += [limit_note] if limit_note else []
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     if repair_compat:
