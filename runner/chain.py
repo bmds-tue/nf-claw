@@ -454,7 +454,10 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
             deferred_params=_deferred(p), resolved_tree=p.tree)
         try:
             input_safety.check_write_boundaries(res.local_dependencies,
-                                               [("chain --outdir", outdir, True)])
+                [("chain --outdir", outdir, True),
+                 ("Nextflow work directory", Path(res.env.get("NXF_WORK")
+                  or os.environ.get("NXF_WORK") or repo_root / "work").expanduser().resolve(), False),
+                 *input_safety.engine_write_paths(res.outdir, res.env)])
         except BaseException:
             if res.staging is not None:
                 shutil.rmtree(res.staging, ignore_errors=True)
