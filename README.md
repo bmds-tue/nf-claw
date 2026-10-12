@@ -170,8 +170,9 @@ unavailable version probe cannot establish that a requested ceiling will be enfo
 By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
-For declared local directory inputs, `--resume` retains the cache only when the recorded
-directory namespace and the bytes of every file beneath it are unchanged. A changed
+For declared local inputs, `--resume` retains the cache only when recorded file bytes
+and recursive directory namespaces are unchanged, including data named by samplesheets.
+Size and timestamp alone cannot establish unchanged scientific data. A changed
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its

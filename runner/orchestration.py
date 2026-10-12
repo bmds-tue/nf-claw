@@ -47,28 +47,31 @@ def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str
             if Path(name) in roots or any(parent in roots for parent in Path(name).parents)}
 
 
-def _directory_file_digests(inventory: dict[str, dict[str, str]],
+def _input_file_digests(inventory: dict[str, dict[str, str]],
                             known: dict[str, str] | None) -> dict[str, str]:
-    """SHA-256 of every file beneath an input directory (from `known` when already hashed)."""
+    """SHA-256 of every local input file (from `known` when already hashed)."""
     digests = {}
-    for name, entry in _directory_nodes(inventory).items():
+    physical_digests = {}
+    for name, entry in inventory.items():
         if entry["type"] == "file":
-            digests[name] = (known or {}).get(name) or provenance._sha256(
-                Path(entry.get("resolved_path", name)))
+            if known is not None and name in known:
+                digests[name] = known[name]
+            else:
+                physical = Path(entry.get("resolved_path", name))
+                if physical not in physical_digests:
+                    physical_digests[physical] = provenance._sha256(physical)
+                digests[name] = physical_digests[physical]
     return digests
 
 
-def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
+def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                               current_digests: dict[str, str]) -> str | None:
-    """Nextflow's ordinary directory cache key omits the recursive namespace and content.
+    """Guard resume against metadata-preserving input changes, including directory members.
 
-    Its key for a directory input is the directory's path, size and modification time: renaming,
-    adding or editing a file in a subdirectory changes none of them, so -resume reuses the task
-    and republishes results computed from the old data (verified on 25.10.4). A new session is
-    necessary when anything beneath an input directory changed: public engine directives offer no
-    way to add a namespace or content fingerprint to every directory consumer's task hash.
-    Unchanged directories retain normal cache reuse. `current_digests` holds the SHA-256 of every
-    file beneath an input directory, compared with the previous launch's recorded snapshot.
+    Ordinary file and directory cache keys omit file content. A changed local input's bytes
+    require a fresh session because size/mtime can be unchanged. Directory namespaces also
+    need comparison because nested additions/renames can leave directory metadata unchanged.
+    Unchanged inputs retain normal cache reuse. Already captured SHA-256 values are reused.
     """
     current_nodes = _directory_nodes(current)
     try:
@@ -82,9 +85,9 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
         previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
                                                      relative=False)
     except (OSError, ValueError, TypeError):
-        if not current_nodes:
+        if not current:
             return None
-        reason = "the earlier input-directory inventory is unavailable or invalid"
+        reason = "the earlier local-input inventory is unavailable or invalid"
     else:
         directory_roots = [Path(name) for name, entry in current_nodes.items() if entry["type"] == "directory"]
         files = {name for name, entry in current_nodes.items() if entry["type"] == "file"}
@@ -92,14 +95,22 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                             if any(Path(name).is_relative_to(root) for root in directory_roots)}
         if current_nodes != _directory_nodes(previous):
             reason = "the input-directory inventory changed"
-        elif files != historical_files or files != current_digests.keys():
+        elif files != historical_files:
             reason = "the input-directory namespace and content records disagree"
-        elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
+        elif ({name for name, entry in current.items() if entry["type"] == "file"}
+              != current_digests.keys()
+              or {name for name, entry in previous.items() if entry["type"] == "file"}
+              != previous_digests.keys()):
+            reason = "the local-input namespace and content records disagree"
+        elif any(previous_digests.get(name) != current_digests[name] for name in files):
             reason = "the content of a file inside an input directory changed"
+        elif any(previous_digests[name] != digest for name, digest in current_digests.items()
+                 if name in previous_digests):
+            reason = "the content of a local input file changed"
         else:
             return None
     return (f"--resume starts a fresh Nextflow cache session because {reason}. "
-            "Directory metadata alone cannot establish unchanged task inputs; all tasks will "
+            "File and directory metadata alone cannot establish unchanged task inputs; all tasks will "
             "be recomputed to prevent stale results. An existing output directory will be "
             "preserved in a sibling archive before launching.")
 
@@ -442,13 +453,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                     _capture_input_inventory(prov_inputs)[1])
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
-                                  f"cannot inspect local input directories before resume: {exc}") from exc
+                                  f"cannot inspect local inputs before resume: {exc}") from exc
             try:
-                resume_digests = _directory_file_digests(resume_inventory, input_snapshot)
+                resume_digests = _input_file_digests(resume_inventory, input_snapshot)
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
-                                  f"cannot read local input directories before resume: {exc}") from exc
-            if warning := _directory_resume_warning(outdir, resume_inventory, resume_digests):
+                                  f"cannot read local inputs before resume: {exc}") from exc
+            if warning := _input_resume_warning(outdir, resume_inventory, resume_digests):
                 effective_resume = False
                 warnings.append(warning)
                 if on_warning is not None:

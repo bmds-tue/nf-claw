@@ -733,3 +733,49 @@ workflow { READ(file(params.input)) }
     unchanged = run(True)                                       # nothing changed since: reuse
     assert "-resume" in unchanged.command
     assert (out / "value.txt").read_text() == "BBBB\n"
+
+
+@pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
+@pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
+@pytest.mark.parametrize('write_provenance', [True, False])
+def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
+        tmp_path, engine, write_provenance):
+    import shlex
+
+    root = _path_route_fixture(tmp_path)
+    counter = tmp_path / 'executions.txt'
+    script = root / 'pipelines/fixture/upstream/main.nf'
+    script.write_text(script.read_text().replace('shasum -a 256 ${data} > digest.txt',
+        f'echo executed >> {shlex.quote(str(counter))}\n shasum -a 256 ${{data}} > digest.txt'))
+    source = tmp_path / 'reads.fastq'
+    original = b'@R1\nACGT\n+\nIIII\n'
+    modified = b'@R1\nTGCA\n+\nIIII\n'
+    source.write_bytes(original)
+    sheet = tmp_path / 'samples.json'
+    sheet.write_text(json.dumps([{'sample': 'S1', 'reads': str(source)}]))
+    outdir = tmp_path / 'results'
+
+    def run(resume):
+        return orchestration.run_pipeline('fixture', repo_root=root, input_path=sheet,
+            outdir=outdir, profile='standard', params_file=None, cli_overrides={},
+            resume=resume, demo=False, check_only=False, write_provenance=write_provenance,
+            timeout_seconds=90, nxf_ver=engine)
+
+    run(False)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(original).hexdigest()
+    assert len(counter.read_text().splitlines()) == 1
+    stamp = source.stat()
+    source.write_bytes(modified)
+    os.utime(source, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    assert source.stat().st_size == stamp.st_size
+    assert source.stat().st_mtime_ns == stamp.st_mtime_ns
+    changed = run(True)
+    assert '-resume' not in changed.command
+    reason = 'local input file changed' if write_provenance else 'inventory is unavailable'
+    assert any(reason in warning for warning in changed.warnings)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
+    assert len(counter.read_text().splitlines()) == 2
+    unchanged = run(True)
+    assert ('-resume' in unchanged.command) is write_provenance
+    assert len(counter.read_text().splitlines()) == (2 if write_provenance else 3)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
