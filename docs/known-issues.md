@@ -263,7 +263,7 @@ files or columns; the fixes:
 | `do not all bring the same kinds of files` | A stray file (a VCF beside FastQ files) became a sample. Narrow `--input` with a glob such as `'/data/*.fastq.gz'`. |
 | `Sample names come from the file names, which these do not allow` | nfclaw never renames samples. Rename the files, or link them under names the pipeline accepts. |
 | `would repeat the values of …, which the samplesheet requires to be unique` | Several lanes of a sample in a pipeline that takes one row per sample (ampliseq): merge them first. Or make the row key differ, e.g. `--sheet-set run={lane}` (mag). |
-| `contains the run's --outdir` | `--input` would rescan the run's own results on `--resume`. Keep data and `--outdir` apart. |
+| `contains the run's --outdir` / `work directory` | The scan would take the run's own results (on `--resume`) or every task's files as samples. Keep the data directory apart from both; a single result file published into the work tree remains a valid input. |
 
 Files that match no column (checksums, reports, index reads `_I1`/`_I2`, the demultiplexer's
 `Undetermined_S0` reads) are ignored and listed before launch. Two FastQ files named `x_1`/`x_2`

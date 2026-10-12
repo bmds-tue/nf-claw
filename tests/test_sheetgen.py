@@ -665,3 +665,29 @@ def test_an_assigned_lane_must_still_tell_a_samples_rows_apart(tmp_path):
     assert "lane" in str(refused(tmp_path, S.SAREK, [data], {"patient": "{sample}", "lane": "7"}))
     got = rows(gen(tmp_path, S.SAREK, [data], {"patient": "{sample}", "lane": "run7_{lane}"}))
     assert [r["lane"] for r in got] == ["run7_1", "run7_2"]
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads every directory")
+def test_an_unreadable_subdirectory_is_refused_not_skipped(tmp_path):
+    # Skipping it would silently drop its samples from the analysis.
+    data = tmp_path / "data"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    locked = data / "lane2"
+    pair(locked, "B_R1.fastq.gz", "B_R2.fastq.gz")
+    locked.chmod(0)
+    try:
+        err = refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    finally:
+        locked.chmod(0o755)
+    assert "cannot read" in str(err) and "lane2" in str(err)
+
+
+def test_an_empty_directory_and_crlf_fastq(tmp_path):
+    (tmp_path / "empty").mkdir()
+    assert "No input file" in str(refused(tmp_path, S.RNASEQ, [tmp_path / "empty"],
+                                          {"strandedness": "auto"}))
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "A_1.fastq").write_bytes(b"@r1/1\r\nACGT\r\n+\r\nIIII\r\n")
+    (data / "A_2.fastq").write_bytes(b"@r1/2\r\nACGT\r\n+\r\nIIII\r\n")
+    assert rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))[0]["sample"] == "A"

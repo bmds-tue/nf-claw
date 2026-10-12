@@ -784,3 +784,17 @@ def test_a_chain_check_generates_the_first_stages_samplesheet(library, tmp_path,
     with pytest.raises(NfclawError, match="needs values"):
         chain.run_chain(missing, repo_root=root, outdir=tmp_path / "d", check_only=True)
     assert not (tmp_path / "c").exists() and not (tmp_path / "d").exists()
+
+
+def test_sheet_set_on_a_handed_over_stage_is_refused_before_anything_runs(library, tmp_path,
+                                                                          monkeypatch):
+    monkeypatch.setattr(chain, "_probe_config", lambda spec, p, **kw: [])
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    ids = tmp_path / "ids.csv"
+    ids.write_text("SRR1\n")
+    spec = chain.parse_spec({"stages": [{"pipeline": "mini_up", "input": str(ids)},
+                                        {"pipeline": "mini", "sheet_set": {"sample": "{sample}"}}]})
+    with pytest.raises(NfclawError, match="a chain stage's sheet_set"):
+        chain.run_chain(spec, repo_root=root, outdir=tmp_path / "c", check_only=True)
+    assert not (tmp_path / "c").exists()

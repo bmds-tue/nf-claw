@@ -234,8 +234,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                       work_dir=work_dir)
     elif sheet_set:
         raise NfclawError(ErrorCode.PARAMS_INVALID,
-                          "--sheet-set sets columns of a samplesheet nfclaw generates, but --input "
-                          "does not name data files to generate one from.",
+                          "--sheet-set (a chain stage's sheet_set) sets columns of a samplesheet "
+                          "nfclaw generates, but --input does not name data files to generate one "
+                          "from.",
                           fix="Pass the data files (a directory, glob or files) as --input, or set "
                               "the values in your own samplesheet.")
     resolved_input = (inputs.ResolvedInput(str(outdir / "provenance" / generated.filename), None,
