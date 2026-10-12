@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (discovery, engine_version, execution, handoff, inputs, nextflow_command,
+from runner import (discovery, engine_version, execution, handoff, inputs, input_safety, nextflow_command,
                     orchestration, parameters, preflight, provenance, resources, runlog, versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
@@ -452,6 +452,13 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
             nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces, configs=opts.configs,
             limits=opts.limits, on_warning=_warner(on_warning, p.stage),
             deferred_params=_deferred(p), resolved_tree=p.tree)
+        try:
+            input_safety.check_write_boundaries(res.local_dependencies,
+                                               [("chain --outdir", outdir, True)])
+        except BaseException:
+            if res.staging is not None:
+                shutil.rmtree(res.staging, ignore_errors=True)
+            raise
         if not keep and res.staging is not None:
             shutil.rmtree(res.staging, ignore_errors=True)
         label = p.stage.dirname

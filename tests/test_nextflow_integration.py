@@ -15,6 +15,38 @@ from runner import chain, orchestration, resources, runlog, verify
 
 @pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
+    from runner.errors import NfclawError
+    from test_input_output_separation import run, tree
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    (data / "sample_A").mkdir(parents=True)
+    (data / "index.bin").write_bytes(b"fixed scientific input")
+    before = data.stat().st_mtime_ns
+    for output, environment in ((data / "analysis", {}),
+                                (tmp_path / "unsafe_work", {"NXF_WORK": str(data / "work")})):
+        with pytest.raises(NfclawError, match="overlaps local dependency"):
+            run(root, data, output, nxf_ver=engine, nxf_env=environment)
+        assert not output.exists()
+        assert not (output.parent / f".{output.name}.nfclaw.lock").exists()
+        assert sorted(p.name for p in data.iterdir()) == ["index.bin", "sample_A"]
+        assert data.stat().st_mtime_ns == before
+    safe = tmp_path / "safe"
+    result = run(root, data, safe, nxf_ver=engine)
+    assert not result.checked_only
+    assert (safe / "entries.txt").read_text() == "index.bin\nsample_A\n"
+    assert runlog.read_state(safe / "provenance/logs/run.log").state == "success"
+    replay = subprocess.run(["bash", str(safe / "provenance/commands.sh"), str(tmp_path / "replay")],
+                            capture_output=True, text=True, timeout=90)
+    assert replay.returncode == 0, replay.stdout + replay.stderr
+    assert verify.compare(safe, tmp_path / "replay").byte_identical
+    assert (data / "index.bin").read_bytes() == b"fixed scientific input"
+    assert sorted(p.name for p in data.iterdir()) == ["index.bin", "sample_A"]
+    assert data.stat().st_mtime_ns == before
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_staged_file_alias_names_survive_run_replay_and_reference_handoff(tmp_path, engine):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"

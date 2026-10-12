@@ -1,5 +1,10 @@
 # Known Issues & Troubleshooting
 
+Configured Nextflow engine caches and temporary directories must remain outside declared input
+directories. The launcher can create framework and Java-version cache entries even while probing
+its version. Boundary checks cover `NXF_HOME`, `NXF_DIST`, `NXF_TEMP` and `CAPSULE_CACHE_DIR`
+before metadata probes, including inherited settings and relative paths.
+
 Most run-time failures fall into two categories: **environment** (host, network, or path issues — fixable via `nfclaw run` flags or environment adjustments) and **upstream pipeline defects** (bugs in a specific pinned nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**. Upstream defects, recorded runtime corrections and their validation limits are documented here.
 
 ---
@@ -256,6 +261,22 @@ are outside this explicit-value preflight.
   alias identity, even when a retargeted link has identical bytes. Reference handoffs
   preserve the alias too; chain status can still verify older bundles that explicitly
   recorded the resolved target as their consumed parameter.
+
+### Output or work directories contaminated a directory input
+- **Status: Fixed.** A real Nextflow 25.10.4 task consuming a directory observed
+  `.analysis.nfclaw.lock` and `analysis` alongside the original `index.bin` when its
+  `--outdir` was a child of that input. The sibling lock was created before input
+  validation, and the output tree appeared after the prelaunch snapshot.
+  Dependency separation now precedes lock acquisition and all generated run files.
+  Checks cover explicit directory inputs, samplesheet data paths, directory glob
+  matches, nested aliases, code/configuration dependencies, generated-file redirects,
+  the configured Nextflow log, work directories and chain records. A boundary refusal
+  does not append to an existing run log inside the input. Refusal logging for other
+  errors acquires the writer lock so it cannot forge the outcome of a live run.
+  Real-engine tests on 25.10.4 and 26.04.0 verify unchanged input bytes and directory
+  entries, then execute and replay a separate safe output location with literal
+  filename and content oracles. Previously computed task files beneath a shared
+  work tree remain legitimate downstream inputs; consuming the whole work tree is refused.
 
 ---
 

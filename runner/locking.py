@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from functools import wraps
+from contextlib import contextmanager
 from pathlib import Path
 
 from runner.errors import ErrorCode, NfclawError
@@ -13,40 +13,39 @@ except ImportError:
     fcntl = None
 
 
-def single_writer(function):
-    @wraps(function)
-    def guarded(*args, **kwargs):
-        if kwargs.get("check_only") or fcntl is None:
-            return function(*args, **kwargs)
-        outdir = Path(kwargs["outdir"]).expanduser().resolve()
-        # A persistent sibling file leaves a fresh output directory untouched. Never unlink it:
-        # a third process could otherwise lock a new inode while a second still holds the old one.
-        lock = outdir.parent / f".{outdir.name}.nfclaw.lock"
-        fd = None
+@contextmanager
+def output_writer(outdir: Path, *, check_only: bool = False):
+    """Acquire only after dependency separation is checked; keep it through final recording."""
+    if check_only or fcntl is None:
+        yield
+        return
+    outdir = outdir.expanduser().resolve()
+    # A persistent sibling file leaves a fresh output directory untouched. Never unlink it:
+    # a third process could otherwise lock a new inode while a second still holds the old one.
+    lock = outdir.parent / f".{outdir.name}.nfclaw.lock"
+    fd = None
+    try:
+        outdir.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
-            outdir.parent.mkdir(parents=True, exist_ok=True)
-            fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
-            try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                os.close(fd)
-                fd = None
-                raise NfclawError(
-                    ErrorCode.ENVIRONMENT, f"another nfclaw run is active in {outdir}",
-                    fix="Wait for the active run to finish or stop it before resuming.",
-                    details={"active_run": True}) from None
-        except OSError as exc:
-            if fd is not None:
-                os.close(fd)
-                fd = None
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            os.close(fd)
+            fd = None
             raise NfclawError(
-                ErrorCode.ENVIRONMENT,
-                f"--outdir could not be created or locked: {outdir}: {exc.strerror or exc}",
-                fix="Use an output directory whose parent you can write to.") from exc
-        try:
-            return function(*args, **kwargs)
-        finally:
-            if fd is not None:
-                os.close(fd)
-
-    return guarded
+                ErrorCode.ENVIRONMENT, f"another nfclaw run is active in {outdir}",
+                fix="Wait for the active run to finish or stop it before resuming.",
+                details={"active_run": True}) from None
+    except OSError as exc:
+        if fd is not None:
+            os.close(fd)
+            fd = None
+        raise NfclawError(
+            ErrorCode.ENVIRONMENT,
+            f"--outdir could not be created or locked: {outdir}: {exc.strerror or exc}",
+            fix="Use an output directory whose parent you can write to.") from exc
+    try:
+        yield
+    finally:
+        if fd is not None:
+            os.close(fd)
