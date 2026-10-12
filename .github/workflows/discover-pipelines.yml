@@ -64,6 +64,8 @@ jobs:
           fi
           # Does Nextflow accept each new pipeline? (per-pipeline verdicts in the result file)
           export NFCLAW_RESULT_FILE="$RUNNER_TEMP/accept.tsv"
+          # One argument per added name: names match [A-Za-z0-9._-]+, so word splitting is exact.
+          # shellcheck disable=SC2086
           bash scripts/nextflow_accept.sh $added || true
           kept=0
           # Require an explicit completed acceptance for EVERY added pipeline. A partial result
