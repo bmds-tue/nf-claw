@@ -625,3 +625,43 @@ def test_columns_no_file_can_reach_are_not_offered(tmp_path):
         "bam": {"type": "string", "format": "file-path", "pattern": "^\\S+\\.bam$"},
     }, "required": ["sample"]}}}
     assert plan_of(tmp_path, spec).data_columns == ("bam",)
+
+
+def test_results_published_into_the_shared_work_tree_are_valid_inputs(tmp_path):
+    # Another run's results, published as links into the shared work tree, are inputs like any
+    # other; only this run's --outdir is off-limits, and scanning the whole work tree is refused.
+    work = tmp_path / "work"
+    a1, a2 = pair(work / "ab" / "cdef", "A_R1.fastq.gz", "A_R2.fastq.gz")
+    published = tmp_path / "earlier" / "fastq"
+    published.mkdir(parents=True)
+    (published / "A_R1.fastq.gz").symlink_to(a1)
+    (published / "A_R2.fastq.gz").symlink_to(a2)
+    got = rows(gen(tmp_path, S.RNASEQ, [published], {"strandedness": "auto"}))
+    assert got[0]["fastq_1"] == str(published / "A_R1.fastq.gz")
+    err = refused(tmp_path, S.RNASEQ, [tmp_path], {"strandedness": "auto"},
+                  outdir=tmp_path.parent / f"{tmp_path.name}-results")
+    assert "work directory" in str(err)
+
+
+def test_assigned_columns_take_no_files_and_reads_take_no_constants(tmp_path):
+    data = tmp_path / "data"
+    pair(data, "N1_R1.fastq.gz", "N1_R2.fastq.gz")
+    (data / "N1.bam").write_bytes(b"x")
+    ref = tmp_path / "ref.bam"
+    ref.write_bytes(b"x")
+    # The constant fills the column; the directory's BAM is no longer a candidate for it.
+    got = rows(gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto", "genome_bam": str(ref)}))
+    assert [r["genome_bam"] for r in got] == [str(ref)]
+    # A read column of a group that is not used is still a read column.
+    err = refused(tmp_path, S.MAG, [data], {"group": "0", "short_reads_platform": "ILLUMINA",
+                                            "long_reads": str(data / "N1_R1.fastq.gz")})
+    assert "taken from the input files" in str(err)
+
+
+def test_an_assigned_lane_must_still_tell_a_samples_rows_apart(tmp_path):
+    data = tmp_path / "data"
+    pair(data, "T_S1_L001_R1_001.fastq.gz", "T_S1_L001_R2_001.fastq.gz", "r:1")
+    pair(data, "T_S1_L002_R1_001.fastq.gz", "T_S1_L002_R2_001.fastq.gz", "r:2")
+    assert "lane" in str(refused(tmp_path, S.SAREK, [data], {"patient": "{sample}", "lane": "7"}))
+    got = rows(gen(tmp_path, S.SAREK, [data], {"patient": "{sample}", "lane": "run7_{lane}"}))
+    assert [r["lane"] for r in got] == ["run7_1", "run7_2"]

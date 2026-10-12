@@ -373,28 +373,25 @@ def detect(raw: Any, repo: Path) -> Source | None:
 
 # --- discovering the files ------------------------------------------------------------------------
 
-def _outside(path: Path, avoid: tuple[Path, ...]) -> None:
-    real = path.resolve()
-    for place in avoid:
-        if real.is_relative_to(place.resolve()):
-            raise _bad(f"input file {path} is inside the run's {_avoid_label(place, avoid)} "
-                       f"({place}); results and task files are not inputs",
-                       fix="Pass the data files themselves, kept outside --outdir and the work "
-                           "directory.")
+def _outside(path: Path, outdir: Path) -> None:
+    """A file (or what it links to) inside this run's --outdir is one of its own results."""
+    if path.resolve().is_relative_to(outdir.resolve()):
+        raise _bad(f"input file {path} is inside the run's --outdir ({outdir}); its results are "
+                   "not its inputs",
+                   fix="Pass the data files themselves, kept outside --outdir.")
 
 
-def _avoid_label(place: Path, avoid: tuple[Path, ...]) -> str:
-    return "--outdir" if place == avoid[0] else "work directory"
-
-
-def _walk(root: Path, found: dict[str, tuple[Path, Path]], avoid: tuple[Path, ...]) -> None:
+def _walk(root: Path, found: dict[str, tuple[Path, Path]], outdir: Path, work_dir: Path) -> None:
+    # Scanning a directory that holds the run's --outdir would read its own results as samples on
+    # --resume; one that holds the shared work tree would take every task's files as samples. A
+    # single task file, or a result published into the work tree, remains a valid input.
     real_root = root.resolve()
-    for place in avoid:
+    for place, label in ((outdir, "--outdir"), (work_dir, "work directory")):
         if place.resolve().is_relative_to(real_root):
-            raise _bad(f"--input {root} contains the run's {_avoid_label(place, avoid)} ({place}): "
-                       "a resumed run would read its own results as samples",
-                       fix="Point --input at the directory that holds only the data, or use an "
-                           "--outdir outside it.")
+            raise _bad(f"--input {root} contains the run's {label} ({place}): its files are the "
+                       "pipeline's results and task files, not data to analyse",
+                       fix="Point --input at the directory that holds only the data, or keep "
+                           "--outdir and the work directory outside it.")
 
     def walk(directory: Path, ancestors: frozenset[Path]) -> None:
         real = directory.resolve()
@@ -426,13 +423,13 @@ def _walk(root: Path, found: dict[str, tuple[Path, Path]], avoid: tuple[Path, ..
     walk(root, frozenset())
 
 
-def discover(source: Source, *, avoid: tuple[Path, ...]) -> list[tuple[Path, Path]]:
+def discover(source: Source, *, outdir: Path, work_dir: Path) -> list[tuple[Path, Path]]:
     """Every file the source names, as (file, the directory or value it was found under)."""
     found: dict[str, tuple[Path, Path]] = {}
     for text in source.values:
         path = Path(text)
         if path.is_dir():
-            _walk(path, found, avoid)
+            _walk(path, found, outdir, work_dir)
             continue
         if path.is_file():
             found.setdefault(str(path), (path, path.parent))
@@ -444,14 +441,14 @@ def discover(source: Source, *, avoid: tuple[Path, ...]) -> list[tuple[Path, Pat
                        fix="Check the pattern (quote it so the shell does not expand it).")
         for match in map(Path, matches):
             if match.is_dir():
-                _walk(match, found, avoid)
+                _walk(match, found, outdir, work_dir)
             elif match.is_file():
                 found.setdefault(str(match), (match, match.parent))
             else:
                 raise _bad(f"--input {text}: {match} is not a readable file (a broken link?)",
                            fix="Remove or repair it.")
     for path, _ in found.values():
-        _outside(path, avoid)
+        _outside(path, outdir)
     return list(found.values())
 
 
@@ -672,7 +669,7 @@ def _check_assignments(assignments: Mapping[str, str], p: Plan) -> None:
         if _PLACEHOLDER.sub("", value).count("{") or _PLACEHOLDER.sub("", value).count("}"):
             issues.append(f"'{column}': unbalanced braces in {value!r}")
             continue
-        if column in p.reads and value:
+        if value and any(column in group for group in p.read_groups):
             issues.append(f"'{column}' is taken from the input files; leave it out (or empty it "
                           "to use another read column)")
         elif column == p.id_column and value and "{sample}" not in value:
@@ -719,14 +716,15 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     if sheet is None:
         raise _bad(f"{pipeline} declares no samplesheet columns to generate")
     input_param = schema_mod.load_param_schema(repo).params.get("input")
-    empty = frozenset(c for c, v in assignments.items() if v == "")
-    p = plan(sheet, input_param, empty)
-    _check_assignments(assignments, p)
+    _check_assignments(assignments, plan(sheet, input_param))
+    # An assigned column takes no files: an empty one leaves its read group (how a group is
+    # chosen), a constant one fills the column on every row instead.
+    p = plan(sheet, input_param, frozenset(assignments))
     if p.problem:
         raise _bad(f"nfclaw cannot generate the {pipeline} samplesheet: {p.problem}",
                    fix="Follow the hint above, or write the samplesheet yourself (Inputs in "
                        "skill.md).")
-    found = discover(source, avoid=(outdir, work_dir))
+    found = discover(source, outdir=outdir, work_dir=work_dir)
     # Which column(s) each file fits: the read group as one target, every other typed column alone.
     reads: list[Path] = []
     data: dict[tuple[str, str], Path] = {}
@@ -776,14 +774,6 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
         attached = {col: str(path) for (s, col), path in sorted(data.items()) if s == sample}
         mine = sorted((u for u in units if u.sample == sample),
                       key=lambda u: (u.lane or 0, u.chunk or 0, str(u.reads[0])))
-        if p.lane_column and mine:
-            lanes = [u.lane or 1 for u in mine]
-            if len(set(lanes)) != len(lanes):
-                raise _bad(f"sample {sample!r} has several read sets for one lane "
-                           f"({_shown([u.reads[0].name for u in mine])}); its '{p.lane_column}' "
-                           "column could no longer tell them apart",
-                           fix="Merge the split files of each lane, or write the samplesheet "
-                               "yourself.")
         for unit in mine or [None]:
             row: dict[str, str] = {}
             if p.id_column:
@@ -800,6 +790,11 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     for column, value in assignments.items():
         for row, (sample, lane) in zip(rows, row_sample):
             row[column] = value.replace("{sample}", sample).replace("{lane}", str(lane))
+    # Whatever filled it — the files or an assignment — the lane column must still tell apart the
+    # read sets of one sample.
+    lane_column = next((n for n in p.columns if n.casefold() == "lane"), None)
+    if lane_column and units:
+        _check_lanes(rows, row_sample, lane_column)
     defaults = {}
     for col in sheet.columns:
         if (col.name and col.required and col.name not in assignments
@@ -883,6 +878,22 @@ def _check_shapes(samples: list[str], units: list[_Unit], data: dict) -> None:
                        "glob), or write the samplesheet yourself for mixed inputs.",
                    issues=[f"{', '.join(kinds)}: {_shown(names)}"
                            for kinds, names in shapes.items()])
+
+
+def _check_lanes(rows: list[dict[str, str]], row_sample: list[tuple[str, int]],
+                 lane_column: str) -> None:
+    """The lane column tells the read sets of one sample apart (sarek names read groups by it)."""
+    seen: dict[tuple[str, str], dict[str, str]] = {}
+    for row, (sample, _) in zip(rows, row_sample):
+        key = (sample, row.get(lane_column, ""))
+        if key in seen:
+            reads = [Path(r[c]).name for r in (seen[key], row) for c in r
+                     if c != lane_column and Path(r[c]).is_absolute()][:4]
+            raise _bad(f"sample {sample!r} would have two read sets with '{lane_column}' "
+                       f"{key[1]!r} ({_shown(reads)}): the column could no longer tell them apart",
+                       fix="Merge the split files of each lane, keep {lane} in a --sheet-set "
+                           f"{lane_column} value, or write the samplesheet yourself.")
+        seen[key] = row
 
 
 def _check_complete(rows: list[dict[str, str]], sheet: InputSchema, p: Plan,
