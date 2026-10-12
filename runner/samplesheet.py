@@ -9,7 +9,7 @@ from collections import Counter
 from collections.abc import Hashable, Iterable
 from pathlib import Path
 
-from runner.inputs import local_name_issues
+from runner.inputs import is_remote_url, local_name_issues
 from runner.schema import InputSchema, PATH_FORMATS, json_scalar
 
 
@@ -182,7 +182,7 @@ def _safe_identifier(value: str) -> bool:
 
 
 def _path_issues(row_num: int, col, value: str) -> list[str]:
-    if "://" in value:
+    if is_remote_url(value):
         return [f"row {row_num}: '{col.name}': {issue}"
                 for issue in local_name_issues(value, col.fmt)]
     path = Path(value)

@@ -7,6 +7,7 @@ on:
       - "pipelines/fastqrepair/upstream"
       - "scripts/check_fastqrepair_pairs.py"
       - "tests/test_fastqrepair_pairs.py"
+      - "tests/test_git_path_identity.py"
       - "scripts/check_fastqrepair_wipe.py"
       - "tests/test_fastqrepair_wipe.py"
       - ".github/workflows/fastqrepair-validation.yml"
@@ -39,6 +40,8 @@ jobs:
           java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - run: git submodule update --init --depth 1 pipelines/fastqrepair/upstream
+      - name: Verify correction selection with a Unicode source parent
+        run: pytest -q tests/test_git_path_identity.py -k correction_selection
       - name: Create known pairs, reordered mates and singleton controls
         run: |
           source_args=()

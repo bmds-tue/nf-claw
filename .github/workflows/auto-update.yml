@@ -40,12 +40,26 @@ jobs:
       # auto-merged. Quoting the array preserves every validated pipeline slug as one argument.
       - name: Validate updated pipelines through Nextflow
         run: |
-          mapfile -t updated < <(
+          inventory=$(
             git diff --cached --name-only --diff-filter=AM \
               | sed -nE 's#^pipelines/([A-Za-z0-9._-]+)/upstream$#\1#p'
           )
+          updated=()
+          while IFS= read -r name; do
+            [ -z "$name" ] || updated+=("$name")
+          done <<< "$inventory"
           if (( ${#updated[@]} )); then
+            export NFCLAW_RESULT_FILE="$RUNNER_TEMP/update-acceptance.tsv"
             NFCLAW_KEEP_SUBMODULES=1 bash scripts/nextflow_accept.sh "${updated[@]}"
+            # Nightly checks can recognize a documented defect. Automated release bumps still
+            # require a unique completed preview for every changed pipeline before auto-merge.
+            for name in "${updated[@]}"; do
+              verdict=$(awk -F '\t' -v pipeline="$name" '$1 == pipeline { if (NF == 2) print $2; else print "invalid" }' "$NFCLAW_RESULT_FILE")
+              if [ "$verdict" != accepted ]; then
+                echo "::error::$name has no unique completed Nextflow acceptance ($verdict)"
+                exit 1
+              fi
+            done
           else
             echo "No pipeline release changed."
           fi

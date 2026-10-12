@@ -219,12 +219,18 @@ both `--check` and execution, rather than being treated as a passing result.
 
 ### Directory and reference lineage
 
+Resuming a failed stage creates a new handoff snapshot under
+`chain/handoffs/<stage>/attempts/<id>/`. Earlier handoff records and prepared inputs remain
+at the paths named by the old run manifests when the stage's definition changes.
+
 Published results are checked against both their file checksums and their complete
 `outputs.inventory.json` namespace before a handoff. Empty directories and aliases
 remain distinct entries. A local reference inherited from a producer also needs
 the recorded input namespace and bytes; a changed alias cannot pass merely because
 the new target contains identical data. Missing historical namespace records block
-a handoff rather than certifying an unknown structure.
+a directory handoff rather than certifying an unknown structure. Older individual-file chains
+retain their historical checksum verification. New bundles explicitly declare their output
+inventory version, so missing or malformed declared records remain failures.
 
 Each directory handoff records its exact boundary namespace and file dependencies.
 Chain status verifies the current source and the consumer's prelaunch snapshot,

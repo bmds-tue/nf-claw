@@ -375,7 +375,7 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
     the result of the new one. Only ever appended to a run log that already exists: a fresh
     --outdir is left untouched, so the next attempt is not refused as "not empty"."""
     try:
-        if (not log.is_file() or log.is_symlink()
+        if (not log.is_file() or log.is_symlink() or log.stat().st_nlink != 1
                 or not log.resolve().is_relative_to(log.parent.parent.parent.resolve())):
             return
     except OSError:

@@ -11,14 +11,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
+import stat
 import subprocess
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 from librarian import write_skill
 from librarian.add_pipeline import read_sources, valid_pipeline_name, validate_pipeline_name
+from runner import execution, submodule
+from runner.probes import capture
+from runner.provenance import _atomic_bytes
 
 NFCORE_PIPELINES_JSON = "https://nf-co.re/pipelines.json"
 _SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
@@ -73,8 +79,12 @@ def new_pipelines(
     return [c for c in candidates(workflows) if c[0] not in existing]
 
 
-def _run(args: list[str], **kw) -> subprocess.CompletedProcess:
-    return subprocess.run(args, capture_output=True, text=True, **kw)
+def _run(args: list[str], *, check: bool = False, timeout: float = 60) -> subprocess.CompletedProcess:
+    result = capture(args, timeout=timeout, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, args,
+                                            output=result.stdout, stderr=result.stderr)
+    return result
 
 
 def _rollback(name: str, repo_root: Path) -> None:
@@ -94,18 +104,144 @@ def _rollback(name: str, repo_root: Path) -> None:
         shutil.rmtree(modules_dir, ignore_errors=True)
 
 
+@dataclass(frozen=True)
+class _GitmodulesSnapshot:
+    content: bytes | None
+    permissions: int | None
+    indexed: tuple[str, str] | None
+    assume_unchanged: bool = False
+    skip_worktree: bool = False
+    intent_to_add: bool = False
+
+
+def _gitmodules_snapshot(repo_root: Path) -> _GitmodulesSnapshot:
+    path = repo_root / ".gitmodules"
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
+        content, permissions = None, None
+    else:
+        if not stat.S_ISREG(mode):
+            raise ValueError(".gitmodules must be a regular file before discovery")
+        content, permissions = path.read_bytes(), stat.S_IMODE(mode)
+    result = _run(["git", "-C", str(repo_root), "ls-files", "--stage", "-z", "--", ".gitmodules"],
+                  check=True)
+    entries = [entry for entry in result.stdout.split("\0") if entry]
+    if not entries:
+        return _GitmodulesSnapshot(content, permissions, None)
+    else:
+        if len(entries) != 1:
+            raise ValueError(".gitmodules has unresolved index entries")
+        mode, digest, stage = entries[0].partition("\t")[0].split()
+        if stage != "0" or mode not in {"100644", "100755"}:
+            raise ValueError(".gitmodules has an unsupported index entry")
+        indexed = mode, digest
+    flags = _run(["git", "-C", str(repo_root), "ls-files", "-v", "-z", "--", ".gitmodules"],
+                 check=True).stdout
+    if flags not in {f"{tag} .gitmodules\0" for tag in "HhSs"}:
+        raise ValueError("cannot inspect .gitmodules index flags")
+    diffs = [_run(["git", "-C", str(repo_root), "diff", "--cached", "--raw", "-z",
+                   "--no-ext-diff", "--no-textconv", f"--ita-{visibility}-in-index", "--", ".gitmodules"],
+                  check=True).stdout for visibility in ("visible", "invisible")]
+    return _GitmodulesSnapshot(content, permissions, indexed, flags[0].islower(),
+                               flags[0].upper() == "S", diffs[0] != diffs[1])
+
+
+def _restore_gitmodules(repo_root: Path, snapshot: _GitmodulesSnapshot) -> None:
+    path = repo_root / ".gitmodules"
+    if snapshot.content is None:
+        path.unlink(missing_ok=True)
+    else:
+        _atomic_bytes(path, snapshot.content, mode=snapshot.permissions)
+    # Restore only this index entry, preserving other staged files and the distinction
+    # between the original staged metadata and its possibly different working bytes.
+    if snapshot.indexed is None:
+        _run(["git", "-C", str(repo_root), "update-index", "--force-remove", "--", ".gitmodules"],
+             check=True)
+    else:
+        mode, digest = snapshot.indexed
+        _run(["git", "-C", str(repo_root), "update-index", "--add", "--cacheinfo",
+              f"{mode},{digest},.gitmodules"], check=True)
+        if snapshot.intent_to_add:
+            _run(["git", "-C", str(repo_root), "reset", "-N", "--", ".gitmodules"], check=True)
+        for flag, enabled in (("assume-unchanged", snapshot.assume_unchanged),
+                              ("skip-worktree", snapshot.skip_worktree)):
+            _run(["git", "-C", str(repo_root), "update-index",
+                  "--" + ("" if enabled else "no-") + flag, "--", ".gitmodules"], check=True)
+
+
 def add_one(name: str, url: str, tag: str, repo_root: Path) -> bool:
     """Add one pipeline submodule pinned to `tag` and generate its context."""
     name = validate_pipeline_name(name)
-    up = repo_root / "pipelines" / name / "upstream"
+    try:
+        # Share the runner's lock: discovery and on-demand initialization both mutate Git's
+        # submodule configuration. Recheck ownership while holding it through rollback.
+        with execution.stop_on_signals(), submodule._init_lock(repo_root):
+            return _add_one(name, url, tag, repo_root)
+    except Exception as exc:
+        print(f"{name}: ERROR {exc}; discovery did not complete")
+        return False
+
+
+def _add_one(name: str, url: str, tag: str, repo_root: Path) -> bool:
+    name = validate_pipeline_name(name)
+    entry = repo_root / "pipelines" / name
+    # A failed add rolls back only a tree this invocation owns. Discovery can encounter
+    # orphaned entries absent from sources.tsv; never remove their research data or links.
+    if entry.exists() or entry.is_symlink():
+        print(f"{name}: ERROR pipeline entry already exists: {entry}; preserved without changes")
+        return False
+    relative = f"pipelines/{name}/upstream"
+    if entry.parent.is_symlink():
+        raise ValueError(f"pipeline parent is a symlink: {entry.parent}; preserved without changes")
+    own_root = _run(["git", "-C", str(repo_root), "rev-parse", "--show-toplevel"], check=True)
+    if Path(own_root.stdout.rstrip("\n")).resolve() != repo_root.resolve():
+        raise ValueError(f"discovery root is not the repository root: {repo_root}")
+    git_path = _run(["git", "-C", str(repo_root), "rev-parse", "--git-path",
+                     f"modules/{relative}"], check=True)
+    administrative = Path(git_path.stdout.rstrip("\n"))
+    if not administrative.is_absolute():
+        administrative = repo_root / administrative
+    indexed = _run(["git", "-C", str(repo_root), "ls-files", "-z", "--", relative], check=True)
+    registered = _run(["git", "-C", str(repo_root), "config", "-z", "-f", ".gitmodules",
+                       "--get-regexp", r"^submodule\..*\.path$"])
+    if registered.returncode not in (0, 1):
+        raise ValueError("cannot inspect existing submodule registrations")
+    registered_path = False
+    for record in registered.stdout.split("\0"):
+        if not record:
+            continue
+        _, separator, value = record.partition("\n")
+        if not separator:
+            raise ValueError("cannot parse existing submodule registrations")
+        if (repo_root / value).resolve() == (entry / "upstream").resolve():
+            registered_path = True
+    named_registration = False
+    pattern = r"^submodule\." + re.escape(relative) + r"\."
+    for scope in (("-f", ".gitmodules"), ("--local",)):
+        result = _run(["git", "-C", str(repo_root), "config", "-z", *scope,
+                       "--get-regexp", pattern])
+        if result.returncode not in (0, 1):
+            raise ValueError("cannot inspect existing named submodule configuration")
+        named_registration |= result.returncode == 0
+    if (administrative.exists() or administrative.is_symlink() or indexed.stdout
+            or registered_path or named_registration):
+        print(f"{name}: ERROR existing submodule registration, index or object store; "
+              "preserved without changes")
+        return False
+    # Exclusive creation prevents another owner appearing between the filesystem check and
+    # Git's add. Only after reserving this entry may failure cleanup remove it.
+    metadata = _gitmodules_snapshot(repo_root)
+    entry.mkdir(parents=True, exist_ok=False)
+    up = entry / "upstream"
     try:
         _run(
             ["git", "-C", str(repo_root), "submodule", "add", "--force", url,
              f"pipelines/{name}/upstream"],
-            check=True,
+            check=True, timeout=300,
         )
         _run(["git", "-C", str(up), "fetch", "--tags", "--depth", "1", "origin",
-              f"refs/tags/{tag}:refs/tags/{tag}"])
+              f"refs/tags/{tag}:refs/tags/{tag}"], check=True, timeout=300)
         _run(["git", "-C", str(up), "checkout", f"tags/{tag}"], check=True)
         # `submodule add` records the gitlink at the default branch HEAD; re-stage it at the
         # tag we just checked out so the pin IS the release. Otherwise a later
@@ -114,9 +250,14 @@ def add_one(name: str, url: str, tag: str, repo_root: Path) -> bool:
         _run(["git", "-C", str(repo_root), "add", f"pipelines/{name}/upstream"], check=True)
         write_skill.generate(name, pipelines_dir=repo_root / "pipelines")
         return True
-    except Exception as exc:  # one failure never blocks the others
-        print(f"{name}: ERROR {exc}; rolling back")
-        _rollback(name, repo_root)
+    except BaseException as exc:
+        print(f"{name}: ERROR {exc or type(exc).__name__}; rolling back")
+        try:
+            _rollback(name, repo_root)
+        finally:
+            _restore_gitmodules(repo_root, metadata)
+        if not isinstance(exc, Exception):
+            raise
         return False
 
 
@@ -136,11 +277,12 @@ def _remove_source(sources_path: Path, name: str) -> None:
 def remove_one(name: str, repo_root: Path, sources_path: Path) -> None:
     """Completely remove a pipeline: its submodule, generated files and source row."""
     name = validate_pipeline_name(name)
-    _rollback(name, repo_root)
-    _run(["git", "-C", str(repo_root), "config", "-f", ".gitmodules",
-          "--remove-section", f"submodule.pipelines/{name}/upstream"])
-    _run(["git", "-C", str(repo_root), "add", ".gitmodules"])
-    _remove_source(sources_path, name)
+    with execution.stop_on_signals(), submodule._init_lock(repo_root):
+        _rollback(name, repo_root)
+        _run(["git", "-C", str(repo_root), "config", "-f", ".gitmodules",
+              "--remove-section", f"submodule.pipelines/{name}/upstream"])
+        _run(["git", "-C", str(repo_root), "add", ".gitmodules"])
+        _remove_source(sources_path, name)
 
 
 def _append_source(sources_path: Path, name: str, url: str) -> None:
@@ -196,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
             added += 1
             print(f"{name}: added at {tag}")
     print(f"Added {added}/{len(fresh)} pipeline(s).")
-    return 0
+    return 0 if added == len(fresh) else 1
 
 
 if __name__ == "__main__":

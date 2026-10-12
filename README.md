@@ -22,7 +22,9 @@ Explicit local and remote input filenames are validated before launch because pi
 
 Local path parameters retain the supplied basename, including a symlink's name and format suffix. For example, `sheet.csv` pointing to `stored.data` remains `sheet.csv` for samplesheet validation and Nextflow staging. Parent directories are resolved against the caller's directory; both alias and target names are checked, and provenance records the link identity and target bytes.
 
-Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Boundary refusals leave input data and existing run logs untouched.
+LF/CR in local input paths or resolved targets are refused because Nextflow can turn them into shell lines. Samplesheet paths crossing a directory symlink with `..` must use an explicit parent path: Nextflow may otherwise select different data. Ordinary parent traversal is supported; wildcard parents followed by `..` are refused. Local colon parents remain local dependencies. Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode separators without losing file identities.
+
+Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Existing output symlinks and hard links receive the same separation check; declared work/cache trees can still hold staged read aliases. Boundary refusals leave input data and existing run logs untouched. Refusal logging also leaves multiply linked logs untouched.
 
 ### Navigation
 
@@ -168,6 +170,10 @@ nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
+Resource ceilings require an identified Nextflow engine of version 24.04.0 or newer. An
+unavailable version probe cannot establish that a requested ceiling will be enforced; use
+`--nxf-ver` to select a concrete supported engine.
+
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
 ---
@@ -177,8 +183,9 @@ nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
 By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
-For declared local directory inputs, `--resume` retains the cache only when the recorded
-directory namespace and the bytes of every file beneath it are unchanged. A changed
+For declared local inputs, `--resume` retains the cache only when recorded file bytes
+and recursive directory namespaces are unchanged, including data named by samplesheets.
+Size and timestamp alone cannot establish unchanged scientific data. A changed
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its

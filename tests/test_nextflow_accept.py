@@ -325,3 +325,28 @@ def test_discovery_keeps_a_completed_acceptance(tmp_path):
     assert process.returncode == 0
     assert output == "kept=1\n"
     assert not rollback.exists()
+
+
+@pytest.mark.parametrize("inventory_exit", [0, 1])
+@pytest.mark.parametrize("verdict", [
+    "mini\tknown-timeout\n", "mini\tknown-rejected\n", "mini\tknown-staging-unverified\n",
+    "", "other\taccepted\n", "mini\taccepted\nmini\taccepted\n", "mini\taccepted\n"
+])
+def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path, verdict, inventory_exit):
+    raw = (ROOT / ".github/workflows/auto-update.yml").read_text()
+    step = raw.split("- name: Validate updated pipelines through Nextflow", 1)[1].split(
+        "\n      # PRs", 1)[0]
+    script = re.search(r"^        run: \|\n(.*)", step, re.M | re.S).group(1)
+    script = "\n".join(line[10:] for line in script.splitlines())
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    _executable(fake / "git", f'#!/bin/sh\necho pipelines/mini/upstream\nexit {inventory_exit}\n')
+    (tmp_path / "scripts").mkdir()
+    _executable(tmp_path / "scripts/nextflow_accept.sh", '#!/bin/sh\n'
+                '[ -z "$NFCLAW_RESULT_FILE" ] || printf "%s" "$FAKE_VERDICT" > "$NFCLAW_RESULT_FILE"\n'
+                'exit 0\n')
+    process = subprocess.run(["bash", "-eo", "pipefail", "-c", script], cwd=tmp_path,
+                             env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+                                  "RUNNER_TEMP": str(tmp_path), "FAKE_VERDICT": verdict},
+                             capture_output=True, text=True)
+    assert (process.returncode == 0) == (inventory_exit == 0 and verdict == "mini\taccepted\n"), process.stdout

@@ -1,5 +1,6 @@
 """Filesystem and execution oracles for input data separated from execution writes."""
 import json
+import os
 
 import pytest
 
@@ -104,6 +105,34 @@ def run(root, data, out, **kwargs):
 
 
 @pytest.mark.parametrize("check_only", [False, True])
+@pytest.mark.parametrize("alias", [False, True])
+def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, monkeypatch, check_only, alias):
+    root = tree(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "index.bin"
+    source.write_bytes(b"fixed scientific input")
+    destination = data / "cache"
+    if alias:
+        link = tmp_path / "destination_alias"
+        link.symlink_to(data, target_is_directory=True)
+        destination = link / "cache"
+    monkeypatch.setattr(orchestration.path_roles, "output_only_directories",
+                        lambda *args: frozenset({"future_cache"}))
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("engine launched"))
+    before = data.stat().st_mtime_ns
+    out = tmp_path / "out"
+    with pytest.raises(NfclawError, match="overlaps local dependency") as error:
+        run(root, data, out, check_only=check_only, cli_overrides={"future_cache": str(destination)})
+    assert error.value.details["unsafe_write_boundary"]
+    assert source.read_bytes() == b"fixed scientific input"
+    assert data.stat().st_mtime_ns == before
+    assert not destination.exists() and not out.exists()
+    assert not (tmp_path / ".out.nfclaw.lock").exists()
+
+
+@pytest.mark.parametrize("check_only", [False, True])
 @pytest.mark.parametrize("write_provenance", [False, True])
 @pytest.mark.parametrize("source", ["input", "params_file", "auxiliary", "samplesheet", "nested_alias"])
 def test_overlapping_outputs_are_refused_without_changing_the_data(
@@ -188,6 +217,132 @@ def test_input_files_inside_a_publication_tree_are_refused(tmp_path):
     with pytest.raises(NfclawError, match="overlaps local dependency"):
         input_safety.check_write_boundaries([data], [("outputs", output, True)])
     assert data.read_bytes() == b"fixed scientific input"
+
+
+@pytest.mark.parametrize("alias", ["final", "parent"])
+def test_a_logical_input_slot_inside_outputs_is_protected_when_its_target_is_external(tmp_path, alias):
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    out = tmp_path / "out"
+    out.mkdir()
+    if alias == "final":
+        supplied = out / "reads.fastq"
+        supplied.symlink_to(source)
+    else:
+        (out / "data").symlink_to(data, target_is_directory=True)
+        supplied = out / "data/reads.fastq"
+    before = out.stat().st_mtime_ns
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([supplied], [("outputs", out, True)])
+    assert source.read_bytes() == b"fixed scientific input"
+    assert out.stat().st_mtime_ns == before
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_execution_files_cannot_share_a_hardlinked_input_inode(tmp_path, nested):
+    source = tmp_path / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    destination = tmp_path / "out/provenance/logs/run.log"
+    destination.parent.mkdir(parents=True)
+    os.link(source, destination)
+    writer = destination.parents[2] if nested else destination
+    before = (source.stat().st_mtime_ns, source.read_bytes())
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([source], [("outputs", writer, True)])
+    assert (source.stat().st_mtime_ns, source.read_bytes()) == before
+
+
+def test_nested_output_directory_alias_cannot_reach_an_external_input_tree(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "publication").symlink_to(data, target_is_directory=True)
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([source], [("outputs", out, True)])
+    assert source.read_bytes() == b"fixed scientific input"
+
+
+@pytest.mark.parametrize("alias", ["file", "directory"])
+def test_declared_task_work_aliases_remain_readable_for_a_resume(tmp_path, alias):
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    out = tmp_path / "out"
+    work = out / "work"
+    work.mkdir(parents=True)
+    staged = work / "staged"
+    staged.symlink_to(source if alias == "file" else data, target_is_directory=alias == "directory")
+    input_safety.check_write_boundaries([data], [("outputs", out, True), ("work", work, False)])
+    assert source.read_bytes() == b"fixed scientific input"
+
+
+def test_directory_aliases_and_hardlinks_to_unconsumed_data_are_not_refused(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    unrelated = tmp_path / "other.fastq"
+    unrelated.write_bytes(b"other data")
+    out = tmp_path / "out"
+    out.mkdir()
+    os.link(unrelated, out / "other.fastq")
+    (out / "cycle").symlink_to(out, target_is_directory=True)
+    input_safety.check_write_boundaries([source], [("outputs", out, True)])
+
+
+def test_a_broad_staging_directory_does_not_disable_output_alias_checks(tmp_path):
+    source = tmp_path / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    out = tmp_path / "out"
+    out.mkdir()
+    os.link(source, out / "reads.fastq")
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([source], [
+            ("outputs", out, True), ("check staging directory", tmp_path, False)])
+
+
+def test_an_output_alias_into_an_external_cache_is_still_a_write_boundary(tmp_path):
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    source = cache / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "publication").symlink_to(cache, target_is_directory=True)
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([source], [
+            ("outputs", out, True), ("engine cache", cache, False)])
+
+
+def test_missing_logical_slots_are_protected_through_parent_aliases(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    route = tmp_path / "route"
+    route.symlink_to(tmp_path, target_is_directory=True)
+    (out / "data").symlink_to(data, target_is_directory=True)
+    supplied = route / "out/data/missing.fastq"
+    with pytest.raises(NfclawError, match="overlaps local dependency"):
+        input_safety.check_write_boundaries([supplied], [("outputs", out, True)])
+    assert not supplied.exists()
+
+
+def test_refusal_log_cannot_append_to_a_hardlinked_scientific_input(tmp_path):
+    source = tmp_path / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    log = tmp_path / "out/provenance/logs/run.log"
+    log.parent.mkdir(parents=True)
+    os.link(source, log)
+    runlog.record_unlaunched(log, command="nfclaw run fixture", outcome="refused", error="bad flag")
+    assert source.read_bytes() == b"fixed scientific input"
+    assert not (tmp_path / ".out.nfclaw.lock").exists()
 
 
 def test_check_staging_cannot_create_files_in_a_consumed_directory(tmp_path, monkeypatch):

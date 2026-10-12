@@ -118,13 +118,16 @@ def _space_issues(*, repo_root: Path, output_dir: Path, work_dir: Path | None,
     output path breaks many bioinformatics tools (they build shell commands without quoting
     their work paths) and Docker on macOS outright. A path either contains a space or it does
     not — there is no heuristic here. `--allow-spaces` is the explicit opt-out."""
-    if allow_spaces:
-        return []
     issues: list[str] = []
     for label, path in (("the repo path", repo_root),
                         ("the Nextflow work directory", work_dir),
                         ("--outdir", output_dir)):
-        if path is None or " " not in str(path):
+        if path is None:
+            continue
+        if "\n" in str(path) or "\r" in str(path):
+            issues.append(f"{label} contains a line break: {path!s} — Nextflow can put it into "
+                          "generated shell commands; use a safely named parent path")
+        if allow_spaces or " " not in str(path):
             continue
         fix = ("set the work directory off it with --nxf-env NXF_WORK=/a/space-free/dir"
                if "work" in label else "use a space-free path")

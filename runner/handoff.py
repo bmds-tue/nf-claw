@@ -289,6 +289,22 @@ def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Pa
     return result
 
 
+def recorded_input_inventory(outdir: Path, *, allow_legacy: bool = False) -> dict | None:
+    bundle = outdir / "provenance"
+    manifest = json.loads((bundle / "run_manifest.json").read_text())
+    if not isinstance(manifest, dict):
+        raise ValueError("invalid input manifest")
+    path = bundle / "inputs.inventory.json"
+    if allow_legacy and "dependency_inventory_version" not in manifest:
+        return provenance.read_input_inventory(path) if path.exists() else None
+    version = manifest.get("dependency_inventory_version")
+    flags = manifest.get("unverified_dependency_inventories", [])
+    if (type(version) is not int or version != 1 or not isinstance(flags, list)
+            or any(not isinstance(kind, str) for kind in flags) or "inputs" in flags):
+        raise ValueError("reference has no verified supported prelaunch input namespace")
+    return provenance.read_input_inventory(path)
+
+
 def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | None = None) -> dict:
     """Require historical namespace and byte agreement before handing over a directory."""
     internal = _under(path, upstream)
@@ -313,7 +329,7 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
     if internal is None:
         historical = provenance.read_checksums(upstream / "provenance/inputs.sha256", relative=False)
         expected = {name: digest for name, digest in historical.items() if Path(name).is_relative_to(path)}
-        nodes = provenance.read_input_inventory(upstream / "provenance/inputs.inventory.json")
+        nodes = recorded_input_inventory(upstream)
         expected_nodes = {name: entry for name, entry in nodes.items() if Path(name).is_relative_to(path)}
         current, current_nodes = provenance.snapshot_inputs([path])
         raw_nodes = current_nodes
@@ -444,7 +460,7 @@ def _write_sheet(dest: Path, header: list[str], rows: list[dict[str, str]]) -> P
 def _absolute(value: str, root: Path) -> str:
     """A samplesheet path made absolute against the upstream outdir: Nextflow would otherwise resolve
     a relative one against the downstream's launch directory (its own --outdir)."""
-    if "://" in value or Path(value).is_absolute():
+    if inputs.is_remote_url(value) or Path(value).is_absolute():
         return value
     return os.path.normpath(root / value)
 
@@ -588,7 +604,7 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
         raise _Unresolved(f"the {rule.upstream} run did not set "
                           f"{_flag(src.spec['upstream_param'])}")
     extra: dict[str, Any] = {}
-    if isinstance(value, str) and "://" not in value:
+    if isinstance(value, str) and not inputs.is_remote_url(value):
         target_param = schema_mod.load_param_schema(downstream_tree).params.get(target)
         if target_param is not None and target_param.fmt in ("file-path", "directory-path"):
             value = _absolute(value, upstream_outdir)
@@ -612,8 +628,9 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                     historical = provenance.read_checksums(
                         upstream_outdir / "provenance" / "inputs.sha256", relative=False)
                     digest = historical.get(str(path))
-                    nodes = provenance.read_input_inventory(
-                        upstream_outdir / "provenance/inputs.inventory.json")
+                    nodes = recorded_input_inventory(upstream_outdir, allow_legacy=True)
+                    legacy = nodes is None
+                    nodes = nodes or {}
                     expected_nodes = {str(path): nodes[str(path)]} if str(path) in nodes else {}
                     actual, current_nodes = provenance.snapshot_inputs([path])
                 except (OSError, ValueError) as exc:
@@ -621,14 +638,15 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                         ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: cannot verify local upstream reference {value}: {exc}",
                         fix=remedy) from exc
-                if (digest is None or actual != {str(path): digest} or current_nodes != expected_nodes
-                        or expected_nodes.get(str(path), {}).get("type") != "file"):
+                if (digest is None or actual != {str(path): digest} or (not legacy and (
+                        current_nodes != expected_nodes or expected_nodes.get(str(path), {}).get("type") != "file"))):
                     raise NfclawError(
                         ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: local upstream reference {value} has no historical input "
                         "hash or changed since the upstream launch.", fix=remedy)
                 extra["input_dependencies"] = {str(path): digest}
-                extra["input_inventory"] = expected_nodes
+                if not legacy:
+                    extra["input_inventory"] = expected_nodes
     rel = _under(Path(value), upstream_outdir) if isinstance(value, str) else None
     derived = [r for r in (recorded_in, rel) if r and (upstream_outdir / r).is_file()]
     derived += list(extra.get("output_dependencies", {}))
@@ -646,10 +664,9 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
     own `outputs.sha256` gives it: that is what links the two runs."""
     try:
         outputs = recorded_outputs(upstream_outdir)
-        historical_nodes = output_mod.read_inventory(
-            upstream_outdir / "provenance/outputs.inventory.json", outputs)
+        historical_nodes = output_mod.recorded_inventory(upstream_outdir, outputs)
         current_nodes = output_mod.snapshot(upstream_outdir)[1]
-        if historical_nodes != current_nodes:
+        if historical_nodes is not None and historical_nodes != current_nodes:
             raise ValueError("published output namespace changed since the upstream run; "
                              + output_mod.namespace_difference(historical_nodes, current_nodes))
     except (OSError, ValueError) as exc:

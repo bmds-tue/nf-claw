@@ -1,6 +1,7 @@
 # ruff: noqa: F811
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -528,3 +529,27 @@ def test_chain_lock_reports_environment_error_on_oserror(tmp_path, monkeypatch):
             pass
     assert exc.value.code == ErrorCode.ENVIRONMENT
     assert "could not be created or locked" in str(exc.value)
+
+
+def test_resuming_with_fixed_input_preserves_the_failed_attempt_handoff(
+        library, fake_runs, tmp_path):
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    fake_runs.failures["mini"] = [_boom()]
+    out = tmp_path / "chain"
+    with pytest.raises(NfclawError):
+        chain.run_chain(_spec(), repo_root=root, outdir=out)
+    previous_link = fake_runs.calls[-1]["chain_link"]["upstream"]
+    previous_record = Path(previous_link["handoff"])
+    original = previous_record.read_bytes()
+    previous_input = previous_record.parent / "input.csv"
+    original_input = previous_input.read_bytes()
+    explicit_input = tmp_path / "fixed.csv"
+    explicit_input.write_bytes(original_input)
+    fixed = _spec(stages=[{"pipeline": "mini_up", "input": "/data/ids.csv"},
+                          {"pipeline": "mini", "input": str(explicit_input),
+                           "params": {"aligner": "hisat2"}}])
+    chain.run_chain(fixed, repo_root=root, outdir=out, resume=True)
+    assert previous_record.read_bytes() == original
+    assert handoff.sha256_file(previous_record) == previous_link["handoff_sha256"]
+    assert previous_input.read_bytes() == original_input
+    assert fake_runs.calls[-1]["chain_link"]["upstream"]["handoff"] != str(previous_record)

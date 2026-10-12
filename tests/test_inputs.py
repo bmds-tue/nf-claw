@@ -173,6 +173,81 @@ def test_absolute_path_preserves_final_alias_and_kernel_parent_traversal(tmp_pat
                                 "resolved_path": str(target)}
 
 
+@pytest.mark.parametrize("separator", ["\n", "\r"])
+@pytest.mark.parametrize("alias", [False, True])
+def test_line_breaks_in_source_or_resolved_parent_cannot_enter_staging(tmp_path, separator, alias):
+    parent = tmp_path / f"parent{separator}next"
+    parent.mkdir()
+    source = parent / "reads.fastq"
+    source.write_bytes(b"fixed data")
+    if alias:
+        link = tmp_path / "safe.fastq"
+        link.symlink_to(source)
+        source = link
+    assert any("line break" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+
+
+def test_parent_traversal_route_matches_the_normalized_parameter_but_not_raw_table_field(tmp_path):
+    (tmp_path / "real/nested").mkdir(parents=True)
+    (tmp_path / "route").symlink_to("real/nested", target_is_directory=True)
+    (tmp_path / "real/reads.fastq").write_bytes(b"actual data")
+    (tmp_path / "reads.fastq").write_bytes(b"wrong decoy")
+    source = tmp_path / "route/../reads.fastq"
+    assert any("different data" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+    assert inputs.local_name_issues(str(source), "file-path", resolve_parent=True) == []
+    assert inputs.absolute_local_path(source).read_bytes() == b"actual data"
+
+
+@pytest.mark.parametrize("parent_kind", ["symlink", "missing"])
+def test_missing_filesystem_route_cannot_select_an_existing_lexical_decoy(tmp_path, parent_kind):
+    (tmp_path / "reads.fastq").write_bytes(b"wrong decoy")
+    if parent_kind == "symlink":
+        (tmp_path / "real/nested").mkdir(parents=True)
+        (tmp_path / "route").symlink_to("real/nested", target_is_directory=True)
+    source = tmp_path / "route/../reads.fastq"
+    assert not source.exists()
+    assert any("different data" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+
+
+@pytest.mark.parametrize("fmt", ["file-path", "file-path-pattern"])
+def test_parent_glob_matches_receive_staging_route_checks(tmp_path, fmt):
+    parent = tmp_path / "data\nnext"
+    parent.mkdir()
+    (parent / "reads.fastq").write_bytes(b"fixed data")
+    assert any("line break" in issue for issue in inputs.local_name_issues(str(tmp_path / "data*/reads.fastq"), fmt))
+
+
+def test_wildcard_parent_traversal_is_refused_before_parameter_resolution(tmp_path):
+    repo = _pipeline(tmp_path, {"type": "string", "format": "file-path-pattern"})
+    from runner.errors import NfclawError
+    with pytest.raises(NfclawError, match="wildcard"):
+        inputs.resolve(str(tmp_path / "data*/../reads.fastq"), repo)
+    assert any("wildcard" in issue for issue in inputs.local_name_issues(
+        str(tmp_path / "data*/../reads.fastq"), "file-path-pattern", resolve_parent=True))
+
+
+def test_colon_and_repeated_slashes_in_an_absolute_parent_are_local_dependencies(tmp_path):
+    from runner import provenance, samplesheet, schema
+    repo = _pipeline(tmp_path, SAREK)
+    data = tmp_path / "data:"
+    data.mkdir()
+    source = data / "reads.fastq"
+    source.write_bytes(b"fixed scientific input")
+    value = str(source).replace("data:/", "data://", 1)
+    assert not inputs.is_remote_url(value)
+    resolved = inputs.resolve(value, repo)
+    assert resolved.local_path == source and resolved.value == str(source)
+    (repo / "assets/schema_input.json").write_text(json.dumps({"items": {"properties": {
+        "sample": {"type": "string"}, "reads": {"type": "string", "format": "file-path"}}}}))
+    sheet = tmp_path / "samples.json"
+    sheet.write_text(json.dumps([{"sample": "S", "reads": value}]))
+    columns = schema.load_input_schema(repo)
+    assert samplesheet.validate(sheet, columns) == []
+    assert provenance.samplesheet_input_paths(sheet, columns) == [source]
+    for scheme in ("https", "s3", "ftp", "gs", "custom+protocol"):
+        assert inputs.is_remote_url(f"{scheme}://host/reads.fastq")
+
+
 def test_no_input_gives_none(tmp_path):
     assert inputs.resolve(None, _pipeline(tmp_path, SAREK)) is None
 

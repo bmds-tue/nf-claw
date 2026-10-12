@@ -13,6 +13,128 @@ import pytest
 from runner import chain, orchestration, resources, runlog, verify
 
 
+def _path_route_fixture(tmp_path):
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "assets").mkdir()
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True,
+                  "schema": "assets/schema_input.json"},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (upstream / "assets/schema_input.json").write_text(json.dumps({"items": {
+        "properties": {"sample": {"type": "string"},
+                       "reads": {"type": "string", "format": "file-path"}},
+        "required": ["sample", "reads"]}}))
+    (upstream / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    (upstream / "main.nf").write_text('''process DIGEST {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ output:
+ path 'digest.txt'
+ script:
+ """
+ shasum -a 256 ${data} > digest.txt
+ """
+}
+workflow {
+ def rows = new groovy.json.JsonSlurper().parseText(file(params.input).text)
+ DIGEST(Channel.fromPath(rows[0].reads))
+}
+''')
+    return root
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("mode", ["line_break", "symlink_traversal"])
+def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engine, mode):
+    from runner.errors import ErrorCode, NfclawError
+    root = _path_route_fixture(tmp_path)
+    payload = b"@R1\nACGT\n+\nIIII\n"
+    if mode == "line_break":
+        parent = tmp_path / "parent\npwd\nrest"
+        parent.mkdir()
+        source = parent / "reads.fastq"
+        source.write_bytes(payload)
+    else:
+        (tmp_path / "real/nested").mkdir(parents=True)
+        (tmp_path / "route").symlink_to("real/nested", target_is_directory=True)
+        (tmp_path / "real/reads.fastq").write_bytes(payload)
+        (tmp_path / "reads.fastq").write_bytes(b"wrong decoy")
+        source = tmp_path / "route/../reads.fastq"
+    sheet = tmp_path / "samples.json"
+    sheet.write_text(json.dumps([{"sample": "S", "reads": str(source)}]))
+    params = tmp_path / "raw_params.json"
+    params.write_text(json.dumps({"input": str(sheet), "outdir": str(tmp_path / "raw_outputs")}))
+    launch = tmp_path / "raw_launch"
+    launch.mkdir()
+    raw_work = tmp_path / "raw_work"
+    raw = subprocess.run(["nextflow", "run", str(root / "pipelines/fixture/upstream"),
+                          "-params-file", str(params), "-work-dir", str(raw_work), "-ansi-log", "false"],
+                         cwd=launch, env={**os.environ, "NXF_VER": engine},
+                         capture_output=True, text=True, timeout=90)
+    if mode == "line_break":
+        assert raw.returncode != 0
+        task = next(raw_work.glob("*/*/.command.run"))
+        # The source's newline became a real shell command, not just a display artifact.
+        assert b"\n    pwd\n" in task.read_bytes()
+        assert str(task.parent) in (task.parent / ".command.log").read_text()
+    else:
+        assert raw.returncode == 0, raw.stdout + raw.stderr
+        actual = (tmp_path / "raw_outputs/digest.txt").read_text()
+        assert actual == hashlib.sha256(b"wrong decoy").hexdigest() + "  reads.fastq\n"
+        assert source.read_bytes() == payload  # the checksum preflight would read different bytes
+    out = tmp_path / "refused"
+    with pytest.raises(NfclawError) as error:
+        orchestration.run_pipeline("fixture", repo_root=root, input_path=sheet, outdir=out, profile="",
+            params_file=None, cli_overrides={}, resume=False, demo=False, check_only=False,
+            write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    assert error.value.code == ErrorCode.SAMPLESHEET_INVALID
+    assert "line break" in str(error.value) if mode == "line_break" else "different data" in str(error.value)
+    assert not out.exists() and not (tmp_path / ".refused.nfclaw.lock").exists()
+    assert source.read_bytes() == payload
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("parent_kind", ["escaped", "colon_separator"])
+def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renaming(tmp_path, engine, parent_kind):
+    root = _path_route_fixture(tmp_path)
+    parent = tmp_path / ("parentwith\\slash\u2028separator" if parent_kind == "escaped" else "parent:")
+    (parent / "real/nested").mkdir(parents=True)
+    (parent / "route").symlink_to("real/nested", target_is_directory=True)
+    target = parent / "real/stored.data"
+    payload = b"@R1\nACGT\n+\nIIII\n"
+    target.write_bytes(payload)
+    (parent / "real/reads.fastq").symlink_to("stored.data")
+    (parent / "reads.fastq").write_bytes(b"wrong decoy")
+    source = parent / "real/nested/../reads.fastq"
+    sheet = tmp_path / "samples.json"
+    value = str(source) if parent_kind == "escaped" else str(source).replace("parent:/", "parent://", 1)
+    sheet.write_text(json.dumps([{"sample": "S", "reads": value}]))
+    out = tmp_path / "original"
+    orchestration.run_pipeline("fixture", repo_root=root, input_path=sheet, outdir=out, profile="",
+        params_file=None, cli_overrides={}, resume=False, demo=False, check_only=False,
+        write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    expected = hashlib.sha256(payload).hexdigest() + "  reads.fastq\n"
+    assert (out / "digest.txt").read_text() == expected
+    moved = tmp_path / "moved"
+    out.rename(moved)
+    replay = subprocess.run(["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "replay")],
+                            capture_output=True, text=True, timeout=90)
+    assert replay.returncode == 0, replay.stdout + replay.stderr
+    assert (tmp_path / "replay/digest.txt").read_text() == expected
+    assert verify.compare(moved, tmp_path / "replay").byte_identical
+    target.write_bytes(b"changed scientific input")
+    refused = subprocess.run(["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "refused")],
+                             capture_output=True, text=True, timeout=15)
+    assert refused.returncode != 0 and "content changed" in refused.stderr
+    assert not (tmp_path / "refused/.nextflow").exists()
+
+
 @pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
@@ -625,6 +747,52 @@ workflow { READ(file(params.input)) }
     unchanged = run(True)                                       # nothing changed since: reuse
     assert "-resume" in unchanged.command
     assert (out / "value.txt").read_text() == "BBBB\n"
+
+
+@pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
+@pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
+@pytest.mark.parametrize('write_provenance', [True, False])
+def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
+        tmp_path, engine, write_provenance):
+    import shlex
+
+    root = _path_route_fixture(tmp_path)
+    counter = tmp_path / 'executions.txt'
+    script = root / 'pipelines/fixture/upstream/main.nf'
+    script.write_text(script.read_text().replace('shasum -a 256 ${data} > digest.txt',
+        f'echo executed >> {shlex.quote(str(counter))}\n shasum -a 256 ${{data}} > digest.txt'))
+    source = tmp_path / 'reads.fastq'
+    original = b'@R1\nACGT\n+\nIIII\n'
+    modified = b'@R1\nTGCA\n+\nIIII\n'
+    source.write_bytes(original)
+    sheet = tmp_path / 'samples.json'
+    sheet.write_text(json.dumps([{'sample': 'S1', 'reads': str(source)}]))
+    outdir = tmp_path / 'results'
+
+    def run(resume):
+        return orchestration.run_pipeline('fixture', repo_root=root, input_path=sheet,
+            outdir=outdir, profile='standard', params_file=None, cli_overrides={},
+            resume=resume, demo=False, check_only=False, write_provenance=write_provenance,
+            timeout_seconds=90, nxf_ver=engine)
+
+    run(False)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(original).hexdigest()
+    assert len(counter.read_text().splitlines()) == 1
+    stamp = source.stat()
+    source.write_bytes(modified)
+    os.utime(source, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    assert source.stat().st_size == stamp.st_size
+    assert source.stat().st_mtime_ns == stamp.st_mtime_ns
+    changed = run(True)
+    assert '-resume' not in changed.command
+    reason = 'local input file changed' if write_provenance else 'inventory is unavailable'
+    assert any(reason in warning for warning in changed.warnings)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
+    assert len(counter.read_text().splitlines()) == 2
+    unchanged = run(True)
+    assert ('-resume' in unchanged.command) is write_provenance
+    assert len(counter.read_text().splitlines()) == (2 if write_provenance else 3)
+    assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
 
 
 @pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")

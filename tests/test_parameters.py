@@ -30,7 +30,7 @@ def test_validate_params_boolean_enum_uses_json_literals(tmp_path):
     (tmp_path / "nextflow_schema.json").write_text(json.dumps(
         {"definitions": {"g": {"properties": {"flag": {"type": "boolean", "enum": [False]}}}}}))
     ps = schema.load_param_schema(tmp_path)
-    assert parameters.validate_params({"flag": "false"}, ps) == []   # CLI string, schema-literal → ok
+    assert parameters.validate_params(parameters.coerce_to_schema({"flag": "false"}, ps), ps) == []
     assert parameters.validate_params({"flag": False}, ps) == []     # native bool from a params-file → ok
     assert parameters.validate_params({"flag": "False"}, ps)         # Python casing → rejected
     assert parameters.validate_params({"flag": "true"}, ps)          # not in enum → rejected
@@ -328,6 +328,27 @@ def test_path_resolution_cannot_reintroduce_unsafe_symlink_target_name(tmp_path)
     alias = tmp_path / "safe.fa"
     alias.symlink_to(target)
     assert parameters.validate_params({"fasta": str(alias)}, schema.load_param_schema(tmp_path))
+
+
+def test_finite_number_validation_does_not_expand_shared_yaml_value_graphs():
+    visits = []
+    class SharedList(list):
+        def __iter__(self):
+            visits.append(id(self))
+            assert len(visits) <= 20, "Validation re-expanded shared values"
+            return super().__iter__()
+    value = SharedList([1.0])
+    for _ in range(12):
+        value = SharedList([value, value, value, value])
+    assert parameters._finite(value)
+    assert len(visits) == 13
+
+
+def test_finite_number_validation_handles_deep_values_and_finds_nonfinite_leaves():
+    value = float("inf")
+    for _ in range(2000):
+        value = [value]
+    assert not parameters._finite(value)
 
 
 def test_path_resolution_keeps_alias_format_and_checks_both_names(tmp_path):
