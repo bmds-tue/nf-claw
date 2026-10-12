@@ -13,9 +13,10 @@
 # it could not finish the preview, so it is never accepted for auto-merge.
 #
 # A failure caused by an unreachable remote file (staging, or nf-schema's existence check on a
-# URL) or by a failed plugin download is retried once: hosted test data and plugin releases are
-# occasionally unreachable for a few seconds, and a second identical failure is reported as before
-# (a plugin that still cannot be downloaded is a rejection).
+# URL) or by a failed plugin download is retried twice, after 30 seconds and then 5 minutes:
+# hosted test data and plugin releases are occasionally unreachable (GitHub answered 503 for a
+# test-data page for over ten minutes), and a third identical failure is reported as before (a
+# plugin that still cannot be downloaded is a rejection).
 #
 # Documented upstream defects of an exact pinned commit are listed in
 # scripts/nextflow_accept_exceptions.tsv (pipeline, commit, expected outcome, evidence pattern,
@@ -31,7 +32,8 @@
 #   NFCLAW_KEEP_SUBMODULES  if "1", do not deinit submodules after checking
 #   NFCLAW_LOG_DIR         if set, retain console and engine logs per pipeline
 #   NFCLAW_ACCEPT_EXCEPTIONS  the exceptions file (default: beside this script)
-#   NFCLAW_ACCEPT_RETRY_DELAY seconds to wait before retrying an unreachable remote file (30)
+#   NFCLAW_ACCEPT_RETRY_DELAY seconds before the first retry of an unreachable remote file (30);
+#                           the second retry waits ten times as long
 #
 # Exits non-zero unless every pipeline completed its preview successfully or matched its
 # documented exception exactly.
@@ -157,7 +159,7 @@ for name in "${names[@]}"; do
     NXF_VER="$ver" _run_with_timeout "$budget" nextflow -log "$engine_log" run "$up" -profile test,docker \
       -c "$cfg" --outdir "$out" -work-dir "$work" -preview > "$log" 2>&1 && rc=0 || rc=$?
     transient=""
-    if [ "$rc" != 0 ] && [ "$attempt" = 1 ]; then
+    if [ "$rc" != 0 ] && [ "$attempt" -lt 3 ]; then
       if _remote_failure "$log"; then
         transient="a remote file was unreachable"
       elif _plugin_download_failure "$log"; then
@@ -166,9 +168,10 @@ for name in "${names[@]}"; do
     fi
     if [ -n "$transient" ]; then
       cat "$log"
-      echo "::warning::$name: $transient (exit $rc); retrying the preview once"
-      attempt=2
-      sleep "${NFCLAW_ACCEPT_RETRY_DELAY:-30}"
+      delay=$(( ${NFCLAW_ACCEPT_RETRY_DELAY:-30} * (attempt == 1 ? 1 : 10) ))
+      echo "::warning::$name: $transient (exit $rc); retrying the preview in ${delay}s (attempt $((attempt + 1)) of 3)"
+      attempt=$((attempt + 1))
+      sleep "$delay"
       continue
     fi
     break
