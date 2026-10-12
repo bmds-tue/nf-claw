@@ -195,16 +195,29 @@ def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_pa
 
     fastqrepair_compat.write_config(tmp_path / "compat.config")
     (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\nparams.outdir = 'wrong'\n")
+    report = (fastqrepair_compat._zero_report().replace("Total lines: 0", "Total lines: 12")
+              .replace("Well-formed lines: 0 (0.0%)", "Well-formed lines: 12 (100.0%)")
+              .replace("Clean reads: 0", "Clean reads: 3"))
+    (tmp_path / "chunk.report").write_text(report)
+    # The pinned recipe's shape: the recorded hook replaces its report gatherer before it runs.
     (tmp_path / "main.nf").write_text('''process WIPERTOOLS_REPORTGATHER {
  input:
  val meta
  output:
- path '*.report'
+ path "${meta.id}.report"
  path 'versions.yml'
  script:
  """
- echo 'Clean reads: 3' > ${meta.id}.report
- echo 'tool: original' > versions.yml
+ cp ''' + str(tmp_path / "chunk.report") + ''' chunk.txt
+ wipertools \\\\
+     reportgather \\\\
+     -r chunk.txt \\\\
+     -f ${meta.id}.report
+
+ cat <<-END_VERSIONS > versions.yml
+ "${task.process}":
+     wipertools reportgather: \\$(wipertools reportgather --version)
+ END_VERSIONS
  """
 }
 workflow {
@@ -219,7 +232,7 @@ workflow {
     assert result.returncode == 0, result.stdout + result.stderr
     published = tmp_path / "results/repaired/reports/paired_probe"
     assert sorted(path.name for path in published.iterdir()) == ["left.report", "right.report"]
-    assert all(path.is_symlink() and path.read_text() == "Clean reads: 3\n" for path in published.iterdir())
+    assert all(path.is_symlink() and path.read_text() == report for path in published.iterdir())
     assert not (tmp_path / "wrong").exists()
 
 
