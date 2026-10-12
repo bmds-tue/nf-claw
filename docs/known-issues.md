@@ -247,6 +247,16 @@ explicit directory are not staged names and retain their separate path contract.
 Remote file contents, remote glob matches and values supplied only by configs/profiles
 are outside this explicit-value preflight.
 
+### A valid input symlink lost its filename and format suffix
+- **Status: Fixed.** Resolving a whole input path replaced `sheet.csv` with its target
+  `stored.data`. The CSV parameter constraint then rejected it; format-dependent
+  samplesheet parsing and filename-derived identities could also use the target name.
+  Local path parameters now resolve their parent directory while retaining the supplied
+  basename. Alias and target safety checks still apply. Replay records and checks the
+  alias identity, even when a retargeted link has identical bytes. Reference handoffs
+  preserve the alias too; chain status can still verify older bundles that explicitly
+  recorded the resolved target as their consumed parameter.
+
 ---
 
 ## Warnings a run prints that are not faults
