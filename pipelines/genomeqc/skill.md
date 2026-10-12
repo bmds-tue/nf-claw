@@ -43,6 +43,8 @@ assembly
 
 Any of the optional columns above may be appended to the header when your data needs them: `ncbi`, `fasta`, `gff`, `fastq`, `taxid`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `assembly` from file names; `fastq` from FastQ files (single-end); `fasta`, `gff` from files matching their patterns, by sample name. Set other columns with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

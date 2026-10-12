@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    resources, runlog, verify, versions)
+                    resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -70,13 +70,25 @@ def _collect_overrides(extras: list[str]) -> dict:
             name = tok.split("=", 1)[0]
             hint = (f" Nextflow's `{name}` is `{nextflow[name]}` for nfclaw." if name in nextflow
                     else " nfclaw sets Nextflow's own single-dash options itself."
-                    if tok.startswith("-") and not tok.startswith("--") else "")
+                    if tok.startswith("-") and not tok.startswith("--")
+                    # What an unquoted glob expands to: several data files after one --input.
+                    else " For several --input data files, quote the glob (--input "
+                         "'/data/*.fastq.gz'), pass their directory, or repeat --input."
+                    if _existing_path(tok) else "")
             raise NfclawError(
                 ErrorCode.PARAMS_INVALID,
                 f"unexpected extra argument: {tok!r}",
                 fix="Pipeline parameters must be passed as --param value or --param=value." + hint,
             )
     return out
+
+
+def _existing_path(token: str) -> bool:
+    """Whether a stray token names an existing file (what an unquoted glob expands to)."""
+    try:
+        return Path(token).expanduser().exists()
+    except (OSError, RuntimeError, ValueError):            # ~unknownuser, an over-long name
+        return False
 
 
 def _stop_words(exc: BaseException) -> str:
@@ -254,7 +266,18 @@ def _main(argv: list[str] | None = None) -> int:
     # reach Nextflow. Full flag names and single-dash `-profile` are unaffected.
     p_run = sub.add_parser("run", allow_abbrev=False)
     p_run.add_argument("name")
-    p_run.add_argument("--input")
+    # One value as before (a samplesheet, a directory, an accession, `false`), or — repeated — the
+    # data files nfclaw generates the samplesheet from. Repeated rather than multi-valued: a value
+    # list would swallow a pipeline name written after it (`run --input s.csv rnaseq`).
+    p_run.add_argument("--input", action="append",
+                       help="a samplesheet; or the data files themselves — a directory, a quoted "
+                            "glob, or a file (repeat --input for several) — to generate the "
+                            "samplesheet from")
+    p_run.add_argument("--sheet-set", dest="sheet_set", action="append", default=[],
+                       metavar="COLUMN=VALUE",
+                       help="a column of the samplesheet nfclaw generates from --input data files "
+                            "(repeatable): a constant, or a template using {sample}/{lane}; an "
+                            "empty VALUE leaves the column empty")
     p_run.add_argument("--outdir", required=True)
     p_run.add_argument("-profile", "--profile", dest="profile", default="docker")
     p_run.add_argument("--params-file", dest="params_file")
@@ -408,10 +431,17 @@ def _main(argv: list[str] | None = None) -> int:
             # `kill` (SIGTERM) or a closing terminal (SIGHUP) stop the run the way Ctrl-C does —
             # Nextflow shut down, the run log closed with the outcome — instead of killing nfclaw on
             # the spot and leaving Nextflow running orphaned.
+            if not args.input:
+                raw_input = None
+            elif len(args.input) == 1:
+                raw_input = args.input[0] or None
+            else:
+                raw_input = list(args.input)
+            sheet_set = sheetgen.parse_assignments(args.sheet_set)
             with execution.stop_on_signals():
                 res = orchestration.run_pipeline(
                     args.name, repo_root=root,
-                    input_path=args.input or None,         # interpreted against the pipeline schema
+                    input_path=raw_input,                  # interpreted against the pipeline schema
                     outdir=Path(args.outdir).expanduser().resolve(),
                     profile=args.profile,
                     params_file=Path(args.params_file) if args.params_file else None,
@@ -422,7 +452,7 @@ def _main(argv: list[str] | None = None) -> int:
                     nxf_ver=args.nxf_ver, nxf_env=_parse_nxf_env(args.nxf_env),
                     allow_spaces=args.allow_spaces, configs=args.config,
                     limits=resources.parse(args.limit_cpus, args.limit_memory, args.limit_time),
-                    on_warning=warn)
+                    on_warning=warn, sheet_set=sheet_set)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             if not exc.details.get("active_run") and not exc.details.get("unsafe_write_boundary"):
@@ -437,6 +467,8 @@ def _main(argv: list[str] | None = None) -> int:
             if w not in shown:
                 warn(w)
         print(nextflow_command.shell_line(res.command, res.env))
+        if res.generated_samplesheet is not None:
+            print(f"samplesheet: {res.generated_samplesheet} (generated from --input)")
         rep = res.outputs_report
         if rep is not None:                                   # real run — surface where results landed
             print(f"outputs: {len(rep.files)} files in {res.outdir}")

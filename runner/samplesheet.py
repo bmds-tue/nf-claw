@@ -225,40 +225,45 @@ def header_issues(columns: Iterable[str], input_schema: InputSchema) -> list[str
 
 
 def _value_issues(row_num: int, col, value: str) -> list[str]:
+    return [f"row {row_num}: '{col.name}' {problem}" for problem in value_problems(col, value)]
+
+
+def value_problems(col, value: str) -> list[str]:
+    """Why `value` cannot fill column `col` (enum, scalar type, pattern, length and bounds), each
+    phrased to follow the column's name. Shared with samplesheet generation's --sheet-set check."""
     issues: list[str] = []
-    prefix = f"row {row_num}: '{col.name}'"
     if col.enum and value not in col.enum:
-        issues.append(f"{prefix} value {value!r} must be one of: {', '.join(col.enum)}")
+        issues.append(f"value {value!r} must be one of: {', '.join(col.enum)}")
     numeric: int | float | None = None
     if col.type == "integer":
         try:
             numeric = int(value)
         except ValueError:
-            issues.append(f"{prefix} expects an integer, got {value!r}")
+            issues.append(f"expects an integer, got {value!r}")
     elif col.type == "number":
         try:
             numeric = float(value)
             if not math.isfinite(numeric):
-                issues.append(f"{prefix} expects a finite number, got {value!r}")
+                issues.append(f"expects a finite number, got {value!r}")
                 numeric = None
         except ValueError:
-            issues.append(f"{prefix} expects a number, got {value!r}")
+            issues.append(f"expects a number, got {value!r}")
     if col.pattern:
         try:
             matches = re.search(col.pattern, value) is not None
         except re.error:
             matches = True
         if not matches:
-            issues.append(f"{prefix} value {value!r} must match {col.pattern}")
+            issues.append(f"value {value!r} must match {col.pattern}")
     if col.min_length is not None and len(value) < col.min_length:
-        issues.append(f"{prefix} length must be >= {col.min_length}")
+        issues.append(f"length must be >= {col.min_length}")
     if col.max_length is not None and len(value) > col.max_length:
-        issues.append(f"{prefix} length must be <= {col.max_length}")
+        issues.append(f"length must be <= {col.max_length}")
     if numeric is not None:
         if col.minimum is not None and numeric < col.minimum:
-            issues.append(f"{prefix} must be >= {col.minimum}")
+            issues.append(f"must be >= {col.minimum}")
         if col.maximum is not None and numeric > col.maximum:
-            issues.append(f"{prefix} must be <= {col.maximum}")
+            issues.append(f"must be <= {col.maximum}")
     return issues
 
 

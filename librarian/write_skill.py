@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-from runner import engine_version, fastqrepair_compat, handoff, inputs, versions
+from runner import engine_version, fastqrepair_compat, handoff, inputs, sheetgen, versions
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -323,6 +323,16 @@ def _outputs_section(name: str, st: SubmoduleStatus, ref: str | None = None,
 
 
 def _inputs_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> str:
+    """The samplesheet (or other input) a run takes and, when nfclaw can write that samplesheet
+    from the data files themselves, what it fills and what the caller must set (runner.sheetgen —
+    the same decision `nfclaw run` takes, so the docs and the run cannot disagree)."""
+    text = _sheet_section(insch, ps)
+    generated = (sheetgen.describe(insch, ps.params.get("input") if ps else None)
+                 if insch is not None else "")
+    return text + (f"\n{generated}" if generated else "")
+
+
+def _sheet_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> str:
     if insch is None:
         inp = ps.params.get("input") if ps else None
         if inp is None or not inp.description.strip():
