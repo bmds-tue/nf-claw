@@ -793,3 +793,18 @@ def test_a_malformed_sheet_column_is_refused_before_anything_runs(tmp_path, monk
                      "--sheet-set", "strandedness"]) == 1
     assert "--sheet-set expects COLUMN=VALUE" in capsys.readouterr().err
     assert not (tmp_path / "out").exists()
+
+
+def test_several_input_values_end_at_the_next_option(tmp_path, monkeypatch):
+    from runner import orchestration
+    captured = {}
+    monkeypatch.setattr(orchestration, "run_pipeline",
+                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
+                            "CMD", Path("/o"), True, None))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--input", "a.fq.gz", "b.fq.gz", "-profile", "singularity",
+                     "--outdir", str(tmp_path / "out"), "--skip-qc", "true"]) == 0
+    assert captured["input_path"] == ["a.fq.gz", "b.fq.gz"]
+    assert captured["profile"] == "singularity" and captured["cli_overrides"] == {"skip_qc": "true"}
+    assert cli.main(["run", "x", "--input=sheet.csv", "--outdir", str(tmp_path / "out")]) == 0
+    assert captured["input_path"] == "sheet.csv"
