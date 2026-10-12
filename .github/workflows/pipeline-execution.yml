@@ -91,13 +91,24 @@ jobs:
           if manifest["nextflow"] != f"nextflow version {os.environ['NXF_VER']}":
               raise SystemExit(f"Executed engine identity was not recorded correctly: {manifest['nextflow']!r}")
           PY
+      # upload-artifact refuses file names with characters such as ':' (ampliseq publishes
+      # `ASV-badpairwise10::a.volcano_plot.svg`), which failed a successful run; tarballs keep
+      # every published name, hidden file and task command exactly.
+      - name: Package execution evidence
+        if: always()
+        run: |
+          evidence="$RUNNER_TEMP/evidence"
+          mkdir -p "$evidence"
+          if [ -d "$RUNNER_TEMP/analysis" ]; then
+            tar -czf "$evidence/analysis.tar.gz" -C "$RUNNER_TEMP" analysis
+          fi
+          if [ -d work ]; then
+            find work -name '.command.*' -print0 | tar --null -czf "$evidence/task-commands.tar.gz" -T -
+          fi
       - name: Retain execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-pipeline-evidence
-          path: |
-            ${{ runner.temp }}/analysis
-            work/**/.command.*
-          include-hidden-files: true
+          path: ${{ runner.temp }}/evidence
           retention-days: 14
