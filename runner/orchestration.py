@@ -69,6 +69,8 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
     way to add a namespace or content fingerprint to every directory consumer's task hash.
     Unchanged directories retain normal cache reuse. `current_digests` holds the SHA-256 of every
     file beneath an input directory, compared with the previous launch's recorded snapshot.
+    A changed set of local input files also needs a new session in a fresh --outdir: resuming
+    after a sample was removed would leave its earlier publications beside the new results.
     """
     current_nodes = _directory_nodes(current)
     try:
@@ -90,10 +92,14 @@ def _directory_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             reason = "the input-directory inventory changed"
         elif any(previous_digests.get(name) != digest for name, digest in current_digests.items()):
             reason = "the content of a file inside an input directory changed"
+        elif current != previous:
+            # A changed selection of input files (a sample removed, added or replaced) would mix
+            # fresh publications with an earlier selection's: a removed sample's results remain.
+            reason = "the local-input inventory changed"
         else:
             return None
     return (f"--resume starts a fresh Nextflow cache session because {reason}. "
-            "Directory metadata alone cannot establish unchanged task inputs; all tasks will "
+            "File and directory metadata alone cannot establish unchanged task inputs; all tasks will "
             "be recomputed to prevent stale results. An existing output directory will be "
             "preserved in a sibling archive before launching.")
 
