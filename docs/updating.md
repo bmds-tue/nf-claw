@@ -42,6 +42,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
 3. **Context Regeneration:** Invokes `librarian/write_skill.py` and `librarian/write_catalog.py` to regenerate all parameter tables, input schemas, tool lists, and catalog manifests.
 4. **Comprehensive In-Job Validation:**
    - Runs `scripts/nextflow_accept.sh` (`nextflow -preview`) to verify pipeline compilation, profile resolution, and parameter validation.
+   - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the nightly preview workflow green, but cannot authorize an automated release merge.
    - Executes the complete pytest suite.
    - Runs the drift gate (`python3 -m librarian.check_drift`).
 5. **Automated Merging:** Only when all validation checks pass with exit code 0 is the PR automatically squash-merged into `main`, which dispatches `deploy-pages.yml` to refresh the live site.
@@ -61,6 +62,10 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
      ```
    - Remotes are deterministically constructed as `https://github.com/nf-core/<validated-name>.git`. Mutable catalog metadata cannot redirect automation to external repositories.
 3. **Scaffolding:** Adds the submodule, pins its newest release tag, and generates initial context files.
+   - Discovery shares the runner's submodule writer lock and checks ownership before mutation. Existing pipeline entries, Git index entries, registrations and cached object stores are preserved, including caches in linked worktrees. Reinitializing an existing pipeline is a separate `git submodule update --init pipelines/<name>/upstream` operation.
+   - Git commands cannot wait for credential prompts. Clone and tag-fetch operations have a 300-second bound; other discovery Git commands have a 60-second bound. Timeout and handled interruption stop the command's process group before failure cleanup.
+   - A failed owned addition restores the original `.gitmodules` working bytes and permission bits, its staged blob and its assume-unchanged, skip-worktree and intent-to-add state. Unmerged or nonregular metadata is refused before adding a pipeline. Cleanup removes only the newly reserved pipeline entry and its new cache; explicit `--rollback NAME` remains a request to remove that pipeline.
+   - Partial addition failures return a nonzero status after attempting the remaining candidates, so incomplete discovery cannot reach the batch auto-merge gate.
 4. **Strict Acceptance Gate:** Evaluates each candidate via `scripts/nextflow_accept.sh`.
    - Nextflow must compile, resolve configurations, and validate schema with **strict exit code 0**.
    - A recognized remote-input staging failure is labelled `staging-unverified`; other failures
