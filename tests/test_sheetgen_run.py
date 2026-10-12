@@ -57,8 +57,7 @@ def test_check_generates_stages_and_names_the_sheet(tmp_path, run):
     params = json.loads(Path(_arg(res.command, "-params-file")).read_text())
     assert params["input"] == str(sheet) and sheet.parent == Path(_arg(res.command, "-params-file")).parent
     assert not (tmp_path / "results").exists()
-    assert any(w.startswith("Generated the pipe samplesheet") for w in said)
-    assert any(str(sheet) in w for w in said)
+    assert [w for w in said if w.startswith("Generated the pipe samplesheet")]
 
 
 def test_real_run_records_the_sheet_as_a_config_and_its_files_as_inputs(tmp_path, run):

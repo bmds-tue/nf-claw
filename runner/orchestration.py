@@ -335,7 +335,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     warnings += [limit_note] if limit_note else []
     if generated is not None:
         # What the generated samplesheet holds and where it is, before the run starts (a --check
-        # stages it in a temp directory, named once it exists, below).
+        # stages it in a temp directory: the result and the printed command name it).
         warnings.append(generated.summary + ("" if check_only else
                                              f" It is staged as {resolved_input.value}."))
         warnings += generated.notes
@@ -478,12 +478,6 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # The bytes validated above, staged beside the params file that names them.
         sheet_path = sheetgen.write(generated, staging)
         resolved["input"] = str(sheet_path)
-        if check_only:
-            note = (f"The generated samplesheet is staged as {sheet_path} (the --input of the "
-                    "command below).")
-            warnings.append(note)
-            if on_warning is not None:
-                on_warning(note)
     params_file_out = parameters.write_params_file(resolved, staging / "params.json")
 
     # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
