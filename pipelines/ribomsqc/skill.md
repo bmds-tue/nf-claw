@@ -37,7 +37,7 @@ The samplesheet is a CSV with this header (the columns the schema requires); fil
 id,raw_file
 ```
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `id` from file names; `raw_file` from files matching their patterns, by sample name. Set other columns with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `id` from file names; `raw_file` from files matching their patterns, by sample name. Set other columns with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |

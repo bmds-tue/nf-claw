@@ -42,7 +42,7 @@ sample,seq_type
 
 Any of the optional columns above may be appended to the header when your data needs them: `fastq_1`, `fastq_2`, `bam`.
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2` or `_1`/`_2` and confirmed by read name); `bam` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `seq_type` (one of dna, rna). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates); `bam` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `seq_type` (one of dna, rna). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |

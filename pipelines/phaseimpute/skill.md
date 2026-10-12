@@ -41,7 +41,7 @@ sample,file,index
 
 Any of the optional columns above may be appended to the header when your data needs them: `tools`.
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `sample` from file names; `index` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `file` (matching ^\S+\.(bam|cram)|((vcf|bcf)(\.gz))?$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `index` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `file` (matching ^\S+\.(bam|cram)|((vcf|bcf)(\.gz))?$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |

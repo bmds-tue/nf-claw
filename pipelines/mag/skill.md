@@ -50,7 +50,7 @@ sample,group
 
 Any of the optional columns above may be appended to the header when your data needs them: `run`, `short_reads_1`, `short_reads_2`, `short_reads_platform`, `long_reads`, `long_reads_platform`.
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet once you choose the read columns: the samplesheet takes reads in several column groups (short_reads_1 + short_reads_2; long_reads) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set long_reads=. Set the required columns no file determines with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet once you choose the read columns: the samplesheet takes reads in several column groups (short_reads_1 + short_reads_2; long_reads) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set long_reads=. Set the required columns no file determines with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
