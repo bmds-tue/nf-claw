@@ -326,7 +326,7 @@ def main() -> None:
     gather.add_argument("-f", "--final_report", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "version":
-        print("nfclaw-record-scatter-sha256:" + recipe_digest())
+        print("nfclaw-fastqrepair-compat-sha256:" + recipe_digest())
     elif args.command == "patch":
         patch_task(args.kind, args.script)
     elif args.command == "scatter":

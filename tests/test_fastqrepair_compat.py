@@ -285,4 +285,4 @@ def test_report_gathering_runs_from_the_recorded_recipe(tmp_path):
     result = subprocess.run(["bash", str(script)], cwd=tmp_path, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "of which 24 fixed" in (tmp_path / "sample.report").read_text()
-    assert f"nfclaw_record_reportgather: nfclaw-record-scatter-sha256:{compat.recipe_digest()}" in result.stdout
+    assert f"nfclaw_record_reportgather: nfclaw-fastqrepair-compat-sha256:{compat.recipe_digest()}" in result.stdout
