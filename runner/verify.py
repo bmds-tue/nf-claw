@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -19,6 +21,9 @@ class Comparison:
     extra_directories: list[str] = field(default_factory=list)
     changed_links: list[str] = field(default_factory=list)
     unverified_structure: bool = False
+    # "original -> replay" pairs whose paths differ only by an nf-core launch timestamp; each is
+    # also listed under identical or changed by its bytes.
+    renamed: list[str] = field(default_factory=list)
 
     @property
     def structurally_equal(self) -> bool:
@@ -66,6 +71,32 @@ def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, di
             fix="Make every file of both runs readable, then retry.") from exc
 
 
+# The run-metadata files the nf-core template names from the clock at launch: `params_<time>.json`
+# (written with an inline `new Date()` that no parameter pins) and the execution report, timeline,
+# trace and DAG of releases that predate `trace_report_suffix`. Only these exact names are paired;
+# any other dated file — possibly a scientific result — keeps its exact path in the comparison.
+_LAUNCH_STAMPED = re.compile(
+    r"^pipeline_info/(params|execution_report|execution_timeline|execution_trace|pipeline_dag)_"
+    r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.(json|html|txt|svg|dot|mmd|pdf|png)$")
+
+
+def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, str]]:
+    """(original, replay) launch-stamped run-metadata files, paired one to one.
+
+    Only an unambiguous pair is matched: when several files share a stamped name on either side
+    (an earlier attempt's report beside a resumed one), none of them is paired by guess."""
+    def keys(paths):
+        groups = defaultdict(list)
+        for path in paths:
+            if m := _LAUNCH_STAMPED.match(path):
+                groups[(m.group(1), m.group(3))].append(path)
+        return groups
+
+    before, after = keys(missing), keys(extra)
+    return sorted((before[key][0], after[key][0]) for key in before.keys() & after.keys()
+                  if len(before[key]) == 1 and len(after[key]) == 1)
+
+
 def compare(original: Path, replay: Path) -> Comparison:
     """Compare a replay's outputs against the run it reproduces, by path.
 
@@ -91,9 +122,22 @@ def compare(original: Path, replay: Path) -> Comparison:
     # classification, never silently equated with an identical directory structure.
     for path in sorted(before.keys() & after.keys()):
         (identical if after.pop(path) == before.pop(path) else changed).append(path)
+    # A file named by the clock at launch is the same logical result under a new name: pair it
+    # explicitly and compare its bytes, rather than reporting a faithful replay as missing a file.
+    renamed = []
+    for old_path, new_path in _launch_time_pairs(sorted(before), sorted(after)):
+        label = f"{old_path} -> {new_path}"
+        (identical if before.pop(old_path) == after.pop(new_path) else changed).append(label)
+        renamed.append(label)
+        if original_inventory is not None and any(
+                original_inventory.get(old_path, {}).get(key)
+                != replay_inventory.get(new_path, {}).get(key)
+                for key in ("link_target", "resolved_path")):
+            changed_links.append(label)
     return Comparison(
-        identical=identical,
-        changed=changed,
+        renamed=renamed,
+        identical=sorted(identical),
+        changed=sorted(changed),
         missing=sorted(before),
         extra=sorted(after),
         missing_directories=sorted(before_dirs - after_dirs),
@@ -109,6 +153,7 @@ def report(cmp: Comparison) -> str:
         f"changed   : {len(cmp.changed)}   (same file, different bytes)",
         f"missing   : {len(cmp.missing)}   (in the original, not in the replay)",
         f"extra     : {len(cmp.extra)}   (in the replay, not in the original)",
+        f"renamed   : {len(cmp.renamed)}   (nf-core run metadata named by its launch time)",
         f"missing directories : {len(cmp.missing_directories)}",
         f"extra directories   : {len(cmp.extra_directories)}",
         f"changed links       : {len(cmp.changed_links)}   (target identities differ)",
@@ -120,6 +165,10 @@ def report(cmp: Comparison) -> str:
                      "Start a fresh run to record its complete output namespace.")
     elif cmp.structurally_equal:
         lines.append("The replay produced the same set of files and directories as the original run.")
+        if cmp.renamed:
+            lines.append(f"{len(cmp.renamed)} nf-core run-metadata file(s) are named by their launch "
+                         "time; each is paired with its counterpart and compared by bytes, as listed "
+                         "under renamed.")
         if cmp.changed or cmp.changed_links:
             lines.append(
                 "Changed bytes may reflect timestamps or metadata, but may also reflect different "
@@ -133,7 +182,8 @@ def report(cmp: Comparison) -> str:
     else:
         lines.append("The replay did NOT produce the same set of files and directories. Check whether the runs "
                      "completed and used the same inputs and settings.")
-    for label, paths in (("missing", cmp.missing), ("extra", cmp.extra), ("changed", cmp.changed),
+    for label, paths in (("renamed", cmp.renamed), ("missing", cmp.missing), ("extra", cmp.extra),
+                         ("changed", cmp.changed),
                          ("missing directories", cmp.missing_directories),
                          ("extra directories", cmp.extra_directories), ("changed links", cmp.changed_links)):
         if paths:

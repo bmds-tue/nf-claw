@@ -90,9 +90,11 @@ def test_report_does_not_assume_all_changes_are_timestamps(tmp_path):
     assert "Differing bytes are expected" not in report
 
 
-@pytest.mark.parametrize("prefix", ["pipeline_info/params_", "pipeline_info/sample_",
-                                    "pipeline_info/nested/sample_"])
+@pytest.mark.parametrize("prefix", ["pipeline_info/sample_", "pipeline_info/nested/sample_",
+                                    "pipeline_info/nested/params_"])
 def test_dated_path_changes_cannot_claim_identical_output_inventory(tmp_path, prefix):
+    # Only the nf-core run-metadata names the template stamps with its launch time are paired;
+    # any other dated path keeps its exact identity.
     first = prefix + "2026-10-08_10-00-00.json"
     second = prefix + "2026-10-09_10-00-00.json"
     original = _run(tmp_path, "original", {first: b"same bytes"})
@@ -108,10 +110,25 @@ def test_dated_path_changes_cannot_claim_identical_output_inventory(tmp_path, pr
 def test_cli_refuses_dated_inventory_changes_even_with_identical_bytes(tmp_path, capsys, strict):
     from runner import cli
     original = _run(tmp_path, "original", {
-        "pipeline_info/params_2026-10-08_10-00-00.json": b"unchanged"})
+        "pipeline_info/sample_2026-10-08_10-00-00.json": b"unchanged"})
     replay = _run(tmp_path, "replay", {
-        "pipeline_info/params_2026-10-09_10-00-00.json": b"unchanged"})
+        "pipeline_info/sample_2026-10-09_10-00-00.json": b"unchanged"})
     args = ["verify", str(replay), "--against", str(original)] + (["--strict"] if strict else [])
     assert cli.main(args) == 1
     output = capsys.readouterr().out
     assert "missing" in output and "extra" in output
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_cli_pairs_launch_stamped_run_metadata_explicitly(tmp_path, capsys, strict):
+    from runner import cli
+    original = _run(tmp_path, "original", {
+        "pipeline_info/params_2026-10-08_10-00-00.json": b"unchanged"})
+    replay = _run(tmp_path, "replay", {
+        "pipeline_info/params_2026-10-09_10-00-00.json": b"unchanged"})
+    args = ["verify", str(replay), "--against", str(original)] + (["--strict"] if strict else [])
+    assert cli.main(args) == 0
+    output = capsys.readouterr().out
+    assert ("pipeline_info/params_2026-10-08_10-00-00.json -> "
+            "pipeline_info/params_2026-10-09_10-00-00.json") in output
+    assert "renamed   : 1" in output

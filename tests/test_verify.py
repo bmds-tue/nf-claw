@@ -102,8 +102,11 @@ def test_a_path_that_is_not_a_run_directory_is_named_clearly(tmp_path):
 
 
 def test_unpinnable_parameter_report_names_are_reported_for_explicit_classification(tmp_path):
-    # Independent clock-based filenames change the actual inventory. Their metadata role
-    # does not justify claiming identical paths or suppressing a structural difference.
+    # nf-core names params_<launch time>.json from the clock (no parameter pins it), so every
+    # faithful replay has a differently named one. Comparing exact paths made `nfclaw verify` fail
+    # every such replay (verified for demo 1.2.0 and ampliseq 3.0.0), so a failure no longer told
+    # a broken replay from a faithful one. The pair is now classified explicitly — both names
+    # listed under renamed, bytes compared — never by claiming the paths are identical.
     orig = _bundle(tmp_path, "orig", {
         "pipeline_info/params_2026-07-14_14-13-15.json": "aaa",
         "fastqc/x.html": "ccc"})
@@ -111,10 +114,11 @@ def test_unpinnable_parameter_report_names_are_reported_for_explicit_classificat
         "pipeline_info/params_2026-07-14_15-14-07.json": "bbb",
         "fastqc/x.html": "ccc"})
     cmp = verify.compare(orig, replay)
-    assert cmp.missing == ["pipeline_info/params_2026-07-14_14-13-15.json"]
-    assert cmp.extra == ["pipeline_info/params_2026-07-14_15-14-07.json"]
-    assert cmp.changed == [] and cmp.identical == ["fastqc/x.html"]
-    assert not cmp.structurally_equal
+    pair = ("pipeline_info/params_2026-07-14_14-13-15.json -> "
+            "pipeline_info/params_2026-07-14_15-14-07.json")
+    assert cmp.missing == [] and cmp.extra == [] and cmp.renamed == [pair]
+    assert cmp.changed == [pair] and cmp.identical == ["fastqc/x.html"]
+    assert cmp.structurally_equal and not cmp.byte_identical
 
 
 def test_dated_scientific_results_preserve_their_exact_paths(tmp_path):
@@ -147,3 +151,48 @@ def test_unreadable_run_is_a_clean_error(tmp_path, monkeypatch):
         verify.compare(orig, replay)
     assert exc.value.code == ErrorCode.ENVIRONMENT
     assert "Permission denied" in str(exc.value) and "a.txt" in str(exc.value)
+
+
+def test_a_file_named_by_its_launch_time_is_paired_not_missing(tmp_path):
+    # The nf-core template names pipeline_info/params_<launch time>.json by the clock, so every
+    # faithful replay "lost" the original's file and "gained" its own. They are one logical
+    # result: report the pair explicitly and compare its bytes like any other file.
+    orig = _bundle(tmp_path, "orig", {"data.txt": "same",
+                                      "pipeline_info/params_2026-10-12_04-22-27.json": '{"outdir": "a"}'})
+    replay = _bundle(tmp_path, "replay", {"data.txt": "same",
+                                          "pipeline_info/params_2026-10-12_04-23-14.json": '{"outdir": "b"}'})
+    cmp = verify.compare(orig, replay)
+    assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
+    pair = "pipeline_info/params_2026-10-12_04-22-27.json -> pipeline_info/params_2026-10-12_04-23-14.json"
+    assert cmp.renamed == [pair]
+    assert cmp.changed == [pair] and not cmp.byte_identical       # outdir differs inside
+    text = verify.report(cmp)
+    assert "renamed   : 1" in text and pair in text
+    assert "same set of files and directories" in text
+
+
+def test_identical_launch_stamped_files_count_as_identical(tmp_path):
+    orig = _bundle(tmp_path, "orig", {"pipeline_info/params_2026-10-12_04-22-27.json": "{}"})
+    replay = _bundle(tmp_path, "replay", {"pipeline_info/params_2026-10-12_09-00-00.json": "{}"})
+    cmp = verify.compare(orig, replay)
+    assert cmp.structurally_equal and cmp.byte_identical and len(cmp.identical) == 1
+
+
+@pytest.mark.parametrize("original,replayed", [
+    # Two launch-stamped candidates for one: an earlier attempt's report is not paired by guess.
+    ({"pipeline_info/params_2026-10-12_04-22-27.json": "{}",
+      "pipeline_info/params_2026-10-12_05-00-00.json": "{}"},
+     {"pipeline_info/params_2026-10-12_09-00-00.json": "{}"}),
+    # Names that differ by more than a launch time are different files.
+    ({"pipeline_info/params_2026-10-12_04-22-27.json": "{}"},
+     {"pipeline_info/settings_2026-10-12_04-22-27.json": "{}"}),
+    # A dated file that is not nf-core run metadata may be a result: its exact path counts.
+    ({"pipeline_info/sample_2026-10-08_10-00-00.json": "{}"},
+     {"pipeline_info/sample_2026-10-09_10-00-00.json": "{}"}),
+    ({"results/calls_2026-10-08_10-00-00.vcf": "x"}, {"results/calls_2026-10-09_10-00-00.vcf": "x"}),
+    # Digits that are not an nf-core launch time are sample identities, never paired.
+    ({"sample_1.txt": "x"}, {"sample_2.txt": "x"}),
+])
+def test_only_unambiguous_launch_time_renames_are_paired(tmp_path, original, replayed):
+    cmp = verify.compare(_bundle(tmp_path, "orig", original), _bundle(tmp_path, "replay", replayed))
+    assert not cmp.renamed and not cmp.structurally_equal
