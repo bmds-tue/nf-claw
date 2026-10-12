@@ -497,3 +497,91 @@ workflow { READ(file(params.input)) }
     unchanged = run(True)                                       # nothing changed since: reuse
     assert "-resume" in unchanged.command
     assert (out / "value.txt").read_text() == "BBBB\n"
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_generated_samplesheet_runs_relocates_and_replays_as_recorded(engine, tmp_path):
+    """--input names a directory of FastQ files: the generated sheet drives a real run, its moved
+    bundle replays its own copy, files added later are not rescanned, and a changed read file is
+    refused. The oracle digests are computed here, independently of the run."""
+    import gzip
+    root = tmp_path / "library"
+    upstream = root / "pipelines/sheetfixture/upstream"
+    (upstream / "assets").mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: sheetfixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True,
+                  "schema": "assets/schema_input.json", "pattern": "^\\S+\\.csv$"},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    fastq = "^\\S+\\.f(ast)?q\\.gz$"
+    (upstream / "assets/schema_input.json").write_text(json.dumps({"items": {"properties": {
+        "sample": {"type": "string", "pattern": "^\\S+$", "meta": ["id"]},
+        "fastq_1": {"type": "string", "format": "file-path", "pattern": fastq},
+        "fastq_2": {"type": "string", "format": "file-path", "pattern": fastq},
+        "condition": {"type": "string", "enum": ["treated", "control"]},
+    }, "required": ["sample", "fastq_1", "condition"]}}))
+    (upstream / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (upstream / "main.nf").write_text('''process DIGEST {
+    publishDir params.outdir, mode: 'copy'
+    input:
+    tuple val(sample), val(condition), path(reads)
+    output:
+    path "${sample}.txt"
+    script:
+    """
+    echo "${condition}" > ${sample}.txt
+    shasum -a 256 ${reads} >> ${sample}.txt
+    """
+}
+workflow {
+    Channel.fromPath(params.input).splitCsv(header: true)
+        .map { row -> tuple(row.sample, row.condition,
+                            [row.fastq_1, row.fastq_2].findAll { it }.collect { file(it) }) }
+        | DIGEST
+}
+''')
+    data = tmp_path / "reads"
+    data.mkdir()
+
+    def write(name: str, read: str) -> bytes:
+        payload = gzip.compress(f"@{read}\nACGT\n+\nIIII\n".encode(), mtime=0)
+        (data / name).write_bytes(payload)
+        return payload
+
+    files = {"A_R1.fastq.gz": write("A_R1.fastq.gz", "r1 1:N:0:1"),
+             "A_R2.fastq.gz": write("A_R2.fastq.gz", "r1 2:N:0:1"),
+             "B.fastq.gz": write("B.fastq.gz", "b1")}
+    (data / "md5sums.txt").write_text("not data\n")
+    out = tmp_path / "run" / "results"
+    out.parent.mkdir()
+    result = orchestration.run_pipeline(
+        "sheetfixture", repo_root=root, input_path=str(data), outdir=out, profile="",
+        params_file=None, cli_overrides={}, resume=False, demo=False, check_only=False,
+        write_provenance=True, timeout_seconds=120, nxf_ver=engine,
+        sheet_set={"condition": "treated"})
+
+    def digest(name):
+        return f"{hashlib.sha256(files[name]).hexdigest()}  {name}\n"
+
+    assert (out / "A.txt").read_text() == "treated\n" + digest("A_R1.fastq.gz") + digest("A_R2.fastq.gz")
+    assert (out / "B.txt").read_text() == "treated\n" + digest("B.fastq.gz")
+    assert result.generated_samplesheet == out / "provenance/samplesheet.csv"
+    assert sorted(result.outputs_report.files) == ["A.txt", "B.txt"]
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["generated_samplesheet"]["samples"] == 2
+    assert manifest["generated_samplesheet"]["ignored"] == ["md5sums.txt"]
+    relocated = out.with_name("archive")
+    out.rename(relocated)
+    write("C.fastq.gz", "c1")                 # a later file: not part of the recorded decision
+    replay = subprocess.run(["bash", "archive/provenance/commands.sh", "replay"],
+                            cwd=relocated.parent, capture_output=True, text=True, timeout=120)
+    assert replay.returncode == 0, replay.stdout + replay.stderr
+    comparison = verify.compare(relocated, relocated.parent / "replay")
+    assert comparison.byte_identical and sorted(comparison.identical) == ["A.txt", "B.txt"]
+    write("B.fastq.gz", "b2")                 # a recorded read file changed: refused
+    refused = subprocess.run(["bash", "archive/provenance/commands.sh", "refused"],
+                             cwd=relocated.parent, capture_output=True, text=True, timeout=60)
+    assert refused.returncode != 0 and "dependency check failed" in refused.stderr
+    assert not (relocated.parent / "refused/B.txt").exists()
