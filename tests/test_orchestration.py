@@ -131,6 +131,44 @@ def test_provenance_failure_never_masks_the_run_failure(tmp_path, monkeypatch):
             demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
 
 
+def test_attribution_failure_survives_bundle_recording_failure(tmp_path, monkeypatch):
+    from runner.errors import ErrorCode, NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    source = root / "pipelines/mini/upstream/main.nf"
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: source.write_text("changed"))
+    def disk_full(**kwargs):
+        raise OSError("disk full")
+    monkeypatch.setattr(orchestration.provenance, "write", disk_full)
+    with pytest.raises(NfclawError, match="during execution") as error:
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    assert error.value.code == ErrorCode.ENVIRONMENT
+
+
+def test_failed_engine_keeps_its_error_and_records_changed_dependencies(tmp_path, monkeypatch):
+    import json
+    from runner.errors import ErrorCode, NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    source = root / "pipelines/mini/upstream/main.nf"
+    def fail(*args, **kwargs):
+        source.write_text("changed before pipeline failure")
+        raise NfclawError(ErrorCode.EXECUTION_FAILED, "original engine failure")
+    monkeypatch.setattr(orchestration.execution, "run", fail)
+    out = tmp_path / "out"
+    with pytest.raises(NfclawError, match="original engine failure") as error:
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    assert error.value.code == ErrorCode.EXECUTION_FAILED
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["outcome"] == "failed"
+    assert manifest["dependency_stability"]["status"] == "changed"
+    assert "previous execution" in orchestration._input_resume_warning(out, {}, {})
+
+
 def test_passes_effective_work_dir_and_allow_spaces_to_preflight(tmp_path, monkeypatch):
     from pathlib import Path
     root = _make_pipeline(tmp_path, "mini")
