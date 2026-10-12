@@ -33,6 +33,9 @@ class Param:
     deprecated: bool = False
     # A path format alone does not require an existing input: output/cache directories use it too.
     exists: bool | None = None
+    # Keep JSON values separately from their documentation text: "1", 1 and true differ.
+    enum_values: tuple[Any, ...] | None = None
+    type_declared: bool = True
 
 
 @dataclass(frozen=True)
@@ -117,8 +120,7 @@ class InputSchema:
 
 def json_scalar(value: Any) -> str:
     """A JSON scalar in its JSON literal form — `true`/`false`, not Python's `True`/`False`.
-    Used wherever a schema value becomes text (enum capture, default rendering, the runner's
-    enum check) so generated docs and validation match the schema byte-for-byte."""
+    Used for enum documentation and default rendering. Validation retains typed enum values."""
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
@@ -189,6 +191,11 @@ def load_param_schema(repo: Path) -> ParamSchema:
                 max_length=pobj.get("maxLength"),
                 deprecated=bool(pobj.get("deprecated", False)),
                 exists=pobj.get("exists") if isinstance(pobj.get("exists"), bool) else None,
+                enum_values=tuple(enum) if isinstance(enum, list) else None,
+                type_declared=bool(pobj.get("type") or any(
+                    isinstance(v, dict) and v.get("type")
+                    for variants in (pobj.get("anyOf"), pobj.get("oneOf"))
+                    if isinstance(variants, list) for v in variants)),
             )
     return ParamSchema(
         title=str(data.get("title") or repo.name),

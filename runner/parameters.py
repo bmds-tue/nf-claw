@@ -10,7 +10,7 @@ from typing import Any
 
 from runner.errors import ErrorCode, NfclawError
 from runner.inputs import absolute_local_path, is_remote_url, local_name_issues, shell_path_issues
-from runner.schema import PATH_FORMATS, Param, ParamSchema, json_scalar
+from runner.schema import PATH_FORMATS, Param, ParamSchema
 
 # The nf-core template parameter that suffixes the execution report/timeline/trace/DAG filenames.
 _REPORT_SUFFIX = "trace_report_suffix"
@@ -51,9 +51,9 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema, *,
                     shell_paths: frozenset[str] = frozenset()) -> list[str]:
     """Deterministic, schema-driven validation of agent-supplied flags (errors, not heuristics).
 
-    Settles the two classes the schema makes unambiguous: unknown flags (not in the schema)
-    and values outside an enum's allowed set. Required-ness and types are left to nf-schema
-    at runtime, which handles the schema's conditionals correctly (so we never false-positive).
+    Checks unknown flags, typed enum membership and independent, unambiguous value constraints.
+    Conditional requirements and constraints within alternative branches remain nf-schema's
+    responsibility at runtime.
     """
     known = schema.known_params()
     errors: list[str] = []
@@ -81,27 +81,56 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema, *,
                                   value, param.fmt, resolve_parent=True, inspect_contents=key not in output_only_dirs))
                 if key in shell_paths:
                     errors.extend(f"parameter '{flag}': {issue}" for issue in shell_path_issues(value))
-            if param.enum and not _in_enum(value, param.enum):
+            if param.enum is not None and not _in_enum(value, param):
                 errors.append(f"parameter '{flag}={value}' is not allowed; "
                               f"must be one of: {', '.join(param.enum)}")
-            if not (param.enum and _in_enum(value, param.enum)):
-                errors.extend(_value_shape_errors(flag, value, param))
+            errors.extend(_value_shape_errors(flag, value, param))
     return errors
 
 
-def _in_enum(value: Any, enum: tuple[str, ...]) -> bool:
-    """Whether `value` is one of a schema's allowed values. JSON Schema compares numbers by value
-    (`1.0` equals `1`), so a numeric value matches a numeric entry written either way."""
-    if json_scalar(value) in enum:
-        return True
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        for entry in enum:
-            try:
-                if float(entry) == value:
-                    return True
-            except ValueError:
+def _json_equal(left: Any, right: Any) -> bool:
+    """JSON equality, including numbers by value and booleans as their own type."""
+    pending = [(left, right)]
+    visited = set()
+    while pending:
+        a, b = pending.pop()
+        if isinstance(a, (int, float)) and not isinstance(a, bool):
+            if not isinstance(b, (int, float)) or isinstance(b, bool) or a != b:
+                return False
+        elif type(a) is not type(b):
+            return False
+        elif isinstance(a, (list, dict)):
+            pair = (id(a), id(b))
+            if pair in visited:
                 continue
-    return False
+            visited.add(pair)
+            if isinstance(a, dict):
+                if a.keys() != b.keys():
+                    return False
+                pending.extend((item, b[key]) for key, item in a.items())
+            else:
+                if len(a) != len(b):
+                    return False
+                pending.extend(zip(a, b))
+        elif a != b:
+            return False
+    return True
+
+
+def _in_enum(value: Any, param: Param) -> bool:
+    entries = param.enum_values
+    if entries is None:
+        # Compatibility for programmatic Param construction predating typed enum capture.
+        entries = tuple(param.enum or ())
+        if param.type in {"integer", "number", "boolean"}:
+            converted = []
+            for entry in entries:
+                try:
+                    converted.append(json.loads(entry))
+                except (ValueError, TypeError):
+                    converted.append(entry)
+            entries = tuple(converted)
+    return any(_json_equal(value, entry) for entry in entries)
 
 
 _UNSET = ("null", "''", '""')
@@ -130,14 +159,23 @@ def missing_required_params(merged: dict[str, Any], schema: ParamSchema,
 
 def _value_shape_errors(flag: str, value: Any, param: Param) -> list[str]:
     errors: list[str] = []
-    scalar_type = param.type
+    scalar_type = param.type if param.type_declared else ""
     if scalar_type == "string" and not isinstance(value, str):
         errors.append(f"parameter '{flag}' expects a string, got {type(value).__name__}")
         return errors
     if scalar_type == "boolean" and not isinstance(value, bool):
         errors.append(f"parameter '{flag}' expects a boolean, got {type(value).__name__}")
         return errors
-    if scalar_type == "integer" and (not isinstance(value, int) or isinstance(value, bool)):
+    if scalar_type == "array" and not isinstance(value, list):
+        errors.append(f"parameter '{flag}' expects an array, got {type(value).__name__}")
+        return errors
+    if scalar_type == "object" and not isinstance(value, dict):
+        errors.append(f"parameter '{flag}' expects an object, got {type(value).__name__}")
+        return errors
+    if scalar_type == "integer" and (
+        not isinstance(value, (int, float)) or isinstance(value, bool)
+        or isinstance(value, float) and not value.is_integer()
+    ):
         errors.append(f"parameter '{flag}' expects an integer, got {type(value).__name__}")
         return errors
     if scalar_type == "number" and (
@@ -179,6 +217,10 @@ def _coerce_scalar(value: str, type_: str):
         except ValueError:
             return _LEAVE
     if type_ == "number":
+        # Whole-number CLI tokens need no binary floating-point conversion. A conversion
+        # would silently change large integers before enum and boundary checks see them.
+        if re.fullmatch(r"[+-]?[0-9]+", value.strip()):
+            return int(value.strip())
         try:
             number = float(value.strip())
         except ValueError:
