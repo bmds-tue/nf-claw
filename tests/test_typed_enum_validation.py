@@ -49,3 +49,16 @@ def test_enum_comparison_handles_shared_nested_values_without_expansion(tmp_path
     parsed = load(tmp_path, {'enum': [[[1], [1]]]})
     shared = [1]
     assert parameters.validate_params({'choice': [shared, shared]}, parsed) == []
+
+
+def test_number_cli_integer_digit_limit_reports_validation_error(tmp_path):
+    import sys
+
+    limit = sys.get_int_max_str_digits()
+    if not limit:
+        pytest.skip('Python integer digit limit is disabled')
+    token = '1' * (limit + 1)
+    parsed = load(tmp_path, {'type': 'number'})
+    coerced = parameters.coerce_to_schema({'choice': token}, parsed)
+    assert coerced == {'choice': token}
+    assert any('expects a number' in issue for issue in parameters.validate_params(coerced, parsed))

@@ -220,7 +220,10 @@ def _coerce_scalar(value: str, type_: str):
         # Whole-number CLI tokens need no binary floating-point conversion. A conversion
         # would silently change large integers before enum and boundary checks see them.
         if re.fullmatch(r"[+-]?[0-9]+", value.strip()):
-            return int(value.strip())
+            try:
+                return int(value.strip())
+            except ValueError:
+                return _LEAVE  # Python's integer digit limit: report an ordinary type error.
         try:
             number = float(value.strip())
         except ValueError:
