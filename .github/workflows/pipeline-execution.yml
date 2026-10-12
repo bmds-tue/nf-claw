@@ -11,6 +11,11 @@ on:
         description: Optional concrete engine version; default is the release's declared minimum
         required: false
         type: string
+      budget_minutes:
+        description: Execution budget in minutes (whole run and each task); heavy bundled tests such as ampliseq need more than 30
+        required: false
+        default: 30
+        type: number
   pull_request:
     paths:
       - ".github/workflows/pipeline-execution.yml"
@@ -21,10 +26,12 @@ permissions:
 jobs:
   native-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # nfclaw's --timeout bounds the run; a dispatch may need up to the hosted maximum.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 360 || 40 }}
     env:
       PIPELINE: ${{ inputs.pipeline || 'demo' }}
       ENGINE_OVERRIDE: ${{ inputs.nextflow_version }}
+      BUDGET_MINUTES: ${{ inputs.budget_minutes || 30 }}
       NXF_ANSI_LOG: "false"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -67,8 +74,14 @@ jobs:
       - uses: ./.github/actions/setup-nextflow
       - name: Execute the bundled analysis on native amd64
         run: |
+          # A GitHub-hosted job ends at 360 minutes; keep ten for setup and evidence upload.
+          if ! [[ "$BUDGET_MINUTES" =~ ^[0-9]+$ ]] || (( BUDGET_MINUTES < 1 || BUDGET_MINUTES > 350 )); then
+            echo "::error::budget_minutes must be a whole number from 1 to 350"
+            exit 1
+          fi
           nfclaw run "$PIPELINE" --demo --outdir "$RUNNER_TEMP/analysis" --nxf-ver "$NXF_VER" \
-            --limit-cpus 2 --limit-memory 6.GB --limit-time 30.min --timeout 1800
+            --limit-cpus 2 --limit-memory 6.GB --limit-time "$BUDGET_MINUTES.min" \
+            --timeout "$(( BUDGET_MINUTES * 60 ))"
           nfclaw status "$RUNNER_TEMP/analysis"
           python - <<'PY'
           import json
