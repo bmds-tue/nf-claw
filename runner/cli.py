@@ -455,7 +455,7 @@ def _main(argv: list[str] | None = None) -> int:
                     on_warning=warn, sheet_set=sheet_set)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
-            if not exc.details.get("active_run"):
+            if not exc.details.get("active_run") and not exc.details.get("unsafe_write_boundary"):
                 unlaunched("refused before launch", str(exc))
             return 1
         except (execution.Terminated, KeyboardInterrupt) as exc:

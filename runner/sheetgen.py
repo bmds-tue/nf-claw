@@ -309,7 +309,8 @@ class Source:
 
 
 def _absolute(value: str) -> Path:
-    return Path(os.path.abspath(os.path.expanduser(value)))
+    # As every local path parameter: the parent resolved, the supplied (sample) name kept.
+    return inputs.absolute_local_path(value)
 
 
 def _has_magic(value: str) -> bool:

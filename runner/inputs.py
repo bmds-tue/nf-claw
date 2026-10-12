@@ -30,6 +30,20 @@ _FILE_URI_ISSUE = ("file: URI inputs are local dependencies; use an absolute fil
 _ANNOTATIONS = ("description", "errorMessage", "title", "$comment", "help_text", "fa_icon")
 
 
+def absolute_local_path(value: str | Path) -> Path:
+    """Resolve the parent directory while retaining the supplied staged basename.
+
+    A final symlink can deliberately give a file its format suffix or scientific name.
+    Resolving that link changes the value validated by nf-schema and staged by Nextflow.
+    Parent resolution still gives relative paths and symlink/.. traversal one stable meaning.
+    The special directory entry '..' denotes its resolved directory, never a staged alias.
+    """
+    path = Path(value).expanduser()
+    if path.name in {"", ".."}:
+        return path.resolve()
+    return path.parent.resolve() / path.name
+
+
 @dataclass(frozen=True)
 class ResolvedInput:
     value: Any                           # the params-file value; False = leave `input` unset
@@ -275,6 +289,6 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
     path_like = sheet is not None or any(p.get("format") in PATH_FORMATS for p in declared)
     if not (isinstance(raw, Path) or path_like or Path(text).expanduser().exists()):
         return ResolvedInput(text, None, None)
-    local = Path(text).expanduser().resolve()
+    local = absolute_local_path(text)
     return ResolvedInput(str(local), local, sheet,
                          must_exist=any(p.get("exists") is True for p in declared))

@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (discovery, engine_version, execution, handoff, inputs, nextflow_command,
+from runner import (discovery, engine_version, execution, handoff, inputs, input_safety, nextflow_command,
                     orchestration, parameters, preflight, provenance, resources, runlog, sheetgen,
                     versions)
 from runner import schema as schema_mod
@@ -481,6 +481,13 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
             nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces, configs=opts.configs,
             limits=opts.limits, on_warning=_warner(on_warning, p.stage),
             deferred_params=_deferred(p), resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
+        try:
+            input_safety.check_write_boundaries(res.local_dependencies,
+                                               [("chain --outdir", outdir, True)])
+        except BaseException:
+            if res.staging is not None:
+                shutil.rmtree(res.staging, ignore_errors=True)
+            raise
         if not keep and res.staging is not None:
             shutil.rmtree(res.staging, ignore_errors=True)
         label = p.stage.dirname
@@ -978,6 +985,22 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
             problems.append(f"{sid}: its handoff does not name the preceding stage")
         down = Path(entry["outdir"])
         manifest = manifests.get(sid, {})
+        recorded_params = _read_json(down / "provenance/params.json") or {}
+
+        def consumed_reference_root(reference: Path, name: str) -> Path:
+            root = inputs.absolute_local_path(reference)
+            value = recorded_params.get(name) if isinstance(recorded_params, dict) else None
+            # Older bundles passed the fully resolved target. Read their actual parameters;
+            # do not rewrite the historical consumption record to today's alias behavior.
+            if value is not None:
+                params_path = down / "provenance/params.json"
+                configs = _digests(down / "provenance/configs.sha256", relative=False)
+                if configs.get(str(params_path)) != _sha(params_path):
+                    raise ValueError("recorded reference parameters differ from their config checksum")
+                if not isinstance(value, str) or value not in {str(root), str(reference.resolve())}:
+                    raise ValueError("recorded reference parameter differs from its handoff")
+                root = Path(value)
+            return root
         chain_link = manifest.get("chain")
         link = chain_link.get("upstream") if isinstance(chain_link, dict) else None
         if succeeded and (not isinstance(link, dict)
@@ -1039,9 +1062,9 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                     if any(item.get(key) != value for key, value in evidence.items()):
                         raise ValueError("directory handoff has no matching complete namespace record")
                     if succeeded:
+                        root = consumed_reference_root(Path(reference), name)
                         normalized = handoff.normalize_reference_inventory(evidence["directory_inventory"],
-                                                                           Path(reference))
-                        root = Path(reference).resolve()
+                                                                           Path(reference), destination=root)
                         consumed = {path: entry for path, entry in down_nodes.items()
                                     if Path(path).is_relative_to(root)}
                         source_files = (evidence["bundle_dependencies"] if "bundle_dependencies" in evidence
@@ -1073,8 +1096,9 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                                             "or has no matching complete upstream input record")
                             continue
                         if succeeded:
-                            canonical = str(path.resolve())
-                            normalized = handoff.normalize_reference_inventory(expected_nodes, path)
+                            root = consumed_reference_root(path, name)
+                            canonical = str(root)
+                            normalized = handoff.normalize_reference_inventory(expected_nodes, path, destination=root)
                             if down_in.get(canonical) != digest or down_nodes.get(canonical) != normalized[canonical]:
                                 problems.append(f"{sid}: --{name}: external reference {value} is not "
                                                 "the input this stage hashed")

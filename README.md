@@ -20,6 +20,10 @@ A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelin
 
 Explicit local and remote input filenames are validated before launch because pinned task scripts can interpret shell-active names. Unsafe basenames, local directory entries, symlink targets and local matched filenames are refused without silently renaming scientific samples. See [the input rules](AGENTS.md) for supported names and the scope of these checks.
 
+Local path parameters retain the supplied basename, including a symlink's name and format suffix. For example, `sheet.csv` pointing to `stored.data` remains `sheet.csv` for samplesheet validation and Nextflow staging. Parent directories are resolved against the caller's directory; both alias and target names are checked, and provenance records the link identity and target bytes.
+
+Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Boundary refusals leave input data and existing run logs untouched.
+
 ### Navigation
 
 [Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance](#maintain) • [Adding Pipelines](#adding-pipelines) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)

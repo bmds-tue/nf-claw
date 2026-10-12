@@ -491,8 +491,8 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
                 (prov / "outputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
             else:
-                # The real runner resolves the directory parameter before snapshotting inputs.
-                hashes, nodes = provenance.snapshot_inputs([reference.resolve()])
+                # The runner makes the path absolute while retaining its staged root alias.
+                hashes, nodes = provenance.snapshot_inputs([reference])
                 (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
                 (prov / "inputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
@@ -507,11 +507,11 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
     original = snapshot.read_text()
     different = hashlib.sha256(b"different prelaunch index").hexdigest()
     if change == "changed":
-        snapshot.write_text(f"{different}  {reference.resolve() / 'index.bin'}\n")
+        snapshot.write_text(f"{different}  {reference / 'index.bin'}\n")
     elif change == "missing":
         snapshot.write_text("")
     else:
-        snapshot.write_text(original + f"{different}  {reference.resolve() / 'extra.bin'}\n")
+        snapshot.write_text(original + f"{different}  {reference / 'extra.bin'}\n")
     state, problems = chain.status(out)
     assert any("input inventory" in problem for problem in problems)
     assert chain.status_exit_code(state, problems) == 1
