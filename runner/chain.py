@@ -27,7 +27,8 @@ from pathlib import Path
 from typing import Any
 
 from runner import (discovery, engine_version, execution, handoff, inputs, nextflow_command,
-                    orchestration, parameters, preflight, provenance, resources, runlog, versions)
+                    orchestration, parameters, preflight, provenance, resources, runlog, sheetgen,
+                    versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
 from runner.errors import ErrorCode, NfclawError
@@ -46,7 +47,7 @@ _ID = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 _OPTION_KEYS = {"profile", "nxf_ver", "nxf_env", "config", "limits"}
 _CHAIN_KEYS = {"stages", "allow_spaces"} | _OPTION_KEYS
 _STAGE_KEYS = {"id", "pipeline", "input", "params", "params_file", "pipeline_version",
-               "retries", "demo", "handoff"} | _OPTION_KEYS
+               "retries", "demo", "handoff", "sheet_set"} | _OPTION_KEYS
 _LIMIT_KEYS = {"cpus", "memory", "time"}
 _PROBE_TIMEOUT = 300
 # What the Nextflow launcher prints when it cannot set an engine up at all (no jars, no Java).
@@ -61,7 +62,8 @@ class Stage:
     index: int                        # 1-based position in the chain
     id: str
     pipeline: str
-    input: Any                        # stage's own --input (usually only the first stage has one)
+    input: Any                        # stage's own --input (usually only the first stage has one):
+                                      # a value, or a list of data files to generate a sheet from
     params: dict                      # the stage's own pipeline parameters (as on the command line)
     params_file: Path | None
     pipeline_version: str | None
@@ -73,6 +75,8 @@ class Stage:
     # different engines — fetchngs 1.13 wants Nextflow >= 25.10.4, mag 5.5 >= 26.04, and an older
     # atacseq a parser before 26.04's strict one.
     options: dict = field(default_factory=dict)
+    # Columns of the samplesheet nfclaw generates when `input` names data files (`--sheet-set`).
+    sheet_set: dict = field(default_factory=dict)
 
     @property
     def dirname(self) -> str:
@@ -222,6 +226,17 @@ def parse_spec(data: dict) -> ChainSpec:
             if stage_input is not None:
                 raise _bad(f"stage '{sid}': give its input once — 'input' or 'params.input'")
             stage_input = params.pop("input")
+        if isinstance(stage_input, list) and not (
+                stage_input and all(isinstance(v, str) and v.strip() for v in stage_input)):
+            raise _bad(f"stage '{sid}': an 'input' list must name data files, directories or "
+                       "glob patterns")
+        sheet_set = raw.get("sheet_set") or {}
+        if not isinstance(sheet_set, dict):
+            raise _bad(f"stage '{sid}': 'sheet_set' must map samplesheet columns to values")
+        try:
+            sheet_set = sheetgen.assignments_from_mapping(sheet_set)
+        except NfclawError as exc:
+            raise _bad(f"stage '{sid}': {exc.message}") from None
         stages.append(Stage(
             index=index, id=sid, pipeline=raw["pipeline"], input=stage_input,
             params=params,
@@ -229,7 +244,7 @@ def parse_spec(data: dict) -> ChainSpec:
             pipeline_version=version or None, retries=retries,
             demo=demo,
             handoff=Path(_abs(hand)) if isinstance(hand, str) else hand,
-            options=_parse_options(raw, f"stage '{sid}'")))
+            options=_parse_options(raw, f"stage '{sid}'"), sheet_set=sheet_set))
     chain_opts = _parse_options(data, "chain")
     allow_spaces = data.get("allow_spaces", False)
     if not isinstance(allow_spaces, bool):
@@ -296,8 +311,15 @@ def plan(spec: ChainSpec, *, repo_root: Path) -> list[Planned]:
         nxt = rules[i + 1] if i + 1 < len(rules) else None
         injected = dict(nxt.upstream_params) if nxt else {}
         ps = schema_mod.load_param_schema(trees[i].path)
-        resolved = inputs.resolve(s.input, trees[i].path)
-        out.append(Planned(s, trees[i], rules[i], resolved.value if resolved else None,
+        # Data files to generate the stage's samplesheet from are made absolute as given (a link
+        # keeps the name its sample is called by); any other input as `nfclaw run` resolves it.
+        source = sheetgen.detect(s.input, trees[i].path)
+        if source is not None:
+            value = list(source.values) if isinstance(s.input, list) else source.values[0]
+        else:
+            resolved = inputs.resolve(s.input, trees[i].path)
+            value = resolved.value if resolved else None
+        out.append(Planned(s, trees[i], rules[i], value,
                            parameters.resolve_path_params({**injected, **s.params}, ps)))
     return out
 
@@ -321,6 +343,8 @@ def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
                                       "nxf_env": opts.nxf_env, "configs": opts.configs,
                                       "limits": opts.limits}),
             "config_sha256": {c: _file_sha256(Path(c)) for c in opts.configs}}
+    if s.sheet_set:                   # absent when unset: earlier chains keep their fingerprints
+        body["sheet_set"] = dict(s.sheet_set)
     text = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -341,6 +365,7 @@ def normalized(spec: ChainSpec, planned: list[Planned]) -> dict:
                     "demo": p.stage.demo,
                     "handoff": (str(p.stage.handoff) if isinstance(p.stage.handoff, Path)
                                 else p.stage.handoff),
+                    **({"sheet_set": dict(p.stage.sheet_set)} if p.stage.sheet_set else {}),
                     **_options_json(p.stage.options)}
                    for p in planned],
     }
@@ -451,7 +476,7 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
             pipeline_version=p.stage.pipeline_version, nxf_ver=opts.nxf_ver,
             nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces, configs=opts.configs,
             limits=opts.limits, on_warning=_warner(on_warning, p.stage),
-            deferred_params=_deferred(p), resolved_tree=p.tree)
+            deferred_params=_deferred(p), resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
         if not keep and res.staging is not None:
             shutil.rmtree(res.staging, ignore_errors=True)
         label = p.stage.dirname
@@ -773,7 +798,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 timeout_seconds=remaining, pipeline_version=stage.pipeline_version,
                 nxf_ver=opts.nxf_ver, nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces,
                 configs=opts.configs, limits=opts.limits, on_warning=warn, chain_link=link,
-                resolved_tree=p.tree)
+                resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
         except NfclawError as exc:
             entry["attempts"][-1].update(finished=runlog.now(), outcome=_short(exc))
             if _retryable(exc) and attempt <= stage.retries:

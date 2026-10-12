@@ -10,8 +10,8 @@ from pathlib import Path
 
 from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     outputs, parameters, plugin_compat, preflight, provenance,
-                    reproducibility, resources, resume_safety, runlog, samplesheet, submodule,
-                    versions)
+                    reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
+                    submodule, versions)
 from runner import schema as schema_mod
 from runner.replay_guard import _capture_input_inventory
 from runner.errors import ErrorCode, NfclawError
@@ -111,6 +111,8 @@ class RunResult:
     # --check only: the temp directory holding the files the printed command names. It outlives the
     # process so the command stays runnable; a caller that only validates (a chain) removes it.
     staging: Path | None = None
+    # The samplesheet nfclaw generated from the data files --input named (runner.sheetgen).
+    generated_samplesheet: Path | None = None
 
 
 @single_writer
@@ -127,13 +129,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  on_warning: Callable[[str], None] | None = None,
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
-                 resolved_tree: SubmoduleStatus | None = None) -> RunResult:
+                 resolved_tree: SubmoduleStatus | None = None,
+                 sheet_set: dict[str, str] | None = None) -> RunResult:
     """Validate, launch and record one pipeline run.
 
     Two arguments exist for a chain (runner.chain) and change nothing otherwise: `chain_link` is
     recorded in the run's manifest (which chain this stage belongs to, which run fed it), and
     `deferred_params` — for `check_only` alone — names parameters a handoff will supply once the
-    stage feeding this one has run, so they count as neither missing nor invalid yet."""
+    stage feeding this one has run, so they count as neither missing nor invalid yet.
+
+    When the input names data files where the pipeline takes a samplesheet, the samplesheet is
+    generated first (runner.sheetgen); `sheet_set` holds the column values the caller assigned."""
     if deferred_params and not check_only:
         raise ValueError("deferred_params is only meaningful with check_only")
     pipelines_dir = repo_root / "pipelines"
@@ -217,7 +223,24 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # handoff will write does not exist yet, so it is neither resolved nor pre-checked.
     raw_input = (None if "input" in deferred_params
                  else input_path if input_path is not None else file_params.get("input"))
-    resolved_input = inputs.resolve(raw_input, st.path)
+    # Data files where the pipeline takes a samplesheet — a directory, a glob, one or several files:
+    # generate the samplesheet its schema describes (runner.sheetgen). It is validated here like a
+    # hand-written one, before anything is written, and staged beside the params file below; until
+    # then `input` names that staged location, which the parameter checks treat as any sheet path.
+    generated = None
+    if (source := sheetgen.detect(raw_input, st.path)) is not None:
+        generated = sheetgen.generate(source, st.path, pipeline=name,
+                                      assignments=sheet_set or {}, outdir=outdir,
+                                      work_dir=work_dir)
+    elif sheet_set:
+        raise NfclawError(ErrorCode.PARAMS_INVALID,
+                          "--sheet-set sets columns of a samplesheet nfclaw generates, but --input "
+                          "does not name data files to generate one from.",
+                          fix="Pass the data files (a directory, glob or files) as --input, or set "
+                              "the values in your own samplesheet.")
+    resolved_input = (inputs.ResolvedInput(str(outdir / "provenance" / generated.filename), None,
+                                           None)
+                      if generated is not None else inputs.resolve(raw_input, st.path))
     sheet_inputs = []
     if resolved_input is not None and resolved_input.local_path is not None:
         input_schema = (schema_mod.load_input_schema(st.path, resolved_input.samplesheet_schema)
@@ -310,6 +333,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # input, so differences between runs or replays are expected rather than investigated.
     warnings += reproducibility.advisories(st.path, merged)
     warnings += [limit_note] if limit_note else []
+    if generated is not None:
+        # What the generated samplesheet holds and where it is, before the run starts (a --check
+        # stages it in a temp directory, named once it exists, below).
+        warnings.append(generated.summary + ("" if check_only else
+                                             f" It is staged as {resolved_input.value}."))
+        warnings += generated.notes
+        if resume and (note := sheetgen.resume_note(outdir / "provenance" / generated.filename,
+                                                    generated)):
+            warnings.append(note)
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: preserve FASTQ "
@@ -370,8 +402,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # A local --input is an input whatever its declared format (mhcquant's carries none).
     if resolved_input is not None and resolved_input.local_path is not None:
         prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
+    # A generated samplesheet is a file nfclaw writes for the run (recorded with the configs, below);
+    # every data file it names is an input — whether or not its column declares a path format.
     prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
-                                    *sheet_dependencies]))
+                                    *sheet_dependencies,
+                                    *(generated.files if generated is not None else ())]))
     # Capture the local dependency content the launch sees, before a long analysis can change it.
     # The replay guard uses these snapshots, rather than hashing a potentially changed input only
     # after the run has finished. Remote references and runtime downloads remain upstream inputs.
@@ -438,6 +473,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                               f"({exc.filename or outdir})",
                               fix="Pass an --outdir in a directory you can write to.") from exc
         staging = outdir / "provenance"
+    sheet_path = None
+    if generated is not None:
+        # The bytes validated above, staged beside the params file that names them.
+        sheet_path = sheetgen.write(generated, staging)
+        resolved["input"] = str(sheet_path)
+        if check_only:
+            note = (f"The generated samplesheet is staged as {sheet_path} (the --input of the "
+                    "command below).")
+            warnings.append(note)
+            if on_warning is not None:
+                on_warning(note)
     params_file_out = parameters.write_params_file(resolved, staging / "params.json")
 
     # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
@@ -469,8 +515,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # gets its own .nextflow/ state, but the work dir must not move into the results.
     cmd, cmd_str = nextflow_command.build(upstream=st.path, profile=composed_profile,
                                           params_file=params_file_out, resume=effective_resume,
-                                          work_dir=work_dir, extra_configs=tuple(extra_configs))
-    replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out]))
+                                          work_dir=work_dir, extra_configs=tuple(extra_configs),
+                                          bundle_params={"input": sheet_path} if sheet_path else None)
+    replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out,
+                                          *([sheet_path] if sheet_path else [])]))
     if write_provenance and not check_only:
         try:
             config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
@@ -482,7 +530,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
     if check_only:
         return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
-                         outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging)
+                         outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging,
+                         generated_samplesheet=sheet_path)
+
+    generation_record = None
+    if generated is not None:
+        generation_record = {**generated.record, "file": generated.filename,
+                             "sha256": provenance._sha256(sheet_path)}
 
     def record(outcome: str) -> None:
         provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
@@ -493,7 +547,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                          config_inventory=config_inventory,
                          pipeline_checksums=pipeline_snapshot,
                          unverified_local_paths=unverified_paths,
-                         nextflow_version=run_log.nextflow_version or "")
+                         nextflow_version=run_log.nextflow_version or "",
+                         generated_samplesheet=generation_record)
 
     # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
     # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -550,4 +605,5 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         run_log.finish()
     return RunResult(command=cmd_str, outdir=outdir, checked_only=False,
                      outputs_report=report, warnings=warnings,
-                     log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay)
+                     log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay,
+                     generated_samplesheet=sheet_path)

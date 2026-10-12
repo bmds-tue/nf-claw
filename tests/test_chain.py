@@ -706,3 +706,81 @@ def test_status_exit_codes_follow_nfclaw_status(library, fake_runs, tmp_path):
     assert chain.status_exit_code(state, problems) == 0
     assert chain.status_exit_code(state, ["a broken link"]) == 1
     assert chain.status_exit_code({**state, "log_state": "running"}, []) == 3
+
+
+# --- a stage whose samplesheet nfclaw generates from data files ------------------------------------
+
+def test_spec_sheet_set_and_input_lists_are_validated():
+    spec = chain.parse_spec({"stages": [{"pipeline": "rnaseq", "input": ["/d/a.fq.gz", "/d/b.fq.gz"],
+                                         "sheet_set": {"strandedness": "auto", "status": 1}}]})
+    assert spec.stages[0].input == ["/d/a.fq.gz", "/d/b.fq.gz"]
+    assert spec.stages[0].sheet_set == {"strandedness": "auto", "status": "1"}
+    for bad, msg in (({"input": []}, "'input' list"), ({"input": ["/a", 3]}, "'input' list"),
+                     ({"sheet_set": ["x"]}, "'sheet_set' must map"),
+                     ({"sheet_set": {"x": {"y": 1}}}, "sheet_set")):
+        with pytest.raises(NfclawError, match=msg):
+            chain.parse_spec({"stages": [{"pipeline": "rnaseq", **bad}]})
+
+
+def test_fingerprints_without_sheet_set_are_those_of_earlier_chains(library):
+    # A succeeded stage is frozen by its fingerprint: adding a spec key must not change the
+    # fingerprint of a stage that does not use it, or every recorded chain would refuse to resume.
+    import hashlib
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    spec = _spec()
+    p = chain.plan(spec, repo_root=root)[1]
+    opts = chain.options(spec, p.stage)
+    body = {"fingerprint_version": chain.FINGERPRINT_VERSION, "pipeline": "mini",
+            "pipeline_version": None, "commit": p.tree.commit, "input": None, "input_sha256": None,
+            "params": p.params, "params_file": None, "demo": False, "handoff": p.rule.sha256(),
+            "options": chain._options_json({"profile": opts.profile, "nxf_ver": opts.nxf_ver,
+                                            "nxf_env": opts.nxf_env, "configs": opts.configs,
+                                            "limits": opts.limits}),
+            "config_sha256": {}}
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
+    assert chain.fingerprint(p, spec) == hashlib.sha256(text.encode()).hexdigest()
+    other = chain.parse_spec({"stages": [{"pipeline": "mini_up", "input": "/data/ids.csv"},
+                                         {"pipeline": "mini", "params": {"aligner": "hisat2"},
+                                          "sheet_set": {"sample": "{sample}"}}]})
+    assert chain.fingerprint(chain.plan(other, repo_root=root)[1], other) != chain.fingerprint(p, spec)
+
+
+def test_a_first_stage_takes_data_files_and_sheet_columns(library, fake_runs, tmp_path):
+    import sheetgen_schemas as S
+    from test_sheetgen import pair
+    root = library("mini")
+    S.make_pipeline(root, S.RNASEQ, "rna")
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    spec = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data),
+                                         "sheet_set": {"strandedness": "auto"}}]})
+    out = tmp_path / "c"
+    assert chain.run_chain(spec, repo_root=root, outdir=out).outcome == "success"
+    (check,), (call,) = fake_runs.checks, fake_runs.calls
+    assert check["input_path"] == call["input_path"] == str(data)
+    assert check["sheet_set"] == call["sheet_set"] == {"strandedness": "auto"}
+    recorded = json.loads((out / "chain" / "chain.json").read_text())["stages"][0]
+    assert recorded["sheet_set"] == {"strandedness": "auto"} and recorded["input"] == str(data)
+    again = chain.parse_spec(json.loads((out / "chain" / "chain.json").read_text()))
+    assert again.stages[0].sheet_set == {"strandedness": "auto"}
+
+
+def test_a_chain_check_generates_the_first_stages_samplesheet(library, tmp_path, monkeypatch):
+    # Not faked: the real check-only run generates and validates the sheet, and a missing column
+    # stops the chain before any stage launches.
+    import sheetgen_schemas as S
+    from test_sheetgen import pair
+    monkeypatch.setattr(chain, "_probe_config", lambda spec, p, **kw: [])
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    root = library("mini")
+    S.make_pipeline(root, S.RNASEQ, "rna")
+    data = tmp_path / "reads"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    ok = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data),
+                                       "sheet_set": {"strandedness": "auto"}}]})
+    res = chain.run_chain(ok, repo_root=root, outdir=tmp_path / "c", check_only=True)
+    assert res.outcome == "checked" and "--input" in res.commands[0][1]
+    missing = chain.parse_spec({"stages": [{"pipeline": "rna", "input": str(data)}]})
+    with pytest.raises(NfclawError, match="needs values"):
+        chain.run_chain(missing, repo_root=root, outdir=tmp_path / "d", check_only=True)
+    assert not (tmp_path / "c").exists() and not (tmp_path / "d").exists()
