@@ -37,6 +37,8 @@ The samplesheet is a CSV with this header (the columns the schema requires); fil
 sample,seed
 ```
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

@@ -42,6 +42,8 @@ sample_id,mapped,file_type
 
 Any of the optional columns above may be appended to the header when your data needs them: `index`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `sample_id` from file names; `mapped`, `index` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `file_type` (one of bam, cram). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

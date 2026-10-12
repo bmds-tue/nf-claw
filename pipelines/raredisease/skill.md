@@ -56,6 +56,8 @@ sample,sex,phenotype,case_id
 
 Any of the optional columns above may be appended to the header when your data needs them: `lane`, `fastq_1`, `fastq_2`, `spring_1`, `spring_2`, `bam`, `bai`, `paternal_id`, `maternal_id`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2` or `_1`/`_2` and confirmed by read name); `lane` from Illumina lane numbers (`_L002` → 2, else 1); `bam`, `bai` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `sex` (integer or string); `phenotype` (one of 0, 1, 2); `case_id` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

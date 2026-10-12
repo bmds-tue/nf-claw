@@ -45,6 +45,8 @@ group_id,subject_id,sample_id,sample_type,sequence_type,filetype,filepath
 
 Any of the optional columns above may be appended to the header when your data needs them: `info`.
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

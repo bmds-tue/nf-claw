@@ -50,6 +50,8 @@ sample_id	subject_id	species	pcr_target_locus	tissue	sex	age	biomaterial_provide
 
 Any of the optional columns above may be appended to the header when your data needs them: `filename_R1`, `filename_R2`, `filename_I1`, `filename`.
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

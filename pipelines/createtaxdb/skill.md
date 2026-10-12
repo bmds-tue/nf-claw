@@ -42,6 +42,8 @@ id,taxid
 
 Any of the optional columns above may be appended to the header when your data needs them: `fasta_dna`, `fasta_aa`.
 
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a glob or several files — from which nfclaw writes this samplesheet: `id` from file names; `fasta_dna`, `fasta_aa` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `taxid` (integer). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|

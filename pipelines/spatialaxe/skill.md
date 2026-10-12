@@ -40,6 +40,8 @@ sample,bundle
 
 Any of the optional columns above may be appended to the header when your data needs them: `image`.
 
+**From data files.** nfclaw cannot generate this samplesheet: the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension).
+
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
