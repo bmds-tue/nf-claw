@@ -2,7 +2,7 @@
 
 The pinned repository stays unchanged. Generated task recipes use this standalone
 splitter, wipe placeholder chunks, gather reports exactly, repair a missing shell
-continuation, and preserve distinct publications. The complete helper source is
+continuation, preserve declared mate order, and preserve distinct publications. The complete helper source is
 embedded into the recorded config, so replay does not depend on the installed
 nfclaw version or the original helper path.
 
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import csv
 import gzip
 import hashlib
 import json
@@ -27,6 +28,7 @@ import shlex
 import sys
 from contextlib import ExitStack
 from pathlib import Path
+from urllib.parse import urlsplit
 
 SUPPORTED_COMMIT = "70a38209407b9367a9ff7ab8b26d84cb1983ea18"
 
@@ -119,7 +121,7 @@ def scatter(path: Path, splits: int, prefix: str, folder: Path, *,
     for index in range(n):
         starts.append(starts[-1] + segments // n + (index < segments % n))
     if n == 1:
-        print(f"nfclaw: {path.name} has no line where fastqwiper restarts afresh; wiping it whole "
+        print(f"nfclaw: {path.name} is being wiped in one data chunk "
               "beside an empty placeholder chunk", file=sys.stderr)
     total = max(n, 2)
     width = max(3, len(str(total - 1)))
@@ -149,7 +151,7 @@ def scatter(path: Path, splits: int, prefix: str, folder: Path, *,
 
 def _zero_report() -> str:
     return "FASTQWIPER REPORT:\n\n" + "".join(
-        f"{field}: 0" + (" (0.0%)" if field in _PERCENT else "")
+        f"{field}: 0" + (" (not applicable)" if field in _PERCENT else "")
         + (" of which 0 fixed" if field == "Bad headers or misplaced lines" else "") + "\n"
         for field in _FIELDS)
 
@@ -175,19 +177,23 @@ def wipe(argv: list[str]) -> None:
 
 def _parse_report(path: Path) -> dict[str, int]:
     counts: dict[str, int] = {}
+    undefined = False
     for line in path.read_text().splitlines():
         for field in _FIELDS:
             if line.startswith(field + ":"):
-                rest = r" \(\d+(?:\.\d+)?%\)" if field in _PERCENT else ""
+                rest = r" \((?:\d+(?:\.\d+)?%|not applicable)\)" if field in _PERCENT else ""
                 fixed = r" of which (\d+) fixed" if field == "Bad headers or misplaced lines" else ""
                 match = re.fullmatch(re.escape(field) + r": (\d+)" + rest + fixed, line)
                 if field in counts or not match:
                     raise ValueError(f"{path}: unrecognized fastqwiper report line: {line!r}")
                 counts[field] = int(match[1])
+                undefined |= "(not applicable)" in line
                 if fixed:
                     counts["fixed"] = int(match[2])
     if len(counts) != len(_FIELDS) + 1:
         raise ValueError(f"{path}: incomplete fastqwiper report")
+    if undefined and any(counts.values()):
+        raise ValueError(f"{path}: undefined rates are only valid for a zero-count placeholder report")
     return counts
 
 
@@ -222,7 +228,79 @@ _TASKS = {
 }
 
 
-def patch_task(kind: str, path: Path) -> None:
+def paired_input_roles(path: Path | None) -> dict[str, list[str]]:
+    """The stream identities that survive the exact pinned decoupling/recovery code."""
+    if path is None:
+        return {}
+    with path.open(newline="", encoding="utf-8-sig") as stream:
+        return paired_row_roles(csv.DictReader(stream, delimiter="\t" if path.suffix.lower() == ".tsv" else ","))
+
+
+def paired_row_roles(rows) -> dict[str, list[str]]:
+    orders, seen = {}, set()
+    for row in rows:
+        first, second = (row.get("fastq_1") or "").strip(), (row.get("fastq_2") or "").strip()
+        sample = row["sample"].strip()
+        if sample in seen:
+            raise ValueError(f"sample {sample} occurs more than once; its stream identity would collapse")
+        seen.add(sample)
+        if not second:
+            continue
+        names = [Path(urlsplit(value).path if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", value)
+                      else value).name for value in (first, second)]
+        if names[0] == names[1]:
+            raise ValueError(f"paired sample {sample} has the same staged filename for both mates")
+        if names[0].endswith(".gz") != names[1].endswith(".gz"):
+            raise ValueError(f"paired sample {sample} mixes gzip and plain streams; use matching formats")
+        orders[sample] = ([sample + "_recovered_1", sample + "_recovered_2"]
+                          if names[0].endswith(".gz") else [Path(name).stem for name in names])
+        if len(set(orders[sample])) != 2:
+            raise ValueError(f"paired sample {sample} has the same decoupled identity for both mates")
+    return orders
+
+
+def _ordered_inputs(source: str, orders: dict[str, list[str]]) -> str:
+    match = re.search(r"\bout=([^\s]+)__nfclaw_[0-9a-f]{16}_1_repaired\.fastq\.gz", source)
+    inputs = re.findall(r"(?<!\S)in(?:2)?=([^\s]+)", source)
+    if match is None or len(inputs) != 2:
+        raise ValueError("unrecognized pinned paired repair inputs; orientation correction refused")
+    wanted = orders.get(match[1])
+    if wanted:
+        roles = [re.sub(r"_gather__nfclaw_[0-9a-f]{16}\.fastq\.gz$", "", name) for name in inputs]
+        if sorted(roles) != sorted(wanted) or len(set(roles)) != 2:
+            raise ValueError("gathered mate identities disagree with the declared samplesheet")
+        ordered = [inputs[roles.index(role)] for role in wanted]
+    else:
+        def mate(name):
+            role = None
+            with _open_source(Path(name)) as stream:
+                while line := stream.readline():
+                    header = line.decode("utf-8").split()
+                    labels = set()
+                    if header and header[0].startswith("@") and header[0].endswith(("/1", "/2")):
+                        labels.add(int(header[0][-1]))
+                    if len(header) > 1 and header[1].startswith(("1:", "2:")):
+                        labels.add(int(header[1][0]))
+                    sequence, plus, quality = stream.readline(), stream.readline(), stream.readline()
+                    if (len(labels) != 1 or not header or not header[0].startswith("@")
+                            or not plus.startswith(b"+") or not sequence or not quality
+                            or len(sequence.rstrip(b"\r\n")) != len(quality.rstrip(b"\r\n"))):
+                        return None
+                    current = labels.pop()
+                    if role is not None and role != current:
+                        return None
+                    role = current
+            return role
+        roles = [mate(name) for name in inputs]
+        if sorted(role or 0 for role in roles) != [1, 2]:
+            raise ValueError("mate order cannot be verified from this profile; supply an explicit local samplesheet")
+        ordered = [inputs[roles.index(index)] for index in (1, 2)]
+    return re.sub(r"(?<!\S)in(?:2)?=([^\s]+)",
+                  lambda match: ("in2=" if match[0].startswith("in2=") else "in=")
+                  + ordered[1 if match[0].startswith("in2=") else 0], source)
+
+
+def patch_task(kind: str, path: Path, *, mate_orders: dict[str, list[str]] | None = None) -> None:
     source = path.read_text()
     if kind in _TASKS:
         needle, version, subcommand, recorded = _TASKS[kind]
@@ -236,6 +314,8 @@ def patch_task(kind: str, path: Path) -> None:
         corrected, matches = re.subn(r"(?m)^(\s*threads=\d+)\n", r"\1 \\\n", source)
         if matches != 1 or "qin=" not in source:
             raise ValueError("unrecognized pinned repair task; runtime correction refused")
+        if mate_orders is not None:
+            corrected = _ordered_inputs(corrected, mate_orders)
     else:
         raise ValueError("unknown task correction")
     temp = path.with_name(path.name + ".nfclaw.tmp")
@@ -247,22 +327,53 @@ def patch_task(kind: str, path: Path) -> None:
         temp.unlink(missing_ok=True)
 
 
-def write_config(target: Path) -> Path:
+def write_config(target: Path, *, input_path: Path | None = None) -> Path:
     command = _command()
-    hooks = {f"{kind.upper()}_HOOK": json.dumps(f"{command} patch {kind} .command.sh")
-             for kind in ("scatter", "wiper", "reportgather", "repair")}
-    salt = recipe_digest()[:16]
+    scatter_hook = json.dumps(command + " patch scatter .command.sh")
+    orders = paired_input_roles(input_path)
+    encoded = base64.b64encode(json.dumps(orders, sort_keys=True).encode()).decode()
+    repair_hook = json.dumps(command + " patch repair .command.sh --mate-orders " + encoded)
+    # Parse a cohort map once, outside meta-dependent closures: Nextflow stringifies
+    # those closures, so even fragmented table literals inside them overflow the
+    # JVM constant-size ceiling. Each task receives only its sample's role pair.
+    serialized = json.dumps(orders, sort_keys=True)
+    fragments = ", ".join(json.dumps(serialized[index:index + 8000])
+                          for index in range(0, len(serialized), 8000))
+    order_expression = f"new groovy.json.JsonSlurper().parseText([{fragments}].join(''))"
+    if orders:
+        repair_hook = ("{\n            def roles = nfclawMateRoles\n"
+                       "            def pair = roles[meta.id]\n"
+                       "            def selection = pair == null ? [:] : [(meta.id): pair]\n"
+                       "            return " + json.dumps(command + " patch repair .command.sh")
+                       + ' + " --mate-orders " + groovy.json.JsonOutput.toJson(selection).bytes.encodeBase64().toString()\n'
+                       "        }")
+    wiper_hook = json.dumps(command + " patch wiper .command.sh")
+    reportgather_hook = json.dumps(command + " patch reportgather .command.sh")
+    salt = (hashlib.sha256(_source() + encoded.encode()).hexdigest()[:16] if orders else recipe_digest()[:16])
     config = """// nfclaw runtime correction for fastqrepair 1.1.1; pinned source is unchanged.
+def nfclawMateRoles = new java.util.LinkedHashMap(MATE_ORDERS)
 process {
     withName: 'WIPERTOOLS_FASTQSCATTER' {
         beforeScript = SCATTER_HOOK
         ext.prefix = { "${meta.id}__nfclaw_RECIPE" }
     }
-    withName: 'WIPERTOOLS_FASTQWIPER' {
-        beforeScript = WIPER_HOOK
-    }
     withName: 'WIPERTOOLS_FASTQGATHER' {
         ext.prefix = { "${meta.id}_gather__nfclaw_RECIPE" }
+        publishDir = [path: { "${params.outdir}/repaired" }, mode: "${-> params.publish_dir_mode}",
+            enabled: true, overwrite: true,
+            saveAs: { filename ->
+                if (filename == 'versions.yml') return null
+                if (!meta.single_end && !params.skip_bbmap_repair) return null
+                if (meta.single_end) return "${meta.sample_id}.fastq.gz"
+                def roles = nfclawMateRoles
+                def pair = roles[meta.sample_id]
+                if (pair == null || !pair.contains(meta.id))
+                    throw new IllegalStateException("Cannot publish unverified mate identity; supply an explicit local samplesheet")
+                return "${meta.sample_id}_${pair.indexOf(meta.id) + 1}.fastq.gz"
+            }]
+    }
+    withName: 'WIPERTOOLS_FASTQWIPER' {
+        beforeScript = WIPER_HOOK
     }
     withName: 'BBMAP_REPAIR' {
         beforeScript = REPAIR_HOOK
@@ -294,9 +405,13 @@ process {
             overwrite: true, saveAs: { filename -> filename == 'versions.yml' ? null : filename }]
     }
 }
-""".replace("RECIPE", salt)
-    for name, hook in hooks.items():
-        config = config.replace(name, hook)
+"""
+    replacements = {"RECIPE": salt, "SCATTER_HOOK": scatter_hook, "REPAIR_HOOK": repair_hook,
+                    "WIPER_HOOK": wiper_hook, "MATE_ORDERS": order_expression,
+                    "REPORTGATHER_HOOK": reportgather_hook}
+    # Expand only the original template. Sample identifiers and embedded helper
+    # source can contain literal marker words and must never be expanded again.
+    config = re.sub("|".join(replacements), lambda match: replacements[match[0]], config)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(config)
     return target
@@ -313,6 +428,7 @@ def main() -> None:
     patch = sub.add_parser("patch")
     patch.add_argument("kind", choices=(*_TASKS, "repair"))
     patch.add_argument("script", type=Path)
+    patch.add_argument("--mate-orders")
     split = sub.add_parser("scatter")
     split.add_argument("-f", "--fastq", type=Path, required=True)
     split.add_argument("-n", "--num_splits", type=int, required=True)
@@ -328,7 +444,8 @@ def main() -> None:
     if args.command == "version":
         print("nfclaw-fastqrepair-compat-sha256:" + recipe_digest())
     elif args.command == "patch":
-        patch_task(args.kind, args.script)
+        orders = json.loads(base64.b64decode(args.mate_orders)) if args.mate_orders else None
+        patch_task(args.kind, args.script, mate_orders=orders)
     elif args.command == "scatter":
         scatter(args.fastq, args.num_splits, args.prefix, args.out_folder,
                 extension=args.ext, suffix=args.suffix)
