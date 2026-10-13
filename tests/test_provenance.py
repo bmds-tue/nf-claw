@@ -423,3 +423,52 @@ def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
         assert "started" in log
         assert log.rstrip().splitlines()[-1].endswith(": terminated by SIGTERM"), bash
         assert not (target / "provenance" / "logs" / ".replay-console").exists()
+
+
+@pytest.mark.parametrize("bash", ["/bin/bash", "bash"])
+def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, bash):
+    import os
+    import shlex
+    import signal
+    import subprocess
+    import time
+
+    completed = tmp_path / "command_completed"
+    pidfile = tmp_path / "verification.pid"
+    out = tmp_path / "out"
+    out.mkdir()
+    # The replay appends `--outdir <target>`; GNU touch would parse it as an option, so the
+    # recorded command ignores trailing arguments, like the other replay tests here.
+    prov = provenance.write(outdir=out, pipeline="mini",
+                            command_str=shlex.join(["sh", "-c", f"touch {shlex.quote(str(completed))}"]),
+                            submodule=_st(tmp_path / "up"), input_paths=[])
+    guard = prov / "replay_guard.py"
+    text = guard.read_text()
+    marker = 'def verify_dependencies(bundle: Path) -> None:\n'
+    gate = (f'    if Path({str(completed)!r}).exists():\n'
+            f'        Path({str(pidfile)!r}).write_text(str(os.getpid()))\n'
+            '        import time\n        time.sleep(30)\n')
+    assert marker in text
+    guard.write_text(text.replace(marker, marker + gate, 1))
+    target = tmp_path / "fresh"
+    replay = subprocess.Popen([bash, str(prov / "commands.sh"), str(target)],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        deadline = time.monotonic() + 10
+        while not pidfile.exists():
+            assert replay.poll() is None
+            assert time.monotonic() < deadline
+            time.sleep(0.05)
+        child = int(pidfile.read_text())
+        replay.send_signal(signal.SIGTERM)
+        _, stderr = replay.communicate(timeout=10)
+        assert replay.returncode == 143, stderr
+        with pytest.raises(ProcessLookupError):
+            os.kill(child, 0)
+        log = (target / "provenance/logs/run.log").read_text()
+        assert log.rstrip().splitlines()[-1].endswith(": terminated by SIGTERM")
+        assert not (target / "provenance/logs/.replay-verification").exists()
+    finally:
+        if replay.poll() is None:
+            replay.kill()
+            replay.communicate(timeout=5)

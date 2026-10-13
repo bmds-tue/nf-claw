@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import csv
-import json
-import math
 import re
 import unicodedata
 from collections import Counter
 from collections.abc import Hashable, Iterable
+from decimal import Decimal
 from pathlib import Path
 
+from runner import exact_json as json
 from runner.inputs import is_remote_url, local_name_issues
 from runner.schema import InputSchema, PATH_FORMATS, json_scalar
 
@@ -57,12 +57,13 @@ def serialized_rows(path: Path) -> list[dict] | None:
                         seen.add(key)
                     return super().construct_mapping(node, deep=deep)
 
+            UniqueKeySafeLoader.add_constructor("tag:yaml.org,2002:float", json.yaml_float)
             loader = UniqueKeySafeLoader(text)
             try:
                 data = loader.get_single_data()
             finally:
                 loader.dispose()
-        except (yaml.YAMLError, RecursionError) as exc:
+        except (yaml.YAMLError, RecursionError, ValueError, ArithmeticError) as exc:
             raise csv.Error(f"invalid YAML: {exc}") from exc
     return data if isinstance(data, list) and all(isinstance(row, dict) for row in data) else None
 
@@ -111,7 +112,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             for i, row in enumerate(data, start=1):
                 for col in named:
                     value = row.get(col.name)
-                    if col.is_identifier and value is not None and not isinstance(value, (str, int, float, bool)):
+                    if col.is_identifier and value is not None and not isinstance(value, (str, *json.NUMBER_TYPES, bool)):
                         issues.append(f"row {i}: '{col.name}' identifier must be a literal scalar; "
                                       "quote YAML identifiers to preserve their text")
                     else:
@@ -234,7 +235,7 @@ def value_problems(col, value: str) -> list[str]:
     issues: list[str] = []
     if col.enum and value not in col.enum:
         issues.append(f"value {value!r} must be one of: {', '.join(col.enum)}")
-    numeric: int | float | None = None
+    numeric: int | float | Decimal | None = None
     if col.type == "integer":
         try:
             numeric = int(value)
@@ -242,12 +243,10 @@ def value_problems(col, value: str) -> list[str]:
             issues.append(f"expects an integer, got {value!r}")
     elif col.type == "number":
         try:
-            numeric = float(value)
-            if not math.isfinite(numeric):
-                issues.append(f"expects a finite number, got {value!r}")
-                numeric = None
-        except ValueError:
-            issues.append(f"expects a number, got {value!r}")
+            numeric = json.number(value)
+        except ValueError as exc:
+            kind = "a finite number" if "non-finite" in str(exc) else "a number"
+            issues.append(f"expects {kind}, got {value!r}")
     if col.pattern:
         try:
             matches = re.search(col.pattern, value) is not None
@@ -260,9 +259,9 @@ def value_problems(col, value: str) -> list[str]:
     if col.max_length is not None and len(value) > col.max_length:
         issues.append(f"length must be <= {col.max_length}")
     if numeric is not None:
-        if col.minimum is not None and numeric < col.minimum:
+        if col.minimum is not None and json.decimal(numeric) < json.decimal(col.minimum):
             issues.append(f"must be >= {col.minimum}")
-        if col.maximum is not None and numeric > col.maximum:
+        if col.maximum is not None and json.decimal(numeric) > json.decimal(col.maximum):
             issues.append(f"must be <= {col.maximum}")
     return issues
 

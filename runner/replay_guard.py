@@ -330,6 +330,15 @@ def verify_dependencies(bundle: Path) -> None:
     manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("outcome"), str):
         raise ValueError(f"provenance bundle is incomplete: {bundle}")
+    stability = manifest.get("dependency_stability")
+    if stability is not None:
+        if (not isinstance(stability, dict) or type(stability.get("version")) is not int
+                or stability["version"] != 1
+                or stability.get("status") not in {"unchanged", "changed", "not_checked"}):
+            raise ValueError("invalid dependency stability record")
+        if stability["status"] == "changed":
+            raise ValueError("local dependencies changed or could not be verified during the original run; "
+                             "these outputs have no verified launch-input attribution. Start a fresh run.")
     if type(manifest.get("dependency_inventory_version")) is not int \
             or manifest["dependency_inventory_version"] != 1:
         raise ValueError("dependency inventory version is missing or unsupported; "

@@ -168,15 +168,17 @@ def test_prelaunch_directory_shape_survives_changes_during_execution(library, tm
 
     monkeypatch.setattr(orchestration.execution, "run", launch)
     out = tmp_path / "out"
-    orchestration.run_pipeline("mini", repo_root=root, input_path=source, outdir=out,
-        profile="docker", params_file=None, cli_overrides={}, resume=False, demo=False,
-        check_only=False, write_provenance=True, timeout_seconds=None, nxf_ver="25.10.4")
+    from runner.errors import NfclawError
+    with pytest.raises(NfclawError, match="during execution"):
+        orchestration.run_pipeline("mini", repo_root=root, input_path=source, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=False,
+            check_only=False, write_provenance=True, timeout_seconds=None, nxf_ver="25.10.4")
     bundle = out / "provenance"
     inventory = json.loads((bundle / "inputs.inventory.json").read_text())
     assert inventory == {str(source): {"type": "directory"}, str(original): {"type": "directory"}}
     result = subprocess.run([str(bundle / "commands.sh"), str(tmp_path / "replay")],
                             capture_output=True, text=True, timeout=15)
-    assert result.returncode != 0 and "later_sample" in result.stderr
+    assert result.returncode != 0 and "original run" in result.stderr
 
 
 def test_replay_destination_cannot_mutate_recorded_inputs_before_dependency_validation(tmp_path):

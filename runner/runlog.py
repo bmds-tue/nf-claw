@@ -360,7 +360,8 @@ class RunLog:
         if self._finished:
             return
         self._finished = True
-        self.note(f"==> nfclaw {self.label} finished {now()}: {self.outcome}")
+        outcome = self.outcome.replace("\r", "\\r").replace("\n", "\\n")
+        self.note(f"==> nfclaw {self.label} finished {now()}: {outcome}")
         try:
             self._fh.close()
         except OSError:

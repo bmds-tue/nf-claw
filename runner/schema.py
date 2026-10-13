@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Iterator
+
+from runner import exact_json as json
 
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
@@ -26,8 +28,8 @@ class Param:
     hidden: bool = False      # nf-core marks generic/boilerplate params (email, validation*, …) hidden
     # Value-shape constraints nf-schema enforces at runtime (enum has its own field above).
     pattern: str | None = None
-    minimum: int | float | None = None
-    maximum: int | float | None = None
+    minimum: int | float | Decimal | None = None
+    maximum: int | float | Decimal | None = None
     min_length: int | None = None
     max_length: int | None = None
     deprecated: bool = False
@@ -68,8 +70,8 @@ class Column:
     fmt: str | None = None          # "file-path" | "directory-path" | None — mirrors Param.fmt
     enum: tuple[str, ...] | None = None
     # Same value-shape constraints as Param, so one renderer serves both (no asymmetry).
-    minimum: int | float | None = None
-    maximum: int | float | None = None
+    minimum: int | float | Decimal | None = None
+    maximum: int | float | Decimal | None = None
     min_length: int | None = None
     max_length: int | None = None
     deprecated: bool = False
@@ -133,6 +135,8 @@ def json_scalar(value: Any) -> str:
     Used for enum documentation and default rendering. Validation retains typed enum values."""
     if isinstance(value, bool):
         return "true" if value else "false"
+    if value is None or isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     return str(value)
 
 

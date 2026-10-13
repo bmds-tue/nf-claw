@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import json
 import math
 import re
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from runner import exact_json as json
 from runner.errors import ErrorCode, NfclawError
 from runner.inputs import absolute_local_path, is_remote_url, local_name_issues, shell_path_issues
 from runner.schema import PATH_FORMATS, Param, ParamSchema
@@ -94,8 +95,8 @@ def _json_equal(left: Any, right: Any) -> bool:
     visited = set()
     while pending:
         a, b = pending.pop()
-        if isinstance(a, (int, float)) and not isinstance(a, bool):
-            if not isinstance(b, (int, float)) or isinstance(b, bool) or a != b:
+        if isinstance(a, json.NUMBER_TYPES) and not isinstance(a, bool):
+            if not isinstance(b, json.NUMBER_TYPES) or isinstance(b, bool) or json.decimal(a) != json.decimal(b):
                 return False
         elif type(a) is not type(b):
             return False
@@ -173,13 +174,14 @@ def _value_shape_errors(flag: str, value: Any, param: Param) -> list[str]:
         errors.append(f"parameter '{flag}' expects an object, got {type(value).__name__}")
         return errors
     if scalar_type == "integer" and (
-        not isinstance(value, (int, float)) or isinstance(value, bool)
+        not isinstance(value, json.NUMBER_TYPES) or isinstance(value, bool)
         or isinstance(value, float) and not value.is_integer()
+        or isinstance(value, Decimal) and value != value.to_integral_value()
     ):
         errors.append(f"parameter '{flag}' expects an integer, got {type(value).__name__}")
         return errors
     if scalar_type == "number" and (
-        not isinstance(value, (int, float)) or isinstance(value, bool)
+        not isinstance(value, json.NUMBER_TYPES) or isinstance(value, bool)
     ):
         errors.append(f"parameter '{flag}' expects a number, got {type(value).__name__}")
         return errors
@@ -194,10 +196,10 @@ def _value_shape_errors(flag: str, value: Any, param: Param) -> list[str]:
         errors.append(f"parameter '{flag}' length >= {param.min_length} required")
     if param.max_length is not None and isinstance(value, str) and len(value) > param.max_length:
         errors.append(f"parameter '{flag}' length <= {param.max_length} required")
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        if param.minimum is not None and value < param.minimum:
+    if isinstance(value, json.NUMBER_TYPES) and not isinstance(value, bool):
+        if param.minimum is not None and json.decimal(value) < json.decimal(param.minimum):
             errors.append(f"parameter '{flag}' must be >= {param.minimum}")
-        if param.maximum is not None and value > param.maximum:
+        if param.maximum is not None and json.decimal(value) > json.decimal(param.maximum):
             errors.append(f"parameter '{flag}' must be <= {param.maximum}")
     return errors
 
@@ -215,7 +217,12 @@ def _coerce_scalar(value: str, type_: str):
         try:
             return int(value.strip())
         except ValueError:
-            return _LEAVE
+            if re.fullmatch(r"[+-]?[0-9]+", value.strip()):
+                return _LEAVE  # retain Python's direct integer-token digit limit
+            try:
+                return json.integral(json.number(value.strip()))
+            except ValueError:
+                return _LEAVE
     if type_ == "number":
         # Whole-number CLI tokens need no binary floating-point conversion. A conversion
         # would silently change large integers before enum and boundary checks see them.
@@ -225,11 +232,10 @@ def _coerce_scalar(value: str, type_: str):
             except ValueError:
                 return _LEAVE  # Python's integer digit limit: report an ordinary type error.
         try:
-            number = float(value.strip())
+            number = json.number(value.strip())
         except ValueError:
             return _LEAVE
-        # `nan`/`inf` parse as floats but have no JSON form; left as a string, they are reported.
-        return number if math.isfinite(number) else _LEAVE
+        return number
     return _LEAVE           # string, or a union like "integer or string" — ambiguous, leave it
 
 
@@ -243,11 +249,11 @@ def coerce_to_schema(merged: dict[str, Any], schema: ParamSchema) -> dict[str, A
         param = schema.params.get(key)
         if param is None:
             continue
-        if (param.type == "integer" and isinstance(val, float) and math.isfinite(val)
-                and val.is_integer()):
+        if (param.type == "integer" and isinstance(val, (float, Decimal))
+                and _finite(val) and json.decimal(val) == json.decimal(val).to_integral_value()):
             # JSON Schema counts 4.0 as an integer; pass the pipeline the integer its schema
             # declares rather than a float it may interpolate as "4.0".
-            out[key] = int(val)
+            out[key] = json.integral(val)
             continue
         if not isinstance(val, str):
             continue
@@ -336,6 +342,7 @@ def load_params_file(path: Path, *, label: str = "--params-file") -> dict:
                             pass  # SafeLoader reports unhashable keys with a source location.
                     return super().construct_mapping(node, deep=deep)
 
+            UniqueLoader.add_constructor("tag:yaml.org,2002:float", json.yaml_float)
             loader = UniqueLoader(text)
             try:
                 data = loader.get_single_data()
@@ -345,7 +352,7 @@ def load_params_file(path: Path, *, label: str = "--params-file") -> dict:
             # malformed params files too; `or {}` silently discarded them.
             if data is None and yaml.compose(text) is None:
                 data = {}
-        except (yaml.YAMLError, RecursionError) as exc:
+        except (yaml.YAMLError, RecursionError, ValueError, ArithmeticError) as exc:
             raise NfclawError(
                 ErrorCode.PARAMS_INVALID,
                 f"{label} is not valid YAML: {path} ({exc})",
@@ -409,7 +416,8 @@ def _finite(value: Any) -> bool:
     pending, seen = [value], set()
     while pending:
         item = pending.pop()
-        if isinstance(item, float) and not math.isfinite(item):
+        if (isinstance(item, float) and not math.isfinite(item)
+                or isinstance(item, Decimal) and not item.is_finite()):
             return False
         if isinstance(item, (Mapping, list, tuple)) and id(item) not in seen:
             seen.add(id(item))
@@ -421,7 +429,7 @@ def write_params_file(params: dict[str, Any], dest: Path) -> Path:
     # allow_nan=False: Python would otherwise write the non-standard `NaN`/`Infinity` literals, which
     # Nextflow cannot parse. Validation reports such values first; this is the backstop.
     try:
-        text = json.dumps(params, indent=2, sort_keys=True, allow_nan=False)
+        text = json.dumps(params, indent=2, sort_keys=True, allow_nan=False, nextflow_compatible=True)
     except ValueError as exc:
         raise NfclawError(ErrorCode.PARAMS_INVALID,
                           f"Parameters cannot be written as JSON: {exc}",
