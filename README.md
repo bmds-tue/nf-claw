@@ -105,6 +105,12 @@ nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' 
 
 Sample names come from the file names and are never altered (a name the pipeline cannot take is refused, naming the file). FastQ mates are paired by `_R1`/`_R2` (an advisory flags first read names that disagree) and by `_1`/`_2` only when their first read names show they are mates, so numbered single-end replicates are not mistaken for mates; Illumina lane numbers fill a `lane` column. Values no file determines (strandedness, patient, condition, …) come only from `--sheet-set COLUMN=VALUE` — a constant or a `{sample}`/`{lane}` template — or the schema's own defaults: a gap is refused with the column's allowed values, and so is an ambiguous or stray file. The sheet passes the same checks as a hand-written one, is staged as `<outdir>/provenance/samplesheet.csv` and recorded in the provenance bundle, and a replay reuses it rather than re-scanning the directory.
 
+Review the generated sheet against the experimental design. Filename conventions and the first
+read header provide limited identity evidence; they do not establish biological replicates,
+complete read synchronization or correct study metadata. Distinct SRA `accession.spot-id`
+values remain distinct molecules. Explicit mate labels that contradict an inferred pairing
+are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about contradictions.
+
 Sample, patient, genome and database identifiers become upstream shell arguments and filenames. They must start with a letter, digit or underscore and use only letters, digits, combining marks, dots, underscores or hyphens; choose explicit safe aliases for other names. The runner preserves accepted identities exactly. CSV/TSV and flat JSON/YAML records receive these guards, duplicate-field checks and absolute local-path checks (including globs). YAML preflight requires the optional `pip install -e ".[yaml]"` dependency. Explicitly supplied auxiliary tables (for example `--genome-sheet` and `--databases`) receive their own declared schema checks too. Declared local data paths in these records are hashed for replay; nested input structures still rely on the pinned nf-schema validation.
 
 ### 3. Provenance Replay & Verification
@@ -187,8 +193,9 @@ unavailable version probe cannot establish that a requested ceiling will be enfo
 By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
 The log appends on `--resume`; metadata and checksums describe the latest attempt.
 External dependencies must remain available: the bundle does not archive every input.
-For declared local inputs, `--resume` retains the cache only when recorded file bytes
-and recursive directory namespaces are unchanged, including data named by samplesheets.
+For declared local inputs, `--resume` retains the cache only when complete file selection,
+alias identities, recorded bytes and recursive directory namespaces are unchanged,
+including data named by samplesheets and files selected for generated sheets.
 Size and timestamp alone cannot establish unchanged scientific data. A changed
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
