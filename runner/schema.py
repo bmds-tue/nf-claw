@@ -368,8 +368,11 @@ def _audited_input_contract(content: bytes, repo: Path) -> dict:
     """Additional consumed-file roles established from the pinned source, by schema digest.
 
     Added roles fill omitted path annotations. Consumer corrections and non-input
-    exclusions also require the exact revision and unchanged audited source. Unknown
-    schemas retain their explicit path annotations, including annotated alternatives.
+    exclusions were established for one exact revision: another revision sharing the
+    schema (an older release run with --pipeline-version, or a newer pin awaiting its
+    audit) keeps the contract its schema publishes, while a changed consumer at the
+    audited revision fails closed. Unknown schemas retain their explicit path
+    annotations, including annotated alternatives.
     """
     registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest(), {})
@@ -378,9 +381,7 @@ def _audited_input_contract(content: bytes, repo: Path) -> dict:
             or any(role.get("separator") for role in audited.get("columns", {}).values())):
         from runner.submodule import _own_head
         if _own_head(repo) != audited["commit"]:
-            raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
-                             "audited samplesheet correction requires its exact pinned pipeline revision",
-                             fix="Use the supported pinned release; other stale contracts require a source audit.")
+            return {}
         for name, digest in audited["source_sha256"].items():
             path = repo / name
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:

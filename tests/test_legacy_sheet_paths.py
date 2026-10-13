@@ -161,8 +161,10 @@ def test_audited_schema_roles_match_the_pins_and_capture_each_data_cell(tmp_path
     source = tree / audit["schema"]
     if not source.exists():
         pytest.skip("requires initialized pinned pipeline source")
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tree, text=True).strip()
+    if head != audit["commit"]:
+        pytest.skip(f"{audit['pipeline']} is no longer pinned at the audited commit {audit['commit'][:12]}")
     assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
-    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tree, text=True).strip() == audit["commit"]
     for reference in audit["source"]:
         assert (tree / reference.partition(":")[0]).is_file(), reference
     for reference, expected_digest in audit.get("source_sha256", {}).items():
@@ -244,20 +246,40 @@ def test_nanoseq_positional_header_cannot_be_reordered(tmp_path):
     assert any("header" in issue for issue in samplesheet.validate(sheet, contract))
 
 
-@pytest.mark.parametrize("damage", ["revision", "source"])
-def test_consumer_schema_corrections_fail_closed_when_audited_identity_changes(tmp_path, damage):
-    tree, _ = _pinned("hgtseq")
+def _shared_copy(tmp_path, name):
+    tree, _ = _pinned(name)
     copy = tmp_path / "pipeline"
     subprocess.run(["git", "clone", "--shared", "--quiet", str(tree), str(copy)], check=True)
+    return copy
+
+
+def _other_revision(copy):
+    subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                    "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"], cwd=copy, check=True)
+
+
+def _published_columns(copy):
+    published = json.loads((copy / "assets/schema_input.json").read_text())
+    return set(published["items"]["properties"])
+
+
+def test_consumer_schema_corrections_fail_closed_when_audited_source_changes(tmp_path):
+    copy = _shared_copy(tmp_path, "hgtseq")
     assert {c.name for c in schema.load_input_schema(copy).columns} == {"sample", "input1", "input2"}
-    if damage == "revision":
-        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-                        "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"], cwd=copy, check=True)
-    else:
-        source = copy / "workflows/hgtseq.nf"
-        source.write_text(source.read_text() + "\n// modified consumer\n")
+    source = copy / "workflows/hgtseq.nf"
+    source.write_text(source.read_text() + "\n// modified consumer\n")
     with pytest.raises(NfclawError, match="audited samplesheet"):
         schema.load_input_schema(copy)
+
+
+def test_consumer_schema_corrections_leave_other_revisions_their_published_contract(tmp_path):
+    # An older release sharing the schema (nfclaw show/run --pipeline-version) or a newer pin
+    # awaiting its audit is not the audited consumer: it keeps the columns its schema declares.
+    copy = _shared_copy(tmp_path, "hgtseq")
+    _other_revision(copy)
+    contract = schema.load_input_schema(copy)
+    assert {c.name for c in contract.columns} == _published_columns(copy) != {"sample", "input1", "input2"}
+    assert contract.header_prefix == () and contract.generation_problem is None
 
 
 def test_nanoseq_configured_reference_name_remains_metadata_but_local_references_are_hashed(tmp_path):
@@ -451,20 +473,21 @@ def test_datasync_destination_is_not_captured_as_consumed_input(tmp_path):
     assert provenance.samplesheet_file_paths(sheet, contract) == []
 
 
-@pytest.mark.parametrize("damage", ["revision", "source"])
-def test_datasync_destination_exclusion_requires_the_audited_consumer(tmp_path, damage):
-    tree, _ = _pinned("datasync")
-    copy = tmp_path / "pipeline"
-    subprocess.run(["git", "clone", "--shared", "--quiet", str(tree), str(copy)], check=True)
+def test_datasync_destination_exclusion_requires_the_audited_consumer(tmp_path):
+    copy = _shared_copy(tmp_path, "datasync")
     assert schema.load_input_schema(copy).destination_columns == ("output_path",)
-    if damage == "revision":
-        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-                        "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"], cwd=copy, check=True)
-    else:
-        source = copy / "modules/nf-core/rclone/copy/main.nf"
-        source.write_text(source.read_text() + "\n// modified consumer\n")
+    source = copy / "modules/nf-core/rclone/copy/main.nf"
+    source.write_text(source.read_text() + "\n// modified consumer\n")
     with pytest.raises(NfclawError, match="audited samplesheet"):
         schema.load_input_schema(copy)
+
+
+def test_datasync_destination_exclusion_does_not_extend_to_other_revisions(tmp_path):
+    copy = _shared_copy(tmp_path, "datasync")
+    _other_revision(copy)
+    contract = schema.load_input_schema(copy)
+    assert contract.destination_columns == ()
+    assert not any(c.audited_double_quoted for c in contract.columns)
 
 
 @pytest.mark.parametrize("destination", ['/archive/Study"A', '/archive/Study\\A'])
