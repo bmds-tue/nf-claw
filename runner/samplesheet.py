@@ -86,9 +86,23 @@ def pattern_file_columns(input_schema: InputSchema) -> dict:
 
     columns = {c.name: c for c in input_schema.columns if c.name}
     excluded = {*input_schema.metadata_columns, *input_schema.destination_columns}
+    # Audited metadata applies only at its exact revision; a release run with --pipeline-version
+    # keeps the published schema, whose name column shares the patterns of the column it names.
+    # A column that pairs with its formatted twin as a mate (chipseq's fastq_2) is a file.
+    staged: dict[frozenset, list[str]] = {}
+    for column in columns.values():
+        if column.path_format():
+            staged.setdefault(frozenset(sheetgen._patterns(column)), []).append(column.name)
+
+    def names_a_staged_file(name: str) -> bool:
+        twins = staged.get(frozenset(sheetgen._patterns(columns[name])), [])
+        return bool(twins) and not any(len(group) == 2 for twin in twins
+                                       for group in sheetgen._read_groups([twin, name]))
+
     return {name: columns[name] for name in sheetgen.file_columns(input_schema)
             if not columns[name].path_format()
-            and name not in excluded}
+            and name not in excluded
+            and not names_a_staged_file(name)}
 
 
 def names_relative_file(col, value: str) -> bool:

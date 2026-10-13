@@ -331,6 +331,20 @@ def test_pattern_typed_file_columns_refuse_relative_paths(tmp_path, extension):
     assert any(row_b in i and "'LongFastQ' is a relative path" in i for i in issues)
 
 
+def test_a_column_naming_a_staged_file_stays_a_name_without_an_audit(tmp_path):
+    # nanostring 1.3.0-1.3.2 (run with --pipeline-version) publish RCC_FILE_NAME beside RCC_FILE
+    # with no audited contract: a bare file name there is metadata, not a relative path.
+    import dataclasses
+    unaudited = dataclasses.replace(PATTERN_TYPED, metadata_columns=())
+    rcc = tmp_path / "a.RCC"
+    rcc.write_text("x")
+    ss = tmp_path / "ss.csv"
+    ss.write_text(f"sample,fastq_1,RCC_FILE,RCC_FILE_NAME\nA,{tmp_path / 'a_R1.fastq.gz'},{rcc},a.RCC\n")
+    assert samplesheet.validate(ss, unaudited) == []
+    assert "RCC_FILE_NAME" not in samplesheet.pattern_file_columns(unaudited)
+    assert "fastq_1" in samplesheet.pattern_file_columns(unaudited)
+
+
 def test_pattern_typed_file_columns_keep_remote_and_absolute_values(tmp_path):
     ss = tmp_path / "ss.csv"
     ss.write_text("sample,fastq_1\n"
