@@ -18,6 +18,18 @@ def _cell(text: object) -> str:
     return " ".join(str(text).split()).replace("|", "\\|")
 
 
+def _reference_description(text: str, ps: ParamSchema) -> str:
+    """Keep upstream prose, but do not link to nonexistent parameter-table anchors."""
+    def reference(match: re.Match) -> str:
+        label, anchor = match.groups()
+        if anchor in ps.groups() or anchor == "general":
+            return match.group(0)
+        name = anchor.removeprefix("--").replace("-", "_")
+        missing = name not in ps.params and label.strip("`") == anchor
+        return label + (" (not declared in this pinned schema)" if missing else "")
+    return _cell(re.sub(r"\[([^\]]+)\]\(#([\w-]+)\)", reference, text))
+
+
 def _allowed(values: tuple[str, ...] | None) -> str:
     """An allowed-values cell: each value its own code span, so a value that itself contains a comma
     (ampliseq's `bac,arc,mito,euk`) cannot be mistaken for several."""
@@ -186,21 +198,18 @@ def _resources_section(name: str, ps: ParamSchema, insch: InputSchema | None,
                        pipeline_version: str | None = None) -> str:
     """How to run this pipeline on a machine smaller than its defaults assume.
 
-    nf-core sizes every process from a resource label in `conf/base.config`, and those labels are
-    written for a server: the stock `process_high` asks for tens of gigabytes, and Nextflow retries a
-    failed task with *more*. On a workstation the run dies at the first such task — the failure the
-    `test` profile never shows, because it ships its own small `resourceLimits` ceiling. The fix
-    nf-core documents is that same ceiling, applied to a real run."""
-    inp = _input_arg(ps, insch)
-    ver = f" --pipeline-version {pipeline_version}" if pipeline_version else ""
+    nf-core resource labels commonly assume a server and retry rules can grow their requests.
+    A workstation can refuse such a task before it runs. Apply the resourceLimits ceiling
+    nf-core documents to every request, rather than resizing individual processes."""
+    command, _ = _run_invocation(name, ps, insch, pipeline_version)
     return (
-        "A real (non-`--demo`) run requests the resources the pipeline's `conf/base.config` asks "
-        "for, which are sized for a server — a single step can request far more memory than a "
-        "workstation has, and Nextflow retries a failed step with more still. If a run fails with "
+        "Resource requests follow the pipeline's configs and selected profiles. nf-core's "
+        "resource labels often assume a server — a single step can request far more memory than a "
+        "workstation has, and retry rules can increase requests. If a run fails with "
         "`Process requirement exceeds available memory` (or CPUs), cap every request, and every "
         "retry, at what this machine actually has:\n\n"
         "```bash\n"
-        f"nfclaw run {name}{inp} --outdir results{ver} -profile docker \\\n"
+        f"{command} \\\n"
         "  --limit-cpus 4 --limit-memory 15.GB\n"
         "```\n\n"
         "nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` "
@@ -313,8 +322,8 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
     pin = engine_version.minimum_version(spec)
     pin_line = ""
     if pin:
-        pin_line = (f"\n\nTo run the engine this {what} targets — worth doing if a newer Nextflow "
-                    f"emits config-parser warnings the {what} never saw:\n```bash\n"
+        pin_line = (f"\n\nTo pin this {what}'s declared minimum engine — useful when a newer "
+                    "Nextflow has incompatible config parsing:\n```bash\n"
                     f"nfclaw run {name} ... --nxf-ver {pin}\n```\n"
                     "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
                     f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
@@ -554,19 +563,20 @@ def _run_invocation(name: str, ps: ParamSchema, insch: InputSchema | None,
                     tree: str | None = None) -> tuple[str, str]:
     """The (nfclaw, raw nextflow) example commands. `--input` comes from `_input_arg`, and every
     schema-required param beyond input/outdir that has NO default
-    is shown as an explicit `<placeholder>` (those carrying a default are filled by nf-schema, so
-    the one-liner stays runnable as printed). When rendering a non-pinned version, the nfclaw
+    is shown as an explicit `<placeholder>` (defaults remain subject to the pipeline's config
+    and runtime validation). When rendering a non-pinned version, the nfclaw
     command carries `--pipeline-version <tag>` and the raw command targets that version's tree
     (`tree` names its cache directory when that differs from the tag, as for a `dev` commit)."""
     inp = _input_arg(ps, insch)
-    extra = "".join(f" --{p.name.replace('_', '-')} <{p.name}>"
-                    for p in ps.params.values()
-                    if p.required and p.name not in ("input", "outdir") and p.default is None)
+    required = [p for p in ps.params.values()
+                if p.required and p.name not in ("input", "outdir") and p.default is None]
+    extra = "".join(f" --{p.name.replace('_', '-')} <{p.name}>" for p in required)
+    raw_extra = "".join(f" --{p.name} <{p.name}>" for p in required)
     ver = f" --pipeline-version {pipeline_version}" if pipeline_version else ""
     upstream = (f"pipelines/{name}/.versions/{tree or pipeline_version}/upstream"
                 if pipeline_version else f"pipelines/{name}/upstream")
     nfclaw = f"nfclaw run {name}{inp} --outdir results{extra}{ver} -profile docker"
-    raw = f"nextflow run {upstream} -profile docker{inp} --outdir results{extra}"
+    raw = f"nextflow run {upstream} -profile docker{inp} --outdir results{raw_extra}"
     return nfclaw, raw
 
 
@@ -717,8 +727,10 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         "## Full reference\n"
         "Every parameter — name, type, required, hidden, allowed values, constraints, default and "
         "description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. "
-        "Nextflow's nf-schema validates every parameter against this schema at runtime, so an "
-        "unknown or invalid value fails fast. Upstream usage: "
+        "nfclaw checks explicit parameters before launch; the pinned pipeline's validation "
+        "handles conditional and complex constraints at runtime. The reference uses nfclaw's "
+        "hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). "
+        "Upstream usage: "
         f"https://github.com/nf-core/{name}/blob/{ref}/docs/usage.md\n\n"
         f"<!-- Generated from nf-core/{name}@{st.commit}. Do not edit by hand. -->\n"
     )
@@ -729,10 +741,12 @@ def _render_reference(name: str, st: SubmoduleStatus, ps: ParamSchema,
                       insch: InputSchema | None) -> str:
     out = (f"---\nname: {name}\nversion: {st.version}\ncommit: {st.commit}\n---\n\n"
            f"# {name} — full parameter reference\n\n"
-           f"{ps.title}. Every parameter from the pinned `nextflow_schema.json`, validated by "
-           "nf-schema at runtime. `hidden` marks nf-core's generic/boilerplate parameters; "
+           f"{ps.title}. Every parameter from the pinned `nextflow_schema.json`. Flags use nfclaw's "
+           "hyphenated spelling; raw Nextflow requires the exact schema spelling (usually underscores). "
+           "`hidden` marks parameters hidden from upstream's normal help output; "
            "`constraints` lists each parameter's declared value bounds (pattern, min/max, length) — "
-           "conditional or composed rules (e.g. anyOf/oneOf) are enforced by nf-schema at runtime.\n\n")
+           "conditional or composed rules (e.g. anyOf/oneOf) remain subject to the pinned "
+           "pipeline's runtime validation.\n\n")
     for group, params in sorted(ps.groups().items()):
         out += f"## {group or 'general'}\n\n"
         out += ("| parameter | type | required | hidden | allowed values | constraints | "
@@ -743,7 +757,7 @@ def _render_reference(name: str, st: SubmoduleStatus, ps: ParamSchema,
             hid = "yes" if p.hidden else ""
             out += (f"| `--{p.name.replace('_', '-')}` | {_type_with_fmt(p.type, p.fmt)} | "
                     f"{req} | {hid} | {_allowed(p.enum)} | {_constraints(p)} | "
-                    f"{_cell(default)} | {_cell(p.description)} |\n")
+                    f"{_cell(default)} | {_reference_description(p.description, ps)} |\n")
         out += "\n"
     out += f"<!-- Generated from nf-core/{name}@{st.commit}. Do not edit by hand. -->\n"
     return out

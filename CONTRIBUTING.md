@@ -16,7 +16,7 @@ All contributions must uphold four architectural invariants:
 
 | Tenet | Rule & Invariant |
 |---|---|
-| **1. Pipeline-Agnostic Design** | Neither `runner/` (execution runtime) nor `librarian/` (maintenance) may hardcode pipeline names or biological assumptions about parameter values and samplesheet columns. The documented `input`/`outdir` interface and narrowly detected schema/plugin compatibility mechanisms are shared runtime contracts. Other parameter and column logic comes from the pinned schemas; pipeline-specific relationships are declarative data in `handoffs/*.json`. |
+| **1. Pipeline-Agnostic Design** | General behavior in `runner/` (execution runtime) and `librarian/` (maintenance) comes from pinned schemas and declarative handoff rules, rather than biological assumptions about names or columns. Narrow, audited exceptions in `runner/fastqrepair_compat.py` and `runner/path_roles.json` require exact source identities and record their evidence for replay. Keep new compatibility logic equally explicit and guarded. |
 | **2. Deterministic Outputs** | Generated markdown and JSON documents must remain bit-identical across repeated runs on the same commits. Timestamps are forbidden in generated context; git commit hashes serve as immutable version anchors. |
 | **3. Test-Driven Development (TDD)** | Every bugfix or new feature must be paired with regression tests. Write the failing test first, implement the minimal fix, and verify with `make test`. |
 | **4. Zero-Drift Invariant** | Committed context (`skill.md`, `reference.md`, `catalog.*`) must always match pinned submodule code. Any discrepancy between context files and pinned submodules is rejected by the drift gate (`python3 -m librarian.check_drift`). |
@@ -184,7 +184,7 @@ When submitting the PR on GitHub:
 - **Path Handling:** Always use `pathlib.Path` for filesystem operations. Do not concatenate strings for paths.
 - **Subprocess Execution:** Never invoke bare shell strings (`shell=True`). Use `subprocess.Popen` or `subprocess.run` with discrete argument lists (`list[str]`) to prevent word splitting and shell injection vulnerabilities.
 - **Process Signals:** Ensure background processes cleanly trap `SIGINT` and `SIGTERM` and shut down child tasks.
-- **Space-Free Path Invariant:** Use `runner/preflight.py` checks to validate that repository, output, and Nextflow work paths contain no spaces unless `--allow-spaces` is explicit. Line breaks remain refused.
+- **Space-Free Path Invariant:** Use `runner/preflight.py` checks for repository, output and work paths. `--allow-spaces` bypasses the space check; LF/CR remain forbidden. Input filename and route checks live in `runner/input_safety.py`.
 
 ### Code Style & Linting
 We enforce Ruff configuration defined in `pyproject.toml`:
@@ -248,7 +248,7 @@ Both `librarian.check_drift` and the full pytest suite must pass with 0 errors.
 Handoff rules describe how outputs published by an upstream pipeline are adapted into inputs for a downstream pipeline. Rules reside in `handoffs/<upstream>/<downstream>.json`.
 
 ### 1. Author the Rule File
-Inspect the upstream pipeline's `docs/output.md` to identify output file paths, and the downstream pipeline's `assets/schema_input.json` to identify required samplesheet columns.
+Inspect the upstream pipeline's `docs/output.md` and publication code to identify output paths, and the downstream parameter's declared input schema to identify required columns. Some parameters use an auxiliary schema; inspect the pinned parser when its contract disagrees with a bundled template. Static checks validate parameters and column compatibility; actual published files are verified at handoff time.
 
 Example: `handoffs/fetchngs/rnaseq.json`:
 ```json

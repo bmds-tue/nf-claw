@@ -1,13 +1,13 @@
 # nf-claw
 
-> A self-maintaining, token-minimal library of nf-core Nextflow DSL2 pipelines curated for autonomous AI agents and bioinformaticians. Unmodified upstream releases are executed with deterministic preflight validation, strict identifier hygiene, cryptographic provenance bundles, reproducible replay guards, and multi-stage pipeline chaining.
+> A self-maintaining, token-minimal library of nf-core Nextflow DSL2 pipelines curated for autonomous AI agents and bioinformaticians. Upstream source trees remain unmodified; execution includes documented, source-guarded runtime corrections alongside deterministic preflight validation, strict identifier hygiene, cryptographic provenance bundles, reproducible replay guards, and multi-stage pipeline chaining.
 
-nf-claw provides AI agents with structured, machine-actionable instructions and CLI tooling to discover, configure, execute, and chain production-grade nf-core bioinformatic pipelines without hallucinated parameters or manual wrapper overhead.
+nf-claw provides AI agents with structured, machine-actionable instructions and CLI tooling to discover, configure, execute, and chain production-grade nf-core bioinformatic pipelines using pinned parameter references and a shared runner.
 
 Key conventions for AI agents navigating this repository:
 - Discover without token bloat: Do not read full catalogs or directory listings. Grep `catalog.json` (or `catalog.md`) for keywords.
-- Inspect pipeline skills: Read `pipelines/<name>/skill.md` for required inputs, parameters, and verified run commands. Consult `pipelines/<name>/reference.md` for complete parameter constraints.
-- Run safely: Execute with `nfclaw run <name> --input <file> --outdir <dir> -profile <profile>` (or `python3 -m runner run ...`). Pass `--check` for preflight schema validation and dry-run command inspection without execution.
+- Inspect pipeline skills: Read `pipelines/<name>/skill.md` for required inputs, parameters, and schema-derived run commands. Consult `pipelines/<name>/reference.md` for complete parameter constraints.
+- Run a pipeline: Execute with `nfclaw run <name> --input <file> --outdir <dir> -profile <profile>` (or `python3 -m runner run ...`). Use Python 3.11+; pass `--check` for explicit-value preflight and command inspection without launching pipeline tasks. It leaves the output directory untouched but can initialize sources and probe the engine.
 - No samplesheet yet: pass the data files as `--input` (a directory, a quoted glob, or files with `--input` once each) and nfclaw generates the samplesheet from the pipeline's own schema; set the columns no file name determines with `--sheet-set COLUMN=VALUE` (listed under Inputs in each `skill.md`).
 - Check status: Monitor foreground or background runs with `nfclaw status <outdir>`. Runs are logged to `<outdir>/provenance/logs/run.log` and protected by a non-blocking writer lock beside the output directory (`.<outdir name>.nfclaw.lock`).
 - Sample identity safety: Scientific metadata identifiers (`meta.id`, sample/patient IDs, genome/database names) must start with a letter, digit or underscore and contain only letters, digits, combining marks, dots, underscores or hyphens (Unicode letters and digits count). nfclaw refuses other identifiers rather than renaming samples. Local paths in samplesheets must always be absolute.
@@ -23,7 +23,7 @@ Key conventions for AI agents navigating this repository:
 ## Essential Documentation
 
 - [Repository Overview & Quickstart (README.md)](https://github.com/danilomonge/nf-claw/blob/main/README.md): Repository layout, quickstart examples, provenance bundles, scientific validation notes, and citations.
-- [System Architecture (docs/architecture.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/architecture.md): Four architectural zones, schema preflight gates, non-blocking sibling writer locks (`.nfclaw.lock`), and cryptographic provenance bundle structure.
+- [System Architecture (docs/architecture.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/architecture.md): Four architectural zones, schema preflight gates, non-blocking sibling writer locks (`.nfclaw.lock`), and cryptographic provenance bundle structure and its validation limits.
 - [Pipeline Chaining Engine (docs/chaining.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/chaining.md): Multi-stage workflow orchestration, declarative JSON specs, cryptographic handoff verification, automated stage retries, and lineage tracking.
 - [Engine Compatibility & Runtime Controls (docs/compatibility.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/compatibility.md): Nextflow DSL2 compatibility, Nextflow engine version pinning (`--nxf-ver`), JVM tuning (`--nxf-env`), and host resource limit controls (`--limit-*`).
 - [Known Issues & Operational Troubleshooting (docs/known-issues.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/known-issues.md): Triage guide for benign upstream Nextflow warnings (e.g. nf-schema config scopes), host environment issues (IPv6, disk, permissions), and pipeline-specific workarounds.

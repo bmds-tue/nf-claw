@@ -9,6 +9,40 @@ from runner.submodule import SubmoduleStatus
 FIX = Path(__file__).parent / "fixtures"
 
 
+def test_raw_command_preserves_upstream_parameter_spelling():
+    ps = ParamSchema("p", "", {
+        "input_format": Param("input_format", "string", None, None, "", None, True, "g"),
+        "db_name": Param("db_name", "string", None, None, "", None, True, "g"),
+    })
+    wrapped, raw = write_skill._run_invocation("p", ps, None)
+    assert "--input-format <input_format>" in wrapped
+    assert "--db-name <db_name>" in wrapped
+    assert "--input_format <input_format>" in raw
+    assert "--db_name <db_name>" in raw
+    assert "--input-format" not in raw and "--db-name" not in raw
+
+
+def test_reference_description_distinguishes_missing_parameters_from_groups():
+    ps = ParamSchema("p", "", {
+        "existing_param": Param("existing_param", "string", None, None, "", None, False, "options"),
+    })
+    description = "See [`missing_param`](#missing_param), [`existing_param`](#existing_param) and [options](#options)."
+    text = write_skill._reference_description(description, ps)
+    assert "`missing_param` (not declared in this pinned schema)" in text
+    assert "`existing_param`" in text and "#existing_param" not in text
+    assert "[options](#options)" in text
+
+
+def test_resource_example_retains_required_pipeline_arguments():
+    ps = ParamSchema("p", "", {
+        "input_format": Param("input_format", "string", None, None, "", None, True, "g"),
+    })
+    text = write_skill._resources_section("p", ps, None, "1.2.0")
+    assert "--input-format <input_format>" in text
+    assert "--pipeline-version 1.2.0" in text
+    assert "--limit-cpus 4 --limit-memory 15.GB" in text
+
+
 def test_affected_fastqrepair_docs_distinguish_corrected_runs_from_direct_source(tmp_path):
     pdir = _seed(tmp_path, "mini")
     st = SubmoduleStatus("fastqrepair", pdir / "mini" / "upstream", True, True,
