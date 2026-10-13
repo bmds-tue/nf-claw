@@ -136,6 +136,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 - **Why:** Pipelines filter samples and tolerate task failures without failing the run. rnaseq skips a sample below its `--min_trimmed_reads` or `--min_mapped_reads` threshold (observed: a public paired-end run whose deposited read 2 was a 4 bp index read lost every pair in trimming), and nf-core's template ends "Pipeline completed successfully, but with errored process(es)" when failed tasks were ignored. Nextflow and nfclaw judge a run by its exit status alone.
 - **Behavior:** nfclaw quotes the pipeline's own completion caveats and Nextflow's count of ignored task failures: as warnings after the run, in `nfclaw status` (`status: success — with caveats the pipeline reported about its results`), in `run_manifest.json` (`completion_caveats`) and per stage in the chain log and `nfclaw chain status`. The outcome stays `success`; nfclaw reports what the pipeline said and does not reinterpret it. A pipeline that drops samples without saying so is not detected: compare the samples you supplied with those in the results.
 
+### Intermittent `No signature of method: java.util.LinkedHashMap.subMap() is applicable …`
+- **Symptom:** A run fails in a channel operator rather than in a task: `.nextflow.log` shows `groovy.lang.MissingMethodException: No signature of method: java.util.LinkedHashMap.subMap() is applicable for argument types: (String, String, String)`, although the pipeline calls the ordinary varargs `meta.subMap('a', 'b', 'c')`.
+- **Observed:** Once among the fastqrepair 1.1.1 native validations on Nextflow 25.10.4 (GitHub-hosted Ubuntu runner, 2026-10-13); the identical job passed in every run before and after it. The stack trace fails inside Groovy's invokedynamic call-site cache (`IndyInterface.fromCache`), not in pipeline or nfclaw code, and no input changed.
+- **Fix:** Re-run the same command with `--resume`: completed tasks are reused. If it recurs, report it to Nextflow with the `.nextflow.log` stack trace.
+
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
 
