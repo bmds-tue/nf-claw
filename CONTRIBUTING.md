@@ -64,7 +64,7 @@ Before opening a bug report, determine which category the issue falls into:
 |---|---|---|
 | **Host / Environment Issue** | Spaces in directory path, missing Python packages, IPv6 JVM socket timeouts, Docker permissions, workstation OOMs. | Consult [`docs/known-issues.md`](docs/known-issues.md). Fix via flags (`--nxf-env`, `--limit-*`, `--config`) or system configuration. |
 | **Upstream Pipeline Defect** | A task failure inside an nf-core process (`.command.err`), container image bugs, or conflicting test profiles. | Pinned releases are wrapped **unmodified**. Document the workaround in `docs/known-issues.md` and report the bug upstream to the respective [nf-core repository](https://github.com/nf-core). |
-| **nf-claw Runtime Defect** | Preflight parameter validation falsely rejecting valid values, locking deadlocks, broken provenance bundles, or chaining errors. | File a bug report on [GitHub Issues](https://github.com/danilomonge/nf-claw/issues). |
+| **nf-claw Runtime Defect** | Preflight parameter validation falsely rejecting valid values, locking deadlocks, broken provenance bundles, or chaining errors. | File a bug report on [GitHub Issues](https://github.com/bmds-tue/nf-claw/issues). |
 
 ### 2. How to File an Issue
 

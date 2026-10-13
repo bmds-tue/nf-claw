@@ -17,27 +17,27 @@ Key conventions for AI agents navigating this repository:
 
 ## Agent Guidance
 
-- [Agent Operational Manual (AGENTS.md)](https://github.com/danilomonge/nf-claw/blob/main/AGENTS.md): Authoritative operational rules for AI agents: CLI execution semantics, parameter preflight, samplesheet rules, identity safety, status inspection, locking, chaining, replay, and benign warning triage.
-- [Claude Code Entry Point (CLAUDE.md)](https://github.com/danilomonge/nf-claw/blob/main/CLAUDE.md): Dedicated entry point for Anthropic Claude Code (maintained in identical parity with AGENTS.md).
+- [Agent Operational Manual (AGENTS.md)](https://github.com/bmds-tue/nf-claw/blob/main/AGENTS.md): Authoritative operational rules for AI agents: CLI execution semantics, parameter preflight, samplesheet rules, identity safety, status inspection, locking, chaining, replay, and benign warning triage.
+- [Claude Code Entry Point (CLAUDE.md)](https://github.com/bmds-tue/nf-claw/blob/main/CLAUDE.md): Dedicated entry point for Anthropic Claude Code (maintained in identical parity with AGENTS.md).
 
 ## Essential Documentation
 
-- [Repository Overview & Quickstart (README.md)](https://github.com/danilomonge/nf-claw/blob/main/README.md): Repository layout, quickstart examples, provenance bundles, scientific validation notes, and citations.
-- [System Architecture (docs/architecture.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/architecture.md): Four architectural zones, schema preflight gates, non-blocking sibling writer locks (`.nfclaw.lock`), and cryptographic provenance bundle structure and its validation limits.
-- [Pipeline Chaining Engine (docs/chaining.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/chaining.md): Multi-stage workflow orchestration, declarative JSON specs, cryptographic handoff verification, automated stage retries, and lineage tracking.
-- [Engine Compatibility & Runtime Controls (docs/compatibility.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/compatibility.md): Nextflow DSL2 compatibility, Nextflow engine version pinning (`--nxf-ver`), JVM tuning (`--nxf-env`), and host resource limit controls (`--limit-*`).
-- [Known Issues & Operational Troubleshooting (docs/known-issues.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/known-issues.md): Triage guide for benign upstream Nextflow warnings (e.g. nf-schema config scopes), host environment issues (IPv6, disk, permissions), and pipeline-specific workarounds.
-- [Upstream Tracking & Maintenance Automation (docs/updating.md)](https://github.com/danilomonge/nf-claw/blob/main/docs/updating.md): Submodule version tracking, automated release bumping, schema drift auditing (`librarian.check_drift`), and zero-drift policy.
+- [Repository Overview & Quickstart (README.md)](https://github.com/bmds-tue/nf-claw/blob/main/README.md): Repository layout, quickstart examples, provenance bundles, scientific validation notes, and citations.
+- [System Architecture (docs/architecture.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/architecture.md): Four architectural zones, schema preflight gates, non-blocking sibling writer locks (`.nfclaw.lock`), and cryptographic provenance bundle structure and its validation limits.
+- [Pipeline Chaining Engine (docs/chaining.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/chaining.md): Multi-stage workflow orchestration, declarative JSON specs, cryptographic handoff verification, automated stage retries, and lineage tracking.
+- [Engine Compatibility & Runtime Controls (docs/compatibility.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/compatibility.md): Nextflow DSL2 compatibility, Nextflow engine version pinning (`--nxf-ver`), JVM tuning (`--nxf-env`), and host resource limit controls (`--limit-*`).
+- [Known Issues & Operational Troubleshooting (docs/known-issues.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/known-issues.md): Triage guide for benign upstream Nextflow warnings (e.g. nf-schema config scopes), host environment issues (IPv6, disk, permissions), and pipeline-specific workarounds.
+- [Upstream Tracking & Maintenance Automation (docs/updating.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/updating.md): Submodule version tracking, automated release bumping, schema drift auditing (`librarian.check_drift`), and zero-drift policy.
 
 ## Pipeline Catalogs & Library
 
-- [Pipeline Catalog Markdown (catalog.md)](https://github.com/danilomonge/nf-claw/blob/main/catalog.md): Human-readable index of every tracked nf-core pipeline with its pinned version, declared input, output locations and description (use grep; do not read whole).
-- [Pipeline Catalog JSON (catalog.json)](https://github.com/danilomonge/nf-claw/blob/main/catalog.json): Machine-readable catalog: for every tracked pipeline its name, pinned version, description, summary, declared input, output locations, tools and the pipelines it feeds (use grep; do not read whole).
-- [Upstream Sources Manifest (sources.tsv)](https://github.com/danilomonge/nf-claw/blob/main/sources.tsv): Tab-separated registry mapping each pipeline to its upstream Git repository and tracking policy.
-- [Pipeline Library Directory (pipelines/)](https://github.com/danilomonge/nf-claw/tree/main/pipelines): Library of individual pipelines (`pipelines/<name>/`), each holding pinned code (`upstream/`), agent instructions (`skill.md`), and complete parameter schemas (`reference.md`).
+- [Pipeline Catalog Markdown (catalog.md)](https://github.com/bmds-tue/nf-claw/blob/main/catalog.md): Human-readable index of every tracked nf-core pipeline with its pinned version, declared input, output locations and description (use grep; do not read whole).
+- [Pipeline Catalog JSON (catalog.json)](https://github.com/bmds-tue/nf-claw/blob/main/catalog.json): Machine-readable catalog: for every tracked pipeline its name, pinned version, description, summary, declared input, output locations, tools and the pipelines it feeds (use grep; do not read whole).
+- [Upstream Sources Manifest (sources.tsv)](https://github.com/bmds-tue/nf-claw/blob/main/sources.tsv): Tab-separated registry mapping each pipeline to its upstream Git repository and tracking policy.
+- [Pipeline Library Directory (pipelines/)](https://github.com/bmds-tue/nf-claw/tree/main/pipelines): Library of individual pipelines (`pipelines/<name>/`), each holding pinned code (`upstream/`), agent instructions (`skill.md`), and complete parameter schemas (`reference.md`).
 
 ## Optional
 
-- [Contributing Guidelines (CONTRIBUTING.md)](https://github.com/danilomonge/nf-claw/blob/main/CONTRIBUTING.md): Guide for contributing new pipelines, modifying librarian automation, and running tests.
-- [Live Web Portal](https://danilomonge.github.io/nf-claw/): Interactive web portal for exploring pipelines, parameter schemas, live GitHub Actions workflows, and system architecture.
-- [Academic Citation (CITATION.cff)](https://github.com/danilomonge/nf-claw/blob/main/CITATION.cff): Citation Metadata Format file for referencing nf-claw and wrapped nf-core pipelines.
+- [Contributing Guidelines (CONTRIBUTING.md)](https://github.com/bmds-tue/nf-claw/blob/main/CONTRIBUTING.md): Guide for contributing new pipelines, modifying librarian automation, and running tests.
+- [Live Web Portal](https://bmds-tue.github.io/nf-claw/): Interactive web portal for exploring pipelines, parameter schemas, live GitHub Actions workflows, and system architecture.
+- [Academic Citation (CITATION.cff)](https://github.com/bmds-tue/nf-claw/blob/main/CITATION.cff): Citation Metadata Format file for referencing nf-claw and wrapped nf-core pipelines.

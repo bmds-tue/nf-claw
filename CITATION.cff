@@ -11,6 +11,8 @@ title: "nf-claw: A self-maintaining, token-minimal library of nf-core pipelines 
 version: 1.0.0
 date-released: "2026-06-15"
 license: MIT
+repository-code: "https://github.com/bmds-tue/nf-claw"
+url: "https://bmds-tue.github.io/nf-claw/"
 abstract: >-
   nf-claw turns nf-core pipelines into an agent-runnable library. The pipelines
   themselves are authored by the nf-core community and wrapped unmodified as
