@@ -38,7 +38,7 @@ KINDS = ("samplesheet", "build", "file", "upstream_param")
 _RULE_KEYS = {"description", "upstream_params", "params"}
 _EXTRA_KEYS = {"samplesheet": {"provides", "rename", "set", "add_empty", "drop_rows_not_allowed",
                                "require_values"},
-               "build": set(), "file": set(), "upstream_param": set()}
+               "build": set(), "file": {"paired_with"}, "upstream_param": set()}
 _BUILD_KEYS = {"rows", "columns", "format"}
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
@@ -138,6 +138,20 @@ def parse_rule(data: Any, *, upstream: str, downstream: str, origin: str) -> Rul
         if kind == "build":
             _check_build(src["build"], target, bad)
         sources[target] = Source(kind, src, bool(src.get("optional", False)))
+    # `paired_with`: a file list whose candidates belong to another file list's, index by index
+    # (rnaseq's gene lengths to the counts of the same quantification). The partner's choice decides.
+    for target, source in sources.items():
+        if "paired_with" not in source.spec:
+            continue
+        partner = source.spec["paired_with"]
+        other = sources.get(partner) if isinstance(partner, str) else None
+        if (other is None or partner == target or other.kind != "file"
+                or "paired_with" in other.spec
+                or not isinstance(source.spec["file"], list)
+                or not isinstance(other.spec["file"], list)
+                or len(source.spec["file"]) != len(other.spec["file"])):
+            raise bad(f"'{target}': 'paired_with' must name another parameter whose 'file' list "
+                      "is as long as this one's")
     return Rule(upstream, downstream, origin, str(data.get("description", "")), dict(up),
                 sources, data)
 
@@ -403,15 +417,16 @@ def _one_match(root: Path, pattern: str) -> Path:
     return found[0]
 
 
-def _first_match(root: Path, patterns: str | list[str]) -> Path:
-    """The file the first pattern that matches anything names (it must name exactly one). An ordered
-    list says which output to prefer when a pipeline can write it in several places — rnaseq's
-    merged counts sit under whichever quantifier ran, and its test profile runs two."""
+def _first_match(root: Path, patterns: str | list[str]) -> tuple[Path, int]:
+    """The file the first pattern that matches anything names (it must name exactly one), and that
+    pattern's position. An ordered list says which output to prefer when a pipeline can write it in
+    several places — rnaseq's merged counts sit under whichever quantifier ran, and its test
+    profile runs two."""
     if isinstance(patterns, str):
-        return _one_match(root, patterns)
-    for pattern in patterns:
+        return _one_match(root, patterns), 0
+    for index, pattern in enumerate(patterns):
         try:
-            return _one_match(root, pattern)
+            return _one_match(root, pattern), index
         except _NoMatch:
             continue                                      # several files matching is not skipped
     raise _NoMatch(f"nothing in {root} matches any of " + ", ".join(repr(p) for p in patterns))
@@ -651,7 +666,8 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
 
 def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
              downstream_tree: Path, dest: Path,
-             used: tuple[Mapping[str, Any], str | None]) -> tuple[Any, list[str], dict[str, Any]]:
+             used: tuple[Mapping[str, Any], str | None],
+             chosen: dict[str, int] | None = None) -> tuple[Any, list[str], dict[str, Any]]:
     """One source's value, the upstream files it was derived from, and extra record fields."""
     if src.kind in ("samplesheet", "build"):
         ref = inputs.samplesheet_schema(downstream_tree, param=target)
@@ -673,7 +689,16 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                                            upstream_outdir)
         return str(path), derived, {"sha256": sha256_file(path), **extra, **consumption}
     if src.kind == "file":
-        found = _first_match(upstream_outdir, src.spec["file"])
+        chosen = {} if chosen is None else chosen
+        if (partner := src.spec.get("paired_with")) is not None:
+            if partner not in chosen:
+                raise _Unresolved(f"it belongs to {_flag(partner)}, which this handoff did not "
+                                  f"choose; supply both {_flag(partner)} and {_flag(target)}")
+            index = chosen[partner]
+            found = _one_match(upstream_outdir, src.spec["file"][index])
+        else:
+            found, index = _first_match(upstream_outdir, src.spec["file"])
+        chosen[target] = index
         return (str(found), [found.relative_to(upstream_outdir).as_posix()],
                 {**consumption_evidence([found], upstream_outdir), "consumed_scalar": True})
     params, recorded_in = used
@@ -759,12 +784,16 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
     used = _recorded_params(upstream_outdir)
     values: dict[str, Any] = {}
     traced: dict[str, dict] = {}
-    for target, src in rule.params.items():
+    chosen: dict[str, int] = {}                 # which candidate each file list chose
+    # A paired file list follows its partner's choice, so the partner is resolved first.
+    order = sorted(rule.params.items(), key=lambda item: "paired_with" in item[1].spec)
+    for target, src in order:
         if target in exclude_params:
             continue
         try:
             value, derived, extra = _resolve(rule, target, src, upstream_outdir=upstream_outdir,
-                                             downstream_tree=downstream_tree, dest=dest, used=used)
+                                             downstream_tree=downstream_tree, dest=dest, used=used,
+                                             chosen=chosen)
         except (OSError, ValueError) as exc:
             raise NfclawError(
                 ErrorCode.HANDOFF_FAILED,

@@ -352,6 +352,61 @@ def test_file_source_takes_the_first_candidate_that_matches(library, finished_ru
     assert hand.params == {"fasta": str(up / "star_salmon" / "counts.tsv")}
 
 
+def _with_lengths(down):
+    """The mini fixture with a second file parameter, as differentialabundance takes counts and
+    lengths."""
+    import json
+    path = down / "nextflow_schema.json"
+    schema = json.loads(path.read_text())
+    schema["definitions"]["reference_genome_options"]["properties"]["lengths"] = {
+        "type": "string", "format": "file-path"}
+    path.write_text(json.dumps(schema))
+    return down
+
+
+PAIRED = {"params": {
+    "fasta": {"file": ["star_rsem/counts.tsv", "salmon/counts.tsv"]},
+    "lengths": {"file": ["star_rsem/lengths.tsv", "salmon/lengths.tsv"], "paired_with": "fasta"}}}
+
+
+def test_paired_file_sources_come_from_the_same_producer(library, finished_run, tmp_path):
+    # rnaseq 3.15-3.22 published Salmon gene lengths but none for RSEM: independent first matches
+    # handed RSEM counts on with Salmon's lengths, silently mixing two quantifications.
+    _, down = _trees(library("mini_up", "mini"))
+    down = _with_lengths(down)
+    both = finished_run(tmp_path / "both", {
+        "star_rsem/counts.tsv": "rc", "star_rsem/lengths.tsv": "rl",
+        "salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    hand = handoff.materialize(_rule(PAIRED), upstream_outdir=both, downstream_tree=down,
+                               dest=tmp_path / "h")
+    assert hand.params == {"fasta": str(both / "star_rsem/counts.tsv"),
+                           "lengths": str(both / "star_rsem/lengths.tsv")}
+    rsem_without = finished_run(tmp_path / "old", {
+        "star_rsem/counts.tsv": "rc", "salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    with pytest.raises(NfclawError, match="star_rsem/lengths.tsv"):
+        handoff.materialize(_rule(PAIRED), upstream_outdir=rsem_without, downstream_tree=down,
+                            dest=tmp_path / "h2")
+
+
+def test_a_paired_source_is_not_chosen_without_its_partner(library, finished_run, tmp_path):
+    _, down = _trees(library("mini_up", "mini"))
+    down = _with_lengths(down)
+    up = finished_run(tmp_path / "up", {"salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    with pytest.raises(NfclawError, match="supply both --fasta and --lengths"):
+        handoff.materialize(_rule(PAIRED), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h", exclude_params=frozenset({"fasta"}))
+
+
+@pytest.mark.parametrize("lengths", [
+    {"file": ["a.tsv", "b.tsv"], "paired_with": "nope"},
+    {"file": ["a.tsv"], "paired_with": "fasta"},
+    {"file": "a.tsv", "paired_with": "fasta"},
+    {"file": ["a.tsv", "b.tsv"], "paired_with": "lengths"}])
+def test_paired_with_must_name_an_equally_long_file_list(lengths):
+    with pytest.raises(NfclawError, match="paired_with"):
+        _rule({"params": {"fasta": {"file": ["x.tsv", "y.tsv"]}, "lengths": lengths}})
+
+
 def test_file_source_candidates_none_matching(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"other.tsv": "x"})

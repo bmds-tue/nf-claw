@@ -1,5 +1,5 @@
 {
-  "description": "rnaseq's merged gene counts (and gene lengths) become differentialabundance's --matrix and --feature-length-matrix \u2014 from the alignment-based quantification when rnaseq ran one, otherwise its pseudo-aligner \u2014 with the GTF the rnaseq run used. The experimental design (--input, sample names as in rnaseq) and --contrasts describe your study and go in the stage's own params.",
+  "description": "rnaseq's merged gene counts and the gene lengths of the same quantification become differentialabundance's --matrix and --feature-length-matrix (DESeq2 models length bias with them; differentialabundance does not recommend raw counts without lengths) \u2014 from the alignment-based quantification when rnaseq ran one, otherwise its pseudo-aligner \u2014 with the GTF the rnaseq run used. An rnaseq release that published no lengths for that quantification (before 3.15.0; RSEM before 3.23.0) fails the handoff: hand over its length-scaled counts with an inline handoff instead. The experimental design (--input, sample names as in rnaseq) and --contrasts describe your study and go in the stage's own params.",
   "params": {
     "matrix": {
       "file": [
@@ -18,7 +18,7 @@
         "salmon/salmon.merged.gene_lengths.tsv",
         "kallisto/kallisto.merged.gene_lengths.tsv"
       ],
-      "optional": true
+      "paired_with": "matrix"
     },
     "gtf": {
       "upstream_param": "gtf",

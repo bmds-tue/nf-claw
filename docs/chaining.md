@@ -148,7 +148,7 @@ Example: `handoffs/fetchngs/rnaseq.json`:
 |---|---|---|
 | `samplesheet` | Copies and adapts an upstream samplesheet. `provides` declares guaranteed columns checked during static drift checks. | `fetchngs` → `rnaseq`, `fetchngs` → `mag` |
 | `build` | Synthesizes a new samplesheet from matching output files. Uses `{placeholders}` for row grouping and column templating. | `bamtofastq` → `rnaseq` |
-| `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. | `rnaseq` → `differentialabundance` (`--matrix`) |
+| `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. A list of patterns is tried in order; `"paired_with": "<param>"` instead takes the pattern at the position the named parameter's list chose, so two files come from the same producer step. | `rnaseq` → `differentialabundance` (`--matrix`, and `--feature-length-matrix` paired with it) |
 | `upstream_param` | Reuses a resolved parameter value from the upstream run's `params.json`. | `rnaseq` `--gtf` → `differentialabundance` `--gtf` |
 
 ### Samplesheet Transformations
