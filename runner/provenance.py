@@ -26,7 +26,7 @@ from runner.replay_guard import (MissingInputSource as MissingInputSource,
                                  read_input_inventory as read_input_inventory,
                                  read_checksums as read_checksums)
 from runner.samplesheet import delimiter_for, serialized_rows
-from runner.schema import InputSchema, PATH_FORMATS
+from runner.schema import InputSchema
 from runner.submodule import SubmoduleStatus
 
 
@@ -52,21 +52,24 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     Remote URLs and nested or pipeline-specific inputs need separate identity handling and are not guessed.
     The sheet has already been validated by the runner, including its absolute-path requirement.
     """
-    columns = [column.name for column in schema.columns if column.fmt in PATH_FORMATS]
+    columns = [column for column in schema.columns
+               if column.path_format() and column.name not in {*schema.destination_columns, *schema.metadata_columns}]
     paths: set[Path] = set()
     if path.suffix.lower() not in (".csv", ".tsv"):
         for row in serialized_rows(path) or []:
             for column in columns:
-                value = row.get(column)
-                if isinstance(value, str) and value and not is_remote_url(value):
-                    paths.add(Path(value))
+                value = row.get(column.name)
+                if isinstance(value, str) and value:
+                    paths.update(Path(part) for part in column.path_values(value, row)
+                                 if not is_remote_url(part))
         return sorted(paths)
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream, delimiter=delimiter_for(path), strict=True):
             for column in columns:
-                value = (row.get(column) or "").strip()
-                if value and not is_remote_url(value):
-                    paths.add(Path(value))
+                value = (row.get(column.name) or "").strip()
+                if value:
+                    paths.update(Path(part) for part in column.path_values(value, row)
+                                 if not is_remote_url(part))
     return sorted(paths)
 
 
@@ -81,7 +84,9 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
     """
     from runner import sheetgen
 
-    declared = {column.name for column in schema.columns if column.fmt in PATH_FORMATS}
+    declared = {column.name for column in schema.columns if column.path_format()}
+    declared.update(schema.destination_columns)
+    declared.update(schema.metadata_columns)
     typed = set(sheetgen.file_columns(schema))
     if path.suffix.lower() in (".csv", ".tsv"):
         with path.open(newline="", encoding="utf-8-sig") as stream:
@@ -100,6 +105,15 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
             if candidate.is_file() or (column in typed and candidate.is_dir()):
                 paths.add(candidate)
     return sorted(paths)
+
+
+def samplesheet_dependencies(path: Path, schema: InputSchema) -> list[Path]:
+    """The same local dependency boundary for run snapshots and producer handoffs.
+
+    Effective path roles and conservative existing-file capture are combined after
+    source-guarded metadata/destination exclusions; neither side may omit a member.
+    """
+    return sorted(set(samplesheet_input_paths(path, schema)) | set(samplesheet_file_paths(path, schema)))
 
 
 def _atomic_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:

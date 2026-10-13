@@ -37,7 +37,8 @@ Provenance (per the implementation plan):
   - LICENSE, CITATION.cff, and the agent/human docs (CLAUDE.md, AGENTS.md,
                  README.md, CONTRIBUTING.md) were kept or rewritten from ClawBio.
   - catalog.*, pipelines/<name>/skill.md and reference.md are generated
-                 deterministically from each pipeline's own nextflow_schema.json.
+                 deterministically from pinned schemas and source, with audited
+                 input contracts documented in runner/input_roles.json.
 
 ClawBio: Corpas M. ClawBio: Bioinformatics-Native AI Agent Skill Library.
 Zenodo (2026). https://doi.org/10.5281/zenodo.19420648

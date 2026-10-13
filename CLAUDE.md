@@ -153,7 +153,7 @@ Which pipeline can follow which: `nfclaw chain edges [name]`, or the `## Chainin
 
 ## To run a specific (non-latest) version
 
-The default is always the pinned latest release. To run any other published release instead:
+The default is the repository's pinned release. Updates are checked before adoption, so a newer upstream release may not yet be pinned. To run another published release instead:
 
 1. **List releases:** `nfclaw versions <name>` (the pinned latest is flagged).
 2. **Read that version's docs:** `nfclaw show <name> --pipeline-version X.Y.Z` — it fetches the tag, materializes it under `pipelines/<name>/.versions/X.Y.Z/` (git-ignored), and prints the `skill.md` generated from *that* release's schema (a `reference.md` is written alongside it). The params, flags and validation all come from X.Y.Z, not from latest.

@@ -14,14 +14,16 @@ license: MIT
 abstract: >-
   nf-claw turns nf-core pipelines into an agent-runnable library. The pipelines
   themselves are authored by the nf-core community and wrapped unmodified as
-  git submodules pinned to a release tag; nf-claw pairs each with an
-  auto-generated, token-minimal skill.md (the exact run command and required
-  inputs) and a full reference.md, derived from pinned schemas, usage documents
-  and citations. A generic runner executes each pipeline through a single command
-  and records a provenance bundle; curated, schema-checked handoff rules chain
-  pipelines. Documented runtime corrections preserve the pinned source trees
-  and record their evidence for replay. Scheduled workflows track release tags
-  through git and merge updates only after acceptance, test and drift checks pass.
+  git submodules pinned to a release tag; nf-claw pairs each with a
+  generated skill.md describing declared inputs and run commands, and a full
+  parameter reference.md. Context comes from the pinned schemas and source,
+  with documented exact-schema audits correcting stale input contracts. A
+  generic runner launches supported pipelines and records a provenance bundle;
+  curated handoff rules connect pipelines, and documented runtime corrections
+  are applied through recorded configurations without editing upstream source.
+  Scheduled workflows check new upstream releases and regenerate context.
+  Validation and replay checks cover declared dependencies and observed
+  execution behavior, rather than certifying biological accuracy.
 keywords:
   - nextflow
   - nf-core
@@ -96,7 +98,7 @@ references:
     authors:
       - family-names: Corpas
         given-names: Manuel
-        orcid: "https://orcid.org/0000-0002-5765-9827"
+        orcid: "https://orcid.org/0000-0002-4417-1018"
         affiliation: "University of Westminster"
     version: "0.5.0"
     date-released: "2026-04-04"

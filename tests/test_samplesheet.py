@@ -302,7 +302,7 @@ PATTERN_TYPED = InputSchema(columns=(
     # nanostring: a column that only names the file another column stages.
     Column("RCC_FILE", "string", False, "^\\S+\\.RCC$", "file-path"),
     Column("RCC_FILE_NAME", "string", False, "^\\S+\\.RCC$", None),
-))
+), metadata_columns=("RCC_FILE_NAME",))
 
 
 @pytest.mark.parametrize("extension", [".csv", ".json"])
@@ -337,6 +337,40 @@ def test_pattern_typed_file_columns_keep_remote_and_absolute_values(tmp_path):
                   "A,https://example.org/a_R1.fastq.gz\n"
                   f"B,{tmp_path / 'b_R1.fastq.gz'}\n")
     assert samplesheet.validate(ss, PATTERN_TYPED) == []
+
+
+@pytest.mark.parametrize("extension", [".csv", ".json"])
+def test_matching_read_patterns_do_not_turn_an_unformatted_mate_into_metadata(tmp_path, extension):
+    pattern = r"^\S+\.fastq\.gz$"
+    contract = InputSchema(columns=(Column("sample", "string", True, None),
+        Column("fastq_1", "string", True, pattern, "file-path"),
+        Column("fastq_2", "string", True, pattern)))
+    read = tmp_path / "A_1.fastq.gz"
+    read.write_bytes(b"first mate identity")
+    sheet = tmp_path / f"samples{extension}"
+    if extension == ".csv":
+        sheet.write_text(f"sample,fastq_1,fastq_2\nA,{read},A_2.fastq.gz\n")
+    else:
+        import json
+        sheet.write_text(json.dumps([{"sample": "A", "fastq_1": str(read), "fastq_2": "A_2.fastq.gz"}]))
+    assert any("fastq_2" in issue and "relative path" in issue for issue in samplesheet.validate(sheet, contract))
+
+
+@pytest.mark.parametrize("extension", [".csv", ".json"])
+@pytest.mark.parametrize("location", ["local", "remote"])
+def test_pattern_only_read_paths_receive_the_same_literal_filename_guard(tmp_path, extension, location):
+    contract = InputSchema(columns=(Column("sample", "string", True, None),
+        Column("reads", "string", True, r"^\S+\.fastq\.gz$")))
+    data = tmp_path / "O'Brien.fastq.gz"
+    data.write_bytes(b"read identity; preflight does not decode sequence content")
+    value = str(data) if location == "local" else "https://example.org/O'Brien.fastq.gz"
+    sheet = tmp_path / f"samples{extension}"
+    if extension == ".csv":
+        sheet.write_text(f"sample,reads\nA,{value}\n")
+    else:
+        import json
+        sheet.write_text(json.dumps([{"sample": "A", "reads": value}]))
+    assert any("unsafe" in issue and "filename" in issue for issue in samplesheet.validate(sheet, contract))
 
 
 def test_path_format_columns_are_checked_too(tmp_path):

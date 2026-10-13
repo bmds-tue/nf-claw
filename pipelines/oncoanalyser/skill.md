@@ -25,6 +25,8 @@ nextflow run pipelines/oncoanalyser/upstream -profile docker --input samplesheet
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions oncoanalyser` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show oncoanalyser --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show oncoanalyser --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
 
 ## Inputs
+**Pinned input contract.** For FASTQ rows, `filepath` is `forward_path;reverse_path` and both members must be absolute local paths or explicit remote URLs. File-type selection is case-insensitive. Other file types use one file or directory location. FASTQ `info` must provide `library_id` and `lane`; review their assignments against the study design. The `group_id`, `subject_id` and filename-forming info values (`library_id`, `lane`, `flowcell`) receive the same literal alias checks as sample identifiers. Info keys follow the consumer's uppercase normalization. An apostrophe in `read_group_overrides` is refused because the pinned BWA command passes its read-group line in single quotes. The exact compound interpretation is guarded by the pinned revision and consumer source hashes.
+
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
 | `group_id` | string | yes |  | matches ^\S+$ |

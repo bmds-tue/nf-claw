@@ -1,6 +1,7 @@
 """Producer evidence must describe the actual local data consumed by its successor."""
 # ruff: noqa: F811
 import json
+from pathlib import Path
 
 import pytest
 
@@ -174,3 +175,38 @@ def test_chain_cannot_report_success_after_consuming_changed_then_restored_data(
         chain.run_chain(_spec(), repo_root=root, outdir=out)
     state, problems = chain.status(out)
     assert state["outcome"] != "success" and problems
+
+
+@pytest.mark.parametrize("kind", ["direct", "build"])
+@pytest.mark.parametrize("changed", [False, True])
+def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library, tmp_path, kind, changed):
+    _, tree = _trees(library("mini_up", "mini"))
+    (tree / "assets/schema_input.json").write_text(json.dumps({"items": {
+        "properties": {"sample": {"type": "string"},
+                       "fastq_1": {"type": "string", "pattern": r"^\S+\.fastq\.gz$"},
+                       "reference": {"type": "string", "format": "file-path"}},
+        "required": ["sample", "fastq_1", "reference"]}}))
+    up, down = tmp_path / "up", tmp_path / "down"
+    up.mkdir()
+    reads, reference = up / "A.fastq.gz", up / "reference.fa"
+    original = b"original read identity"
+    reads.write_bytes(original)
+    reference.write_bytes(b">reference\nACGT\n")
+    (up / "samples.csv").write_text("sample,fastq_1,reference\nA,A.fastq.gz,reference.fa\n")
+    record(up)
+    spec = ({"samplesheet": "samples.csv", "provides": ["sample", "fastq_1", "reference"]}
+            if kind == "direct" else {"build": {"rows": "{sample}.fastq.gz", "columns": {
+                "sample": "{sample}", "fastq_1": "{sample}.fastq.gz", "reference": "reference.fa"}}})
+    evidence = handoff.materialize(_rule({"params": {"input": spec}}), upstream_outdir=up,
+                                  downstream_tree=tree, dest=tmp_path / "snapshot")
+    if changed:
+        reads.write_bytes(b"different bytes observed by the consumer")
+    state = _linked_state(up, down, evidence, tmp_path / "link",
+                          [Path(evidence.params["input"]), reads, reference])
+    reads.write_bytes(original)
+    problems = chain._integrity_problems(state)
+    if changed:
+        assert problems, "a declared reference must not mask different pattern-only read bytes"
+    else:
+        assert problems == []
+        assert evidence.record["params"]["input"]["consumed_sources"] == sorted(map(str, (reads, reference)))

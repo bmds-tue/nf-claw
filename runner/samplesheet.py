@@ -10,7 +10,7 @@ from pathlib import Path
 
 from runner import exact_json as json
 from runner.inputs import is_remote_url, local_name_issues
-from runner.schema import InputSchema, PATH_FORMATS, json_scalar
+from runner.schema import InputSchema, json_scalar
 
 
 def _unique_json_keys(pairs):
@@ -85,10 +85,10 @@ def pattern_file_columns(input_schema: InputSchema) -> dict:
     from runner import sheetgen
 
     columns = {c.name: c for c in input_schema.columns if c.name}
-    staged = {frozenset(sheetgen._patterns(c)) for c in columns.values() if c.fmt in PATH_FORMATS}
+    excluded = {*input_schema.metadata_columns, *input_schema.destination_columns}
     return {name: columns[name] for name in sheetgen.file_columns(input_schema)
-            if columns[name].fmt not in PATH_FORMATS
-            and frozenset(sheetgen._patterns(columns[name])) not in staged}
+            if not columns[name].path_format()
+            and name not in excluded}
 
 
 def names_relative_file(col, value: str) -> bool:
@@ -100,12 +100,20 @@ def names_relative_file(col, value: str) -> bool:
             and sheetgen._matches(col, Path("/") / value))
 
 
-def _relative_file_issues(row_num: int, col, value: str) -> list[str]:
-    if not names_relative_file(col, value):
-        return []
-    return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
-            "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
-            "to --outdir)"]
+def _pattern_file_issues(row_num: int, col, value: str) -> list[str]:
+    if names_relative_file(col, value):
+        return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
+                "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
+                "to --outdir)"]
+    from runner import sheetgen
+    if ((is_remote_url(value) or Path(value).is_absolute())
+            and sheetgen._matches(col, Path(value))):
+        # A pattern-only schema omits its existence semantics, but the recognized
+        # filename still reaches task scripts. Preserve literal markers that do not
+        # match a file pattern and apply the ordinary basename/route guard to files.
+        return [f"row {row_num}: '{col.name}': {issue}"
+                for issue in local_name_issues(value, "file-path")]
+    return []
 
 
 def validate(path: Path, input_schema: InputSchema) -> list[str]:
@@ -150,14 +158,20 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                     else:
                         raw = "" if value is None else json_scalar(value)
                         issues.extend(_identity_issues(i, col, raw))
-                    if col.fmt in PATH_FORMATS and isinstance(value, str) and value:
-                        issues.extend(_path_issues(i, col, value))
+                    if isinstance(value, str) and value and col.path_format(value):
+                        issues.extend(_path_cell_issues(i, col, value, row))
                     elif col.name in pattern_files and isinstance(value, str) and value.strip():
-                        issues.extend(_relative_file_issues(i, col, value.strip()))
+                        issues.extend(_pattern_file_issues(i, col, value.strip()))
+                    if isinstance(value, str):
+                        issues.extend(_info_identifier_issues(i, col, value))
+                        issues.extend(_quoted_value_issues(i, col, value))
             return issues
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter, strict=True)
             fields = reader.fieldnames or []
+            if input_schema.header_prefix and tuple(fields[:len(input_schema.header_prefix)]) != input_schema.header_prefix:
+                issues.append("samplesheet header must begin with " + ",".join(input_schema.header_prefix)
+                              + " in this order, as required by the pinned consumer")
             duplicates = sorted(name for name, count in Counter(fields).items() if count > 1)
             if duplicates:
                 return [f"duplicate samplesheet column '{name}'" for name in duplicates]
@@ -189,15 +203,17 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             if col.required and not val:
                 issues.append(f"row {i}: empty required '{col.name}'")
             issues.extend(_identity_issues(i, col, raw))
+            issues.extend(_info_identifier_issues(i, col, val))
+            issues.extend(_quoted_value_issues(i, col, raw))
             if val:
                 issues.extend(_value_issues(i, col, val))
-            if col.fmt in PATH_FORMATS and val:
+            if val and col.path_format(val):
                 # nf-schema resolves a relative path against Nextflow's launch directory — which
                 # nfclaw sets to --outdir — not against the samplesheet's folder, and it does not
                 # expand `~`. A relative path cannot mean what it says, so require an absolute one.
-                issues.extend(_path_issues(i, col, val))
+                issues.extend(_path_cell_issues(i, col, val, row))
             elif col.name in pattern_files and val:
-                issues.extend(_relative_file_issues(i, col, val))
+                issues.extend(_pattern_file_issues(i, col, val))
         values = {col.name: (row.get(col.name) or "").strip() for col in named}
         for trigger, required in input_schema.dependent_required:
             if values.get(trigger):
@@ -218,18 +234,59 @@ def _safe_identifier(value: str) -> bool:
                     for char in value))
 
 
+def _path_cell_issues(row_num: int, col, value: str, row: dict) -> list[str]:
+    try:
+        values = col.path_values(value, row)
+    except ValueError as exc:
+        return [f"row {row_num}: {exc}"]
+    return [issue for part in values for issue in _path_issues(row_num, col, part)]
+
+
+def _info_identifier_issues(row_num: int, col, value: str) -> list[str]:
+    issues = []
+    if col.info_identifier_keys or col.info_single_quoted_keys:
+        identifiers = {key.upper() for key in col.info_identifier_keys}
+        single_quoted = {key.upper() for key in col.info_single_quoted_keys}
+        for entry in value.split(";"):
+            key, separator, identity = entry.partition(":")
+            # The pinned consumer maps keys to enum names with toUpperCase(),
+            # which also recognizes dotless-i spellings; casefold() differs.
+            if (separator and key.upper() in identifiers
+                    and identity and not _safe_identifier(identity)):
+                issues.append(f"row {row_num}: '{col.name}.{key}' identifier {identity!r} "
+                              "is not a literal safe alias; use letters, digits, combining marks, "
+                              "dots, underscores or hyphens")
+            if separator and key.upper() in single_quoted and "'" in identity:
+                issues.append(f"row {row_num}: '{col.name}.{key}' contains a single quote; "
+                              "the pinned consumer cannot pass this value in its single-quoted argument")
+    return issues
+
+
+def _quoted_value_issues(row_num: int, col, value: str) -> list[str]:
+    # Some consumers pass the complete scalar as a double-quoted shell argument
+    # rather than staging its basename. Check every character in the actual value;
+    # destinations need neither an existence check nor a directory inventory.
+    if col.audited_double_quoted and any(char in {'"', '\\', '$', '`'}
+                                         or ord(char) < 32 or ord(char) == 127 for char in value):
+        return [f"row {row_num}: '{col.name}' cannot be passed literally in the pinned "
+                "consumer's double-quoted argument; use a location without quotes, "
+                "backslashes, dollar signs, backticks or control characters"]
+    return []
+
+
 def _path_issues(row_num: int, col, value: str) -> list[str]:
+    fmt = col.path_format(value)
     if is_remote_url(value):
         return [f"row {row_num}: '{col.name}': {issue}"
-                for issue in local_name_issues(value, col.fmt)]
+                for issue in local_name_issues(value, fmt)]
     path = Path(value)
     if not path.is_absolute():
         return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an "
                 "absolute path (Nextflow resolves samplesheet paths against its "
                 "launch directory, which nfclaw sets to --outdir)"]
-    if issues := local_name_issues(value, col.fmt):
+    if issues := local_name_issues(value, fmt):
         return [f"row {row_num}: '{col.name}': {issue}" for issue in issues]
-    if col.fmt != "file-path-pattern" and not path.exists():
+    if fmt != "file-path-pattern" and not path.exists():
         return [f"row {row_num}: file not found for '{col.name}': {value}"]
     return []
 
@@ -249,6 +306,8 @@ def header_issues(columns: Iterable[str], input_schema: InputSchema) -> list[str
     have = set(columns)
     issues = [f"missing required column '{c.name}'" for c in input_schema.columns
               if c.name and c.required and c.name not in have]
+    issues += [f"missing positional header column '{name}'" for name in input_schema.header_prefix
+               if name not in have and not any(f"'{name}'" in issue for issue in issues)]
     if input_schema.one_of and not any(set(group) <= have for group in input_schema.one_of):
         issues.append("needs one of these column sets: "
                       + "; ".join(", ".join(group) for group in input_schema.one_of))

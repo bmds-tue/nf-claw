@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Iterator
+from runner.errors import ErrorCode, NfclawError
 
 from runner import exact_json as json
 
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
+_INPUT_ROLES = Path(__file__).with_name("input_roles.json")
 
 
 @dataclass(frozen=True)
@@ -81,6 +84,52 @@ class Column:
     # pattern only inside `anyOf` (beside an empty-string branch, which is left out here).
     default: Any = None
     alternatives: tuple[str, ...] = ()
+    # Older schemas sometimes put formats only on alternatives or omit them entirely.
+    # Preserve branch-specific rules; exact-schema source audits fill omissions without
+    # treating arbitrary filename-like metadata as data or sentinel values as paths.
+    path_branches: tuple[tuple[str | None, str], ...] = ()
+    audited_path_format: str | None = None
+    path_sentinels: tuple[str, ...] = ()
+    path_separator: str | None = None
+    path_selector: tuple[str, str] | None = None
+    path_count: int | None = None
+    audited_identifier: bool = False
+    info_identifier_keys: tuple[str, ...] = ()
+    info_single_quoted_keys: tuple[str, ...] = ()
+    audited_double_quoted: bool = False
+
+    def path_values(self, value: str, row: dict) -> tuple[str, ...]:
+        if not self.path_format(value):
+            return ()
+        if self.path_separator and self.path_selector:
+            key, expected = self.path_selector
+            if str(row.get(key, "")).upper() == expected.upper():
+                values = tuple(part for part in value.split(self.path_separator) if part)
+                if self.path_count is not None and len(values) != self.path_count:
+                    raise ValueError(f"'{self.name}' requires exactly {self.path_count} paths "
+                                     f"delimited by {self.path_separator!r}")
+                return values
+        return (value,)
+
+    def join_paths(self, paths: tuple[str, ...]) -> str:
+        return (self.path_separator or "").join(paths)
+
+    def path_format(self, value: str | None = None) -> str | None:
+        if self.fmt in PATH_FORMATS:
+            return self.fmt
+        if value is not None:
+            if value in self.path_sentinels:
+                return None
+            for pattern, fmt in self.path_branches:
+                try:
+                    if pattern is None or re.search(pattern, value):
+                        return fmt
+                except re.error:
+                    continue
+        elif self.path_branches:
+            formats = {fmt for _, fmt in self.path_branches}
+            return next(iter(formats)) if len(formats) == 1 else "path"
+        return self.audited_path_format
 
     @property
     def is_path(self) -> bool:
@@ -88,7 +137,7 @@ class Column:
         must be absolute and get an existence check. A glob (`file-path-pattern`) cannot be checked
         for literal existence; glob matching is left to nf-schema, but the runner still requires
         an absolute local pattern."""
-        return self.fmt in ("file-path", "directory-path", "path")
+        return self.path_format() in ("file-path", "directory-path", "path")
 
     @property
     def is_identifier(self) -> bool:
@@ -97,10 +146,10 @@ class Column:
         Paths and descriptive annotations keep their own contracts; identity values are often
         interpolated into upstream shell scripts and output filenames without escaping.
         """
-        if self.fmt in PATH_FORMATS:
+        if self.path_format() in PATH_FORMATS:
             return False
         name = self.name.casefold().replace("_", "").replace(" ", "")
-        return (self.type not in {"object", "array"}
+        return (self.audited_identifier or self.type not in {"object", "array"}
                 and name in {"id", "sample", "sampleid", "samplename", "patient", "patientid"}
                 or any(key in {"id", "sample", "patient", "sample_name", "sample_alias",
                                "tumour_sample", "normal_sample", "paternal", "maternal",
@@ -128,6 +177,11 @@ class InputSchema:
     # samplesheet generation, which must not write a sheet nf-schema would then reject.
     any_of_required: tuple[tuple[str, ...], ...] = ()
     unique_entries: tuple[tuple[str, ...], ...] = ()
+    header_prefix: tuple[str, ...] = ()
+    generation_problem: str | None = None
+    audit_note: str = ""
+    destination_columns: tuple[str, ...] = ()
+    metadata_columns: tuple[str, ...] = ()
 
 
 def json_scalar(value: Any) -> str:
@@ -224,7 +278,11 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
     path = repo / rel
     if not path.exists():
         return None
-    data = json.loads(path.read_text(encoding="utf-8"))
+    content = path.read_bytes()
+    data = json.loads(content)
+    audited = _audited_input_contract(content, repo)
+    audited_roles = audited.get("columns", {})
+    data = audited.get("replacement", data)
     items = data.get("items", {})
     props = items.get("properties", {})
     required = set(items.get("required") or [])
@@ -276,7 +334,21 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 meta=tuple(key for key in meta if isinstance(key, str)) if isinstance(meta, list) else (),
                 default=cobj.get("default"),
                 alternatives=_branch_patterns(cobj),
+                path_branches=_path_branches(cobj),
+                audited_path_format=audited_roles.get(cname, {}).get("format"),
+                path_sentinels=tuple(audited_roles.get(cname, {}).get("sentinels", [])),
+                path_separator=audited_roles.get(cname, {}).get("separator"),
+                path_selector=tuple(audited_roles[cname]["selector"]) if audited_roles.get(cname, {}).get("selector") else None,
+                path_count=audited_roles.get(cname, {}).get("count"),
+                audited_identifier=cname in audited.get("identifiers", []),
+                info_identifier_keys=tuple(audited.get("info_identifiers", {}).get(cname, [])),
+                info_single_quoted_keys=tuple(audited.get("info_single_quoted", {}).get(cname, [])),
+                audited_double_quoted=cname in audited.get("double_quoted_columns", []),
             ))
+    header_prefix = tuple(audited.get("header_prefix", []))
+    if header_prefix:
+        ordered = {name: index for index, name in enumerate(header_prefix)}
+        cols.sort(key=lambda column: ordered.get(column.name, len(ordered)))
     return InputSchema(
         columns=tuple(cols),
         one_of=tuple(one_of),
@@ -284,7 +356,51 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
         any_of_dependent_required=tuple(any_of_dependent_required),
         any_of_required=tuple(any_of_required),
         unique_entries=tuple(tuple(entry) for entry in unique_entries),
+        header_prefix=header_prefix,
+        generation_problem=audited.get("generation_problem"),
+        audit_note=audited.get("note", ""),
+        destination_columns=tuple(audited.get("destination_columns", [])),
+        metadata_columns=tuple(audited.get("metadata_columns", [])),
     )
+
+
+def _audited_input_contract(content: bytes, repo: Path) -> dict:
+    """Additional consumed-file roles established from the pinned source, by schema digest.
+
+    Added roles fill omitted path annotations. Consumer corrections and non-input
+    exclusions were established for one exact revision: another revision sharing the
+    schema (an older release run with --pipeline-version, or a newer pin awaiting its
+    audit) keeps the contract its schema publishes, while a changed consumer at the
+    audited revision fails closed. Unknown schemas retain their explicit path
+    annotations, including annotated alternatives.
+    """
+    registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
+    audited = registry.get(hashlib.sha256(content).hexdigest(), {})
+    if ("replacement" in audited or audited.get("destination_columns") or audited.get("metadata_columns")
+            or audited.get("double_quoted_columns")
+            or any(role.get("separator") for role in audited.get("columns", {}).values())):
+        from runner.submodule import _own_head
+        if _own_head(repo) != audited["commit"]:
+            return {}
+        for name, digest in audited["source_sha256"].items():
+            path = repo / name
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
+                                 f"audited samplesheet consumer source changed: {path}",
+                                 fix="Restore the pinned consumer source before using its corrected input contract.")
+    return audited
+
+
+def _path_branches(obj: dict) -> tuple[tuple[str | None, str], ...]:
+    out = []
+    for key in ("anyOf", "oneOf"):
+        for branch in obj.get(key) or []:
+            if not isinstance(branch, dict):
+                continue
+            if branch.get("format") in PATH_FORMATS:
+                out.append((branch.get("pattern"), branch["format"]))
+            out.extend(_path_branches(branch))
+    return tuple(dict.fromkeys(out))
 
 
 def _branch_patterns(obj: dict) -> tuple[str, ...]:

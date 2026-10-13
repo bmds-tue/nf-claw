@@ -6,7 +6,7 @@ commit: 6e563e54362cddb8e48d15c156251708c22d0e8d
 description: A pipeline to demultiplex, QC and map Nanopore data
 summary: nfcore/nanoseq is a bioinformatics analysis pipeline for Nanopore DNA/RNA sequencing data that can be used to perform basecalling, demultiplexing, QC, alignment, and downstream analysis.
 has_samplesheet: true
-input: samplesheet (sample, fastq_1, fastq_2)
+input: samplesheet (group, replicate, barcode, input_file, fasta, gtf)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
 tools: ["bambu", "BEDTools", "cuteSV", "DeepVariant", "featureCounts", "GraphMap", "JAFFAL", "m6anet", "PEPPER-Margin-DeepVariant", "Minimap2", "Medaka", "MultiQC", "NanoLyse", "NanoPlot", "qcat", "SAMtools", "Sniffles", "StringTie2", "UCSC tools", "xPore", "R", "BSgenome", "DESeq2", "DEXSeq", "DRIMSeq", "stageR"]
 ---
@@ -25,22 +25,25 @@ nextflow run pipelines/nanoseq/upstream -profile docker --input samplesheet.csv 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions nanoseq` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show nanoseq --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show nanoseq --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
 
 ## Inputs
+**Pinned input correction.** The bundled FASTQ schema is a stale template. The pinned checker requires the six columns below in this exact order. Input data may be FASTQ, BAM or a FAST5 directory; `fasta` may be a local reference path or a configured genome key. Empty optional cells retain their place in the CSV header. Write the sheet explicitly and review barcode, replicate and reference assignments.
+
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string | no |  |  |
+| `group` | string | yes |  | matches ^\S+$ |
+| `replicate` | integer | yes |  | matches ^\d+$; ≥ 1 |
+| `barcode` | string | no |  | matches ^\d+$ |
+| `input_file` | string (file or directory path) | no |  |  |
+| `fasta` | string | no |  |  |
+| `gtf` | string (file path) | no |  | matches ^\S+\.gtf(\.gz)?$ |
 
 `--input` must match `^\S+\.csv$`.
 
-The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
+The samplesheet is a CSV with this header (the required header order; optional values may be empty); fill each value per the table above and `reference.md` (no example value is invented here):
 ```csv
-sample,fastq_1
+group,replicate,barcode,input_file,fasta,gtf
 ```
 
-Any of the optional columns above may be appended to the header when your data needs them: `fastq_2`.
-
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates). Set other columns with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** nfclaw cannot generate this samplesheet: group, replicate, barcode, data layout and reference assignments require an explicit samplesheet.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
