@@ -71,6 +71,11 @@ def input_param(repo: Path, name: str = "input") -> dict | None:
 
 
 def _schema_ref(obj: dict) -> str | None:
+    """The samplesheet schema `obj` names. nf-schema validates a file against `schema` only when
+    the value is a path, so an explicitly non-path format names none: nanoseq 3.1.0 copies its
+    input's `schema` onto `--protocol`, a `sample-type` string such as `cDNA`."""
+    if isinstance(obj.get("format"), str) and obj["format"] not in PATH_FORMATS:
+        return None
     ref = obj.get("schema")
     return ref.lstrip("/") if isinstance(ref, str) and ref.strip("/") else None
 
