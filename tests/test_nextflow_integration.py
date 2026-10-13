@@ -5,6 +5,7 @@ This exercises nfclaw's execution contract; it makes no claim about biological a
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 
@@ -30,7 +31,7 @@ def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_
     (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
         "input": {"type": "string", "format": "file-path", "exists": True},
-        "ready": {"type": "string"}, "release": {"type": "string"}, "counter": {"type": "string"},
+        "ready": {"type": "string"}, "release": {"type": "string"},
         "outdir": {"type": "string", "format": "directory-path"}}}))
     script = tree / "main.nf"
     script.write_text(r'''process OBSERVE {
@@ -47,12 +48,12 @@ def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_
    sleep 0.05
  done
  test -f ${params.release}
- echo executed >> ${params.counter}
+ echo executed >> COUNTER
  shasum -a 256 ${data} > digest.txt
  """
 }
 workflow { OBSERVE(file(params.input)) }
-''')
+'''.replace("COUNTER", shlex.quote(str(tmp_path / "counter"))))
     original = b"@S\nACGT\n+\nIIII\n"
     changed = b"@S\nACGA\n+\nIIII\n"
     source = tmp_path / "reads.fastq"
@@ -64,8 +65,7 @@ workflow { OBSERVE(file(params.input)) }
     out = tmp_path / "result"
     def launch(resume=False):
         return orchestration.run_pipeline("fixture", repo_root=root, input_path=source, outdir=out,
-            profile="", params_file=None, cli_overrides={"ready": str(ready), "release": str(release),
-                                                         "counter": str(counter)},
+            profile="", params_file=None, cli_overrides={"ready": str(ready), "release": str(release)},
             resume=resume, demo=False, check_only=False, write_provenance=provenance,
             timeout_seconds=90, nxf_ver=engine, configs=[str(config)])
     restore = None
@@ -715,7 +715,6 @@ def test_empty_directory_namespace_is_guarded_and_resume_is_current(engine, tmp_
     (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
         "input": {"type": "string", "format": "directory-path", "exists": True},
-        "counter": {"type": "string"},
         "outdir": {"type": "string", "format": "directory-path"}}}))
     (tree / "nextflow.config").write_text('''nextflow.enable.dsl=2
 trace {
@@ -732,13 +731,13 @@ trace {
  script:
  """
  mkdir result
- echo executed >> ${params.counter}
+ echo executed >> COUNTER
  find -L ${data} -mindepth 1 -maxdepth 1 -type d -print | sed 's#^.*/##' | LC_ALL=C sort > result/namespace.txt
  for sample in ${data}/*; do basename "\\$sample" > "result/\\$(basename "\\$sample").txt"; done
  """
 }
 workflow { NAMESPACE(file(params.input)) }
-''')
+'''.replace("COUNTER", shlex.quote(str(tmp_path / "executions.txt"))))
     data = tmp_path / "data"
     data.mkdir()
     first = data / "sample_A"
@@ -749,7 +748,7 @@ workflow { NAMESPACE(file(params.input)) }
 
     def run(resume):
         return orchestration.run_pipeline("fixture", repo_root=root, input_path=data,
-            outdir=out, profile="", params_file=None, cli_overrides={"counter": str(counter)}, resume=resume,
+            outdir=out, profile="", params_file=None, cli_overrides={}, resume=resume,
             demo=False, check_only=False, write_provenance=True, timeout_seconds=90,
             nxf_ver=engine, limits=resources.parse(1, None, None))
 
