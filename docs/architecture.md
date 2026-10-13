@@ -100,7 +100,7 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 | Manifest / File | Description & Verification Function |
 |---|---|
 | `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. |
-| `inputs.sha256` | Prelaunch snapshot of declared local input files, local schema path parameters, and schema-declared data paths inside CSV/TSV samplesheets, including directory inventories. |
+| `inputs.sha256` | Prelaunch snapshot of declared local input files, local schema path parameters, existing absolute local files given to parameters whose schema declares no path format (differentialabundance's `--feature-length-matrix`), and schema-declared data paths inside CSV/TSV samplesheets, including directory inventories. |
 | `outputs.sha256` | Snapshot of published result files, excluding provenance and Nextflow state. |
 | `pipeline.sha256` | Prelaunch digest snapshot of tracked pipeline source files. |
 | `configs.sha256` | Digests of the resolved params file, generated configs and explicit external Nextflow configuration files passed via `-c`. |

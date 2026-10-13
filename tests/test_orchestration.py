@@ -84,6 +84,33 @@ def test_a_successful_run_reports_the_caveats_its_pipeline_printed(tmp_path, mon
     assert manifest.get("completion_caveats", []) == expected
 
 
+def test_local_files_given_to_format_less_parameters_are_recorded_inputs(tmp_path, monkeypatch):
+    # differentialabundance declares --feature-length-matrix without a path format: the gene lengths
+    # a chain handed over were neither hashed nor replay-checked, and the chain's lineage broke.
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    schema_path = root / "pipelines/mini/upstream/nextflow_schema.json"
+    schema = json.loads(schema_path.read_text())
+    props = schema["definitions"]["reference_genome_options"]["properties"]
+    props["lengths"] = {"type": "string"}
+    props["label"] = {"type": "string"}
+    schema_path.write_text(json.dumps(schema))
+    lengths = tmp_path / "data" / "gene_lengths.tsv"
+    lengths.parent.mkdir()
+    lengths.write_text("gene\tA\ng1\t100\n")
+    (tmp_path / "data" / "notes").mkdir()
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+        profile="docker", params_file=None,
+        cli_overrides={"lengths": str(lengths), "label": str(tmp_path / "data" / "notes")},
+        resume=False, demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
+    hashed = (tmp_path / "out/provenance/inputs.sha256").read_text()
+    assert str(lengths) in hashed                       # a file the pipeline reads
+    assert "notes" not in hashed                        # a directory or plain text is not guessed at
+
+
 def test_engine_provenance_uses_the_executed_banner_without_probing_a_changed_launcher(
         tmp_path, monkeypatch):
     import json
