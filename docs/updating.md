@@ -44,6 +44,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
    - Runs `scripts/nextflow_accept.sh` (`nextflow -preview`) to verify pipeline compilation, profile resolution, and parameter validation.
    - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the nightly preview workflow green, but cannot authorize an automated release merge.
    - Executes the complete pytest suite.
+   - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped. The merged PR triggers no `tests.yml` run, so this is the only check before the site is redeployed.
    - Runs the drift gate (`python3 -m librarian.check_drift`).
 5. **Automated Merging:** Only when all validation checks pass with exit code 0 is the PR automatically squash-merged into `main`, which dispatches `deploy-pages.yml` to refresh the live site.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
@@ -71,7 +72,7 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
    - A recognized remote-input staging failure is labelled `staging-unverified`; other failures
      and timeouts are `rejected`. Both verdicts fail the gate.
    - Rejected pipelines are pruned before committing.
-5. **Batch Auto-Merge:** Validated additions that pass tests and drift checks are committed and merged.
+5. **Batch Auto-Merge:** Validated additions that pass the tests (including the website parsing tests, which must not be skipped) and the drift gate are committed and merged.
 
 ---
 

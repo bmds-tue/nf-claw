@@ -280,7 +280,7 @@ def test_committed_exceptions_are_well_formed_and_documented():
 
 def _discovery_step(tmp_path, verdict):
     raw = (ROOT / ".github" / "workflows" / "discover-pipelines.yml").read_text()
-    step = raw.split("id: disc", 1)[1].split("\n      - name: Unit tests", 1)[0]
+    step = re.split(r"\n      [-#]", raw.split("id: disc", 1)[1], maxsplit=1)[0]  # up to the next step
     script = re.search(r"^        run: \|\n(.*)", step, re.M | re.S).group(1)
     script = "\n".join(line[10:] for line in script.splitlines())
     fake = tmp_path / "bin"
@@ -336,8 +336,8 @@ def test_discovery_keeps_a_completed_acceptance(tmp_path):
 def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path, verdict, staged,
                                                                         inventory_exit):
     raw = (ROOT / ".github/workflows/auto-update.yml").read_text()
-    step = raw.split("- name: Validate updated pipelines through Nextflow", 1)[1].split(
-        "\n      # PRs", 1)[0]
+    step = raw.split("- name: Validate updated pipelines through Nextflow", 1)[1]
+    step = re.split(r"\n      [-#]", step, maxsplit=1)[0]  # up to the next step or its comment
     script = re.search(r"^        run: \|\n(.*)", step, re.M | re.S).group(1)
     script = "\n".join(line[10:] for line in script.splitlines())
     fake = tmp_path / "bin"
