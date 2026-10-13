@@ -339,8 +339,9 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
           </span>
         </div>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fog-muted">
-          Every parameter from the pinned <code className="font-mono text-fog">nextflow_schema.json</code>, validated by nf-schema at
-          runtime. Search, filter by group, and expand any parameter for its default, allowed values and constraints.
+          Every parameter from the pinned <code className="font-mono text-fog">nextflow_schema.json</code>.
+          nfclaw checks explicit values before launch; complex rules use the pinned pipeline&apos;s runtime validation.
+          Search, filter by group, and expand any parameter for its default, allowed values and constraints.
         </p>
         <div className="mt-6">
           <ParameterExplorer params={skill.params} groups={skill.groups} schemaUrl={schema} />

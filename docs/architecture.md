@@ -46,7 +46,7 @@ Each pipeline lives in `pipelines/<name>/`:
 | **`upstream/`** | Git submodule | Pinned to the commit resolved from an nf-core release tag. Upstream code unmodified. |
 | **`skill.md`** | Agent definition | Concise agent instructions generated deterministically from `nextflow_schema.json`. Includes identity, description, tool inventory (from `CITATIONS.md`), run commands, allowed parameters, parameter groups from the upstream schema, and chaining relationships. |
 | **`reference.md`** | Complete catalog | Comprehensive parameter manual documenting every parameter, type, required/hidden status, regex constraints, and defaults. |
-| **`.versions/`** | Git worktrees *(git-ignored)* | Ephemeral, immutable worktrees materialized on demand when executing specific older releases or unreleased `dev` branch heads. |
+| **`.versions/`** | Git worktrees *(git-ignored)* | Commit-anchored worktrees materialized on demand when executing other releases or unreleased `dev` branch heads. |
 
 The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas and checks them against the committed files. This detects stale generated context; it does not prove that an upstream schema describes every behavior of its analysis code correctly.
 
@@ -65,8 +65,8 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Path Resolution:** Resolves the `--input` samplesheet path against the caller's working directory. Local data paths inside a samplesheet must already be absolute; relative entries are rejected.
 - **Type Coercion Safeguards:** Translates `--input false` to an unset `input` parameter in `params.json` for pipelines that support running without a samplesheet (e.g. sarek), preventing nf-schema type validation crashes.
 - **Pipeline Code Integrity:** Refuses a pinned `upstream/` that is not at the commit its `skill.md` documents, and any tree (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names code that did not run.
-- **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0, which ignores `process.resourceLimits` silently.
-- **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. Nextflow's runtime `nf-schema` plugin remains the ultimate authority for conditional constraints.
+- **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0 or cannot be identified; older engines ignore `process.resourceLimits` silently.
+- **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
 
 ### 2.2 Run Execution & Sibling Directory Locking
 - **Launch Isolation:** Nextflow is executed with its working directory pointed inside `--outdir`, isolating `.nextflow/` state, session databases, and caches to that run.
@@ -100,11 +100,14 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 | Manifest / File | Description & Verification Function |
 |---|---|
 | `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. |
-| `inputs.sha256` | Prelaunch snapshot of declared local input files, local schema path parameters, existing absolute local files given to parameters whose schema declares no path format (differentialabundance's `--feature-length-matrix`), and schema-declared data paths inside CSV/TSV samplesheets, including directory inventories. |
+| `inputs.sha256` | Prelaunch digests of declared local input files, schema path parameters, existing absolute local files supplied to parameters without a path format, and local data paths inside CSV/TSV or flat JSON/YAML records, including auxiliary tables. |
 | `outputs.sha256` | Snapshot of published result files, excluding provenance and Nextflow state. |
 | `pipeline.sha256` | Prelaunch digest snapshot of tracked pipeline source files. |
 | `configs.sha256` | Digests of the resolved params file, generated configs and explicit external Nextflow configuration files passed via `-c`. |
+| `inputs.inventory.json` / `configs.inventory.json` | Prelaunch dependency namespaces, empty directories, entry types and link identities, checked alongside file bytes. |
+| `outputs.inventory.json` | Published output namespace used by replay verification and handoff checks. |
 | `resource_limits.config` | Generated resource ceiling configuration when `--limit-*` flags are used. |
+| `nf_schema_compat.config` / `fastqrepair_compat.config` | Conditional plugin adjustments and recorded task corrections. |
 | `trace_report_suffix` | A pinned parameter in `params.json` when supported by the upstream schema; other independently timestamped metadata can still change filenames. |
 
 Missing local path parameters without an upstream `exists: true` constraint are delegated to Nextflow: they may be output/cache destinations. They produce a warning and an `unverified_local_paths` manifest entry rather than a false input checksum. Required missing inputs are refused. Remote data, profile-only references, indirect configuration includes, container digests and data referenced by non-tabular input formats are not comprehensively frozen.
@@ -115,6 +118,11 @@ a clean matching source checkout. These destinations keep their filename checks 
 checksums, while unrelated existing children are excluded from input inspection and snapshots.
 Unlisted paths, changed releases and reused `storeDir` caches retain their input guards. Audited
 whole-path shell arguments also check parent folders and resolved symlink paths.
+
+Before `--resume`, declared local inputs are compared with the prior byte and namespace
+snapshots. Unchanged inputs retain caching; changed data or an unavailable inventory
+archives the complete prior run in `<outdir>.previous-<id>` and starts a fresh cache
+session. Prior logs are copied forward. This also applies with `--no-provenance`.
 
 Archive operations prepare replacements before moving the run, retain ordinary relative links,
 rebase links through outdir aliases and external publications, and roll back recoverable failures
@@ -131,7 +139,8 @@ the archive's file checksums and logical namespace.
 - `runner/verify.py` compares replayed output files against the original run by path.
 - **Structural Equivalence:** Separates file inventory from byte equality. Pairs timestamped
   metadata paths in `pipeline_info/` while preserving file multiplicity and reporting byte changes.
-- **Strict Mode (`--strict`):** Requires byte-for-byte identity for every paired result, including metadata.
+  Also compares directory inventories; a historical file-only manifest cannot certify structure.
+- **Strict Mode (`--strict`):** Requires byte-for-byte identity for every paired result, including metadata, and agreement of recorded link identities.
 - **Scientific Scope:** Inventory agreement alone establishes no analytical agreement. Matching
   bytes demonstrate agreement of the observed artifacts, not biological accuracy or universal reproducibility.
 
@@ -144,7 +153,7 @@ the archive's file checksums and logical namespace.
 - **Chain Locking:** Locks `<outdir>/chain/.lock` against concurrent chain execution.
 - **Preflight Configuration Probe:** Runs `nextflow config` under each stage's engine before
   launching stage 1. Parser failures, unavailable engines and inconclusive probes stop the chain.
-- **Handoff Output Verification:** Validates that upstream output files match recorded checksums before constructing downstream inputs.
+- **Handoff Output Verification:** Validates upstream output bytes and complete recorded namespaces before constructing downstream inputs; inherited local references also require producer input evidence.
 - **Lineage Verification:** `nfclaw chain status` checks recorded stage identities, live stage
   outputs, and handoff files/references against upstream and downstream checksum inventories.
   This checks the recorded links; it does not independently revalidate every original input,

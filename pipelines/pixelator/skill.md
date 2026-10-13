@@ -73,10 +73,10 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Sample calling options** (`pna_sample_calling_options`) — 4 parameters
 
 ## Resources
-A real (non-`--demo`) run requests the resources the pipeline's `conf/base.config` asks for, which are sized for a server — a single step can request far more memory than a workstation has, and Nextflow retries a failed step with more still. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
+Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
 
 ```bash
-nfclaw run pixelator --input samplesheet.csv --outdir results -profile docker \
+nfclaw run pixelator --input samplesheet.csv --outdir results --technology <technology> -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
@@ -85,7 +85,7 @@ nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=25.10.4'`.
 
-To run the engine this release targets — worth doing if a newer Nextflow emits config-parser warnings the release never saw:
+To pin this release's declared minimum engine — useful when a newer Nextflow has incompatible config parsing:
 ```bash
 nfclaw run pixelator ... --nxf-ver 25.10.4
 ```
@@ -109,6 +109,6 @@ nfclaw run pixelator --demo --outdir results   # adds the upstream test profile 
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. Nextflow's nf-schema validates every parameter against this schema at runtime, so an unknown or invalid value fails fast. Upstream usage: https://github.com/nf-core/pixelator/blob/5.0.3/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/pixelator/blob/5.0.3/docs/usage.md
 
 <!-- Generated from nf-core/pixelator@d7376a8bca8b262b858ed440b6dd49c1853911e8. Do not edit by hand. -->

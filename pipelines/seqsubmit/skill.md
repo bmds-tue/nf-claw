@@ -19,7 +19,7 @@ nf-core/seqsubmit is a Nextflow pipeline for submitting sequence data to ENA. Th
 git submodule update --init pipelines/seqsubmit/upstream   # first time only
 nfclaw run seqsubmit --input <input> --outdir results --centre-name <centre_name> --mode <mode> -profile docker
 # raw equivalent (the submodule is already pinned to this release, so no -r is needed):
-nextflow run pipelines/seqsubmit/upstream -profile docker --input <input> --outdir results --centre-name <centre_name> --mode <mode>
+nextflow run pipelines/seqsubmit/upstream -profile docker --input <input> --outdir results --centre_name <centre_name> --mode <mode>
 ```
 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions seqsubmit` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show seqsubmit --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show seqsubmit --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
@@ -46,10 +46,10 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Assigning NCBI taxonomy with CAT_pack** (`taxonomy_assignment_options`) — 1 parameter
 
 ## Resources
-A real (non-`--demo`) run requests the resources the pipeline's `conf/base.config` asks for, which are sized for a server — a single step can request far more memory than a workstation has, and Nextflow retries a failed step with more still. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
+Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
 
 ```bash
-nfclaw run seqsubmit --input <input> --outdir results -profile docker \
+nfclaw run seqsubmit --input <input> --outdir results --centre-name <centre_name> --mode <mode> -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
@@ -58,7 +58,7 @@ nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=25.10.4'`.
 
-To run the engine this release targets — worth doing if a newer Nextflow emits config-parser warnings the release never saw:
+To pin this release's declared minimum engine — useful when a newer Nextflow has incompatible config parsing:
 ```bash
 nfclaw run seqsubmit ... --nxf-ver 25.10.4
 ```
@@ -82,6 +82,6 @@ nfclaw run seqsubmit --demo --outdir results   # adds the upstream test profile 
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. Nextflow's nf-schema validates every parameter against this schema at runtime, so an unknown or invalid value fails fast. Upstream usage: https://github.com/nf-core/seqsubmit/blob/1.0.0/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/seqsubmit/blob/1.0.0/docs/usage.md
 
 <!-- Generated from nf-core/seqsubmit@717fd19e7a40099fbe5362ec48ab8ec21f62d3f8. Do not edit by hand. -->

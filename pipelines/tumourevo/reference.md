@@ -6,7 +6,7 @@ commit: 180ae5447d0eb0214f650b6fcf7dabed0c77b5a2
 
 # tumourevo — full parameter reference
 
-nf-core/tumourevo pipeline parameters. Every parameter from the pinned `nextflow_schema.json`, validated by nf-schema at runtime. `hidden` marks nf-core's generic/boilerplate parameters; `constraints` lists each parameter's declared value bounds (pattern, min/max, length) — conditional or composed rules (e.g. anyOf/oneOf) are enforced by nf-schema at runtime.
+nf-core/tumourevo pipeline parameters. Every parameter from the pinned `nextflow_schema.json`. Flags use nfclaw's hyphenated spelling; raw Nextflow requires the exact schema spelling (usually underscores). `hidden` marks parameters hidden from upstream's normal help output; `constraints` lists each parameter's declared value bounds (pattern, min/max, length) — conditional or composed rules (e.g. anyOf/oneOf) remain subject to the pinned pipeline's runtime validation.
 
 ## cnaqc
 
@@ -14,7 +14,7 @@ nf-core/tumourevo pipeline parameters. Every parameter from the pinned `nextflow
 |---|---|---|---|---|---|---|---|
 | `--cnaqc-blacklist-indels` | string |  |  |  |  | TRUE | If TRUE INDEL are excluded from CNAqc analysis and following steps otherwise are kept. |
 | `--cnaqc-matching-strategy` | string |  |  | `closest`, `rightmost` |  | rightmost | For clonal simple CNAs, if "closest" the closest peak will be used to match the expected peak. If "rightmost" peaks are matched prioritizing right to left peaks (the higher-VAF gets matched first); this strategy is more correct in principle but works only if there are no spurious peaks in the estimated density. |
-| `--cnaqc-min-absolute-karyotype-mutations` | integer |  |  |  |  | 100 | For clonal simple CNAs, this is the same as [`cnaqc_min_karyotype_size`](#cnaqc_min_karyotype_size), but with a cut measured on absolute mutation counts. |
+| `--cnaqc-min-absolute-karyotype-mutations` | integer |  |  |  |  | 100 | For clonal simple CNAs, this is the same as `cnaqc_min_karyotype_size` (not declared in this pinned schema), but with a cut measured on absolute mutation counts. |
 | `--cnaqc-muts-per-karyotype` | integer |  |  |  |  | 25 | Minimum number of mutations that are required to be mapped to a karyotype in order to compute CCF values. |
 | `--cnaqc-purity-error` | number |  |  |  |  | 0.05 | For clonal simple CNAs, the purity error tolerance to determine QC pass or fail. |
 
