@@ -100,7 +100,7 @@ Run atacseq as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` s
 
 Fed by:
 - `demultiplex` — demultiplex writes samplesheet/atacseq_samplesheet.csv (every sample as replicate 1) for its demultiplexed FastQ files; a single-end run's sheet lacks the fastq_2 column, which atacseq's own sheet check requires, so it is added empty.
-- `fetchngs` — fetchngs writes an atacseq samplesheet (every run as replicate 1 of its sample) with --nf-core-pipeline atacseq.
+- `fetchngs` — fetchngs writes an atacseq samplesheet (every run as replicate 1 of its sample) with --nf-core-pipeline atacseq. Runs whose ENA instrument_platform is not a short-read platform (the ones nf-core/mag accepts as short reads: ILLUMINA, BGISEQ, DNBSEQ, ELEMENT, ULTIMA, ION_TORRENT, LS454, …) are refused: atacseq analyses short reads, and long-read, capillary or colour-space runs would be processed as if they were.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: BWA, BEDTools, BamTools, deepTools, FastQC, featureCounts, HOMER, MACS2, MultiQC, picard-tools, preseq, pysam, SAMtools, Trim Galore!, UCSC tools, ataqv, R, DESeq2, UpSetR, ggplot2, reshape2, scales, pheatmap, RColorBrewer, optparse.
