@@ -19,7 +19,7 @@ nf-core/coproid is a bioinformatics pipeline that helps you identify the "true m
 git submodule update --init pipelines/coproid/upstream   # first time only
 nfclaw run coproid --input samplesheet.csv --outdir results --genome-sheet <genome_sheet> --kraken2-db <kraken2_db> --sp-sources <sp_sources> --sp-labels <sp_labels> -profile docker
 # raw equivalent (the submodule is already pinned to this release, so no -r is needed):
-nextflow run pipelines/coproid/upstream -profile docker --input samplesheet.csv --outdir results --genome-sheet <genome_sheet> --kraken2-db <kraken2_db> --sp-sources <sp_sources> --sp-labels <sp_labels>
+nextflow run pipelines/coproid/upstream -profile docker --input samplesheet.csv --outdir results --genome_sheet <genome_sheet> --kraken2_db <kraken2_db> --sp_sources <sp_sources> --sp_labels <sp_labels>
 ```
 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions coproid` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show coproid --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show coproid --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
@@ -60,10 +60,10 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Pipeline options** (`pipeline_options`) — 11 parameters
 
 ## Resources
-A real (non-`--demo`) run requests the resources the pipeline's `conf/base.config` asks for, which are sized for a server — a single step can request far more memory than a workstation has, and Nextflow retries a failed step with more still. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
+Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
 
 ```bash
-nfclaw run coproid --input samplesheet.csv --outdir results -profile docker \
+nfclaw run coproid --input samplesheet.csv --outdir results --genome-sheet <genome_sheet> --kraken2-db <kraken2_db> --sp-sources <sp_sources> --sp-labels <sp_labels> -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
@@ -72,7 +72,7 @@ nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=25.04.0'`.
 
-To run the engine this release targets — worth doing if a newer Nextflow emits config-parser warnings the release never saw:
+To pin this release's declared minimum engine — useful when a newer Nextflow has incompatible config parsing:
 ```bash
 nfclaw run coproid ... --nxf-ver 25.04.0
 ```
@@ -96,6 +96,6 @@ nfclaw run coproid --demo --outdir results   # adds the upstream test profile (-
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. Nextflow's nf-schema validates every parameter against this schema at runtime, so an unknown or invalid value fails fast. Upstream usage: https://github.com/nf-core/coproid/blob/2.0.1/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/coproid/blob/2.0.1/docs/usage.md
 
 <!-- Generated from nf-core/coproid@045d569d5b01b2d1572220718e64a6d054ad57eb. Do not edit by hand. -->

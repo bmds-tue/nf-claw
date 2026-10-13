@@ -27,8 +27,8 @@ There is **no single Nextflow version that can run every pipeline release**. Eac
 
 | Generation | Era / Versions | Parser Behavior | Typical Pipeline Compatibility | Recommended Flag |
 |---|---|---|---|---|
-| **Legacy Parser** | Nextflow ≤ `25.10.x` | Permissive Groovy parsing; allows `def check_max()`, unquoted dynamic inclusions, and parse-time manifest lookups. | `chipseq` 2.1.0, `atacseq` 2.1.2, `circdna` 1.1.0, `marsseq` 1.0.3, `scrnaseq` 4.2.0 | `--nxf-ver 25.10.4` |
-| **Strict Parser** | Nextflow ≥ `26.x` | Strict declarative configuration validation before plugins load; rejects Groovy functions in config. | Modern releases developed specifically for Nextflow 26 (`mag` 5.5.0) | Default host Nextflow |
+| **Legacy Parser** | Default through `25.10.x`; selectable with `NXF_SYNTAX_PARSER=v1` on 26.04 | Permissive Groovy parsing; allows `def check_max()`, dynamic inclusions, and parse-time manifest lookups. | `chipseq` 2.1.0, `atacseq` 2.1.2, `circdna` 1.1.0, `marsseq` 1.0.3, `scrnaseq` 4.2.0 | `--nxf-ver 25.10.4` |
+| **Strict Parser** | Opt-in on 25.04/25.10; default from `26.04` | Strict declarative configuration validation before plugins load; rejects Groovy functions in config. | Releases using strict syntax (`mag` 5.5.0 declares `!>=26.04.0`) | Pin a tested compatible engine, e.g. `--nxf-ver 26.04.0` for mag 5.5.0 |
 
 ### The Parser Transition
 Nextflow 25.04 and 25.10 default to the legacy parser; the strict parser is opt-in via `NXF_SYNTAX_PARSER=v2`. Starting with 26.04, strict syntax is the default, and the legacy parser can be selected with `NXF_SYNTAX_PARSER=v1`. Strict configuration syntax rejects some Groovy constructs allowed by older releases. See the official [strict syntax guide](https://docs.seqera.io/nextflow/strict-syntax) and [26.04 migration notes](https://docs.seqera.io/nextflow/migrations/26-04).
@@ -65,6 +65,7 @@ The repository validates engine and workflow compatibility using automated GitHu
 | **`tests.yml`** | Tests the wrapper across Python 3.11–3.13 on Linux/macOS, exercises a real deterministic Nextflow run/replay/chain, and audits/builds the website. | A failing test, dependency audit or build. |
 | **`drift-check.yml`** | Regenerates all pinned pipeline context and checks catalog, manifest and handoff consistency. | Any detected drift. |
 | **`demo-validation.yml`** | Executes the pinned demo in native Linux Docker, checks basic FastQC statistics against an independent FASTQ oracle and requires its static plot exports. | Analysis failure, incorrect checked statistics or missing/invalid plot exports. |
+| **`fastqrepair-validation.yml`** | Executes the affected release with recorded runtime corrections, checks independent single/paired read controls and replay. | Execution, read-conservation or replay-check failure. |
 | **`pipeline-execution.yml`** | Executes a selected pinned pipeline's bundled test profile on native Linux Docker under bounded resources and its declared engine, then checks the run status and the recorded engine identity; outputs and task scripts are retained as evidence. It does not replay or verify the run (`demo-validation.yml` and `fastqrepair-validation.yml` do). | Process failure, timeout, or an engine identity that was not recorded. |
 
 ### Strict Exit Code Gating
@@ -88,7 +89,7 @@ script refuses to launch a preview when neither timeout utility is available.
 |---|---|---|
 | **Operating System** | Linux or macOS | The test suite runs on Ubuntu and macOS (GitHub-hosted runners); pipeline executions are validated on native Linux x86_64 with Docker. On arm64 hosts a pipeline depends on arm64 containers or emulation of amd64 ones, which can fail (see [known-issues](known-issues.md#pipeline-specific-run-notes)). |
 | **Python** | 3.11+ | Required for `nfclaw` CLI runtime and `librarian`. |
-| **Java** | OpenJDK 17+ | Runtime requirement for Nextflow workflow engine. |
+| **Java** | Java 17+ compatible with the selected engine | CI uses Temurin 17; newer Java releases are not necessarily supported by older pinned engines. See [Nextflow installation requirements](https://docs.seqera.io/nextflow/install#requirements). |
 | **Nextflow** | Latest or matching `--nxf-ver` | Installed on system PATH. |
 | **Container Engine** | Docker or Singularity / Apptainer | Container execution profile recommended for reproducibility. |
-| **Filesystem Paths** | Space-free paths only | **No spaces allowed.** Many bioinformatics CLI tools mishandle spaces. On macOS, avoid iCloud directories. |
+| **Filesystem Paths** | Space-free repository, output and work paths by default | `--allow-spaces` bypasses the space check at the caller's risk; LF/CR remain forbidden. Input basenames have separate safety checks. On macOS, avoid iCloud directories. |

@@ -14,7 +14,10 @@ nf-claw maintains synchronization with upstream nf-core pipeline releases throug
 
 Tracking policies are declared in `sources.tsv`:
 - Each row contains `name<TAB>url<TAB>version-policy`.
-- The primary policy is `latest-release`, directing automation to track the newest official git release tag.
+- The primary policy is `latest-release`, directing automation to select the highest numeric
+  `X.Y.Z` release tag (optional `v` prefix); prereleases and two-component tags are excluded
+  from automated bumping. Other policies are skipped by the updater. Explicit runtime
+  version selection also supports older `X.Y` tags.
 - Submodules pin exact commits resolved from release tags. Tags can be moved upstream, but a
   committed gitlink remains tied to its recorded commit until deliberately updated.
 
@@ -46,7 +49,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
    - Executes the complete pytest suite.
    - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped. The merged PR triggers no `tests.yml` run, so this is the only check before the site is redeployed.
    - Runs the drift gate (`python3 -m librarian.check_drift`).
-5. **Automated Merging:** Only when all validation checks pass with exit code 0 is the PR automatically squash-merged into `main`, which dispatches `deploy-pages.yml` to refresh the live site.
+5. **Automated Merging:** Only when all validation checks pass with exit code 0 is the PR automatically squash-merged into `main`. The maintenance job explicitly dispatches `deploy-pages.yml`: a push made with `GITHUB_TOKEN` does not trigger the ordinary push workflow.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
 
 ---
@@ -84,8 +87,8 @@ The drift gate guards against divergence between pinned code and documentation:
 |---|---|---|
 | **Manifest Equivalence** | `sources.tsv`, `.gitmodules`, `pipelines/` | Asserts exact equality of pipeline inventory and git remote URLs. |
 | **Context Parity** | `skill.md`, `reference.md`, `catalog.*` | Recompiles context in memory and verifies character-for-character equality against disk. |
-| **Handoff Verification** | `handoffs/*.json` rules | Validates that parameter mappings and column transformations fit pinned upstream and downstream schemas. |
-| **Agent Guidelines Parity** | `AGENTS.md` and `CLAUDE.md` | `tests/test_agent_docs.py` enforces 100% byte-for-byte identity. |
+| **Handoff Verification** | `handoffs/*.json` rules | Validates parameter mappings and downstream column compatibility against pinned schemas. Published file existence and identity are checked at runtime. |
+| **Agent Guidelines Parity** | `AGENTS.md` and `CLAUDE.md` | A separate pytest check (`tests/test_agent_docs.py`), run by `make check`, enforces 100% byte-for-byte identity. |
 
 If any upstream pipeline is updated without regenerating context, or if a manual edit is introduced, `make check` fails immediately.
 
@@ -93,7 +96,11 @@ If any upstream pipeline is updated without regenerating context, or if a manual
 
 ## 5. Manual Maintenance Commands
 
-Developers can run maintenance tasks locally:
+Developers can run maintenance tasks locally from the repository root with Python 3.11+
+and initialized submodules. Install test dependencies with `pip install -e ".[dev,yaml]"`.
+Change generators rather than editing generated context, then run `make build` and
+`make check`. `make update` fetches tags, changes submodule checkouts and stages their
+gitlinks; review those changes before committing. It does not run the CI acceptance gate:
 
 | Command | Action |
 |---|---|
