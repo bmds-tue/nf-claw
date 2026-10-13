@@ -228,7 +228,9 @@ def plan(sheet: InputSchema, input_param: Param | None,
                   + " ".join(f"--sheet-set {n}=" for g in groups[1:] for n in g))
     # What makes generation impossible outright comes before the choice of a read group.
     problem = None
-    if not columns:
+    if sheet.generation_problem:
+        problem = sheet.generation_problem
+    elif not columns:
         problem = "the samplesheet takes one value per line, not data files"
     elif not groups and not data:
         problem = ("the samplesheet declares no file type nfclaw could match files against (no "
@@ -961,9 +963,10 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     # Every local path the sheet names is an input: the files it was generated from, and paths a
     # --sheet-set constant, template or schema default wrote into a path column.
     path_columns = {*p.reads, *p.data_columns} | {
-        c.name for c in sheet.columns if c.name and c.fmt in schema_mod.PATH_FORMATS}
+        c.name for c in sheet.columns if c.name and c.path_format()}
     files = tuple(dict.fromkeys(Path(row[c]) for row in rows for c in header
-                                if c in path_columns and row.get(c) and "://" not in row[c]))
+                                if c in path_columns and row.get(c) and "://" not in row[c]
+                                and row[c] not in p.columns[c].path_sentinels))
     paired = sum(1 for u in units if len(u.reads) == 2)
     record = {"version": 1, "sources": list(source.values), "schema": source.sheet,
               "files": len(files), "samples": len(samples), "rows": len(rows),

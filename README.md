@@ -109,6 +109,8 @@ are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about c
 
 Sample, patient, genome and database identifiers become upstream shell arguments and filenames. They must start with a letter, digit or underscore and use only letters, digits, combining marks, dots, underscores or hyphens; choose explicit safe aliases for other names. The runner preserves accepted identities exactly. CSV/TSV and flat JSON/YAML records receive these guards, duplicate-field checks and absolute local-path checks (including globs). YAML preflight requires the optional `pip install -e ".[yaml]"` dependency. Explicitly supplied auxiliary tables (for example `--genome-sheet` and `--databases`) receive their own declared schema checks too. Declared local data paths in these records are hashed for replay; nested input structures still rely on the pinned nf-schema validation.
 
+Older schemas can omit path formats or put them only on alternatives. The runner preserves branch-specific formats and supplements documented omissions with [source-audited roles bound to exact schema hashes](runner/input_roles.json). Literal sentinels such as `none` or `NA` and filename metadata remain distinct from data paths. HGTseq and Nanoseq ship stale template schemas; their generated instructions and validation use the actual pinned consumers' columns, guarded by the pipeline revision and consumer source hashes. These two formats require an explicit samplesheet.
+
 ### 3. Provenance Replay & Verification
 
 ```bash

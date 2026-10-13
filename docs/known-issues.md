@@ -7,6 +7,12 @@ before metadata probes, including inherited settings and relative paths.
 
 Most run-time failures fall into two categories: **environment** (host, network, or path issues — fixable via `nfclaw run` flags or environment adjustments) and **upstream pipeline defects** (bugs in a specific pinned nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**. Upstream defects, recorded runtime corrections and their validation limits are documented here.
 
+### Legacy samplesheet contracts and local data identity
+
+Some pinned schemas omit path formats on consumed reads, references or indexes, or declare them only inside `anyOf`/`oneOf`. The runner applies declared alternative formats to the values they match. Additional file roles are documented in [`runner/input_roles.json`](../runner/input_roles.json), keyed by the original schema's SHA-256 and supported by source references. Handwritten sheets and handoffs receive the same local path checks, input hashes and namespace capture as generated sheets. Metadata such as Nanostring's `RCC_FILE_NAME`, and absence sentinels such as Bacass's `NA` and Isoseq's `none`, are preserved as literal values.
+
+HGTseq's pinned 1.1.0 consumer reads `sample,input1` and optional `input2`, while its template lists `fastq_1`/`fastq_2`. Nanoseq 3.1.0 requires `group,replicate,barcode,input_file,fasta,gtf` in that order. The runner and generated documentation correct these stale contracts using the exact pinned consumer source, without editing upstream files. Automatic generation is refused because these formats require explicit data-role, barcode, replicate or reference assignments. Corrections require the audited revision and unchanged consumer source; another release needs its own reviewed contract. The pinned consumers continue to enforce extension compatibility, replicate grouping and their other runtime constraints.
+
 ---
 
 ### Navigation

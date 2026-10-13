@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
+from runner.errors import ErrorCode, NfclawError
 
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
+_INPUT_ROLES = Path(__file__).with_name("input_roles.json")
 
 
 @dataclass(frozen=True)
@@ -79,6 +82,29 @@ class Column:
     # pattern only inside `anyOf` (beside an empty-string branch, which is left out here).
     default: Any = None
     alternatives: tuple[str, ...] = ()
+    # Older schemas sometimes put formats only on alternatives or omit them entirely.
+    # Preserve branch-specific rules; exact-schema source audits fill omissions without
+    # treating arbitrary filename-like metadata as data or sentinel values as paths.
+    path_branches: tuple[tuple[str | None, str], ...] = ()
+    audited_path_format: str | None = None
+    path_sentinels: tuple[str, ...] = ()
+
+    def path_format(self, value: str | None = None) -> str | None:
+        if self.fmt in PATH_FORMATS:
+            return self.fmt
+        if value is not None:
+            if value in self.path_sentinels:
+                return None
+            for pattern, fmt in self.path_branches:
+                try:
+                    if pattern is None or re.search(pattern, value):
+                        return fmt
+                except re.error:
+                    continue
+        elif self.path_branches:
+            formats = {fmt for _, fmt in self.path_branches}
+            return next(iter(formats)) if len(formats) == 1 else "path"
+        return self.audited_path_format
 
     @property
     def is_path(self) -> bool:
@@ -86,7 +112,7 @@ class Column:
         must be absolute and get an existence check. A glob (`file-path-pattern`) cannot be checked
         for literal existence; glob matching is left to nf-schema, but the runner still requires
         an absolute local pattern."""
-        return self.fmt in ("file-path", "directory-path", "path")
+        return self.path_format() in ("file-path", "directory-path", "path")
 
     @property
     def is_identifier(self) -> bool:
@@ -95,7 +121,7 @@ class Column:
         Paths and descriptive annotations keep their own contracts; identity values are often
         interpolated into upstream shell scripts and output filenames without escaping.
         """
-        if self.fmt in PATH_FORMATS:
+        if self.path_format() in PATH_FORMATS:
             return False
         name = self.name.casefold().replace("_", "").replace(" ", "")
         return (self.type not in {"object", "array"}
@@ -126,6 +152,9 @@ class InputSchema:
     # samplesheet generation, which must not write a sheet nf-schema would then reject.
     any_of_required: tuple[tuple[str, ...], ...] = ()
     unique_entries: tuple[tuple[str, ...], ...] = ()
+    header_prefix: tuple[str, ...] = ()
+    generation_problem: str | None = None
+    audit_note: str = ""
 
 
 def json_scalar(value: Any) -> str:
@@ -220,7 +249,11 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
     path = repo / rel
     if not path.exists():
         return None
-    data = json.loads(path.read_text(encoding="utf-8"))
+    content = path.read_bytes()
+    data = json.loads(content)
+    audited = _audited_input_contract(content, repo)
+    audited_roles = audited.get("columns", {})
+    data = audited.get("replacement", data)
     items = data.get("items", {})
     props = items.get("properties", {})
     required = set(items.get("required") or [])
@@ -272,7 +305,14 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 meta=tuple(key for key in meta if isinstance(key, str)) if isinstance(meta, list) else (),
                 default=cobj.get("default"),
                 alternatives=_branch_patterns(cobj),
+                path_branches=_path_branches(cobj),
+                audited_path_format=audited_roles.get(cname, {}).get("format"),
+                path_sentinels=tuple(audited_roles.get(cname, {}).get("sentinels", [])),
             ))
+    header_prefix = tuple(audited.get("header_prefix", []))
+    if header_prefix:
+        ordered = {name: index for index, name in enumerate(header_prefix)}
+        cols.sort(key=lambda column: ordered.get(column.name, len(ordered)))
     return InputSchema(
         columns=tuple(cols),
         one_of=tuple(one_of),
@@ -280,7 +320,45 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
         any_of_dependent_required=tuple(any_of_dependent_required),
         any_of_required=tuple(any_of_required),
         unique_entries=tuple(tuple(entry) for entry in unique_entries),
+        header_prefix=header_prefix,
+        generation_problem=audited.get("generation_problem"),
+        audit_note=audited.get("note", ""),
     )
+
+
+def _audited_input_contract(content: bytes, repo: Path) -> dict:
+    """Additional consumed-file roles established from the pinned source, by schema digest.
+
+    These add input checks and capture, never exempt a declared input. Changed and unknown
+    schemas retain only their explicit path annotations, including annotated alternatives.
+    """
+    registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
+    audited = registry.get(hashlib.sha256(content).hexdigest(), {})
+    if "replacement" in audited:
+        from runner.submodule import _own_head
+        if _own_head(repo) != audited["commit"]:
+            raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
+                             "audited samplesheet correction requires its exact pinned pipeline revision",
+                             fix="Use the supported pinned release; other stale contracts require a source audit.")
+        for name, digest in audited["source_sha256"].items():
+            path = repo / name
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
+                                 f"audited samplesheet consumer source changed: {path}",
+                                 fix="Restore the pinned consumer source before using its corrected input contract.")
+    return audited
+
+
+def _path_branches(obj: dict) -> tuple[tuple[str | None, str], ...]:
+    out = []
+    for key in ("anyOf", "oneOf"):
+        for branch in obj.get(key) or []:
+            if not isinstance(branch, dict):
+                continue
+            if branch.get("format") in PATH_FORMATS:
+                out.append((branch.get("pattern"), branch["format"]))
+            out.extend(_path_branches(branch))
+    return tuple(dict.fromkeys(out))
 
 
 def _branch_patterns(obj: dict) -> tuple[str, ...]:

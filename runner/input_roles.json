@@ -1,0 +1,465 @@
+{
+  "129b80400d72bc72093ac07a69a4d2f40bb5a2749f3fbde29deb83a6a62d48b0": {
+    "columns": {},
+    "commit": "6e563e54362cddb8e48d15c156251708c22d0e8d",
+    "generation_problem": "group, replicate, barcode, data layout and reference assignments require an explicit samplesheet",
+    "header_prefix": [
+      "group",
+      "replicate",
+      "barcode",
+      "input_file",
+      "fasta",
+      "gtf"
+    ],
+    "note": "**Pinned input correction.** The bundled FASTQ schema is a stale template. The pinned checker requires the six columns below in this exact order. Input data may be FASTQ, BAM or a FAST5 directory; `fasta` may be a local reference path or a configured genome key. Empty optional cells retain their place in the CSV header. Write the sheet explicitly and review barcode, replicate and reference assignments.",
+    "pipeline": "nanoseq",
+    "replacement": {
+      "items": {
+        "properties": {
+          "barcode": {
+            "pattern": "^\\d+$",
+            "type": "string"
+          },
+          "fasta": {
+            "anyOf": [
+              {
+                "format": "file-path",
+                "pattern": "^\\S+\\.(fa|fasta)(\\.gz)?$",
+                "type": "string"
+              },
+              {
+                "pattern": "^[^\\s./]+$",
+                "type": "string"
+              }
+            ]
+          },
+          "group": {
+            "meta": [
+              "id"
+            ],
+            "pattern": "^\\S+$",
+            "type": "string"
+          },
+          "gtf": {
+            "format": "file-path",
+            "pattern": "^\\S+\\.gtf(\\.gz)?$",
+            "type": "string"
+          },
+          "input_file": {
+            "format": "path",
+            "type": "string"
+          },
+          "replicate": {
+            "minimum": 1,
+            "pattern": "^\\d+$",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "group",
+          "replicate"
+        ]
+      }
+    },
+    "schema": "assets/schema_input.json",
+    "source": [
+      "bin/check_samplesheet.py:44-181",
+      "subworkflows/local/input_check.nf:29-49"
+    ],
+    "source_sha256": {
+      "bin/check_samplesheet.py": "fa2d3a7329935fee6e96acc0648c3070cb71d52d6026885f477fad174c67c5f1",
+      "subworkflows/local/input_check.nf": "599e0a10d799d36277cfd3df2c357ca3b95553cf839cf3abe0c77e1677034ca0"
+    },
+    "use": "Actual consumed sample-sheet contract; bundled schema is a stale template"
+  },
+  "18a97f3c0d729bb2367f1cc323ab91b1af9b6f139b146bbe66ea784001f6afbf": {
+    "columns": {
+      "hmm": {
+        "format": "file-path"
+      }
+    },
+    "commit": "992e6df34065067185b5e34665b5861b6827981d",
+    "pipeline": "ampliseq",
+    "schema": "assets/schema_pplace_sheet.json",
+    "source": [
+      "workflows/ampliseq.nf:351-364"
+    ],
+    "use": "HMM cell passed to file(checkIfExists:true) for placement search"
+  },
+  "1e8b53e8a06ff8ab29d90411d0dab1161fc279299767315baa7f112f6fda1dfb": {
+    "columns": {
+      "hap": {
+        "format": "file-path"
+      },
+      "index": {
+        "format": "file-path"
+      },
+      "legend": {
+        "format": "file-path"
+      },
+      "vcf": {
+        "format": "file-path"
+      }
+    },
+    "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+    "pipeline": "phaseimpute",
+    "schema": "assets/schema_posfile.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_phaseimpute_pipeline/main.nf:255-260"
+    ],
+    "use": "ordered file cells from samplesheetToList passed to data, index, map, positions or chunk channels"
+  },
+  "218e561f4e70b43ad6056738b3a2a2b4dadb5c5b9667119c709eb9e7c2e18c1b": {
+    "columns": {
+      "amp_batches": {
+        "format": "file-path"
+      },
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      },
+      "seq_batches": {
+        "format": "file-path"
+      },
+      "well_cells": {
+        "format": "file-path"
+      }
+    },
+    "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+    "pipeline": "marsseq",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf:31-55"
+    ],
+    "use": "read and annotation workbooks passed to file()"
+  },
+  "3292cffa64c505187e8c19b6546f71965f038e3084b1d4b1a6ccde26593e7096": {
+    "columns": {
+      "map": {
+        "format": "file-path"
+      }
+    },
+    "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+    "pipeline": "phaseimpute",
+    "schema": "assets/schema_map.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_phaseimpute_pipeline/main.nf:225"
+    ],
+    "use": "ordered file cells from samplesheetToList passed to data, index, map, positions or chunk channels"
+  },
+  "4fed647b5aebe6625188a543655a8772240ef67a52a81beb617360cc4e05d076": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      },
+      "panel_file": {
+        "format": "file-path"
+      }
+    },
+    "commit": "d7376a8bca8b262b858ed440b6dd49c1853911e8",
+    "pipeline": "pixelator",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_pixelator_pipeline/main.nf:484-503"
+    ],
+    "use": "panel and read paths resolved against the sample sheet and checked before consumption"
+  },
+  "66cddc2fed28a0324610ca66773ef66d17d798b6c4702a2e1b78db0631b328ac": {
+    "columns": {
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "76e2382b6d443db4dc2396e6831d1243256d80b0",
+    "pipeline": "chipseq",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf:46-49"
+    ],
+    "use": "second read passed to file() for paired samples"
+  },
+  "89ef2a299d57ca4e6b0ce16faa2345322087243c2a86f140e5ea89183009b8c4": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "1a1dbe52ffbd82256c941a032b0e22abbd925b8a",
+    "pipeline": "atacseq",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "9bd5068b18106872080c627c25a0168374013377d88032b11908a9794f1cfbca": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "8e0e14c84f90c94d975c2bac6bde8e5a1d5bc8ab",
+    "pipeline": "circdna",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "a4a16776ee8e98052d5759c96ed07aa15fdbdfb3fb7efd0e01194bf4d2cf0594": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "fe4ac656317d24c37e81e7940a526ed9ea812f8e",
+    "pipeline": "hic",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "a4a75d90423cdba733c451051aac552cd0a3d91ab48810a2eadcb59fce22a9b5": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "429087d2b13e59c3edd2e71b8005c1adc5bbb7bb",
+    "pipeline": "hicar",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "c84777d0924da113a82345bdc685c1a66c63502f8e97f5be64f9a54de9332bfb": {
+    "columns": {
+      "file": {
+        "format": "file-path"
+      },
+      "index": {
+        "format": "file-path"
+      }
+    },
+    "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+    "pipeline": "phaseimpute",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_phaseimpute_pipeline/main.nf:137-144"
+    ],
+    "use": "ordered file cells from samplesheetToList passed to data, index, map, positions or chunk channels"
+  },
+  "c9fe8cb476873737e5d42f657559daa0f3f4f10dc3b37fc89261ae85759218cb": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "70e558aaff836d43f5d662bf9c28414f4e6db642",
+    "pipeline": "viralintegration",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "cbb370a45b98ed6034d6f4c4cf98aadfdbcbfad4ac6eb9c3cb4baeec78685ada": {
+    "columns": {
+      "index": {
+        "format": "file-path"
+      },
+      "vcf": {
+        "format": "file-path"
+      }
+    },
+    "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+    "pipeline": "phaseimpute",
+    "schema": "assets/schema_input_panel.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_phaseimpute_pipeline/main.nf:184-190"
+    ],
+    "use": "ordered file cells from samplesheetToList passed to data, index, map, positions or chunk channels"
+  },
+  "d20897960778d4d6bf6fea613c9a57b5a2e6d1122913367a4e5a2839cb0adddc": {
+    "columns": {
+      "Fast5": {
+        "format": "path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "LongFastQ": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "R1": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "R2": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      }
+    },
+    "commit": "5ed7c2dd9a05d2434d8ba39ace1116368a4ba570",
+    "pipeline": "bacass",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_bacass_pipeline/main.nf:107-118",
+      "subworkflows/local/utils_nfcore_bacass_pipeline/main.nf:299-310"
+    ],
+    "use": "resolveFilePath stages read files and Fast5 locations; NA and empty values mean absence"
+  },
+  "d5d53b5a23bd36776ecd77be47b705c7de525cf6cb450ffc365d031c8a21a54a": {
+    "columns": {
+      "file_path": {
+        "format": "path"
+      }
+    },
+    "commit": "f40870fcbcf2e9fc29b623b848487789d487ed4a",
+    "pipeline": "longraredisease",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "workflows/longraredisease.nf:95-96",
+      "workflows/longraredisease.nf:190-207",
+      "workflows/longraredisease.nf:254-275"
+    ],
+    "use": "file_path names a read/alignment file or a directory"
+  },
+  "d660a5279bebc46cdfcf11912705684605abf2103f57773da6b0c1ddac5b6881": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "6e1125d4fee4ea7c8b70ed836bb0e92a89e3305f",
+    "pipeline": "cutandrun",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "dad4d25f163e209bf9a289dc7e17337e7040c4b7d87dd6772d2e35f8c03e6693": {
+    "columns": {
+      "fastq_1": {
+        "format": "file-path"
+      },
+      "fastq_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "1d0494ae3402d1a46e0adadad24f81a0ff855c77",
+    "pipeline": "rnasplice",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/input_check.nf"
+    ],
+    "use": "read cells passed to file() and staged as FASTQ inputs"
+  },
+  "dea220218fe1b38b6ce1a42f55025c7f331368f418fc023c1f59aa9539053ff8": {
+    "columns": {
+      "file": {
+        "format": "file-path"
+      }
+    },
+    "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+    "pipeline": "phaseimpute",
+    "schema": "assets/schema_chunks.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_phaseimpute_pipeline/main.nf:277-283"
+    ],
+    "use": "ordered file cells from samplesheetToList passed to data, index, map, positions or chunk channels"
+  },
+  "df3101b79617572b6b390f610e3f0dd58fb6b613a3a62686be4222cf2236e4b5": {
+    "columns": {
+      "path": {
+        "format": "file-path"
+      },
+      "path_2": {
+        "format": "file-path"
+      }
+    },
+    "commit": "13547eaa7345dab4ac97db49775ae8284af4113d",
+    "pipeline": "pathogensurveillance",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/prepare_input/main.nf:360-374"
+    ],
+    "use": "read paths passed to file()"
+  },
+  "ff48324f6046a6ee05285608f45dedcb1672498c5da23d9165f0ab7c5fcb2264": {
+    "columns": {},
+    "commit": "683daaf41bb396839445e603152b45daa141ced4",
+    "generation_problem": "the pinned consumer accepts mixed FASTQ/alignment roles that require an explicit samplesheet",
+    "header_prefix": [],
+    "note": "**Pinned input correction.** The bundled schema is an unused FASTQ template. These columns come from the pinned consumer, which reads `input1` and optional `input2`. Paired inputs must have the same extension; BAM/CRAM input cannot have a second mate. Write the sheet explicitly.",
+    "pipeline": "hgtseq",
+    "replacement": {
+      "items": {
+        "properties": {
+          "input1": {
+            "format": "file-path",
+            "pattern": "^\\S+\\.(fastq(\\.gz)?|bam|cram)$",
+            "type": "string"
+          },
+          "input2": {
+            "format": "file-path",
+            "pattern": "^\\S+\\.fastq(\\.gz)?$",
+            "type": "string"
+          },
+          "sample": {
+            "meta": [
+              "id"
+            ],
+            "pattern": "^\\S+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sample",
+          "input1"
+        ]
+      }
+    },
+    "schema": "assets/schema_input.json",
+    "source": [
+      "workflows/hgtseq.nf:259-317"
+    ],
+    "source_sha256": {
+      "workflows/hgtseq.nf": "1bbc63e6edc411a418dd403487f9eb46f0a00db399a2bfbd3574c3e33766f66e"
+    },
+    "use": "Actual consumed sample-sheet contract; bundled schema is a stale template"
+  }
+}

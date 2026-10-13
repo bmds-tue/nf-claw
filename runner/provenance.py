@@ -25,7 +25,7 @@ from runner.replay_guard import (MissingInputSource as MissingInputSource,
                                  read_input_inventory as read_input_inventory,
                                  read_checksums as read_checksums)
 from runner.samplesheet import delimiter_for, serialized_rows
-from runner.schema import InputSchema, PATH_FORMATS
+from runner.schema import InputSchema
 from runner.submodule import SubmoduleStatus
 
 
@@ -51,20 +51,21 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     Remote URLs and nested or pipeline-specific inputs need separate identity handling and are not guessed.
     The sheet has already been validated by the runner, including its absolute-path requirement.
     """
-    columns = [column.name for column in schema.columns if column.fmt in PATH_FORMATS]
+    columns = [column for column in schema.columns if column.path_format()]
     paths: set[Path] = set()
     if path.suffix.lower() not in (".csv", ".tsv"):
         for row in serialized_rows(path) or []:
             for column in columns:
-                value = row.get(column)
-                if isinstance(value, str) and value and not is_remote_url(value):
+                value = row.get(column.name)
+                if (isinstance(value, str) and value and column.path_format(value)
+                        and not is_remote_url(value)):
                     paths.add(Path(value))
         return sorted(paths)
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream, delimiter=delimiter_for(path), strict=True):
             for column in columns:
-                value = (row.get(column) or "").strip()
-                if value and not is_remote_url(value):
+                value = (row.get(column.name) or "").strip()
+                if value and column.path_format(value) and not is_remote_url(value):
                     paths.add(Path(value))
     return sorted(paths)
 

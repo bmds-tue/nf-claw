@@ -383,15 +383,17 @@ def _sheet_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> 
     # is always valid; the optional columns are named right below it, so nothing is hidden.
     required_cols = [c.name for c in named if c.required]
     optional_cols = [c.name for c in named if not c.required]
-    header_cols = required_cols or [c.name for c in named]     # no required column → show them all
+    header_cols = list(insch.header_prefix) or required_cols or [c.name for c in named]
+    optional_cols = [name for name in optional_cols if name not in header_cols]
     header_line = delimiter.join(header_cols)
     optional_note = ""
     if required_cols and optional_cols:
         cols = ", ".join(f"`{c}`" for c in optional_cols)
         optional_note = ("\nAny of the optional columns above may be appended to the header when "
                          f"your data needs them: {cols}.\n")
-    required_note = " (the columns the schema requires)" if required_cols else ""
-    return (f"{head}{rows}\n"
+    required_note = (" (the required header order; optional values may be empty)" if insch.header_prefix
+                     else " (the columns the schema requires)" if required_cols else "")
+    return (f"{insch.audit_note}\n\n" if insch.audit_note else "") + (f"{head}{rows}\n"
             f"{input_note}"
             f"{_dependent_rules_section(insch)}"
             f"{tabular_intro}{required_note}; fill each value per the table above "

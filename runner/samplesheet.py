@@ -10,7 +10,7 @@ from collections.abc import Hashable, Iterable
 from pathlib import Path
 
 from runner.inputs import is_remote_url, local_name_issues
-from runner.schema import InputSchema, PATH_FORMATS, json_scalar
+from runner.schema import InputSchema, json_scalar
 
 
 def _unique_json_keys(pairs):
@@ -117,12 +117,15 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                     else:
                         raw = "" if value is None else json_scalar(value)
                         issues.extend(_identity_issues(i, col, raw))
-                    if col.fmt in PATH_FORMATS and isinstance(value, str) and value:
+                    if isinstance(value, str) and value and col.path_format(value):
                         issues.extend(_path_issues(i, col, value))
             return issues
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter, strict=True)
             fields = reader.fieldnames or []
+            if input_schema.header_prefix and tuple(fields[:len(input_schema.header_prefix)]) != input_schema.header_prefix:
+                issues.append("samplesheet header must begin with " + ",".join(input_schema.header_prefix)
+                              + " in this order, as required by the pinned consumer")
             duplicates = sorted(name for name, count in Counter(fields).items() if count > 1)
             if duplicates:
                 return [f"duplicate samplesheet column '{name}'" for name in duplicates]
@@ -156,7 +159,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             issues.extend(_identity_issues(i, col, raw))
             if val:
                 issues.extend(_value_issues(i, col, val))
-            if col.fmt in PATH_FORMATS and val:
+            if val and col.path_format(val):
                 # nf-schema resolves a relative path against Nextflow's launch directory — which
                 # nfclaw sets to --outdir — not against the samplesheet's folder, and it does not
                 # expand `~`. A relative path cannot mean what it says, so require an absolute one.
@@ -182,17 +185,18 @@ def _safe_identifier(value: str) -> bool:
 
 
 def _path_issues(row_num: int, col, value: str) -> list[str]:
+    fmt = col.path_format(value)
     if is_remote_url(value):
         return [f"row {row_num}: '{col.name}': {issue}"
-                for issue in local_name_issues(value, col.fmt)]
+                for issue in local_name_issues(value, fmt)]
     path = Path(value)
     if not path.is_absolute():
         return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an "
                 "absolute path (Nextflow resolves samplesheet paths against its "
                 "launch directory, which nfclaw sets to --outdir)"]
-    if issues := local_name_issues(value, col.fmt):
+    if issues := local_name_issues(value, fmt):
         return [f"row {row_num}: '{col.name}': {issue}" for issue in issues]
-    if col.fmt != "file-path-pattern" and not path.exists():
+    if fmt != "file-path-pattern" and not path.exists():
         return [f"row {row_num}: file not found for '{col.name}': {value}"]
     return []
 
@@ -212,6 +216,8 @@ def header_issues(columns: Iterable[str], input_schema: InputSchema) -> list[str
     have = set(columns)
     issues = [f"missing required column '{c.name}'" for c in input_schema.columns
               if c.name and c.required and c.name not in have]
+    issues += [f"missing positional header column '{name}'" for name in input_schema.header_prefix
+               if name not in have and not any(f"'{name}'" in issue for issue in issues)]
     if input_schema.one_of and not any(set(group) <= have for group in input_schema.one_of):
         issues.append("needs one of these column sets: "
                       + "; ".join(", ".join(group) for group in input_schema.one_of))

@@ -6,7 +6,7 @@ commit: 683daaf41bb396839445e603152b45daa141ced4
 description: A pipeline to investigate horizontal gene transfer from NGS data
 summary: nf-core/hgtseq is a bioinformatics best-practice analysis pipeline built to investigate horizontal gene transfer from NGS data.
 has_samplesheet: true
-input: samplesheet (sample, fastq_1, fastq_2)
+input: samplesheet (input1, input2, sample)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
 tools: ["FastQC", "MultiQC", "Trim Galore", "Qualimap", "BAMTOOLS", "BWA", "BWAmem2", "SAMtools", "Kraken2", "Krona", "RMarkDown"]
 ---
@@ -25,22 +25,24 @@ nextflow run pipelines/hgtseq/upstream -profile docker --input samplesheet.csv -
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions hgtseq` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show hgtseq --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show hgtseq --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
 
 ## Inputs
+**Pinned input correction.** The bundled schema is an unused FASTQ template. These columns come from the pinned consumer, which reads `input1` and optional `input2`. Paired inputs must have the same extension; BAM/CRAM input cannot have a second mate. Write the sheet explicitly.
+
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
+| `input1` | string (file path) | yes |  | matches ^\S+\.(fastq(\.gz)?\|bam\|cram)$ |
+| `input2` | string (file path) | no |  | matches ^\S+\.fastq(\.gz)?$ |
 | `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string | no |  |  |
 
 `--input` must match `^\S+\.csv$`.
 
 The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
 ```csv
-sample,fastq_1
+input1,sample
 ```
 
-Any of the optional columns above may be appended to the header when your data needs them: `fastq_2`.
+Any of the optional columns above may be appended to the header when your data needs them: `input2`.
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `sample` from file names; `fastq_1`/`fastq_2` from FastQ files (mates paired by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they are mates). Set other columns with `--sheet-set COLUMN=VALUE`. Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** nfclaw cannot generate this samplesheet: the pinned consumer accepts mixed FASTQ/alignment roles that require an explicit samplesheet.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
