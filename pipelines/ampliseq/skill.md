@@ -100,7 +100,7 @@ Check a run — in the foreground or the background — with `nfclaw status <out
 Run ampliseq as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` starts each stage only after the one before it succeeded, and prepares its inputs from that stage's outputs. The rules live in `handoffs/` (format and spec in [docs/chaining.md](../../docs/chaining.md)); list them with `nfclaw chain edges ampliseq`.
 
 Fed by:
-- `fetchngs` — fetchngs writes an ampliseq samplesheet (sample, fastq_1, fastq_2, run) with --nf-core-pipeline ampliseq.
+- `fetchngs` — fetchngs writes an ampliseq samplesheet (sample, fastq_1, fastq_2, run) with --nf-core-pipeline ampliseq. Its run column is empty, so ampliseq treats every sample as one sequencing run and learns one DADA2 error model for all of them; data from several sequencing runs needs run filled per sequencing run: an inline handoff whose set templates it from a column that identifies the run, or your own samplesheet.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: Cutadapt, FastQC, DADA2, Porechop_ABI, Chopper, Savont, Barrnap, Greengenes2, PR2 - Protist Reference Ribosomal Database, GTDB - Genome Taxonomy Database, SBDI-GTDB, RDP - Ribosomal Database Project, UNITE - eukaryotic nuclear ribosomal ITS region, GloSED - Global standardised soil eukaryome dataset, MIDORI2 - a collection of reference databases, COIDB - CO1 Taxonomy Database, Zehr lab nifH database, BOLD Plantae, nf-core/phyloplace, HMMER, MAFFT, EPA-NG, Gappa, q2-sidle, SMURF, RESCRIPt, SEPP, QIIME2, ANCOM, ANCOM-BC, ANCOM-BC2, Adonis, Phyloseq, TreeSummarizedExperiment, ITSx, ITSxRust, PICRUSt2, VSEARCH, decontam, Kraken2, MultiQC, DuckDB.
