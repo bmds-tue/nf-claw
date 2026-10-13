@@ -599,13 +599,16 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         for col in header:
             if not (value := (r.get(col) or "").strip()):
                 continue
+            values = (value,)
             if col in path_cols and path_cols[col].path_format(value):
-                value = r[col] = _absolute(value, root)
+                values = tuple(_absolute(part, root) for part in path_cols[col].path_values(value, r))
+                r[col] = path_cols[col].join_paths(values)
             # Trace every upstream result the sheet points at — also in a column the downstream
             # schema declares no path format for (atacseq's fastq_1), so lineage misses none.
-            rel = _under(Path(value), root) if Path(value).is_absolute() else None
-            if rel is not None and (root / rel).is_file():
-                derived.append(rel)
+            for part in values:
+                rel = _under(Path(part), root) if Path(part).is_absolute() else None
+                if rel is not None and (root / rel).is_file():
+                    derived.append(rel)
     suffix = sheet.suffix.lower() if sheet.suffix.lower() in (".csv", ".tsv") else ".csv"
     extra = {"dropped_rows": dropped} if dropped else {}
     return (_write_sheet(dest.with_suffix(suffix), _schema_order(header, sheet_schema), rows),
@@ -624,19 +627,27 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         if m is None:
             continue
         derived.append(match.relative_to(root).as_posix())
-        row: dict[str, str] = {}
+        row = {col: _fill(template[:-1] if template.endswith("?") else template, m.groupdict())
+               for col, template in spec["columns"].items()}
         for col, template in spec["columns"].items():
             optional = template.endswith("?")
-            text = _fill(template[:-1] if optional else template, m.groupdict())
+            text = row[col]
             if col in path_cols and text and path_cols[col].path_format(text):
-                if (root / text).is_file() or (root / text).is_dir():
-                    if (root / text).is_file():
-                        derived.append(PurePosixPath(text).as_posix())
-                    text = os.path.normpath(root / text)
-                elif optional:
-                    text = ""
-                else:
-                    raise _Unresolved(f"{text} not found in {root} (column '{col}')")
+                resolved = []
+                for part in path_cols[col].path_values(text, row):
+                    path = root / part
+                    if path.is_file() or path.is_dir():
+                        if path.is_file():
+                            rel = _under(path, root)
+                            if rel is not None:
+                                derived.append(rel)
+                        resolved.append(os.path.normpath(path))
+                    elif optional:
+                        resolved = []
+                        break
+                    else:
+                        raise _Unresolved(f"{part} not found in {root} (column '{col}')")
+                text = path_cols[col].join_paths(tuple(resolved))
             row[col] = text
         rows.append(row)
     if not rows:

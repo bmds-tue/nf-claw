@@ -811,7 +811,7 @@
   {
     "description": "A pipeline to investigate horizontal gene transfer from NGS data",
     "feeds": [],
-    "input": "samplesheet (sample, fastq_1, fastq_2)",
+    "input": "samplesheet (input1, input2, sample)",
     "name": "hgtseq",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nf-core/hgtseq is a bioinformatics best-practice analysis pipeline built to investigate horizontal gene transfer from NGS data.",
@@ -1268,7 +1268,7 @@
   {
     "description": "A pipeline to demultiplex, QC and map Nanopore data",
     "feeds": [],
-    "input": "samplesheet (sample, fastq_1, fastq_2)",
+    "input": "samplesheet (group, replicate, barcode, input_file, fasta, gtf)",
     "name": "nanoseq",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nfcore/nanoseq is a bioinformatics analysis pipeline for Nanopore DNA/RNA sequencing data that can be used to perform basecalling, demultiplexing, QC, alignment, and downstream analysis.",

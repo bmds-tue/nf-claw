@@ -971,7 +971,9 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
         c.name for c in sheet.columns if c.name and c.path_format()}
     files = tuple(dict.fromkeys(Path(row[c]) for row in rows for c in header
                                 if c in path_columns and row.get(c) and "://" not in row[c]
-                                and row[c] not in p.columns[c].path_sentinels))
+                                and (p.columns[c].path_format(row[c])
+                                     or not p.columns[c].path_format()
+                                     and c in {*p.reads, *p.data_columns})))
     paired = sum(1 for u in units if len(u.reads) == 2)
     record = {"version": 1, "sources": list(source.values), "schema": source.sheet,
               "files": len(files), "samples": len(samples), "rows": len(rows),

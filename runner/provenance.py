@@ -52,22 +52,24 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     Remote URLs and nested or pipeline-specific inputs need separate identity handling and are not guessed.
     The sheet has already been validated by the runner, including its absolute-path requirement.
     """
-    columns = [column for column in schema.columns if column.path_format()]
+    columns = [column for column in schema.columns
+               if column.path_format() and column.name not in schema.destination_columns]
     paths: set[Path] = set()
     if path.suffix.lower() not in (".csv", ".tsv"):
         for row in serialized_rows(path) or []:
             for column in columns:
                 value = row.get(column.name)
-                if (isinstance(value, str) and value and column.path_format(value)
-                        and not is_remote_url(value)):
-                    paths.add(Path(value))
+                if isinstance(value, str) and value:
+                    paths.update(Path(part) for part in column.path_values(value, row)
+                                 if not is_remote_url(part))
         return sorted(paths)
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream, delimiter=delimiter_for(path), strict=True):
             for column in columns:
                 value = (row.get(column.name) or "").strip()
-                if value and column.path_format(value) and not is_remote_url(value):
-                    paths.add(Path(value))
+                if value:
+                    paths.update(Path(part) for part in column.path_values(value, row)
+                                 if not is_remote_url(part))
     return sorted(paths)
 
 
@@ -83,6 +85,7 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
     from runner import sheetgen
 
     declared = {column.name for column in schema.columns if column.path_format()}
+    declared.update(schema.destination_columns)
     typed = set(sheetgen.file_columns(schema))
     if path.suffix.lower() in (".csv", ".tsv"):
         with path.open(newline="", encoding="utf-8-sig") as stream:

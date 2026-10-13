@@ -13,6 +13,8 @@ Some pinned schemas omit path formats on consumed reads, references or indexes, 
 
 HGTseq's pinned 1.1.0 consumer reads `sample,input1` and optional `input2`, while its template lists `fastq_1`/`fastq_2`. Nanoseq 3.1.0 requires `group,replicate,barcode,input_file,fasta,gtf` in that order. The runner and generated documentation correct these stale contracts using the exact pinned consumer source, without editing upstream files. Automatic generation is refused because these formats require explicit data-role, barcode, replicate or reference assignments. Corrections require the audited revision and unchanged consumer source; another release needs its own reviewed contract. The pinned consumers continue to enforce extension compatibility, replicate grouping and their other runtime constraints.
 
+The audited roles also cover directory-valued sources (including Methylong POD5 inputs and microscopy datasets) and auxiliary reference sheets. Oncoanalyser FASTQ `filepath` values contain exactly two nonempty semicolon-delimited paths; both are validated, normalized during handoffs and hashed independently. `group_id`, `subject_id` and the `library_id`, `lane`, `flowcell` info values must be literal safe aliases. Info keys use the consumer's uppercase normalization. An apostrophe in `read_group_overrides` is unsupported by the pinned single-quoted BWA argument and is refused. Datasync `output_path` locations are destinations rather than consumed inputs. The composite interpretation and destination exclusion require the exact audited revision and source hashes.
+
 ---
 
 ### Navigation

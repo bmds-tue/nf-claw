@@ -90,6 +90,28 @@ class Column:
     path_branches: tuple[tuple[str | None, str], ...] = ()
     audited_path_format: str | None = None
     path_sentinels: tuple[str, ...] = ()
+    path_separator: str | None = None
+    path_selector: tuple[str, str] | None = None
+    path_count: int | None = None
+    audited_identifier: bool = False
+    info_identifier_keys: tuple[str, ...] = ()
+    info_single_quoted_keys: tuple[str, ...] = ()
+
+    def path_values(self, value: str, row: dict) -> tuple[str, ...]:
+        if not self.path_format(value):
+            return ()
+        if self.path_separator and self.path_selector:
+            key, expected = self.path_selector
+            if str(row.get(key, "")).upper() == expected.upper():
+                values = tuple(part for part in value.split(self.path_separator) if part)
+                if self.path_count is not None and len(values) != self.path_count:
+                    raise ValueError(f"'{self.name}' requires exactly {self.path_count} paths "
+                                     f"delimited by {self.path_separator!r}")
+                return values
+        return (value,)
+
+    def join_paths(self, paths: tuple[str, ...]) -> str:
+        return (self.path_separator or "").join(paths)
 
     def path_format(self, value: str | None = None) -> str | None:
         if self.fmt in PATH_FORMATS:
@@ -126,7 +148,7 @@ class Column:
         if self.path_format() in PATH_FORMATS:
             return False
         name = self.name.casefold().replace("_", "").replace(" ", "")
-        return (self.type not in {"object", "array"}
+        return (self.audited_identifier or self.type not in {"object", "array"}
                 and name in {"id", "sample", "sampleid", "samplename", "patient", "patientid"}
                 or any(key in {"id", "sample", "patient", "sample_name", "sample_alias",
                                "tumour_sample", "normal_sample", "paternal", "maternal",
@@ -157,6 +179,7 @@ class InputSchema:
     header_prefix: tuple[str, ...] = ()
     generation_problem: str | None = None
     audit_note: str = ""
+    destination_columns: tuple[str, ...] = ()
 
 
 def json_scalar(value: Any) -> str:
@@ -312,6 +335,12 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 path_branches=_path_branches(cobj),
                 audited_path_format=audited_roles.get(cname, {}).get("format"),
                 path_sentinels=tuple(audited_roles.get(cname, {}).get("sentinels", [])),
+                path_separator=audited_roles.get(cname, {}).get("separator"),
+                path_selector=tuple(audited_roles[cname]["selector"]) if audited_roles.get(cname, {}).get("selector") else None,
+                path_count=audited_roles.get(cname, {}).get("count"),
+                audited_identifier=cname in audited.get("identifiers", []),
+                info_identifier_keys=tuple(audited.get("info_identifiers", {}).get(cname, [])),
+                info_single_quoted_keys=tuple(audited.get("info_single_quoted", {}).get(cname, [])),
             ))
     header_prefix = tuple(audited.get("header_prefix", []))
     if header_prefix:
@@ -327,18 +356,21 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
         header_prefix=header_prefix,
         generation_problem=audited.get("generation_problem"),
         audit_note=audited.get("note", ""),
+        destination_columns=tuple(audited.get("destination_columns", [])),
     )
 
 
 def _audited_input_contract(content: bytes, repo: Path) -> dict:
     """Additional consumed-file roles established from the pinned source, by schema digest.
 
-    These add input checks and capture, never exempt a declared input. Changed and unknown
-    schemas retain only their explicit path annotations, including annotated alternatives.
+    Added roles fill omitted path annotations. Consumer corrections and destination
+    exclusions also require the exact revision and unchanged audited source. Unknown
+    schemas retain their explicit path annotations, including annotated alternatives.
     """
     registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest(), {})
-    if "replacement" in audited:
+    if ("replacement" in audited or audited.get("destination_columns")
+            or any(role.get("separator") for role in audited.get("columns", {}).values())):
         from runner.submodule import _own_head
         if _own_head(repo) != audited["commit"]:
             raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,

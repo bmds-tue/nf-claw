@@ -115,6 +115,8 @@ Sample, patient, genome and database identifiers become upstream shell arguments
 
 Older schemas can omit path formats or put them only on alternatives. The runner preserves branch-specific formats and supplements documented omissions with [source-audited roles bound to exact schema hashes](runner/input_roles.json). Literal sentinels such as `none` or `NA` and filename metadata remain distinct from data paths. HGTseq and Nanoseq ship stale template schemas; their generated instructions and validation use the actual pinned consumers' columns, guarded by the pipeline revision and consumer source hashes. These two formats require an explicit samplesheet.
 
+The audit also covers consumed directory inputs and Oncoanalyser's semicolon-delimited FASTQ pair, recording each member separately for replay and handoffs. Its filename-forming identifiers receive literal alias checks, and unsupported apostrophes in read-group overrides are refused before launch. Datasync's `output_path` is a destination, excluded from consumed-input capture using an exact revision and source check.
+
 ### 3. Provenance Replay & Verification
 
 ```bash

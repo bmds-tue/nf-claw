@@ -125,12 +125,14 @@ def test_audited_schema_roles_match_the_pins_and_capture_each_data_cell(tmp_path
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tree, text=True).strip() == audit["commit"]
     for reference in audit["source"]:
         assert (tree / reference.partition(":")[0]).is_file(), reference
+    for reference, expected_digest in audit.get("source_sha256", {}).items():
+        assert hashlib.sha256((tree / reference).read_bytes()).hexdigest() == expected_digest, reference
     contract = schema.load_input_schema(tree, audit["schema"])
     row = {}
     expected = []
     for name, role in audit["columns"].items():
         path = tmp_path / f"{name}.data"
-        if role["format"] == "path":
+        if role["format"] in {"path", "directory-path"}:
             path.mkdir()
         else:
             path.write_bytes(b"known data")
@@ -248,3 +250,178 @@ def test_corrected_nanoseq_sheet_is_accepted_by_the_actual_pinned_checker(tmp_pa
     process = subprocess.run([sys.executable, str(checker), str(sheet), "not_changed", str(result)],
                              capture_output=True, text=True)
     assert process.returncode != 0 and "header" in process.stdout
+
+
+def test_generated_isoseq_sheet_keeps_none_literal_out_of_data_snapshot(tmp_path):
+    from runner import sheetgen
+    tree, _ = _pinned("isoseq")
+    data = tmp_path / "A.bam"
+    data.write_bytes(b"known BAM identity; sheet generation does not interpret alignments")
+    source = sheetgen.detect(str(data), tree)
+    generated = sheetgen.generate(source, tree, pipeline="isoseq",
+                                  assignments={"start_from": "mapping", "pbi": "none"},
+                                  outdir=tmp_path / "results", work_dir=tmp_path / "work")
+    assert generated.rows[0]["pbi"] == "none"
+    assert generated.files == (data,)
+    checksums, inventory = provenance.snapshot_inputs(list(generated.files))
+    assert set(checksums) == {str(data)} and set(inventory) == {str(data)}
+
+
+def _onco_sheet(tmp_path, *, value=None, filetype="fastq", info="library_id:LIB;lane:1"):
+    tree, contract = _pinned("oncoanalyser")
+    reads = [tmp_path / f"A_R{i}.fastq.gz" for i in (1, 2)]
+    for data in reads:
+        data.write_bytes(b"known read identity")
+    sheet = tmp_path / "samples.csv"
+    row = {"group_id": "G", "subject_id": "P", "sample_id": "A", "sample_type": "tumor",
+           "sequence_type": "dna", "info": info, "filetype": filetype,
+           "filepath": value or ";".join(map(str, reads))}
+    with sheet.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+    return tree, contract, sheet, reads, row
+
+
+@pytest.mark.parametrize("filetype", ["fastq", "FASTQ"])
+@pytest.mark.parametrize("suffix", ["csv", "json"])
+def test_oncoanalyser_consumed_fastq_members_are_separate_replay_dependencies(tmp_path, filetype, suffix):
+    _, contract, sheet, reads, row = _onco_sheet(tmp_path, filetype=filetype)
+    if suffix == "json":
+        sheet = tmp_path / "samples.json"
+        sheet.write_text(json.dumps([row]))
+    assert samplesheet.validate(sheet, contract) == []
+    dependencies = provenance.samplesheet_input_paths(sheet, contract)
+    assert dependencies == sorted(reads)
+    out = tmp_path / "run"
+    record(out, inputs=[sheet, *dependencies])
+    replay_guard.verify_dependencies(out / "provenance")
+    reads[1].write_bytes(b"changed second mate")
+    with pytest.raises(ValueError, match="changed"):
+        replay_guard.verify_dependencies(out / "provenance")
+
+
+@pytest.mark.parametrize("value,expected", [("relative.fastq.gz;/other.fastq.gz", "relative path"),
+                                           ("/one.fastq.gz", "exactly 2"),
+                                           ("/one;/two;/three", "exactly 2")])
+def test_oncoanalyser_fastq_contract_rejects_unresolvable_or_wrong_cardinality(tmp_path, value, expected):
+    _, contract, sheet, _, _ = _onco_sheet(tmp_path, value=value)
+    assert any(expected in issue for issue in samplesheet.validate(sheet, contract))
+
+
+@pytest.mark.parametrize("field", ["group_id", "subject_id", "library_id", "lane", "flowcell"])
+def test_oncoanalyser_actual_filename_identifiers_receive_literal_alias_guards(tmp_path, field):
+    _, contract, sheet, _, row = _onco_sheet(tmp_path)
+    if field in row:
+        row[field] = "unsafe;id"
+    else:
+        row["info"] = f"library_id:LIB;lane:1;{field}:L$(id)"
+    sheet = tmp_path / "unsafe.json"
+    sheet.write_text(json.dumps([row]))
+    assert any("identifier" in issue for issue in samplesheet.validate(sheet, contract))
+
+
+def test_methylong_pod5_directory_members_are_replay_dependencies(tmp_path):
+    _, contract = _pinned("methylong")
+    directory = tmp_path / "pod5"
+    directory.mkdir()
+    data, reference = directory / "A.pod5", tmp_path / "ref.fa"
+    data.write_bytes(b"known instrument data identity")
+    reference.write_bytes(b">ref\nACGT\n")
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text(f"group,sample,path,ref,method\nG,A,{directory},{reference},ont\n")
+    assert samplesheet.validate(sheet, contract) == []
+    dependencies = provenance.samplesheet_input_paths(sheet, contract)
+    assert dependencies == sorted((directory, reference))
+    out = tmp_path / "run"
+    record(out, inputs=[sheet, *dependencies])
+    data.write_bytes(b"changed instrument data")
+    with pytest.raises(ValueError, match="changed"):
+        replay_guard.verify_dependencies(out / "provenance")
+
+
+def test_oncoanalyser_compound_tokens_match_the_pinned_tokenize_semantics(tmp_path):
+    _, contract, sheet, reads, row = _onco_sheet(tmp_path)
+    row["filepath"] = ";;" + str(reads[0]) + ";;;" + str(reads[1]) + ";"
+    sheet = tmp_path / "tokenized.json"
+    sheet.write_text(json.dumps([row]))
+    assert samplesheet.validate(sheet, contract) == []
+    assert provenance.samplesheet_input_paths(sheet, contract) == sorted(reads)
+    row.update(filetype="ALN", filepath=str(reads[0]), info="")
+    sheet.write_text(json.dumps([row]))
+    assert samplesheet.validate(sheet, contract) == []
+    assert provenance.samplesheet_input_paths(sheet, contract) == [reads[0]]
+
+
+@pytest.mark.parametrize("kind", ["direct", "build"])
+def test_oncoanalyser_handoffs_normalize_and_trace_each_fastq_member(tmp_path, kind):
+    tree, _ = _pinned("oncoanalyser")
+    up = tmp_path / "producer"
+    up.mkdir()
+    _, _, sheet, reads, row = _onco_sheet(up)
+    row["filepath"] = ";".join(data.name for data in reads)
+    with sheet.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+    record(up)
+    if kind == "direct":
+        spec = {"samplesheet": sheet.name, "provides": list(row)}
+    else:
+        # Complete row context must exist before a compound path is normalized, even
+        # when the selector field follows the path in the rule's column order.
+        columns = {"filepath": "{sample}_R1.fastq.gz;{sample}_R2.fastq.gz",
+                   **{key: value for key, value in row.items() if key != "filepath"}}
+        spec = {"build": {"rows": "{sample}_R1.fastq.gz", "columns": columns}}
+    result = handoff.materialize(_rule({"params": {"input": spec}}), upstream_outdir=up,
+                                 downstream_tree=tree, dest=tmp_path / "handoff")
+    assert result.record["params"]["input"]["consumed_sources"] == sorted(map(str, reads))
+    captured = result.record["params"]["input"]["consumed_dependencies"]
+    assert set(captured) == set(map(str, reads))
+    assert all(data.name in result.record["params"]["input"]["derived_from"] for data in reads)
+
+
+@pytest.mark.parametrize("key", ["LIBRARY_ID", "lıbrary_ıd", "flowcell"])
+def test_oncoanalyser_info_alias_keys_follow_the_consumers_uppercase_normalization(tmp_path, key):
+    _, contract, sheet, _, _ = _onco_sheet(tmp_path, info=f"{key}:O'Brien;lane:1")
+    assert any("identifier" in issue for issue in samplesheet.validate(sheet, contract))
+
+
+@pytest.mark.parametrize("key", ["read_group_overrides", "READ_GROUP_OVERRIDES", "read_group_overrıdes"])
+def test_oncoanalyser_read_group_apostrophe_is_refused_before_single_quoted_argument(tmp_path, key):
+    _, contract, sheet, _, _ = _onco_sheet(
+        tmp_path, info=f"library_id:LIB;lane:1;{key}:CN=O'Brien|DS=Study")
+    assert any("single quote" in issue for issue in samplesheet.validate(sheet, contract))
+
+
+def test_oncoanalyser_read_group_description_keeps_colons_and_double_quotes(tmp_path):
+    _, contract, sheet, _, _ = _onco_sheet(
+        tmp_path, info='library_id:LIB;lane:1;read_group_overrides:CN=Research_Centre|DS=Study:"A"')
+    assert samplesheet.validate(sheet, contract) == []
+
+
+def test_datasync_destination_is_not_captured_as_consumed_input(tmp_path):
+    _, contract = _pinned("datasync")
+    source, destination = tmp_path / "source.data", tmp_path / "destination.data"
+    source.write_bytes(b"source bytes")
+    destination.write_bytes(b"destination location is not read as input")
+    sheet = tmp_path / "samples.csv"
+    sheet.write_text(f"input,output_path\n{source},{destination}\n")
+    assert provenance.samplesheet_input_paths(sheet, contract) == [source]
+    assert provenance.samplesheet_file_paths(sheet, contract) == []
+
+
+@pytest.mark.parametrize("damage", ["revision", "source"])
+def test_datasync_destination_exclusion_requires_the_audited_consumer(tmp_path, damage):
+    tree, _ = _pinned("datasync")
+    copy = tmp_path / "pipeline"
+    subprocess.run(["git", "clone", "--shared", "--quiet", str(tree), str(copy)], check=True)
+    assert schema.load_input_schema(copy).destination_columns == ("output_path",)
+    if damage == "revision":
+        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                        "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"], cwd=copy, check=True)
+    else:
+        source = copy / "modules/nf-core/rclone/copy/main.nf"
+        source.write_text(source.read_text() + "\n// modified consumer\n")
+    with pytest.raises(NfclawError, match="audited samplesheet"):
+        schema.load_input_schema(copy)
