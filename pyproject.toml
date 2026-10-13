@@ -20,7 +20,7 @@ nfclaw = "runner.cli:main"
 packages = ["runner", "librarian"]
 
 [tool.setuptools.package-data]
-runner = ["path_roles.json", "input_roles.json"]
+runner = ["path_roles.json", "input_roles.json", "param_roles.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

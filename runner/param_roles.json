@@ -1,0 +1,48 @@
+{
+  "e4abfe602c101a3d739f128b3f435e0f8abe1f7daa2abfadbab64203399aa55e": {
+    "pipeline": "nanoseq",
+    "releases": {
+      "2.0.0": "73cbe193e9cd19610daa0fa0b00db603acd76750",
+      "2.0.1": "a93c84624e59ed07062c334afa9bc03aebfe4737"
+    },
+    "values": {
+      "protocol": {
+        "source": [
+          "workflows/nanoseq.nf:72-82",
+          "workflows/nanoseq.nf:361",
+          "modules/local/minimap2_align.nf:29-32",
+          "modules/local/minimap2_index.nf:28-31",
+          "modules/local/graphmap2_align.nf:29-30",
+          "modules/local/graphmap2_index.nf:28-29",
+          "modules/local/bedtools_genomecov.nf:25",
+          "modules/local/bedtools_bamtobed.nf:18",
+          "modules/local/ucsc_bed12tobigbed.nf:24"
+        ],
+        "use": "compared only with the literals DNA, cDNA and directRNA; never passed to file() or opened"
+      }
+    }
+  },
+  "b8b05fc496485f7c37680c3681005c1d22b7aae667347a10c02baf4783653cd4": {
+    "pipeline": "nanoseq",
+    "releases": {
+      "3.0.0": "1e60482a2c4621234393a6eef8e9a104309c20ae"
+    },
+    "values": {
+      "protocol": {
+        "source": [
+          "workflows/nanoseq.nf:37-38",
+          "workflows/nanoseq.nf:80-105",
+          "workflows/nanoseq.nf:365-482",
+          "modules/local/minimap2_align.nf:18-22",
+          "modules/local/minimap2_index.nf:18-21",
+          "modules/local/graphmap2_align.nf:18-19",
+          "modules/local/graphmap2_index.nf:18-19",
+          "modules/local/bedtools_genomecov.nf:18",
+          "modules/local/bedtools_bamtobed.nf:10",
+          "modules/local/ucsc_bed12tobigbed.nf:11"
+        ],
+        "use": "compared only with the literals DNA, cDNA and directRNA; never passed to file() or opened"
+      }
+    }
+  }
+}

@@ -14,7 +14,6 @@ when the parameter is declared a file (rangeland ships the template file but tak
 from __future__ import annotations
 
 import glob
-import json
 import os
 import re
 import unicodedata
@@ -23,7 +22,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from runner.schema import PATH_FORMATS, iter_param_groups
+from runner.schema import PATH_FORMATS, iter_param_groups, read_param_schema
 
 DEFAULT_SAMPLESHEET_SCHEMA = "assets/schema_input.json"
 _FILE_URI_ISSUE = ("file: URI inputs are local dependencies; use an absolute filesystem path "
@@ -62,7 +61,7 @@ class ResolvedInput:
 def input_param(repo: Path, name: str = "input") -> dict | None:
     """The raw schema object of parameter `name` (by default `input`), or None when the pipeline
     declares no such parameter."""
-    data = json.loads((repo / "nextflow_schema.json").read_text(encoding="utf-8"))
+    data = read_param_schema(repo)
     for _, group in iter_param_groups(data):
         props = group.get("properties")
         if isinstance(props, dict) and isinstance(props.get(name), dict):
@@ -119,7 +118,7 @@ def samplesheet_schema(repo: Path, param: str = "input") -> str | None:
 
 def samplesheet_parameters(repo: Path) -> tuple[str, ...]:
     """Parameters with an explicit samplesheet schema in a supported schema branch."""
-    data = json.loads((repo / "nextflow_schema.json").read_text(encoding="utf-8"))
+    data = read_param_schema(repo)
     names = []
     for _, group in iter_param_groups(data):
         for name, obj in (group.get("properties") or {}).items():

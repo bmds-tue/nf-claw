@@ -13,6 +13,7 @@ from runner import exact_json as json
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
 _INPUT_ROLES = Path(__file__).with_name("input_roles.json")
+_PARAM_ROLES = Path(__file__).with_name("param_roles.json")
 
 
 @dataclass(frozen=True)
@@ -229,8 +230,32 @@ def iter_param_groups(data: dict) -> Iterator[tuple[str, dict]]:
         yield "", {"properties": data["properties"], "required": data.get("required", [])}
 
 
+def read_param_schema(repo: Path) -> dict:
+    """The pipeline's `nextflow_schema.json`, with its source-audited value parameters applied.
+
+    A few releases annotate a plain value as a file: nanoseq 2.0.0-3.0.0 give the `--protocol`
+    string (DNA, cDNA or directRNA) a `file-path` format and the input samplesheet's `schema`.
+    `param_roles.json` records, by schema digest and exact revision, parameters whose pinned
+    source only compares the value with literals; their path annotations are dropped so the value
+    is passed as written. Any other revision keeps the published annotations.
+    """
+    content = (repo / "nextflow_schema.json").read_bytes()
+    data = json.loads(content)
+    registry = json.loads(_PARAM_ROLES.read_text(encoding="utf-8"))
+    audited = registry.get(hashlib.sha256(content).hexdigest())
+    if audited:
+        from runner.submodule import _own_head
+        if _own_head(repo) in audited["releases"].values():
+            for _, group in iter_param_groups(data):
+                for name, obj in (group.get("properties") or {}).items():
+                    if name in audited["values"] and isinstance(obj, dict):
+                        for key in ("format", "schema", "mimetype", "exists"):
+                            obj.pop(key, None)
+    return data
+
+
 def load_param_schema(repo: Path) -> ParamSchema:
-    data = json.loads((repo / "nextflow_schema.json").read_text(encoding="utf-8"))
+    data = read_param_schema(repo)
     params: dict[str, Param] = {}
     for gname, gobj in iter_param_groups(data):
         props = gobj.get("properties")
