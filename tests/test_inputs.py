@@ -326,9 +326,9 @@ def test_auxiliary_conditional_schema_and_primary_only_legacy_convention(tmp_pat
     assert inputs.resolve("false", repo, param_name="other_file").value == str(tmp_path / "false")
 
 
-def test_schema_on_an_explicitly_non_path_parameter_names_no_samplesheet(tmp_path):
+def test_scalar_sample_type_annotation_names_no_samplesheet(tmp_path):
     # nanoseq 3.1.0's --protocol ('DNA', 'cDNA' or 'directRNA') carries its input's `schema` and
-    # mimetype; nf-schema never reads a value of a non-path format as a file.
+    # mimetype; this copied annotation does not make its scalar protocol a samplesheet.
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets/schema_input.json").write_text("{}")
     (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
@@ -355,9 +355,27 @@ def test_conditional_remote_input_names_are_guarded_before_returning(tmp_path):
     assert result.local_path is None
 
 
-def test_pinned_nanoseq_protocol_is_a_value_not_a_samplesheet():
+def test_unknown_samplesheet_format_keeps_validation_and_path_resolution(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets/schema_input.json").write_text("{}")
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "references": {"type": "string", "format": "samplesheet",
+                       "schema": "assets/schema_input.json"}}}))
+    sheet = tmp_path / "references.csv"
+    sheet.write_text("reference\n/data/reference.fa\n")
+    assert inputs.samplesheet_parameters(tmp_path) == ("references",)
+    resolved = inputs.resolve("references.csv", tmp_path, param_name="references")
+    assert resolved.value == str(sheet)
+    assert resolved.samplesheet_schema == "assets/schema_input.json"
+
+
+@pytest.mark.parametrize("protocol", ["DNA", "cDNA", "directRNA"])
+def test_pinned_nanoseq_protocol_is_a_value_not_a_samplesheet(protocol):
     tree = Path(__file__).resolve().parents[1] / "pipelines/nanoseq/upstream"
     if not (tree / "nextflow_schema.json").is_file():
         pytest.skip("nanoseq submodule not initialised")
     assert "protocol" not in inputs.samplesheet_parameters(tree)
-    assert inputs.resolve("cDNA", tree, param_name="protocol").samplesheet_schema is None
+    resolved = inputs.resolve(protocol, tree, param_name="protocol")
+    assert resolved.samplesheet_schema is None
+    assert resolved.value == protocol
