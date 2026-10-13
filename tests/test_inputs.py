@@ -4,6 +4,7 @@ Each schema below mirrors a real pinned release, so these pin the behaviour agai
 nf-core actually ships rather than an idealised `--input samplesheet.csv`.
 """
 import json
+from pathlib import Path
 
 import pytest
 
@@ -325,6 +326,23 @@ def test_auxiliary_conditional_schema_and_primary_only_legacy_convention(tmp_pat
     assert inputs.resolve("false", repo, param_name="other_file").value == str(tmp_path / "false")
 
 
+def test_scalar_sample_type_annotation_names_no_samplesheet(tmp_path):
+    # nanoseq 3.1.0's --protocol ('DNA', 'cDNA' or 'directRNA') carries its input's `schema` and
+    # mimetype; this copied annotation does not make its scalar protocol a samplesheet.
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets/schema_input.json").write_text("{}")
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "schema": "assets/schema_input.json"},
+        "protocol": {"type": "string", "format": "sample-type", "mimetype": "text/csv",
+                     "schema": "assets/schema_input.json"},
+        "unformatted": {"type": "string", "schema": "assets/schema_input.json"}}}))
+    assert inputs.samplesheet_parameters(tmp_path) == ("input", "unformatted")
+    assert inputs.samplesheet_schema(tmp_path, param="protocol") is None
+    assert inputs.resolve("cDNA", tmp_path, param_name="protocol").samplesheet_schema is None
+    # A schema without any format still names a sheet (rnadnavar's --input declares none).
+    assert inputs.samplesheet_schema(tmp_path, param="unformatted") == "assets/schema_input.json"
+
+
 def test_conditional_remote_input_names_are_guarded_before_returning(tmp_path):
     from runner.errors import NfclawError
     (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
@@ -335,3 +353,29 @@ def test_conditional_remote_input_names_are_guarded_before_returning(tmp_path):
     result = inputs.resolve("https://example.org/reads.sdrf.tsv?token=x&y=2", tmp_path)
     assert result.value == "https://example.org/reads.sdrf.tsv?token=x&y=2"
     assert result.local_path is None
+
+
+def test_unknown_samplesheet_format_keeps_validation_and_path_resolution(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets/schema_input.json").write_text("{}")
+    (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "references": {"type": "string", "format": "samplesheet",
+                       "schema": "assets/schema_input.json"}}}))
+    sheet = tmp_path / "references.csv"
+    sheet.write_text("reference\n/data/reference.fa\n")
+    assert inputs.samplesheet_parameters(tmp_path) == ("references",)
+    resolved = inputs.resolve("references.csv", tmp_path, param_name="references")
+    assert resolved.value == str(sheet)
+    assert resolved.samplesheet_schema == "assets/schema_input.json"
+
+
+@pytest.mark.parametrize("protocol", ["DNA", "cDNA", "directRNA"])
+def test_pinned_nanoseq_protocol_is_a_value_not_a_samplesheet(protocol):
+    tree = Path(__file__).resolve().parents[1] / "pipelines/nanoseq/upstream"
+    if not (tree / "nextflow_schema.json").is_file():
+        pytest.skip("nanoseq submodule not initialised")
+    assert "protocol" not in inputs.samplesheet_parameters(tree)
+    resolved = inputs.resolve(protocol, tree, param_name="protocol")
+    assert resolved.samplesheet_schema is None
+    assert resolved.value == protocol

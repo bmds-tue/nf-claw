@@ -71,6 +71,14 @@ def input_param(repo: Path, name: str = "input") -> dict | None:
 
 
 def _schema_ref(obj: dict) -> str | None:
+    """The samplesheet schema `obj` names.
+
+    Nanoseq 3.1.0 copies its input's schema onto the scalar `sample-type` protocol.
+    Treat that annotation as a value; retain unknown formats, whose schema references
+    may describe real tables. This is nfclaw's classification, not nf-schema behavior.
+    """
+    if obj.get("format") == "sample-type":
+        return None
     ref = obj.get("schema")
     return ref.lstrip("/") if isinstance(ref, str) and ref.strip("/") else None
 
