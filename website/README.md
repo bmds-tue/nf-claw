@@ -88,8 +88,9 @@ NEXT_PUBLIC_BASE_PATH=/nf-claw NEXT_PUBLIC_SITE_URL=https://<user>.github.io npm
    bundle on every push to `main` and publishes it to Pages. It checks out the pinned
    submodules and full git history so the data layer can read release dates, module
    counts, tags and the commit log, and it derives the base path/origin from the Pages
-   configuration. Every push — including the daily `auto-update` PR that bumps pipelines —
-   rebuilds the site from the current repository state. No tokens required.
+   configuration. Every push to `main` rebuilds the site from the current repository state.
+   A bot merge (`auto-update`, `discover-pipelines`) is made with `GITHUB_TOKEN` and triggers
+   no push workflow, so those jobs dispatch the deploy after merging. No tokens required.
 2. **Live GitHub augmentation (optional).** If a `GITHUB_TOKEN` (or `GH_TOKEN`) is present
    at build time, `src/lib/data/github.ts` augments the Activity section with live Actions
    runs and Releases via the REST API. Without it, the site falls back to local git tags
