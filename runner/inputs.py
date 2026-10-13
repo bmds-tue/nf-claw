@@ -71,10 +71,13 @@ def input_param(repo: Path, name: str = "input") -> dict | None:
 
 
 def _schema_ref(obj: dict) -> str | None:
-    """The samplesheet schema `obj` names. nf-schema validates a file against `schema` only when
-    the value is a path, so an explicitly non-path format names none: nanoseq 3.1.0 copies its
-    input's `schema` onto `--protocol`, a `sample-type` string such as `cDNA`."""
-    if isinstance(obj.get("format"), str) and obj["format"] not in PATH_FORMATS:
+    """The samplesheet schema `obj` names.
+
+    Nanoseq 3.1.0 copies its input's schema onto the scalar `sample-type` protocol.
+    Treat that annotation as a value; retain unknown formats, whose schema references
+    may describe real tables. This is nfclaw's classification, not nf-schema behavior.
+    """
+    if obj.get("format") == "sample-type":
         return None
     ref = obj.get("schema")
     return ref.lstrip("/") if isinstance(ref, str) and ref.strip("/") else None
