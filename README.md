@@ -26,6 +26,10 @@ LF/CR in local input paths or resolved targets are refused because Nextflow can 
 
 Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Existing output symlinks and hard links receive the same separation check; declared work/cache trees can still hold staged read aliases. Boundary refusals leave input data and existing run logs untouched. Refusal logging also leaves multiply linked logs untouched.
 
+Declared local dependencies are checked again after execution before success is reported. Changed bytes, directory namespaces, configurations or tracked pipeline source fail the run; the launch hashes and results remain available for inspection. A tainted attempt cannot be replayed as a verified reproduction, and restoring input bytes does not make its cached tasks safe to reuse. Resume archives it and recomputes. These checks also run with `--no-provenance`. They compare checkpoints and cannot detect transient changes restored between checks, remote input changes or indirect configuration dependencies.
+
+Numeric CLI flags and JSON/YAML parameters preserve their decimal value, including large integers written with decimals or exponents and small nonzero values. The same handling covers nested parameters, chain records, numeric schema comparisons and numeric CSV/TSV column bounds. Values reach Nextflow as JSON numbers; integers beyond its signed 64-bit JSON parser range use decimal notation to prevent wraparound. NaN and infinity are refused. This preserves the supplied value at the wrapper boundary, while downstream tools retain their own arithmetic precision.
+
 ### Navigation
 
 [Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance](#maintain) • [Adding Pipelines](#adding-pipelines) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
@@ -198,7 +202,10 @@ Size and timestamp alone cannot establish unchanged scientific data. A changed
 namespace, changed file content or an unavailable inventory starts a fresh
 cache session and recomputes all tasks, with an explicit advisory. The complete
 previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
-logs are copied forward. Old sample publications are kept in the archive. Replay targets
+logs are copied forward. Old sample publications are kept in the archive. A changed
+selection of local input files (a sample added, removed or replaced, including in a
+generated samplesheet) also starts a fresh session in a fresh `--outdir`, so a removed
+sample's earlier results cannot remain beside the new ones. Replay targets
 inside a recorded input directory are refused before any lock or log is written.
 
 | Artifact | File Path | Function & Role |
@@ -210,7 +217,7 @@ inside a recorded input directory are refused before any lock or log is written.
 | **Parameter File** | `params.json` | Resolved wrapper parameters passed to Nextflow. Additional defaults or profile values can be recorded separately by the upstream pipeline. |
 | **Output Namespace** | `outputs.inventory.json` | Recorded result paths, empty directories, entry types and link identities; internal targets are relative to the result root so complete bundle moves preserve their identity. |
 | **Dependency Inventories** | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch directory entries, empty directories, entry types and symlink identities; replay checks these alongside file bytes. |
-| **Checksum Manifests** | `inputs.sha256` / `configs.sha256` / `pipeline.sha256` / `outputs.sha256` | SHA-256 digests of declared local inputs (including samplesheet data paths), the params file and configs, the tracked pipeline source, and generated result files. Remote inputs and container image digests are not frozen by these manifests. |
+| **Checksum Manifests** | `inputs.sha256` / `configs.sha256` / `pipeline.sha256` / `outputs.sha256` | SHA-256 digests of declared local inputs (including samplesheet data paths: path fields, data columns typed only by their pattern, and absolute paths of existing files in other columns), the params file and configs, the tracked pipeline source, and generated result files. Remote inputs and container image digests are not frozen by these manifests. |
 | **Resource Limits** | `resource_limits.config` | Nextflow `process.resourceLimits` configuration generated when `--limit-*` flags are specified. |
 
 > [!IMPORTANT]

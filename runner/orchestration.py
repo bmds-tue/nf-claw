@@ -8,12 +8,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
+from runner import (dependency_stability, discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
                     reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
                     submodule, versions)
 from runner import schema as schema_mod
-from runner.replay_guard import _capture_input_inventory
+from runner.replay_guard import _capture_input_inventory, pipeline_head
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
 from runner.submodule import SubmoduleStatus
@@ -72,8 +72,17 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
     require a fresh session because size/mtime can be unchanged. Directory namespaces also
     need comparison because nested additions/renames can leave directory metadata unchanged.
     Unchanged inputs retain normal cache reuse. Already captured SHA-256 values are reused.
+    A changed set of local input files also needs a new session in a fresh --outdir: resuming
+    after a sample was removed would leave its earlier publications beside the new results.
     """
     current_nodes = _directory_nodes(current)
+    previous_state = runlog.read_state(outdir / "provenance/logs/run.log")
+    if previous_state.outcome in {dependency_stability.FAILED_OUTCOME,
+                                  dependency_stability.FAILED_EXECUTION_OUTCOME}:
+        return ("--resume starts a fresh Nextflow cache session because local dependencies changed "
+                "during the previous execution. Restoring their launch bytes does not establish "
+                "what cached tasks consumed; all tasks will be recomputed and the previous run "
+                "will be preserved in a sibling archive.")
     try:
         previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
         manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
@@ -82,6 +91,13 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                 or manifest["dependency_inventory_version"] != 1
                 or "inputs" in manifest.get("unverified_dependency_inventories", [])):
             raise ValueError("previous namespace was not captured")
+        previous_stability = manifest.get("dependency_stability")
+        if previous_stability is not None and not isinstance(previous_stability, dict):
+            raise ValueError("previous dependency stability record is invalid")
+        if previous_stability and previous_stability.get("status") != "unchanged":
+            return ("--resume starts a fresh Nextflow cache session because the previous run's "
+                    "local dependency attribution failed. Cached tasks may have consumed changed "
+                    "data; all tasks will be recomputed and the previous run will be archived.")
         previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
                                                      relative=False)
     except (OSError, ValueError, TypeError):
@@ -98,6 +114,8 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
         elif files != historical_files:
             reason = "the input-directory namespace and content records disagree"
         elif current != previous:
+            # A changed selection of input files (a sample removed, added or replaced) would mix
+            # fresh publications with an earlier selection's: a removed sample's results remain.
             reason = "the local-input inventory changed"
         elif ({name for name, entry in current.items() if entry["type"] == "file"}
               != current_digests.keys()
@@ -328,6 +346,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     for sheet_path, sheet_schema in sheet_inputs:
         try:
             sheet_dependencies.extend(provenance.samplesheet_input_paths(sheet_path, sheet_schema))
+            sheet_dependencies.extend(provenance.samplesheet_file_paths(sheet_path, sheet_schema))
         except (csv.Error, UnicodeDecodeError) as exc:
             raise NfclawError(
                 ErrorCode.SAMPLESHEET_INVALID,
@@ -486,7 +505,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # after the run has finished. Remote references and runtime downloads remain upstream inputs.
         input_snapshot = config_snapshot = pipeline_snapshot = None
         input_inventory = config_inventory = None
-        if write_provenance and not check_only:
+        if not check_only:
             try:
                 input_snapshot, input_inventory = provenance.snapshot_inputs(prov_inputs)
             except OSError as exc:
@@ -497,7 +516,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 warning = ("Local path parameters absent before launch were not input-snapshotted: "
                            + ", ".join(sorted(unverified_paths))
                            + ". Their schemas do not require existing paths; Nextflow validates "
-                           "their use. Provenance records these paths as unverified.")
+                           "their use. These paths are outside the initial local-dependency snapshot."
+                           + (" Provenance records them as unverified." if write_provenance else ""))
                 warnings.append(warning)
                 if on_warning is not None:
                     on_warning(warning)
@@ -586,10 +606,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             bundle_params={"input": sheet_path} if sheet_path else None)
         replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out,
                                               *([sheet_path] if sheet_path else [])]))
-        if write_provenance and not check_only:
+        git_head = None
+        if not check_only:
             try:
                 config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
                 pipeline_snapshot = provenance.hash_pipeline(st.path)
+                git_head = pipeline_head(st.path)
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot snapshot local run dependencies: {exc}",
@@ -606,6 +628,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             generation_record = {**sheet.record, "file": sheet.filename,
                                  "sha256": provenance._sha256(sheet_path)}
 
+        stability = {"version": 1, "status": "not_checked", "issues": []}
+
         def record(outcome: str) -> None:
             provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
                              input_paths=prov_inputs, env_extra=nxf_overlay, outcome=outcome,
@@ -616,7 +640,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              pipeline_checksums=pipeline_snapshot,
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
-                             generated_samplesheet=generation_record)
+                             generated_samplesheet=generation_record,
+                             dependency_stability=stability)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -634,11 +659,21 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
                               timeout_seconds=timeout_seconds, env_extra=nxf_overlay,
                               run_log=run_log)
-            except BaseException:
+            except BaseException as failure:
                 # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
                 # the run once the cause is fixed, and the checksums record what it did manage to
                 # produce. Write it, then re-raise — a provenance error must never replace the real
                 # failure as the cause.
+                if not isinstance(failure, (KeyboardInterrupt, execution.Terminated)):
+                    try:
+                        stability = dependency_stability.compare(
+                            inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
+                            configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                            pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                        if stability["status"] == "changed":
+                            run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
+                    except Exception:
+                        pass  # dependency inspection must not replace Nextflow's original failure
                 if write_provenance:
                     try:
                         record("failed")
@@ -648,6 +683,26 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             run_log.outcome = "success"
             try:
                 report = outputs.collect(outdir)
+                stability = dependency_stability.compare(
+                    inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
+                    configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                    pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                if stability["status"] != "unchanged":
+                    if write_provenance:
+                        try:
+                            record("failed")
+                        except Exception:
+                            pass  # recording failure must not replace the attribution failure
+                    problems = [f"{issue['kind']} {issue['change']}: "
+                                f"{issue.get('path', issue.get('error', 'unknown dependency'))}"
+                                for issue in stability["issues"]]
+                    raise NfclawError(
+                        ErrorCode.ENVIRONMENT,
+                        "Local dependencies changed or became unreadable during execution; "
+                        "the results cannot be attributed to the recorded launch dependencies.",
+                        details={"issues": problems, "outdir": str(outdir)},
+                        fix="Keep inputs, configurations and pipeline source stable, then start a fresh run. "
+                            "The existing results and launch snapshots are retained for inspection.")
                 if write_provenance:
                     record("success")
             except BaseException as exc:
@@ -655,7 +710,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 # interrupt): the log's last line must not claim a success the bundle does not back.
                 what = (execution.stop_outcome(exc)
                         if isinstance(exc, (KeyboardInterrupt, execution.Terminated)) else "failed")
-                run_log.fail(f"{what} after Nextflow succeeded ({type(exc).__name__}: {exc})",
+                outcome = (dependency_stability.FAILED_OUTCOME if stability["status"] == "changed"
+                           else f"{what} after Nextflow succeeded ({type(exc).__name__}: {exc})")
+                run_log.fail(outcome,
                              f"nfclaw: {type(exc).__name__}: {exc}")
                 if isinstance(exc, OSError):
                     # Summarising the outputs and writing the bundle reads every result and writes

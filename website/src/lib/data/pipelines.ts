@@ -35,7 +35,13 @@ function cleanTools(tools: string[] | undefined): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of tools ?? []) {
-    const t = raw.replace(/<sup>.*?<\/sup>/gi, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    let t = raw.replace(/<sup>.*?<\/sup>/gi, "");
+    // Until stable: removing one tag must not leave another assembled from its neighbours.
+    for (let previous = ""; previous !== t; ) {
+      previous = t;
+      t = t.replace(/<[^>]+>/g, "");
+    }
+    t = t.replace(/\s+/g, " ").trim();
     if (t && !seen.has(t.toLowerCase())) {
       seen.add(t.toLowerCase());
       out.push(t);

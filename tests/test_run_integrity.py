@@ -80,11 +80,12 @@ def test_provenance_snapshots_sheet_data_and_config_before_execution(library, tm
         config.write_bytes(b"params.aligner = 'hisat2'\n")
 
     monkeypatch.setattr(orchestration.execution, "run", launch)
-    orchestration.run_pipeline(
-        "mini", repo_root=root, input_path=sheet, outdir=outdir,
-        profile="docker", params_file=None, cli_overrides={}, configs=[str(config)],
-        resume=False, demo=False, check_only=False, write_provenance=True,
-        timeout_seconds=None)
+    with pytest.raises(NfclawError, match="during execution"):
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=sheet, outdir=outdir,
+            profile="docker", params_file=None, cli_overrides={}, configs=[str(config)],
+            resume=False, demo=False, check_only=False, write_provenance=True,
+            timeout_seconds=None)
     assert f"{hashlib.sha256(b'original reads').hexdigest()}  {data}" in (
         outdir / "provenance" / "inputs.sha256").read_text()
     assert f"{hashlib.sha256(original_config).hexdigest()}  {config}" in (

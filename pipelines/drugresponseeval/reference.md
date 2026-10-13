@@ -1,7 +1,7 @@
 ---
 name: drugresponseeval
-version: 1.2.2
-commit: 84cb752a7ca4584fcb95fcb7492aceb4137a3df7
+version: 1.3.0
+commit: 6e420c1cc2f1be2907627d9b2b3aca77bf622603
 ---
 
 # drugresponseeval — full parameter reference
@@ -12,13 +12,16 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
+| `--clean-min-responder-frac` | number |  |  |  | ≤ 1 |  | Keep only drugs whose fraction of significant responder curves is at least this value. |
+| `--clean-min-responders` | integer |  |  |  | ≥ 1 |  | Keep only drugs with at least this many reproducible responder curves. |
+| `--custom-splitter-path` | string (file path) |  |  |  | matches ^\S+\.py$ |  | Path to a Python script with a custom CV splitter. |
 | `--final-model-on-full-data` | boolean |  |  |  |  | false | Train final model on full data. |
 | `--model-checkpoint-dir` | string |  |  |  |  | TEMPORARY | Model checkpoint directory |
 | `--n-cv-splits` | integer |  |  |  | ≥ 2 | 10 | Number of cross-validation splits. |
 | `--no-hyperparameter-tuning` | boolean |  |  |  |  | false | Disable hyperparameter tuning. |
 | `--no-refitting` | boolean |  |  |  |  | false | False by default (=refitting). By default, we use measures calculated with CurveCurator instead of original measures reported by the authors for the available datasets, or invoke automatic fitting of custom raw viability data with CurveCurator. Set this flag to disable this option. |
 | `--optim-metric` | string |  |  | `RMSE`, `MSE`, `MAE`, `R^2`, `Pearson`, `Spearman`, `Kendall` |  | RMSE | Optimization metric for the pipeline. |
-| `--response-transformation` | string |  |  | `None`, `standard`, `minmax`, `robust` |  | None | Response transformation |
+| `--response-transformation` | string |  |  | `None`, `standard`, `minmax`, `robust`, `drug_mean`, `drug_tissue_mean` |  | None | Response transformation |
 
 ## data_options
 
@@ -27,7 +30,7 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 | `--cross-study-datasets` | string |  |  |  | matches ^(?:\|(?:GDSC[12]\|CCLE\|CTRPv[12]\|TOYv[12]\|PDX_Bruna\|BeatAML2)(,(?:GDSC[12]\|CCLE\|CTRPv[12]\|TOYv[12]\|PDX_Bruna\|BeatAML2))*)$ |  | Datasets for cross-study prediction. |
 | `--measure` | string |  |  | `LN_IC50`, `pEC50`, `AUC`, `response`, `EC50`, `IC50` |  | LN_IC50 | The name of the drug response measure to use. |
 | `--path-data` | string (directory path) |  |  |  |  | data | Path to the data directory. |
-| `--zenodo-link` | string |  |  |  | matches (^https://zenodo.org/records/[0-9]+/files/$)\|(https://github.com/nf-core/test-datasets/raw/refs/heads/drugresponseeval/test_data/) | https://zenodo.org/records/20624451/files/ | Link to the latest Zenodo version of the dataset. |
+| `--zenodo-link` | string |  |  |  | matches (^https://zenodo.org/records/[0-9]+/files/$)\|(https://github.com/nf-core/test-datasets/raw/refs/heads/drugresponseeval/test_data/) | https://zenodo.org/records/23159774/files/ | Link to the latest Zenodo version of the dataset. |
 
 ## generic_options
 
@@ -69,7 +72,7 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--test-mode` | string | yes |  |  | matches ^((LPO\|LCO\|LTO\|LDO)?,?)*(?<!,)$ | LCO | Run the pipeline in test mode LPO (Leave-random-Pairs-Out), LCO (Leave-Cell-line-Out), or LDO (Leave-Drug-Out). |
+| `--test-mode` | string | yes |  |  | matches ^((LPO\|LCO\|LTO\|LDO)?,?)*(?<!,)$ | LCO | Run the pipeline in test mode LPO (Leave-random-Pairs-Out), LCO (Leave-Cell-line-Out), LTO (Leave-Tissue-Out), or LDO (Leave-Drug-Out). |
 
 ## model_options
 
@@ -91,4 +94,4 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 |---|---|---|---|---|---|---|---|
 | `--n-trials-robustness` | integer |  |  |  | ≥ 0 | 0 | Number of trials to run for the robustness test |
 
-<!-- Generated from nf-core/drugresponseeval@84cb752a7ca4584fcb95fcb7492aceb4137a3df7. Do not edit by hand. -->
+<!-- Generated from nf-core/drugresponseeval@6e420c1cc2f1be2907627d9b2b3aca77bf622603. Do not edit by hand. -->

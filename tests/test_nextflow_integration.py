@@ -13,6 +13,252 @@ import pytest
 from runner import chain, orchestration, resources, runlog, verify
 
 
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("kind,provenance", [("data", True), ("data", False), ("config", True),
+                                           ("source", True), ("unchanged", True)])
+def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine, kind, provenance):
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from runner.errors import ErrorCode, NfclawError
+    from runner import replay_guard
+
+    root = tmp_path / "library"
+    tree = root / "pipelines/fixture/upstream"
+    tree.mkdir(parents=True)
+    (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True},
+        "ready": {"type": "string"}, "release": {"type": "string"}, "counter": {"type": "string"},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    script = tree / "main.nf"
+    script.write_text(r'''process OBSERVE {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ output:
+ path 'digest.txt'
+ script:
+ """
+ touch ${params.ready}
+ for attempt in \$(seq 1 1200); do
+   [ -f ${params.release} ] && break
+   sleep 0.05
+ done
+ test -f ${params.release}
+ echo executed >> ${params.counter}
+ shasum -a 256 ${data} > digest.txt
+ """
+}
+workflow { OBSERVE(file(params.input)) }
+''')
+    original = b"@S\nACGT\n+\nIIII\n"
+    changed = b"@S\nACGA\n+\nIIII\n"
+    source = tmp_path / "reads.fastq"
+    source.write_bytes(original)
+    config = tmp_path / "extra.config"
+    config.write_text("params.receipt_note = 'before'\n")
+    ready, release = tmp_path / "ready", tmp_path / "release"
+    counter = tmp_path / "counter"
+    out = tmp_path / "result"
+    def launch(resume=False):
+        return orchestration.run_pipeline("fixture", repo_root=root, input_path=source, outdir=out,
+            profile="", params_file=None, cli_overrides={"ready": str(ready), "release": str(release),
+                                                         "counter": str(counter)},
+            resume=resume, demo=False, check_only=False, write_provenance=provenance,
+            timeout_seconds=90, nxf_ver=engine, configs=[str(config)])
+    restore = None
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(launch)
+        deadline = time.monotonic() + 70
+        try:
+            while not ready.exists():
+                if future.done():
+                    future.result()
+                    pytest.fail("run finished without opening the task gate")
+                assert time.monotonic() < deadline, "native task gate timed out"
+                time.sleep(0.05)
+            if kind == "data":
+                stat = source.stat()
+                source.write_bytes(changed)
+                os.utime(source, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+                def restore():
+                    source.write_bytes(original)
+                    os.utime(source, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+            elif kind == "config":
+                config.write_text("params.receipt_note = 'after'\n")
+                def restore():
+                    config.write_text("params.receipt_note = 'before'\n")
+            elif kind == "source":
+                before = script.read_bytes()
+                script.write_bytes(before + b"\n// changed after compilation\n")
+                def restore():
+                    script.write_bytes(before)
+        finally:
+            release.touch()
+        if kind == "unchanged":
+            future.result(timeout=30)
+        else:
+            with pytest.raises(NfclawError, match="during execution") as error:
+                future.result(timeout=30)
+            assert error.value.code == ErrorCode.ENVIRONMENT
+    expected = hashlib.sha256(changed if kind == "data" else original).hexdigest()
+    assert (out / "digest.txt").read_text().split()[0] == expected
+    state = runlog.read_state(out / "provenance/logs/run.log")
+    assert state.state == ("success" if kind == "unchanged" else "ended")
+    if kind != "unchanged":
+        assert state.outcome.startswith("failed after Nextflow succeeded")
+    if provenance:
+        bundle = out / "provenance"
+        manifest = json.loads((bundle / "run_manifest.json").read_text())
+        assert manifest["outcome"] == ("success" if kind == "unchanged" else "failed")
+        stability = manifest["dependency_stability"]
+        assert stability["status"] == ("unchanged" if kind == "unchanged" else "changed")
+        recorded = replay_guard.read_checksums(bundle / "inputs.sha256", relative=False)
+        assert recorded[str(source)] == hashlib.sha256(original).hexdigest()
+        if kind == "unchanged":
+            ready.unlink()
+            release.unlink()
+            target = tmp_path / "tainted_replay"
+            process = subprocess.Popen(["bash", str(bundle / "commands.sh"), str(target)],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            deadline = time.monotonic() + 70
+            try:
+                while not ready.exists():
+                    if process.poll() is not None:
+                        stdout, stderr = process.communicate(timeout=10)
+                        pytest.fail(stdout + stderr)
+                    assert time.monotonic() < deadline, "replay task gate timed out"
+                    time.sleep(0.05)
+                source.write_bytes(changed)
+            finally:
+                release.touch()
+            stdout, stderr = process.communicate(timeout=30)
+            assert process.returncode != 0, stdout + stderr
+            assert "local dependencies changed" in stderr
+            assert (target / "digest.txt").read_text().split()[0] == hashlib.sha256(changed).hexdigest()
+            replay_state = runlog.read_state(target / "provenance/logs/run.log")
+            assert replay_state.state == "ended"
+            assert replay_state.outcome == "failed after Nextflow succeeded (local dependencies changed)"
+        if restore:
+            restore()
+            replay = subprocess.run(["bash", str(bundle / "commands.sh"), str(tmp_path / "refused")],
+                                    capture_output=True, text=True, timeout=15)
+            assert replay.returncode != 0 and "original run" in replay.stderr
+            assert not (tmp_path / "refused/.nextflow").exists()
+            if kind == "data":
+                result = launch(resume=True)
+                assert any("previous execution" in warning for warning in result.warnings)
+                assert (out / "digest.txt").read_text().split()[0] == hashlib.sha256(original).hexdigest()
+                assert counter.read_text().splitlines() == ["executed", "executed"]
+                archives = list(tmp_path.glob("result.previous-*"))
+                assert len(archives) == 1
+                assert (archives[0] / "digest.txt").read_text().split()[0] == hashlib.sha256(changed).hexdigest()
+    else:
+        assert not (out / "provenance/run_manifest.json").exists()
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("source_kind", ["cli", "json", "yaml"])
+def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_path, engine, source_kind):
+    from decimal import Decimal
+
+    if source_kind == "yaml":
+        pytest.importorskip("yaml")
+    root = tmp_path / "library"
+    tree = root / "pipelines/fixture/upstream"
+    tree.mkdir(parents=True)
+    (tree.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (tree / "nextflow_schema.json").write_text('''{"properties": {
+      "choice": {"type":"integer", "enum":[9007199254740993]},
+      "count": {"type":"integer", "enum":[1e23]},
+      "values": {"type":"object"},
+      "outdir": {"type":"string", "format":"directory-path"}}}''')
+    (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    (tree / "main.nf").write_text('''process OBSERVE {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ val values
+ output:
+ path 'observed.json'
+ script:
+ def text = groovy.json.JsonOutput.toJson(values.collectEntries { key, value -> [key, value.toString()] })
+ """
+ cat > observed.json <<'NFCLAW_VALUES'
+ ${text}
+ NFCLAW_VALUES
+ """
+}
+workflow { OBSERVE(params.values + [choice: params.choice, count: params.count]) }
+''')
+    tokens = {"tiny": "1e-9999", "large": "1e9999", "precise": "0.1000000000000000000001",
+              "whole_decimal": "100000000000000000000001e0"}
+    choice = "9007199254740993e0"
+    raw_values = ",".join(json.dumps(key) + ":" + value for key, value in tokens.items())
+    params_path = tmp_path / "params.json"
+    params_path.write_text('{"choice":' + choice + ',"count":1e23,"values":{' + raw_values + '}}')
+    expected = {**tokens, "choice": choice, "count": "1e23"}
+
+    def observe(outdir):
+        observed = json.loads((outdir / "observed.json").read_text())
+        assert observed.keys() == expected.keys()
+        assert {key: Decimal(value) for key, value in observed.items()} == {
+            key: Decimal(value) for key, value in expected.items()}
+
+    # Independent direct-Nextflow control: these decimal values are supported by the engine.
+    if source_kind == "cli":
+        raw = tmp_path / "raw"
+        raw.mkdir()
+        result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(params_path),
+            "--outdir", str(raw), "-ansi-log", "false"], cwd=raw,
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        observe(raw)
+        # Plain integer literals beyond signed-long range wrap in these engines. The decimal
+        # notation above is a separate direct control; the wrapper must avoid this corruption.
+        import ctypes
+        overflowing = tmp_path / "overflowing.json"
+        overflowing.write_text(params_path.read_text().replace('"count":1e23',
+                                                               '"count":100000000000000000000000'))
+        raw_wrapped = tmp_path / "raw_wrapped"
+        raw_wrapped.mkdir()
+        result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(overflowing),
+            "--outdir", str(raw_wrapped), "-ansi-log", "false"], cwd=raw_wrapped,
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        wrapped = json.loads((raw_wrapped / "observed.json").read_text())["count"]
+        assert Decimal(wrapped) == ctypes.c_longlong(10 ** 23).value
+        assert Decimal(wrapped) != Decimal("1e23")
+
+    overrides = {}
+    if source_kind == "cli":
+        overrides["choice"] = choice
+        overrides["count"] = "100000000000000000000000"
+        # An object comes from the JSON params file; its nested numbers also need preservation.
+    elif source_kind == "yaml":
+        params_path = tmp_path / "params.yaml"
+        params_path.write_text("choice: 9007199254740993.0\ncount: 1.0e+23\nvalues:\n  tiny: 1.0e-9999\n"
+                               "  large: 1.0e+9999\n  precise: 0.1000000000000000000001\n"
+                               "  whole_decimal: 100000000000000000000001.0\n")
+    out = tmp_path / "original"
+    orchestration.run_pipeline("fixture", repo_root=root, input_path=None, outdir=out, profile="",
+        params_file=params_path, cli_overrides=overrides, resume=False, demo=False, check_only=False,
+        write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+    observe(out)
+    recorded = json.loads((out / "provenance/params.json").read_text(), parse_float=Decimal)
+    assert recorded["choice"] == Decimal(choice)
+    assert recorded["count"] == Decimal("1e23")
+    assert recorded["values"] == {key: Decimal(value) for key, value in tokens.items()}
+    replay = tmp_path / "replay"
+    result = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(replay)],
+                            capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    observe(replay)
+    assert verify.compare(out, replay).byte_identical
+
+
 def _path_route_fixture(tmp_path):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"

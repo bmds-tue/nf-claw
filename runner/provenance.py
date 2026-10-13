@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import json
 import os
 import platform
 import re
@@ -11,6 +10,8 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from runner import exact_json as json
 from runner.inputs import is_remote_url
 
 from runner.outputs import result_files
@@ -67,6 +68,38 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
                 value = (row.get(column.name) or "").strip()
                 if value and column.path_format(value) and not is_remote_url(value):
                     paths.add(Path(value))
+    return sorted(paths)
+
+
+def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
+    """Local data a samplesheet names outside its path-format fields.
+
+    Some pinned schemas type data columns by their pattern alone (hic's `fastq_1`, phaseimpute's
+    `vcf`), and some parsers read columns the schema leaves undeclared (hgtseq's `input1`). Their
+    bytes are part of the run's inputs too: record an existing absolute value of a file-typed
+    column (file or directory) and an existing absolute regular file in any other column. Relative
+    and remote values are not guessed at, and a missing file stays the pipeline's own error.
+    """
+    from runner import sheetgen
+
+    declared = {column.name for column in schema.columns if column.path_format()}
+    typed = set(sheetgen.file_columns(schema))
+    if path.suffix.lower() in (".csv", ".tsv"):
+        with path.open(newline="", encoding="utf-8-sig") as stream:
+            rows = list(csv.DictReader(stream, delimiter=delimiter_for(path), strict=True))
+    else:
+        rows = serialized_rows(path) or []
+    paths: set[Path] = set()
+    for row in rows:
+        for column, value in (row.items() if isinstance(row, dict) else ()):
+            if column in declared or not isinstance(value, str):
+                continue
+            value = value.strip()
+            if not value or "://" in value or not Path(value).is_absolute():
+                continue
+            candidate = Path(value)
+            if candidate.is_file() or (column in typed and candidate.is_dir()):
+                paths.add(candidate)
     return sorted(paths)
 
 
@@ -190,6 +223,7 @@ while :; do
   status=$?
   kill -0 "$supervisor_pid" 2>/dev/null || break
 done
+supervisor_pid=""
 wait "$tee_pid"
 rm -f -- "$console"
 set -e
@@ -197,7 +231,30 @@ if [ -n "$stopped_by" ]; then
   outcome="$stopped_by"
   status="$stopped_status"
 elif [ "$status" -eq 0 ]; then
-  outcome=success
+  verification_log="$target/provenance/logs/.replay-verification"
+  set +e
+  python3 "$_script_dir/replay_guard.py" "$original/provenance" >"$verification_log" 2>&1 &
+  supervisor_pid=$!
+  if [ -n "$stopped_by" ]; then kill -TERM "$supervisor_pid" 2>/dev/null; fi
+  while :; do
+    wait "$supervisor_pid"
+    verification_status=$?
+    kill -0 "$supervisor_pid" 2>/dev/null || break
+  done
+  supervisor_pid=""
+  set -e
+  sed 's/^/| /' "$verification_log" >>"$log"
+  rm -f -- "$verification_log"
+  if [ -n "$stopped_by" ]; then
+    outcome="$stopped_by"
+    status="$stopped_status"
+  elif [ "$verification_status" -eq 0 ]; then
+    outcome=success
+  else
+    outcome="failed after Nextflow succeeded (local dependencies changed)"
+    status=1
+    echo "nfclaw replay: local dependencies changed during execution; start a fresh run" >&2
+  fi
 else
   outcome="failed (exit status $status)"
 fi
@@ -219,7 +276,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           pipeline_checksums: dict[str, str] | None = None,
           unverified_local_paths: dict[str, str] | None = None,
           nextflow_version: str | None = None,
-          generated_samplesheet: dict | None = None) -> Path:
+          generated_samplesheet: dict | None = None,
+          dependency_stability: dict | None = None) -> Path:
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -261,6 +319,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # and how. The sheet itself sits in this bundle, checksummed with the configs.
     if generated_samplesheet:
         manifest["generated_samplesheet"] = dict(generated_samplesheet)
+    if dependency_stability is not None:
+        manifest["dependency_stability"] = dependency_stability
     if pipeline_checksums is not None or submodule.path.is_dir():
         manifest["pipeline_path"] = str(submodule.path.absolute())
         manifest["pipeline_git_head"] = (

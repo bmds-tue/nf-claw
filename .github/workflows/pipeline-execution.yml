@@ -97,6 +97,8 @@ jobs:
       - name: Package execution evidence
         if: always()
         run: |
+          # pipefail: a failed task-command listing must not pass as a complete evidence archive.
+          set -eo pipefail
           evidence="$RUNNER_TEMP/evidence"
           mkdir -p "$evidence"
           if [ -d "$RUNNER_TEMP/analysis" ]; then

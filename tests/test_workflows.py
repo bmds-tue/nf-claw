@@ -3,6 +3,7 @@ import os
 import re
 import shlex
 import subprocess
+import tarfile
 import pytest
 from pathlib import Path
 
@@ -56,6 +57,35 @@ def test_write_capable_test_gates_install_yaml_before_running_the_suite(name):
     editable = args[args.index("-e") + 1]
     assert editable.startswith(".[") and editable.endswith("]"), name
     assert {"dev", "yaml"} <= set(editable[2:-1].split(",")), name
+
+
+@pytest.mark.parametrize("name, gate", [("auto-update.yml", "Unit tests + final drift gate"),
+                                        ("discover-pipelines.yml", "Unit tests + drift gate")])
+@pytest.mark.parametrize("parsing", ["..  [100%]\n",
+                                     "ss  [100%]\nSKIPPED [1] tests/test_website_parsing.py:51: needs node\n"])
+def test_write_capable_gates_run_the_website_parsing_tests(tmp_path, name, gate, parsing):
+    # These jobs merge PRs that trigger no tests.yml run, and the site's parser tests skip without
+    # node: a silent skip would merge and deploy skill.md files the site was never checked to read.
+    text = _text(name)
+    step = text.index(f"- name: {gate}")
+    install = re.search(r"working-directory: website\n\s+run: (npm ci .*)", text)
+    assert install and install.start() < step, name
+    assert "--ignore-scripts" in install.group(1).split(), name
+    raw = text[step:].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
+    script = "\n".join(line[10:] for line in raw.splitlines())
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "pytest").write_text(
+        '#!/bin/sh\ncase "$*" in *test_website_parsing*) printf "%s" "$PARSING" ;; esac\n')
+    (fake / "python").write_text("#!/bin/sh\nexit 0\n")
+    for path in fake.iterdir():
+        path.chmod(0o755)
+    env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+           "RUNNER_TEMP": str(tmp_path), "PARSING": parsing}
+    # GitHub runs a step without an explicit shell as `bash -e {0}`, without pipefail.
+    result = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env,
+                            capture_output=True, text=True)
+    assert (result.returncode == 0) == ("SKIPPED" not in parsing), result.stdout
 
 
 def test_pages_and_oidc_permissions_are_scoped_to_the_deploy_job():
@@ -150,3 +180,26 @@ def test_smoke_rejects_failed_partial_inventories_before_checking_subset(tmp_pat
                             capture_output=True, text=True)
     assert result.returncode != 0, "a partial subset is not a completed smoke check"
     assert not checked.exists(), "do not validate a subset from a failed inventory command"
+
+
+@pytest.mark.parametrize("listing_exit", [0, 1])
+def test_execution_evidence_packaging_fails_on_a_partial_task_listing(tmp_path, listing_exit):
+    raw = _text("pipeline-execution.yml").split("- name: Package execution evidence", 1)[1]
+    raw = raw.split("        run: |\n", 1)[1].split("\n      - name:", 1)[0]
+    script = "\n".join(line[10:] for line in raw.splitlines())
+    task = tmp_path / "work" / "ab" / "cdef"
+    task.mkdir(parents=True)
+    (task / ".command.sh").write_text("echo task\n")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    # A listing that stops partway (e.g. an unreadable task directory) still prints what it found.
+    (fake / "find").write_text(f'#!/bin/sh\n/usr/bin/find "$@"\nexit {listing_exit}\n')
+    (fake / "find").chmod(0o755)
+    env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+           "RUNNER_TEMP": str(tmp_path / "runner")}
+    # GitHub runs a step without an explicit shell as `bash -e {0}`, without pipefail.
+    result = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env,
+                            capture_output=True, text=True)
+    assert (result.returncode == 0) == (listing_exit == 0), result.stderr
+    with tarfile.open(tmp_path / "runner" / "evidence" / "task-commands.tar.gz") as archive:
+        assert "work/ab/cdef/.command.sh" in archive.getnames()  # retained even when incomplete

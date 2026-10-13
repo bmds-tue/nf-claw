@@ -42,6 +42,16 @@ def test_partial_child_line_cannot_hide_the_real_outcome(tmp_path):
     assert runlog.read_state(log.path).state == "success"
 
 
+def test_multiline_failure_still_ends_with_one_physical_status_line(tmp_path):
+    log = runlog.RunLog.open(tmp_path, command=["nextflow"], launch_dir=tmp_path)
+    log.fail("failed after Nextflow succeeded (error: first\r\nsecond)", "first\nsecond")
+    log.finish()
+    state = runlog.read_state(log.path)
+    assert state.state == "ended"
+    assert state.outcome == "failed after Nextflow succeeded (error: first\\r\\nsecond)"
+    assert log.path.read_bytes().split(b"\n")[-2].startswith(b"==> nfclaw run finished")
+
+
 def test_multiline_header_value_cannot_forge_a_new_attempt(tmp_path):
     log = runlog.RunLog.open(tmp_path, command=["nextflow", "--label",
         "sample\n==> nfclaw replay started 2026-10-09T00:00:00+00:00\n    pid: 1"], launch_dir=tmp_path)
