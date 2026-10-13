@@ -535,6 +535,44 @@ def test_reference_source_is_not_invented_from_a_genome_name(tmp_path):
     assert "remotely by default" not in reference
 
 
+def test_default_genome_key_names_the_fasta_its_configuration_selects(tmp_path):
+    # marsseq's `mm10` key selects GENCODE's GRCm39 assembly, not UCSC mm10 (GRCm38): the key's name
+    # is no evidence of the assembly, so the FASTA the pinned configuration assigns is quoted.
+    pdir = _seed_with_schema(tmp_path, "localrefs", {"properties": {
+        "genome": {"type": "string", "default": "mm10"},
+        "genomes_base": {"type": "string", "format": "directory-path"},
+        "fasta": {"type": "string", "format": "file-path"}}})
+    conf = pdir / "localrefs" / "upstream" / "conf"
+    conf.mkdir()
+    (conf / "genomes.config").write_text(
+        "params {\n    genomes {\n"
+        "        'mm10_v32' {\n            fasta = \"${params.genomes_base}/mm10_v32/GRCm39.fa\"\n        }\n"
+        "        'mm10' {   // GENCODE M27\n"
+        "            bowtie2 = \"${params.genomes_base}/mm10/bowtie2/\"\n"
+        "            fasta   = \"${params.genomes_base}/mm10/GRCm39.fa\"\n        }\n    }\n}\n")
+    text = write_skill.generate("localrefs", pipelines_dir=pdir)[0].read_text()
+    reference = text.split("## Reference genome\n", 1)[1].split("\n## ", 1)[0]
+    assert "gives `--genome mm10` the FASTA `${params.genomes_base}/mm10/GRCm39.fa`" in reference
+    assert "need not be the assembly it selects" in reference
+
+
+def test_configured_fasta_reads_igenomes_maps_and_refuses_ambiguity(tmp_path):
+    up = tmp_path / "up"
+    (up / "conf").mkdir(parents=True)
+    (up / "nextflow.config").write_text("params { genome = 'GRCh38' }\n")
+    (up / "conf" / "igenomes.config").write_text(
+        "params.genomes = [\n    'GRCh38' : [\n"
+        "        fasta_fai : \"${params.igenomes_base}/x/genome.fa.fai\",\n"
+        "        fasta     : \"${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/genome.fa\",\n"
+        "    ],\n    'GRCh37' : [\n        fasta : \"${params.igenomes_base}/GRCh37/genome.fa\"\n    ]\n]\n")
+    assert (write_skill._configured_fasta(up, "GRCh38")
+            == "${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/genome.fa")
+    assert write_skill._configured_fasta(up, "hg19") is None
+    # Two definitions that disagree say nothing rather than pick one.
+    (up / "conf" / "other.config").write_text("'GRCh38' {\n    fasta = '/elsewhere/genome.fa'\n}\n")
+    assert write_skill._configured_fasta(up, "GRCh38") is None
+
+
 def test_local_igenomes_base_does_not_claim_remote_downloads(tmp_path):
     pdir = _seed_with_schema(tmp_path, "localigenomes", {"properties": {
         "genome": {"type": "string", "default": "GRCh38"},
