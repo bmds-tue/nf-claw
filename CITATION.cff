@@ -14,14 +14,14 @@ license: MIT
 abstract: >-
   nf-claw turns nf-core pipelines into an agent-runnable library. The pipelines
   themselves are authored by the nf-core community and wrapped unmodified as
-  git submodules pinned to a release tag; nf-claw pairs each with an
+  git submodules pinned to a release tag; nf-claw pairs each with a
   generated skill.md describing declared inputs and run commands, and a full
   parameter reference.md. Context comes from the pinned schemas and source,
   with documented exact-schema audits correcting stale input contracts. A
   generic runner launches supported pipelines and records a provenance bundle;
   curated handoff rules connect pipelines, and documented runtime corrections
   are applied through recorded configurations without editing upstream source.
-  scheduled workflows check new upstream releases and regenerate context.
+  Scheduled workflows check new upstream releases and regenerate context.
   Validation and replay checks cover declared dependencies and observed
   execution behavior, rather than certifying biological accuracy.
 keywords:

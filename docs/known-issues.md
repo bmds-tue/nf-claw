@@ -19,6 +19,8 @@ Datasync passes complete source and destination strings into double-quoted comma
 
 Some upstream consumers infer companion files that are absent from the samplesheet (for example, Sarek's SnpSift database index defaults to `vcf.tbi`). Input hashes cover explicitly named paths; they do not comprehensively discover these inferred dependencies. Supply index paths explicitly where the consumer supports them, and preserve the complete reference dataset for reproducibility.
 
+Runs and handoffs share the same declared and conservatively discovered local dependencies. A sheet mixing declared paths with pattern-only reads records both sets, so restoring producer bytes cannot mask different data captured by the consumer. Equal filename patterns do not establish a metadata role: an unformatted second mate remains a data path even when its first mate has a path format. Nanostring's `RCC_FILE_NAME` exclusion instead requires its exact audited revision and consumer hashes, and applies to input capture and handoff derivation. Untyped absolute existing-file values without a proven exclusion are recorded conservatively; this is dependency attribution, not proof that an analysis task read every recorded file.
+
 ---
 
 ### Navigation

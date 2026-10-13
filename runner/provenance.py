@@ -53,7 +53,7 @@ def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     The sheet has already been validated by the runner, including its absolute-path requirement.
     """
     columns = [column for column in schema.columns
-               if column.path_format() and column.name not in schema.destination_columns]
+               if column.path_format() and column.name not in {*schema.destination_columns, *schema.metadata_columns}]
     paths: set[Path] = set()
     if path.suffix.lower() not in (".csv", ".tsv"):
         for row in serialized_rows(path) or []:
@@ -86,6 +86,7 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
 
     declared = {column.name for column in schema.columns if column.path_format()}
     declared.update(schema.destination_columns)
+    declared.update(schema.metadata_columns)
     typed = set(sheetgen.file_columns(schema))
     if path.suffix.lower() in (".csv", ".tsv"):
         with path.open(newline="", encoding="utf-8-sig") as stream:
@@ -104,6 +105,15 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
             if candidate.is_file() or (column in typed and candidate.is_dir()):
                 paths.add(candidate)
     return sorted(paths)
+
+
+def samplesheet_dependencies(path: Path, schema: InputSchema) -> list[Path]:
+    """The same local dependency boundary for run snapshots and producer handoffs.
+
+    Effective path roles and conservative existing-file capture are combined after
+    source-guarded metadata/destination exclusions; neither side may omit a member.
+    """
+    return sorted(set(samplesheet_input_paths(path, schema)) | set(samplesheet_file_paths(path, schema)))
 
 
 def _atomic_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:

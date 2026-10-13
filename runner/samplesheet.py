@@ -85,10 +85,10 @@ def pattern_file_columns(input_schema: InputSchema) -> dict:
     from runner import sheetgen
 
     columns = {c.name: c for c in input_schema.columns if c.name}
-    staged = {frozenset(sheetgen._patterns(c)) for c in columns.values() if c.path_format()}
+    excluded = {*input_schema.metadata_columns, *input_schema.destination_columns}
     return {name: columns[name] for name in sheetgen.file_columns(input_schema)
             if not columns[name].path_format()
-            and frozenset(sheetgen._patterns(columns[name])) not in staged}
+            and name not in excluded}
 
 
 def names_relative_file(col, value: str) -> bool:
@@ -100,12 +100,20 @@ def names_relative_file(col, value: str) -> bool:
             and sheetgen._matches(col, Path("/") / value))
 
 
-def _relative_file_issues(row_num: int, col, value: str) -> list[str]:
-    if not names_relative_file(col, value):
-        return []
-    return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
-            "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
-            "to --outdir)"]
+def _pattern_file_issues(row_num: int, col, value: str) -> list[str]:
+    if names_relative_file(col, value):
+        return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
+                "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
+                "to --outdir)"]
+    from runner import sheetgen
+    if ((is_remote_url(value) or Path(value).is_absolute())
+            and sheetgen._matches(col, Path(value))):
+        # A pattern-only schema omits its existence semantics, but the recognized
+        # filename still reaches task scripts. Preserve literal markers that do not
+        # match a file pattern and apply the ordinary basename/route guard to files.
+        return [f"row {row_num}: '{col.name}': {issue}"
+                for issue in local_name_issues(value, "file-path")]
+    return []
 
 
 def validate(path: Path, input_schema: InputSchema) -> list[str]:
@@ -153,7 +161,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                     if isinstance(value, str) and value and col.path_format(value):
                         issues.extend(_path_cell_issues(i, col, value, row))
                     elif col.name in pattern_files and isinstance(value, str) and value.strip():
-                        issues.extend(_relative_file_issues(i, col, value.strip()))
+                        issues.extend(_pattern_file_issues(i, col, value.strip()))
                     if isinstance(value, str):
                         issues.extend(_info_identifier_issues(i, col, value))
                         issues.extend(_quoted_value_issues(i, col, value))
@@ -205,7 +213,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                 # expand `~`. A relative path cannot mean what it says, so require an absolute one.
                 issues.extend(_path_cell_issues(i, col, val, row))
             elif col.name in pattern_files and val:
-                issues.extend(_relative_file_issues(i, col, val))
+                issues.extend(_pattern_file_issues(i, col, val))
         values = {col.name: (row.get(col.name) or "").strip() for col in named}
         for trigger, required in input_schema.dependent_required:
             if values.get(trigger):

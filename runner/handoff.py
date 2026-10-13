@@ -631,10 +631,13 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                               f"{', '.join(missing[:5])} "
                               + ("have none" if len(missing) > 1 else "has none"))
     derived = [sheet.relative_to(root).as_posix()]
-    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()}
+    excluded = {*sheet_schema.metadata_columns, *sheet_schema.destination_columns}
+    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format() and c.name not in excluded}
     pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     for r in rows:
         for col in header:
+            if col in excluded:
+                continue
             if not (value := (r.get(col) or "").strip()):
                 continue
             values = (value,)
@@ -660,7 +663,8 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
            ) -> tuple[Path, list[str], dict[str, Any]]:
     spec = src.spec["build"]
     glob, rx = _pattern(spec["rows"])
-    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()}
+    excluded = {*sheet_schema.metadata_columns, *sheet_schema.destination_columns}
+    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format() and c.name not in excluded}
     pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     rows: list[dict[str, str]] = []
     derived: list[str] = []
@@ -722,7 +726,7 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                 fix=(f"Inspect {path}. Fix the rule, or the {rule.upstream} stage's options, then "
                      "resume the chain."),
                 details={"issues": issues, "snapshot": str(path)})
-        consumption = consumption_evidence(provenance.samplesheet_input_paths(path, sheet_schema),
+        consumption = consumption_evidence(provenance.samplesheet_dependencies(path, sheet_schema),
                                            upstream_outdir)
         return str(path), derived, {"sha256": sha256_file(path), **extra, **consumption}
     if src.kind == "file":

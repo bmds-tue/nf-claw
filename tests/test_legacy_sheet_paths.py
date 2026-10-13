@@ -111,6 +111,46 @@ def test_filename_metadata_is_not_guessed_to_be_a_local_input(tmp_path):
     assert provenance.samplesheet_input_paths(sheet, contract) == [data]
 
 
+@pytest.mark.parametrize("suffix", ["csv", "json"])
+def test_nanostring_existing_absolute_filename_metadata_is_not_a_data_dependency(tmp_path, suffix):
+    _, contract = _pinned("nanostring")
+    data, label = tmp_path / "A.RCC", tmp_path / "label.RCC"
+    data.write_bytes(b"actual instrument data identity")
+    label.write_bytes(b"unrelated file whose absolute name is used as metadata")
+    sheet = tmp_path / f"samples.{suffix}"
+    row = {"SAMPLE_ID": "A", "RCC_FILE": str(data), "RCC_FILE_NAME": str(label)}
+    if suffix == "json":
+        sheet.write_text(json.dumps([row]))
+    else:
+        with sheet.open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(row))
+            writer.writeheader()
+            writer.writerow(row)
+    assert samplesheet.validate(sheet, contract) == []
+    assert provenance.samplesheet_input_paths(sheet, contract) == [data]
+    assert provenance.samplesheet_file_paths(sheet, contract) == []
+
+
+@pytest.mark.parametrize("kind", ["direct", "build"])
+def test_nanostring_handoff_keeps_filename_metadata_out_of_file_derivation(tmp_path, kind):
+    tree, _ = _pinned("nanostring")
+    up = tmp_path / "producer"
+    (up / "labels").mkdir(parents=True)
+    data, label = up / "A.RCC", up / "labels/metadata.RCC"
+    data.write_bytes(b"instrument data identity")
+    label.write_bytes(b"unrelated producer file named by metadata")
+    (up / "samples.csv").write_text(f"SAMPLE_ID,RCC_FILE,RCC_FILE_NAME\nA,A.RCC,{label}\n")
+    record(up)
+    spec = ({"samplesheet": "samples.csv", "provides": ["SAMPLE_ID", "RCC_FILE", "RCC_FILE_NAME"]}
+            if kind == "direct" else {"build": {"rows": "{sample}.RCC", "columns": {
+                "SAMPLE_ID": "{sample}", "RCC_FILE": "{sample}.RCC", "RCC_FILE_NAME": str(label)}}})
+    result = handoff.materialize(_rule({"params": {"input": spec}}, down="nanostring"),
+        upstream_outdir=up, downstream_tree=tree, dest=tmp_path / "snapshot")
+    item = result.record["params"]["input"]
+    assert "labels/metadata.RCC" not in item["derived_from"]
+    assert item["consumed_sources"] == [str(data)]
+
+
 AUDITS = json.loads((ROOT / "runner/input_roles.json").read_text())
 
 

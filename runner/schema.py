@@ -181,6 +181,7 @@ class InputSchema:
     generation_problem: str | None = None
     audit_note: str = ""
     destination_columns: tuple[str, ...] = ()
+    metadata_columns: tuple[str, ...] = ()
 
 
 def json_scalar(value: Any) -> str:
@@ -359,19 +360,21 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
         generation_problem=audited.get("generation_problem"),
         audit_note=audited.get("note", ""),
         destination_columns=tuple(audited.get("destination_columns", [])),
+        metadata_columns=tuple(audited.get("metadata_columns", [])),
     )
 
 
 def _audited_input_contract(content: bytes, repo: Path) -> dict:
     """Additional consumed-file roles established from the pinned source, by schema digest.
 
-    Added roles fill omitted path annotations. Consumer corrections and destination
+    Added roles fill omitted path annotations. Consumer corrections and non-input
     exclusions also require the exact revision and unchanged audited source. Unknown
     schemas retain their explicit path annotations, including annotated alternatives.
     """
     registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest(), {})
-    if ("replacement" in audited or audited.get("destination_columns") or audited.get("double_quoted_columns")
+    if ("replacement" in audited or audited.get("destination_columns") or audited.get("metadata_columns")
+            or audited.get("double_quoted_columns")
             or any(role.get("separator") for role in audited.get("columns", {}).values())):
         from runner.submodule import _own_head
         if _own_head(repo) != audited["commit"]:

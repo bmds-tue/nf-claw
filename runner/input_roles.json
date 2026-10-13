@@ -169,6 +169,32 @@
     ],
     "use": "read and annotation workbooks passed to file()"
   },
+  "27ac7bcb652bee3b6238179995362ae8c0ee2902d76b71ac084d837cc953027b": {
+    "columns": {},
+    "commit": "6f0b2d537a1f06e8fe1d6c63d7c409009141aa62",
+    "metadata_columns": [
+      "RCC_FILE_NAME"
+    ],
+    "pipeline": "nanostring",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_nanostring_pipeline/main.nf:105-106",
+      "workflows/nanostring.nf:57-63",
+      "modules/nf-core/nacho/qc/main.nf:11-12",
+      "modules/nf-core/nacho/qc/resources/usr/bin/nacho_qc.R:41-46",
+      "modules/nf-core/nacho/normalize/main.nf:11-12",
+      "modules/nf-core/nacho/normalize/resources/usr/bin/nacho_norm.R:56-63"
+    ],
+    "source_sha256": {
+      "modules/nf-core/nacho/normalize/main.nf": "c5b49bde320e5345f021b160479c9f5e6287b2c36845c81045871f63915003dd",
+      "modules/nf-core/nacho/normalize/resources/usr/bin/nacho_norm.R": "ca1ff3a1de93409fdd10a3dfc52a449ca6ecec5c82d87958fdcc55de3088f3a7",
+      "modules/nf-core/nacho/qc/main.nf": "e2fb7260dd8374830e97f0d653680e4f1c8217e0aeea40845e5ff6442c5afa0e",
+      "modules/nf-core/nacho/qc/resources/usr/bin/nacho_qc.R": "9765f2b2d32c55c7b423ff16eeaa955419adb105b410643d1d188c4d3ddf2d8b",
+      "subworkflows/local/utils_nfcore_nanostring_pipeline/main.nf": "68a5566ce5348b394603db234781ba3211c530ff0e34af77a24c1987c846ff72",
+      "workflows/nanostring.nf": "63ea2f39806d6e68417ae9f6e47636072e7f21de1e2b5ba4353839811133c6cd"
+    },
+    "use": "RCC_FILE_NAME is a samplesheet lookup identifier passed to NACHO id_colname; consumed instrument files are staged from RCC_FILE alone. Existing files whose absolute names appear in RCC_FILE_NAME are not additional input dependencies."
+  },
   "2949ef9513066795ecf3ece218d39e422cda96f639aae19a734b8ce8042718a0": {
     "columns": {
       "dfp": {
@@ -301,8 +327,13 @@
       }
     },
     "commit": "c48b5103cc568d275c7d65a9609771cfb3471931",
-    "destination_columns": ["output_path"],
-    "double_quoted_columns": ["input", "output_path"],
+    "destination_columns": [
+      "output_path"
+    ],
+    "double_quoted_columns": [
+      "input",
+      "output_path"
+    ],
     "pipeline": "datasync",
     "schema": "assets/schema_input.json",
     "source": [
@@ -476,7 +507,11 @@
         "flowcell"
       ]
     },
-    "info_single_quoted": {"info": ["read_group_overrides"]},
+    "info_single_quoted": {
+      "info": [
+        "read_group_overrides"
+      ]
+    },
     "note": "**Pinned input contract.** For FASTQ rows, `filepath` is `forward_path;reverse_path` and both members must be absolute local paths or explicit remote URLs. File-type selection is case-insensitive. Other file types use one file or directory location. FASTQ `info` must provide `library_id` and `lane`; review their assignments against the study design. The `group_id`, `subject_id` and filename-forming info values (`library_id`, `lane`, `flowcell`) receive the same literal alias checks as sample identifiers. Info keys follow the consumer's uppercase normalization. An apostrophe in `read_group_overrides` is refused because the pinned BWA command passes its read-group line in single quotes. The exact compound interpretation is guarded by the pinned revision and consumer source hashes.",
     "pipeline": "oncoanalyser",
     "schema": "assets/schema_input.json",
