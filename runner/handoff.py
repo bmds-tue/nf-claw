@@ -37,8 +37,8 @@ REGISTRY_DIRNAME = "handoffs"
 KINDS = ("samplesheet", "build", "file", "upstream_param")
 _RULE_KEYS = {"description", "upstream_params", "params"}
 _EXTRA_KEYS = {"samplesheet": {"provides", "rename", "set", "add_empty", "drop_rows_not_allowed",
-                               "require_values"},
-               "build": set(), "file": set(), "upstream_param": set()}
+                               "require_values", "allowed_values"},
+               "build": set(), "file": {"paired_with"}, "upstream_param": set()}
 _BUILD_KEYS = {"rows", "columns", "format"}
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
@@ -135,9 +135,28 @@ def parse_rule(data: Any, *, upstream: str, downstream: str, origin: str) -> Rul
                 cols = src.get(key, [])
                 if not (isinstance(cols, list) and all(isinstance(c, str) and c for c in cols)):
                     raise bad(f"'{target}': '{key}' must list column names")
+            allowed = src.get("allowed_values", {})
+            if not (isinstance(allowed, dict) and all(
+                    isinstance(c, str) and c and isinstance(v, list) and v
+                    and all(isinstance(x, str) and x for x in v) for c, v in allowed.items())):
+                raise bad(f"'{target}': 'allowed_values' must map column names to lists of values")
         if kind == "build":
             _check_build(src["build"], target, bad)
         sources[target] = Source(kind, src, bool(src.get("optional", False)))
+    # `paired_with`: a file list whose candidates belong to another file list's, index by index
+    # (rnaseq's gene lengths to the counts of the same quantification). The partner's choice decides.
+    for target, source in sources.items():
+        if "paired_with" not in source.spec:
+            continue
+        partner = source.spec["paired_with"]
+        other = sources.get(partner) if isinstance(partner, str) else None
+        if (other is None or partner == target or other.kind != "file"
+                or "paired_with" in other.spec
+                or not isinstance(source.spec["file"], list)
+                or not isinstance(other.spec["file"], list)
+                or len(source.spec["file"]) != len(other.spec["file"])):
+            raise bad(f"'{target}': 'paired_with' must name another parameter whose 'file' list "
+                      "is as long as this one's")
     return Rule(upstream, downstream, origin, str(data.get("description", "")), dict(up),
                 sources, data)
 
@@ -219,6 +238,10 @@ def check_rule(rule: Rule, upstream_tree: Path, downstream_tree: Path) -> list[s
                 issues += [f"{rule.downstream} samplesheet: {i}"
                            for i in samplesheet.header_issues(provided_columns(src), sheet)]
                 columns = {c.name: c for c in sheet.columns}
+                for col in src.spec.get("allowed_values", {}):
+                    if col not in provided_columns(src):
+                        issues.append(f"'{col}' is not among the columns the handoff provides "
+                                      "(allowed_values)")
                 for col in src.spec.get("drop_rows_not_allowed", []):
                     if col not in columns:
                         issues.append(f"'{col}' is not a column of the {rule.downstream} "
@@ -403,15 +426,16 @@ def _one_match(root: Path, pattern: str) -> Path:
     return found[0]
 
 
-def _first_match(root: Path, patterns: str | list[str]) -> Path:
-    """The file the first pattern that matches anything names (it must name exactly one). An ordered
-    list says which output to prefer when a pipeline can write it in several places — rnaseq's
-    merged counts sit under whichever quantifier ran, and its test profile runs two."""
+def _first_match(root: Path, patterns: str | list[str]) -> tuple[Path, int]:
+    """The file the first pattern that matches anything names (it must name exactly one), and that
+    pattern's position. An ordered list says which output to prefer when a pipeline can write it in
+    several places — rnaseq's merged counts sit under whichever quantifier ran, and its test
+    profile runs two."""
     if isinstance(patterns, str):
-        return _one_match(root, patterns)
-    for pattern in patterns:
+        return _one_match(root, patterns), 0
+    for index, pattern in enumerate(patterns):
         try:
-            return _one_match(root, pattern)
+            return _one_match(root, pattern), index
         except _NoMatch:
             continue                                      # several files matching is not skipped
     raise _NoMatch(f"nothing in {root} matches any of " + ", ".join(repr(p) for p in patterns))
@@ -585,6 +609,19 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         raise _Unresolved(f"no row of {sheet.name} is left once rows with values the downstream "
                           f"does not allow ({', '.join(sorted(allowed))}) are dropped")
     rows = kept
+    # Rows whose data the downstream must not analyse although its schema cannot tell (a long-read
+    # or colour-space run handed to a short-read aligner): refused, never dropped, naming them.
+    for col, values in src.spec.get("allowed_values", {}).items():
+        if col not in header:
+            raise _Unresolved(f"{sheet.name} has no column '{col}' to check against the values "
+                              f"{downstream} can analyse")
+        if outside := [f"row {i} ({r.get('sample') or '?'}: {(r.get(col) or '').strip() or 'empty'})"
+                       for i, r in enumerate(rows, start=2)
+                       if (r.get(col) or "").strip() not in values]:
+            raise _Unresolved(f"{downstream} takes only {col} {', '.join(values)}; "
+                              f"{', '.join(outside[:5])}" + (" and more" if len(outside) > 5 else "")
+                              + " — leave those runs out, or analyse them with a pipeline for "
+                                "their data")
     # Rows a downstream cannot take although its schema allows them (sarek reads paired-end FastQ
     # only; its schema leaves fastq_2 optional): named here, before it launches.
     for col in src.spec.get("require_values", []):
@@ -595,6 +632,7 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                               + ("have none" if len(missing) > 1 else "has none"))
     derived = [sheet.relative_to(root).as_posix()]
     path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()}
+    pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     for r in rows:
         for col in header:
             if not (value := (r.get(col) or "").strip()):
@@ -603,6 +641,9 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
             if col in path_cols and path_cols[col].path_format(value):
                 values = tuple(_absolute(part, root) for part in path_cols[col].path_values(value, r))
                 r[col] = path_cols[col].join_paths(values)
+            elif col in pattern_cols and samplesheet.names_relative_file(pattern_cols[col], value):
+                values = (_absolute(value, root),)
+                r[col] = values[0]
             # Trace every upstream result the sheet points at — also in a column the downstream
             # schema declares no path format for (atacseq's fastq_1), so lineage misses none.
             for part in values:
@@ -620,6 +661,7 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
     spec = src.spec["build"]
     glob, rx = _pattern(spec["rows"])
     path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()}
+    pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     rows: list[dict[str, str]] = []
     derived: list[str] = []
     for match in sorted(p for p in root.glob(glob) if p.is_file()):
@@ -632,9 +674,12 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         for col, template in spec["columns"].items():
             optional = template.endswith("?")
             text = row[col]
-            if col in path_cols and text and path_cols[col].path_format(text):
+            column = path_cols.get(col)
+            if text and (column and column.path_format(text) or col in pattern_cols
+                         and samplesheet.names_relative_file(pattern_cols[col], text)):
                 resolved = []
-                for part in path_cols[col].path_values(text, row):
+                values = column.path_values(text, row) if column else (text,)
+                for part in values:
                     path = root / part
                     if path.is_file() or path.is_dir():
                         if path.is_file():
@@ -647,7 +692,7 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                         break
                     else:
                         raise _Unresolved(f"{part} not found in {root} (column '{col}')")
-                text = path_cols[col].join_paths(tuple(resolved))
+                text = column.join_paths(tuple(resolved)) if column else "".join(resolved)
             row[col] = text
         rows.append(row)
     if not rows:
@@ -658,7 +703,8 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
 
 def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
              downstream_tree: Path, dest: Path,
-             used: tuple[Mapping[str, Any], str | None]) -> tuple[Any, list[str], dict[str, Any]]:
+             used: tuple[Mapping[str, Any], str | None],
+             chosen: dict[str, int] | None = None) -> tuple[Any, list[str], dict[str, Any]]:
     """One source's value, the upstream files it was derived from, and extra record fields."""
     if src.kind in ("samplesheet", "build"):
         ref = inputs.samplesheet_schema(downstream_tree, param=target)
@@ -680,7 +726,16 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                                            upstream_outdir)
         return str(path), derived, {"sha256": sha256_file(path), **extra, **consumption}
     if src.kind == "file":
-        found = _first_match(upstream_outdir, src.spec["file"])
+        chosen = {} if chosen is None else chosen
+        if (partner := src.spec.get("paired_with")) is not None:
+            if partner not in chosen:
+                raise _Unresolved(f"it belongs to {_flag(partner)}, which this handoff did not "
+                                  f"choose; supply both {_flag(partner)} and {_flag(target)}")
+            index = chosen[partner]
+            found = _one_match(upstream_outdir, src.spec["file"][index])
+        else:
+            found, index = _first_match(upstream_outdir, src.spec["file"])
+        chosen[target] = index
         return (str(found), [found.relative_to(upstream_outdir).as_posix()],
                 {**consumption_evidence([found], upstream_outdir), "consumed_scalar": True})
     params, recorded_in = used
@@ -766,12 +821,16 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
     used = _recorded_params(upstream_outdir)
     values: dict[str, Any] = {}
     traced: dict[str, dict] = {}
-    for target, src in rule.params.items():
+    chosen: dict[str, int] = {}                 # which candidate each file list chose
+    # A paired file list follows its partner's choice, so the partner is resolved first.
+    order = sorted(rule.params.items(), key=lambda item: "paired_with" in item[1].spec)
+    for target, src in order:
         if target in exclude_params:
             continue
         try:
             value, derived, extra = _resolve(rule, target, src, upstream_outdir=upstream_outdir,
-                                             downstream_tree=downstream_tree, dest=dest, used=used)
+                                             downstream_tree=downstream_tree, dest=dest, used=used,
+                                             chosen=chosen)
         except (OSError, ValueError) as exc:
             raise NfclawError(
                 ErrorCode.HANDOFF_FAILED,

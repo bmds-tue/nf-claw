@@ -63,7 +63,7 @@ id,caller
 
 Any of the optional columns above may be appended to the header when your data needs them: `test_vcf`, `test_regions`, `subsample`, `normshift`, `normdist`, `normsizediff`, `maxdist`, `pctsize`, `pctseq`, `pctovl`, `refdist`, `chunksize`, `dup_to_ins`, `typeignore`, `bpDistance`, `percentThreshold`, `absoluteThreshold`, `maxMatches`, `evaluationmode`, `liftover`, `fix_prefix`.
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `id` from file names; `test_vcf`, `test_regions` from files matching their patterns, by sample name. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `caller` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `id` from file names; `test_vcf`, `test_regions` from files matching their patterns, by sample name. Optional columns left out take their schema defaults in the pipeline: `liftover` = `false`, `fix_prefix` = `false` — set them with `--sheet-set` where your design differs. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `caller` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |

@@ -497,3 +497,44 @@ def test_causes_are_read_from_a_log_in_any_jvm_locale(tmp_path):
     german = tmp_path / "de.log"
     german.write_text(log.read_text(encoding="utf-8").replace("oct-12 ", "Okt.-12 "), encoding="utf-8")
     assert runlog.nextflow_log_causes(german) == ["Caused by: java.net.ConnectException: Connection refused"]
+
+
+# What nf-core/rnaseq 3.27.0 printed at the end of a real run that dropped a sample (with colours).
+_RNASEQ_SKIPPED = (
+    "\x1b[0;35m[nf-core/rnaseq]\x1b[0m done\n"
+    "-\x1b[0;35m[nf-core/rnaseq]\x1b[0;33m Pipeline completed successfully with skipped sampl(es)"
+    "\x1b[0m-\n"
+    "-\x1b[0;35m[nf-core/rnaseq]\x1b[0;31m Please check MultiQC report: 1/3 samples skipped since "
+    "they failed 10000 trimmed read threshold.\x1b[0m-\n"
+    "-\x1b[0;35m[nf-core/rnaseq]\x1b[0;31m Please check MultiQC report: 2/2 samples failed "
+    "strandedness check.\x1b[0m-\n")
+
+
+def test_completion_caveats_quote_what_a_successful_pipeline_left_out(tmp_path):
+    assert runlog.completion_caveats(_RNASEQ_SKIPPED) == [
+        "[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)",
+        "[nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped since they failed "
+        "10000 trimmed read threshold.",
+        "[nf-core/rnaseq] Please check MultiQC report: 2/2 samples failed strandedness check."]
+    # The nf-core template's own qualifier: failed tasks whose errors were ignored.
+    template = "-[nf-core/demo] Pipeline completed successfully, but with errored process(es) -\n"
+    assert runlog.completion_caveats(template) == [
+        "[nf-core/demo] Pipeline completed successfully, but with errored process(es)"]
+    # A plain success carries no caveat, and console text cannot pose as a summary line of
+    # another pipeline after it.
+    plain = ("-[nf-core/demo] Pipeline completed successfully-\n"
+             "-[nf-core/demo] Sent summary e-mail to someone@example.org (sendmail)-\n"
+             "-[other] Please check this-\n")
+    assert runlog.completion_caveats(plain) == []
+
+
+def test_completion_caveats_count_ignored_task_failures_from_the_nextflow_log(tmp_path):
+    log = tmp_path / ".nextflow.log"
+    stats = ("Oct-13 12:15:14.586 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > "
+             "WorkflowStats[succeededCount=85; failedCount={f}; ignoredCount={i}; cachedCount=0]\n")
+    log.write_text(stats.format(f=0, i=0))
+    assert runlog.completion_caveats("", log) == []
+    log.write_text(stats.format(f=2, i=2))
+    assert runlog.completion_caveats("", log) == [
+        "Nextflow ignored 2 failed task(s) (errorStrategy 'ignore'); their results are missing"]
+    assert runlog.completion_caveats("", tmp_path / "absent.log") == []

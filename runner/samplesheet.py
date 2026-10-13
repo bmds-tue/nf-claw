@@ -77,6 +77,37 @@ def _identity_issues(row_num: int, col, raw: str) -> list[str]:
     return []
 
 
+def pattern_file_columns(input_schema: InputSchema) -> dict:
+    """File columns typed by their pattern alone, without an nf-schema path format (atacseq's and
+    hic's `fastq_1`). Their values are paths all the same: the pipelines open them with `file()`,
+    which resolves a relative one against Nextflow's launch directory. A column that only *names*
+    a file another column stages (nanostring's `RCC_FILE_NAME` beside `RCC_FILE`) is not one."""
+    from runner import sheetgen
+
+    columns = {c.name: c for c in input_schema.columns if c.name}
+    staged = {frozenset(sheetgen._patterns(c)) for c in columns.values() if c.path_format()}
+    return {name: columns[name] for name in sheetgen.file_columns(input_schema)
+            if not columns[name].path_format()
+            and frozenset(sheetgen._patterns(columns[name])) not in staged}
+
+
+def names_relative_file(col, value: str) -> bool:
+    """Whether `value`, in a pattern-typed file column, is a relative path to a file the column
+    takes (a plain marker such as bacass's `NA` names none)."""
+    from runner import sheetgen
+
+    return (not is_remote_url(value) and not Path(value).is_absolute()
+            and sheetgen._matches(col, Path("/") / value))
+
+
+def _relative_file_issues(row_num: int, col, value: str) -> list[str]:
+    if not names_relative_file(col, value):
+        return []
+    return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
+            "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
+            "to --outdir)"]
+
+
 def validate(path: Path, input_schema: InputSchema) -> list[str]:
     issues: list[str] = []
     if not path.is_file():
@@ -84,6 +115,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
         # samplesheet would otherwise raise FileNotFoundError/IsADirectoryError as a raw traceback.
         return [f"samplesheet not found or not a file: {path}"]
     named = [c for c in input_schema.columns if c.name]
+    pattern_files = pattern_file_columns(input_schema)
     # nf-schema picks the parser from the file extension; mirror that exactly so a `.tsv`
     # (e.g. nf-core/airrflow, which mandates `.tsv`) is split on TAB, not read as one CSV column.
     delimiter = delimiter_for(path)
@@ -120,6 +152,8 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                         issues.extend(_identity_issues(i, col, raw))
                     if isinstance(value, str) and value and col.path_format(value):
                         issues.extend(_path_cell_issues(i, col, value, row))
+                    elif col.name in pattern_files and isinstance(value, str) and value.strip():
+                        issues.extend(_relative_file_issues(i, col, value.strip()))
                     if isinstance(value, str):
                         issues.extend(_info_identifier_issues(i, col, value))
                         issues.extend(_quoted_value_issues(i, col, value))
@@ -170,6 +204,8 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                 # nfclaw sets to --outdir — not against the samplesheet's folder, and it does not
                 # expand `~`. A relative path cannot mean what it says, so require an absolute one.
                 issues.extend(_path_cell_issues(i, col, val, row))
+            elif col.name in pattern_files and val:
+                issues.extend(_relative_file_issues(i, col, val))
         values = {col.name: (row.get(col.name) or "").strip() for col in named}
         for trigger, required in input_schema.dependent_required:
             if values.get(trigger):

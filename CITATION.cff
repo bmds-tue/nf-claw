@@ -19,6 +19,8 @@ abstract: >-
   parameter reference.md. Context comes from the pinned schemas and source,
   with documented exact-schema audits correcting stale input contracts. A
   generic runner launches supported pipelines and records a provenance bundle;
+  curated handoff rules connect pipelines, and documented runtime corrections
+  are applied through recorded configurations without editing upstream source.
   scheduled workflows check new upstream releases and regenerate context.
   Validation and replay checks cover declared dependencies and observed
   execution behavior, rather than certifying biological accuracy.

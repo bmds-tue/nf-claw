@@ -72,7 +72,7 @@ sample,vcf
 | `--seq-platform` | string | illumina |  |  | Specify the sequencing platform used |
 
 ## Reference genome
-**This release resolves a reference genome remotely by default.** `--genome` defaults to `GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
+**This release resolves a reference genome remotely by default.** `--genome` defaults to `GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. The pinned configuration gives that key the FASTA `${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/genome.fa`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):

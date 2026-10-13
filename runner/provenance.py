@@ -280,7 +280,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           unverified_local_paths: dict[str, str] | None = None,
           nextflow_version: str | None = None,
           generated_samplesheet: dict | None = None,
-          dependency_stability: dict | None = None) -> Path:
+          dependency_stability: dict | None = None,
+          completion_caveats: list[str] | None = None) -> Path:
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -324,6 +325,9 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         manifest["generated_samplesheet"] = dict(generated_samplesheet)
     if dependency_stability is not None:
         manifest["dependency_stability"] = dependency_stability
+    # What the pipeline reported missing from a successful run, in its own words (runner.runlog).
+    if completion_caveats:
+        manifest["completion_caveats"] = list(completion_caveats)
     if pipeline_checksums is not None or submodule.path.is_dir():
         manifest["pipeline_path"] = str(submodule.path.absolute())
         manifest["pipeline_git_head"] = (

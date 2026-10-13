@@ -211,7 +211,35 @@ def _resources_section(name: str, ps: ParamSchema, insch: InputSchema | None,
     )
 
 
-def _reference_section(ps: ParamSchema) -> str:
+_GENOME_KEY = re.compile(r"""^\s*(['"])(?P<key>[^'"]+)\1\s*(?:\{|:\s*\[)\s*$""")
+_GENOME_FASTA = re.compile(r"""^\s*fasta\s*(?:=|:)\s*(['"])(?P<value>[^'"]+)\1""")
+
+
+def _configured_fasta(upstream: Path, key: str) -> str | None:
+    """The `fasta` the pinned configuration assigns to genome `key`, as written — only when every
+    `'<key>' { … }` block (or `'<key>' : [ … ]` map) in the release's config files assigns the
+    same one. A key's name need not be the assembly it selects (marsseq's `mm10` is GRCm39)."""
+    values: set[str] = set()
+    for path in [upstream / "nextflow.config", *sorted((upstream / "conf").glob("*.config"))]:
+        try:
+            lines = [schema_mod._strip_comment(line)
+                     for line in path.read_text(encoding="utf-8").splitlines()]
+        except (OSError, UnicodeDecodeError):
+            continue
+        for start, line in enumerate(lines):
+            if not ((m := _GENOME_KEY.match(line)) and m["key"] == key):
+                continue
+            depth = 0
+            for text in lines[start:]:
+                depth += text.count("{") + text.count("[") - text.count("}") - text.count("]")
+                if fasta := _GENOME_FASTA.match(text):
+                    values.add(fasta["value"])
+                if depth <= 0:
+                    break
+    return values.pop() if len(values) == 1 else None
+
+
+def _reference_section(ps: ParamSchema, upstream: Path | None = None) -> str:
     """Name only reference sources the schema actually declares.
 
     A `genome` key does not identify a provider: some pipelines use local custom references
@@ -234,6 +262,12 @@ def _reference_section(ps: ParamSchema) -> str:
            f"the {group} group in [reference.md](reference.md) lists the reference options")
     selected = (f"`--genome` defaults to `{genome.default}`. " if genome.default else
                 "No reference genome is set by default: supply your own reference. ")
+    configured = (_configured_fasta(upstream, str(genome.default))
+                  if upstream is not None and genome.default else None)
+    if configured:
+        selected += (f"The pinned configuration gives `--genome {genome.default}` the FASTA "
+                     f"`{configured}`; a genome key's name need not be the assembly it selects, so "
+                     "confirm it is the one you intend. ")
     config_note = ("Confirm the selected reference's paths and source in the pinned "
                    "`upstream/nextflow.config` and `upstream/conf/` before running.")
     if ignored is not None and ignored.default is True:
@@ -246,11 +280,13 @@ def _reference_section(ps: ParamSchema) -> str:
     remote = bool(re.match(r"^(?:https?|s3|gs|ftp)://", source, re.I))
     provider = "AWS iGenomes" if source.startswith("s3://ngi-igenomes/") else "iGenomes"
     if genome.default and remote:
+        fasta_note = (f" The pinned configuration gives that key the FASTA `{configured}`."
+                      if configured else "")
         return (
             f"**This release resolves a reference genome remotely by default.** `--genome` defaults "
-            f"to `{genome.default}`; the schema declares {provider} at `{source}`. Resolving "
-            "references through that default needs access to this source. For a self-contained "
-            f"run, pass your own reference instead ({own}).{ignore} {config_note}\n"
+            f"to `{genome.default}`; the schema declares {provider} at `{source}`.{fasta_note} "
+            "Resolving references through that default needs access to this source. For a "
+            f"self-contained run, pass your own reference instead ({own}).{ignore} {config_note}\n"
         )
     return (
         f"{selected}The schema declares {provider} at `{source}`; selecting `--genome <id>` uses "
@@ -649,7 +685,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
             "offset alone is insufficient. See [Cock et al. (2010)]"
             "(https://doi.org/10.1093/nar/gkp1137) for the encoding and score definitions.\n\n"
         )
-    reference = _reference_section(ps)
+    reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
     # tree, pipelines/<name>/.versions/<label>/skill.md, so their links climb two levels further.

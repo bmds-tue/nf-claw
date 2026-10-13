@@ -293,6 +293,52 @@ def test_remote_paths_are_not_checked_locally(tmp_path):
     assert samplesheet.validate(ss, SCH) == []
 
 
+PATTERN_TYPED = InputSchema(columns=(
+    # atacseq/hic: FastQ columns typed by their pattern alone, without a path format.
+    Column("sample", "string", True, "^\\S+$", None),
+    Column("fastq_1", "string", True, "^\\S+\\.f(ast)?q\\.gz$", None),
+    # bacass: `NA` marks a missing read file and names no file.
+    Column("LongFastQ", "string", False, "^(\\S+\\.f(ast)?q\\.gz|NA)$", None),
+    # nanostring: a column that only names the file another column stages.
+    Column("RCC_FILE", "string", False, "^\\S+\\.RCC$", "file-path"),
+    Column("RCC_FILE_NAME", "string", False, "^\\S+\\.RCC$", None),
+))
+
+
+@pytest.mark.parametrize("extension", [".csv", ".json"])
+def test_pattern_typed_file_columns_refuse_relative_paths(tmp_path, extension):
+    # The pipelines open these values with file(), which resolves a relative path against the launch
+    # directory (nfclaw's --outdir): it can only fail late, after launch, or name another file.
+    rcc = tmp_path / "a.RCC"
+    rcc.write_text("x")
+    ss = tmp_path / f"ss{extension}"
+    if extension == ".csv":
+        ss.write_text("sample,fastq_1,LongFastQ,RCC_FILE,RCC_FILE_NAME\n"
+                      f"A,reads/a_R1.fastq.gz,NA,{rcc},a.RCC\n"
+                      f"B,{tmp_path / 'b_R1.fastq.gz'},long.fq.gz,{rcc},a.RCC\n")
+    else:
+        import json
+        ss.write_text(json.dumps([
+            {"sample": "A", "fastq_1": "reads/a_R1.fastq.gz", "LongFastQ": "NA",
+             "RCC_FILE": str(rcc), "RCC_FILE_NAME": "a.RCC"},
+            {"sample": "B", "fastq_1": str(tmp_path / "b_R1.fastq.gz"), "LongFastQ": "long.fq.gz",
+             "RCC_FILE": str(rcc), "RCC_FILE_NAME": "a.RCC"}]))
+    issues = samplesheet.validate(ss, PATTERN_TYPED)
+    row_a, row_b = ("row 2", "row 3") if extension == ".csv" else ("row 1", "row 2")
+    assert len(issues) == 2, issues
+    assert any(row_a in i and "'fastq_1' is a relative path" in i and "--outdir" in i
+               for i in issues)
+    assert any(row_b in i and "'LongFastQ' is a relative path" in i for i in issues)
+
+
+def test_pattern_typed_file_columns_keep_remote_and_absolute_values(tmp_path):
+    ss = tmp_path / "ss.csv"
+    ss.write_text("sample,fastq_1\n"
+                  "A,https://example.org/a_R1.fastq.gz\n"
+                  f"B,{tmp_path / 'b_R1.fastq.gz'}\n")
+    assert samplesheet.validate(ss, PATTERN_TYPED) == []
+
+
 def test_path_format_columns_are_checked_too(tmp_path):
     # nf-schema's `path` format (a file or a directory; e.g. mhcquant's ReplicateFileName, sopa's
     # data_path) resolves exactly like `file-path`.

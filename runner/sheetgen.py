@@ -299,6 +299,10 @@ def describe(sheet: InputSchema, input_param: Param | None) -> str:
     text = f"{lead}: " + "; ".join(fills) + "."
     if defaults:
         text += " Schema defaults fill " + ", ".join(defaults) + "."
+    if implicit := _implicit_defaults(sheet, filled):
+        text += (" Optional columns left out take their schema defaults in the pipeline: "
+                 + ", ".join(f"`{n}` = `{v}`" for n, v in implicit.items())
+                 + " — set them with `--sheet-set` where your design differs.")
     if needs:
         text += (" Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a "
                  "constant or a `{sample}`/`{lane}` template): " + "; ".join(needs) + ".")
@@ -975,6 +979,7 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                                      or not p.columns[c].path_format()
                                      and c in {*p.reads, *p.data_columns})))
     paired = sum(1 for u in units if len(u.reads) == 2)
+    implicit = _implicit_defaults(sheet, header)
     record = {"version": 1, "sources": list(source.values), "schema": source.sheet,
               "files": len(files), "samples": len(samples), "rows": len(rows),
               "paired_end": paired, "single_end": len(units) - paired,
@@ -982,6 +987,8 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                              or (c == p.lane_column and units)],
               "sheet_set": dict(assignments), "defaults": defaults, "ignored": ignored[:50],
               "ignored_count": len(ignored)}
+    if implicit:
+        record["implicit_defaults"] = implicit
     where = source.values[0] if len(source.values) == 1 else f"{len(source.values)} --input values"
     layout = (f" ({paired} paired-end, {len(units) - paired} single-end read sets)" if units else "")
     summary = (f"Generated the {pipeline} samplesheet from {len(files)} files in {where}: "
@@ -991,10 +998,22 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                   if any(c in assignments for c in header) else "")
                + (f"; schema defaults: {', '.join(defaults)}" if defaults else "")
                + (f". Ignored {len(ignored)} file(s) no column takes: {_shown(ignored)}"
-                  if ignored else "") + ".")
+                  if ignored else "")
+               + (". Left out, so the pipeline applies its schema default on every row: "
+                  + ", ".join(f"{n} = {v}" for n, v in implicit.items())
+                  + " (set them with --sheet-set where your design differs)" if implicit else "")
+               + ".")
     return Generated(text=text, suffix=p.suffix, header=tuple(header), rows=tuple(rows),
                      files=files, id_column=p.id_column, summary=summary, notes=tuple(notes),
                      record=record)
+
+
+def _implicit_defaults(sheet: InputSchema, written) -> dict[str, str]:
+    """Optional columns with a schema default that a generated sheet leaves out: the pipeline fills
+    them with that default on every row (sarek's `status` 0, every sample normal tissue)."""
+    return {c.name: json_scalar(c.default) for c in sheet.columns
+            if c.name and not c.required and c.name not in written
+            and c.default not in (None, "")}
 
 
 def _check_paths(paths: list[Path]) -> None:
