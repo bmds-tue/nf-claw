@@ -437,7 +437,10 @@ def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, b
     pidfile = tmp_path / "verification.pid"
     out = tmp_path / "out"
     out.mkdir()
-    prov = provenance.write(outdir=out, pipeline="mini", command_str=shlex.join(["touch", str(completed)]),
+    # The replay appends `--outdir <target>`; GNU touch would parse it as an option, so the
+    # recorded command ignores trailing arguments, like the other replay tests here.
+    prov = provenance.write(outdir=out, pipeline="mini",
+                            command_str=shlex.join(["sh", "-c", f"touch {shlex.quote(str(completed))}"]),
                             submodule=_st(tmp_path / "up"), input_paths=[])
     guard = prov / "replay_guard.py"
     text = guard.read_text()
