@@ -204,6 +204,52 @@ def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, fini
     assert (row["fastq_1"], row["fastq_2"]) == (f"{up}/fastq/A_1.fastq.gz", f"{up}/fastq/A_2.fastq.gz")
 
 
+PLATFORM_SHEET = ("sample,fastq_1,fastq_2,instrument_platform\n"
+                  "A,{outdir}/fastq/A_1.fastq.gz,{outdir}/fastq/A_2.fastq.gz,ILLUMINA\n"
+                  "B,{outdir}/fastq/A_1.fastq.gz,,OXFORD_NANOPORE\n"
+                  "C,{outdir}/fastq/A_1.fastq.gz,,\n")
+SHORT_ONLY = {"params": {"input": {"samplesheet": "s.csv",
+                                   "provides": ["sample", "fastq_1", "fastq_2", "instrument_platform"],
+                                   "allowed_values": {"instrument_platform": ["ILLUMINA", "BGISEQ"]}}}}
+
+
+def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library, finished_run, tmp_path):
+    # A Nanopore run in fetchngs's sheet would reach a short-read aligner as if it were Illumina.
+    _, down = _trees(library("mini_up", "mini"))
+    up = finished_run(tmp_path / "up", {"s.csv": PLATFORM_SHEET, **FASTQS})
+    with pytest.raises(NfclawError) as err:
+        handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h")
+    assert err.value.code is ErrorCode.HANDOFF_FAILED
+    assert ("takes only instrument_platform ILLUMINA, BGISEQ; row 3 (B: OXFORD_NANOPORE), "
+            "row 4 (C: empty)") in err.value.message
+    ok = finished_run(tmp_path / "ok", {"s.csv": PLATFORM_SHEET.split("B,")[0], **FASTQS})
+    hand = handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=ok, downstream_tree=down,
+                               dest=tmp_path / "h2")
+    assert [r["sample"] for r in _rows(tmp_path / "h2" / "input.csv")] == ["A"]
+    assert hand.params["input"] == str(tmp_path / "h2" / "input.csv")
+
+
+def test_allowed_values_need_their_column(library, finished_run, tmp_path):
+    _, down = _trees(library("mini_up", "mini"))
+    up = finished_run(tmp_path / "up", {"s.csv": SHEET.replace("{outdir}", "{outdir}"), **FASTQS})
+    with pytest.raises(NfclawError, match="has no column 'instrument_platform'"):
+        handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h")
+    up_tree, down_tree = _trees(library("mini_up", "mini"))
+    body = {"params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"],
+                                 "allowed_values": {"instrument_platform": ["ILLUMINA"]}}}}
+    assert any("'instrument_platform' is not among the columns the handoff provides" in issue
+               for issue in handoff.check_rule(_rule(body), up_tree, down_tree))
+
+
+@pytest.mark.parametrize("allowed", [["ILLUMINA"], {"col": []}, {"col": "ILLUMINA"}, {"": ["x"]}])
+def test_allowed_values_must_map_columns_to_value_lists(allowed):
+    with pytest.raises(NfclawError, match="'allowed_values' must map column names"):
+        _rule({"params": {"input": {"samplesheet": "s.csv", "provides": ["sample"],
+                                    "allowed_values": allowed}}})
+
+
 def test_a_rename_onto_an_existing_column_is_refused(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"s.csv": "sample,fastq_1,r1\nA,x,y\n"})

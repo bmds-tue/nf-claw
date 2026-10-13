@@ -1,5 +1,5 @@
 {
-  "description": "fetchngs writes an ampliseq samplesheet (sample, fastq_1, fastq_2, run) with --nf-core-pipeline ampliseq. Its run column is empty, so ampliseq treats every sample as one sequencing run and learns one DADA2 error model for all of them; data from several sequencing runs needs run filled per sequencing run: an inline handoff whose set templates it from a column that identifies the run, or your own samplesheet.",
+  "description": "fetchngs writes an ampliseq samplesheet (sample, fastq_1, fastq_2, run) with --nf-core-pipeline ampliseq. Its run column is empty, so ampliseq treats every sample as one sequencing run and learns one DADA2 error model for all of them; data from several sequencing runs needs run filled per sequencing run: an inline handoff whose set templates it from a column that identifies the run, or your own samplesheet. ampliseq assumes Illumina reads unless told otherwise: for PacBio or Ion Torrent runs (the instrument_platform column) set --pacbio or --iontorrent in the stage's params.",
   "upstream_params": {
     "nf_core_pipeline": "ampliseq"
   },

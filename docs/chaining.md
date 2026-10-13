@@ -157,7 +157,8 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 2. `set`: Set values or template expressions for every row (`{"lane": "{run_accession}"}`).
 3. `add_empty`: Insert declared columns that the upstream sheet lacks.
 4. `drop_rows_not_allowed`: Filter out rows containing values rejected by the downstream schema.
-5. `require_values`: Assert that specific columns must contain non-empty values before launch.
+5. `allowed_values`: Refuse (never drop) the handoff when a column holds a value outside a list — rows the downstream must not analyse although its schema cannot tell, such as a long-read or colour-space run in fetchngs's sheet for a short-read pipeline (`{"instrument_platform": ["ILLUMINA", …]}`).
+6. `require_values`: Assert that specific columns must contain non-empty values before launch.
 
 > [!IMPORTANT]
 > **Metagenomic Co-Assembly Safety:**
@@ -175,6 +176,7 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 >       "provides": ["sample", "run", "group", "short_reads_1", "short_reads_2", "long_reads"],
 >       "set": {"group": "{sample}", "short_reads_platform": "ILLUMINA", "long_reads_platform": "PACBIO_HIFI"}}}}}
 >   ```
+> - The `fetchngs` rules into short-read pipelines (`rnaseq`, `atacseq`, `sarek`, `metatdenovo`, `viralrecon`) refuse runs whose ENA `instrument_platform` is not a short-read platform: long-read, capillary and colour-space runs are not analysed as if they were Illumina reads. ampliseq needs `--pacbio`/`--iontorrent` set for such runs.
 > - `fetchngs` → `ampliseq` leaves `run` empty, so ampliseq learns one DADA2 error model for all samples; data from several sequencing runs needs `run` filled per sequencing run — an inline handoff whose `set` templates it from a column that identifies the run, or your own samplesheet.
 > - `fetchngs` → `sarek` and `demultiplex` → `sarek` write no `status` or `sex`: sarek treats every sample as normal tissue and runs germline analyses only. A tumour/normal design needs its own sarek samplesheet: a handoff's `set` gives every row the same value.
 

@@ -37,7 +37,7 @@ REGISTRY_DIRNAME = "handoffs"
 KINDS = ("samplesheet", "build", "file", "upstream_param")
 _RULE_KEYS = {"description", "upstream_params", "params"}
 _EXTRA_KEYS = {"samplesheet": {"provides", "rename", "set", "add_empty", "drop_rows_not_allowed",
-                               "require_values"},
+                               "require_values", "allowed_values"},
                "build": set(), "file": {"paired_with"}, "upstream_param": set()}
 _BUILD_KEYS = {"rows", "columns", "format"}
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -135,6 +135,11 @@ def parse_rule(data: Any, *, upstream: str, downstream: str, origin: str) -> Rul
                 cols = src.get(key, [])
                 if not (isinstance(cols, list) and all(isinstance(c, str) and c for c in cols)):
                     raise bad(f"'{target}': '{key}' must list column names")
+            allowed = src.get("allowed_values", {})
+            if not (isinstance(allowed, dict) and all(
+                    isinstance(c, str) and c and isinstance(v, list) and v
+                    and all(isinstance(x, str) and x for x in v) for c, v in allowed.items())):
+                raise bad(f"'{target}': 'allowed_values' must map column names to lists of values")
         if kind == "build":
             _check_build(src["build"], target, bad)
         sources[target] = Source(kind, src, bool(src.get("optional", False)))
@@ -233,6 +238,10 @@ def check_rule(rule: Rule, upstream_tree: Path, downstream_tree: Path) -> list[s
                 issues += [f"{rule.downstream} samplesheet: {i}"
                            for i in samplesheet.header_issues(provided_columns(src), sheet)]
                 columns = {c.name: c for c in sheet.columns}
+                for col in src.spec.get("allowed_values", {}):
+                    if col not in provided_columns(src):
+                        issues.append(f"'{col}' is not among the columns the handoff provides "
+                                      "(allowed_values)")
                 for col in src.spec.get("drop_rows_not_allowed", []):
                     if col not in columns:
                         issues.append(f"'{col}' is not a column of the {rule.downstream} "
@@ -600,6 +609,19 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         raise _Unresolved(f"no row of {sheet.name} is left once rows with values the downstream "
                           f"does not allow ({', '.join(sorted(allowed))}) are dropped")
     rows = kept
+    # Rows whose data the downstream must not analyse although its schema cannot tell (a long-read
+    # or colour-space run handed to a short-read aligner): refused, never dropped, naming them.
+    for col, values in src.spec.get("allowed_values", {}).items():
+        if col not in header:
+            raise _Unresolved(f"{sheet.name} has no column '{col}' to check against the values "
+                              f"{downstream} can analyse")
+        if outside := [f"row {i} ({r.get('sample') or '?'}: {(r.get(col) or '').strip() or 'empty'})"
+                       for i, r in enumerate(rows, start=2)
+                       if (r.get(col) or "").strip() not in values]:
+            raise _Unresolved(f"{downstream} takes only {col} {', '.join(values)}; "
+                              f"{', '.join(outside[:5])}" + (" and more" if len(outside) > 5 else "")
+                              + " — leave those runs out, or analyse them with a pipeline for "
+                                "their data")
     # Rows a downstream cannot take although its schema allows them (sarek reads paired-end FastQ
     # only; its schema leaves fastq_2 optional): named here, before it launches.
     for col in src.spec.get("require_values", []):

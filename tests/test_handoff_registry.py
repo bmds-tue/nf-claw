@@ -155,3 +155,22 @@ def test_detaxizer_mag_never_assumes_a_long_read_platform(library, finished_run,
     with pytest.raises(NfclawError, match="'long_reads' requires 'long_reads_platform'"):
         handoff.materialize(rule, upstream_outdir=hybrid, downstream_tree=down,
                             dest=tmp_path / "handoff-hybrid")
+
+
+@pytest.mark.parametrize("down", ["rnaseq", "atacseq", "sarek", "metatdenovo", "viralrecon"])
+def test_fetchngs_short_read_handoffs_refuse_other_platforms(library, finished_run, tmp_path, down):
+    """fetchngs's own test accessions include ABI_SOLID (colour-space) and CAPILLARY runs."""
+    from runner.errors import NfclawError
+    rule = RULES[("fetchngs", down)]
+    allowed = rule.params["input"].spec["allowed_values"]["instrument_platform"]
+    assert "ILLUMINA" in allowed and not {"OXFORD_NANOPORE", "PACBIO_SMRT", "ABI_SOLID",
+                                          "CAPILLARY"} & set(allowed)
+    root = library("mini")
+    mini = root / "pipelines/mini/upstream"
+    up = finished_run(tmp_path / "up", {
+        "samplesheet/samplesheet.csv": "sample,fastq_1,fastq_2,patient,run_accession,"
+                                       "instrument_platform\n"
+                                       "A,{outdir}/A_1.fastq.gz,,P1,SRR1,ABI_SOLID\n",
+        "A_1.fastq.gz": "a"})
+    with pytest.raises(NfclawError, match="row 2 \\(A: ABI_SOLID\\)"):
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=mini, dest=tmp_path / "h")
