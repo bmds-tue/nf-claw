@@ -1111,6 +1111,60 @@ def test_descriptor_change_during_launch_preparation_is_refused(
         assert not (tmp_path / "out").exists()
 
 
+@pytest.mark.parametrize("check_only", [False, True])
+@pytest.mark.parametrize("change_descriptor", [False, True])
+def test_a_descriptor_used_for_two_roles_retains_its_first_validation_snapshot(
+        tmp_path, monkeypatch, check_only, change_descriptor):
+    import json
+    from runner.errors import ErrorCode, NfclawError
+    root = _pipeline_with_auxiliary_sheet(tmp_path)
+    up = root / "pipelines/inp/upstream"
+    schema_file = up / "nextflow_schema.json"
+    schema = json.loads(schema_file.read_text())
+    schema["$defs"]["io"]["properties"]["input"] = {
+        "type": "string", "format": "file-path", "schema": "assets/schema_input.json"}
+    schema_file.write_text(json.dumps(schema))
+    first, second = tmp_path / "first.fastq.gz", tmp_path / "second.fastq.gz"
+    first.write_text("ordinary dataset A")
+    second.write_text("ordinary dataset B")
+    fasta = tmp_path / "reference.fa"
+    fasta.write_text(">chr\nACGT\n")
+    sheet = tmp_path / "shared.csv"
+    sheet.write_text(f"sample,fastq_1,label,fasta\nA,{first},ref,{fasta}\n")
+    original = orchestration.samplesheet.validate
+    validations = []
+
+    def change_after_primary_validation(path, schema):
+        problems = original(path, schema)
+        assert not problems
+        validations.append(schema)
+        if change_descriptor and len(validations) == 1:
+            sheet.write_text(f"sample,fastq_1,label,fasta\nA,{second},ref,{fasta}\n")
+        return problems
+
+    monkeypatch.setattr(orchestration.samplesheet, "validate", change_after_primary_validation)
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    launched = []
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: launched.append(True))
+    def run():
+        return orchestration.run_pipeline(
+            "inp", repo_root=root, input_path=str(sheet), outdir=tmp_path / "out",
+            profile="docker", params_file=None, cli_overrides={"references": str(sheet)},
+            resume=False, demo=True, check_only=check_only, write_provenance=True, timeout_seconds=10)
+
+    if not change_descriptor:
+        result = run()
+        assert result.checked_only is check_only
+        assert len(validations) == 2
+        assert bool(launched) is not check_only
+        return
+    with pytest.raises(NfclawError) as error:
+        run()
+    assert len(validations) == 2
+    assert error.value.code is ErrorCode.SAMPLESHEET_INVALID
+    assert not launched and not (tmp_path / "out").exists()
+
+
 def test_local_input_without_a_path_format_is_still_hashed_into_provenance(tmp_path, monkeypatch):
     # mhcquant's --input has no top-level `format`, so the reference-path scan alone would skip it.
     root = _make_pipeline_with_input(tmp_path, {

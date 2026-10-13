@@ -339,7 +339,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         sheet_schema = schema_mod.load_input_schema(st.path, auxiliary.samplesheet_schema)
         if sheet_schema is None:
             continue
-        sheet_snapshots[auxiliary.local_path] = _samplesheet_snapshot(auxiliary.local_path, validating=True)
+        if auxiliary.local_path not in sheet_snapshots:
+            sheet_snapshots[auxiliary.local_path] = _samplesheet_snapshot(auxiliary.local_path, validating=True)
         problems = samplesheet.validate(auxiliary.local_path, sheet_schema)
         if problems:
             raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
