@@ -522,7 +522,9 @@ def test_completion_caveats_quote_what_a_successful_pipeline_left_out(tmp_path):
         "[nf-core/demo] Pipeline completed successfully, but with errored process(es)"]
     # A plain success carries no caveat, and console text cannot pose as a summary line of
     # another pipeline after it.
-    plain = "-[nf-core/demo] Pipeline completed successfully-\n-[other] Please check this-\n"
+    plain = ("-[nf-core/demo] Pipeline completed successfully-\n"
+             "-[nf-core/demo] Sent summary e-mail to someone@example.org (sendmail)-\n"
+             "-[other] Please check this-\n")
     assert runlog.completion_caveats(plain) == []
 
 

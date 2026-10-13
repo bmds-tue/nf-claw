@@ -278,7 +278,8 @@ def completion_caveats(console: str, nextflow_log: Path | None = None) -> list[s
             m = _SUMMARY_LINE.match(line)
             if m is None or m["name"] != first["name"]:
                 break
-            caveats.append(f"[{m['name']}] {m['message']}")
+            if not m["message"].startswith("Sent summary e-mail"):   # the template's mail notice
+                caveats.append(f"[{m['name']}] {m['message']}")
     if nextflow_log is not None:
         try:
             with nextflow_log.open("rb") as fh:
