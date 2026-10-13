@@ -203,3 +203,22 @@ def test_execution_evidence_packaging_fails_on_a_partial_task_listing(tmp_path, 
     assert (result.returncode == 0) == (listing_exit == 0), result.stderr
     with tarfile.open(tmp_path / "runner" / "evidence" / "task-commands.tar.gz") as archive:
         assert "work/ab/cdef/.command.sh" in archive.getnames()  # retained even when incomplete
+
+
+def test_every_action_is_pinned_to_a_full_commit():
+    # A tag can be moved to different code after review; only a commit SHA fixes what runs with the
+    # workflow's token. Local composite actions (./.github/actions/...) are reviewed in this repository.
+    for path in sorted([*WF.glob("*.yml"), *(ROOT / ".github" / "actions").glob("*/action.yml")]):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if m := re.match(r"^\s*-?\s*uses:\s*(\S+)", line):
+                ref = m.group(1)
+                assert ref.startswith("./") or re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", ref), f"{path.name}: {ref}"
+
+
+def test_code_scanning_covers_every_language_in_the_repository():
+    text = _text("codeql.yml")
+    languages = re.search(r"language: \[([^]]+)\]", text).group(1)
+    assert {lang.strip() for lang in languages.split(",")} == {"actions", "javascript-typescript", "python"}
+    assert "security-events: write" in _job(text, "analyze")
+    assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false")
+
