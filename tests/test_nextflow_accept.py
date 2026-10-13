@@ -18,9 +18,9 @@ COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
-            engine_log="engine cause\n", second=None):
+            engine_log="engine cause\n", second=None, third=None):
     """Run the gate on one fake pipeline whose preview prints `log` and exits `exit_code`.
-    `second` is (log, exit_code) for a second launch, when the gate relaunches the preview."""
+    `second` and `third` are (log, exit_code) for relaunches; `second` also serves later ones."""
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)
     (up / "nextflow.config").write_text("manifest { nextflowVersion = '!>=25.10.4' }\n")
@@ -35,6 +35,8 @@ def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
                 'n=$(cat "$FAKE_NXF_COUNT" 2>/dev/null || echo 0); n=$((n + 1))\n'
                 'echo "$n" > "$FAKE_NXF_COUNT"\n'
                 '[ "$1" = -log ] && cat "$FAKE_ENGINE_LOG" > "$2"\n'
+                'if [ "$n" -gt 2 ] && [ -f "$FAKE_NXF_LOG3" ]; then\n'
+                '  cat "$FAKE_NXF_LOG3"; exit "$FAKE_NXF_EXIT3"\nfi\n'
                 'if [ "$n" -gt 1 ] && [ -f "$FAKE_NXF_LOG2" ]; then\n'
                 '  cat "$FAKE_NXF_LOG2"; exit "$FAKE_NXF_EXIT2"\nfi\n'
                 'cat "$FAKE_NXF_LOG"\nexit "$FAKE_NXF_EXIT"\n')
@@ -52,12 +54,16 @@ def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
            "FAKE_NXF_LOG": str(source_log), "FAKE_NXF_EXIT": str(exit_code),
            "FAKE_NXF_LOG2": str(tmp_path / "second-output.txt"),
            "FAKE_NXF_EXIT2": str(second[1] if second else 0),
+           "FAKE_NXF_LOG3": str(tmp_path / "third-output.txt"),
+           "FAKE_NXF_EXIT3": str(third[1] if third else 0),
            "FAKE_ENGINE_LOG": str(tmp_path / "engine-output.txt"),
            "FAKE_NXF_COUNT": str(tmp_path / "launches.txt"),
            "FAKE_TIMEOUTS": str(tmp_path / "timeouts.txt"),
            "FAKE_NXF_ARGS": str(tmp_path / "nextflow-args.txt")}
     if second:
         (tmp_path / "second-output.txt").write_text(second[0])
+    if third:
+        (tmp_path / "third-output.txt").write_text(third[0])
     if not timeout_available:
         startup = tmp_path / "bash-startup"
         startup.write_text('command() {\ncase "$*" in\n'
@@ -211,7 +217,18 @@ def test_persistently_unreachable_remote_file_is_staging_unverified(tmp_path):
     process, verdict = _accept(tmp_path, flaky, 1, second=(flaky, 1))
     assert process.returncode != 0
     assert verdict == "mini\tstaging-unverified\n"
-    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+    assert (tmp_path / "launches.txt").read_text().strip() == "3"
+
+
+def test_remote_outage_outlasting_the_first_retry_is_retried_again(tmp_path):
+    # GitHub answered 503 for sopa's test-data page across a 30-second retry and a rerun.
+    flaky = ("* --input: Error for field 'data_path' (https://github.com/x/blob/dev/s.csv): the file "
+             "or directory 'https://github.com/x/blob/dev/s.csv' does not exist\n")
+    process, verdict = _accept(tmp_path, flaky, 1, second=(flaky, 1), third=("* PREVIEW *\n", 0))
+    assert process.returncode == 0, process.stdout
+    assert verdict == "mini\taccepted\n"
+    assert (tmp_path / "launches.txt").read_text().strip() == "3"
+    assert "retrying the preview in 0s (attempt 3 of 3)" in process.stdout
 
 
 PLUGIN_DOWNLOAD = ("* PREVIEW * null [x] DSL2 - revision: b77a479c29\n"
@@ -225,14 +242,14 @@ def test_failed_plugin_download_is_retried_once(tmp_path):
     assert process.returncode == 0, process.stdout
     assert verdict == "mini\taccepted\n"
     assert (tmp_path / "launches.txt").read_text().strip() == "2"
-    assert "a plugin download failed (exit 1); retrying the preview once" in process.stdout
+    assert "a plugin download failed (exit 1); retrying the preview in 0s (attempt 2 of 3)" in process.stdout
 
 
 def test_persistently_failing_plugin_download_is_rejected(tmp_path):
     process, verdict = _accept(tmp_path, PLUGIN_DOWNLOAD, 1, second=(PLUGIN_DOWNLOAD, 1))
     assert process.returncode != 0
     assert verdict == "mini\trejected\n"
-    assert (tmp_path / "launches.txt").read_text().strip() == "2"
+    assert (tmp_path / "launches.txt").read_text().strip() == "3"
 
 
 def test_ordinary_failure_is_not_retried(tmp_path):

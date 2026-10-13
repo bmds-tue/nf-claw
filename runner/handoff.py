@@ -465,6 +465,76 @@ def _absolute(value: str, root: Path) -> str:
     return os.path.normpath(root / value)
 
 
+def consumption_evidence(paths: list[Path], upstream: Path) -> dict[str, Any]:
+    """Bind local data sources to historical producer bytes and their complete namespace.
+
+    The producer sheet is derivation evidence, but its path fields are the data the
+    successor consumes. Keep the two identities separate, including directory/glob
+    members and empty directories. Remote data cannot be certified by local records.
+    """
+    if not paths:
+        return {}
+    hashes, nodes = provenance.snapshot_inputs(paths)
+    roots = [Path(name) for name in nodes
+             if not any(str(parent) in nodes for parent in Path(name).parents)]
+    published = recorded_outputs(upstream)
+    for path in roots:
+        if nodes[str(path)]["type"] == "directory":
+            evidence = directory_reference_evidence(path, upstream)
+            expected = (evidence.get("bundle_dependencies") or evidence.get("input_dependencies")
+                        or {str(upstream / name): digest for name, digest in
+                            evidence.get("output_dependencies", {}).items()})
+            current = {name: digest for name, digest in hashes.items()
+                       if Path(name).is_relative_to(path)}
+            namespace = {name: entry for name, entry in nodes.items()
+                         if Path(name).is_relative_to(path)}
+            if current != expected or namespace != evidence["directory_inventory"]:
+                raise ValueError(f"reference directory {path} changed while recording its handoff")
+        elif (relative := _under(path, upstream)) is not None:
+            if published.get(relative) != hashes[str(path)]:
+                raise ValueError(f"upstream result {relative} changed or has no historical checksum")
+        else:
+            historical = provenance.read_checksums(upstream / "provenance/inputs.sha256", relative=False)
+            historical_nodes = recorded_input_inventory(upstream)
+            if (historical.get(str(path)) != hashes[str(path)]
+                    or historical_nodes.get(str(path)) != nodes[str(path)]):
+                raise ValueError(f"local upstream reference {path} changed or has no historical input record")
+    return {"consumed_sources": [str(path) for path in sorted(set(paths))],
+            "consumed_dependencies": hashes, "consumed_inventory": nodes}
+
+
+def legacy_consumption_paths(item: dict, upstream: Path) -> list[Path]:
+    """Local data named by a checksum-era handoff that predates consumed records.
+
+    File sources explicitly name their input. For sheets, only absolute values
+    naming recorded producer data are recognized; remote identities remain unverified.
+    """
+    value = item.get("value")
+    if not isinstance(value, str) or inputs.is_remote_url(value):
+        return []
+    if item.get("kind") in ("file", "upstream_param"):
+        if (Path(value).is_absolute() and not item.get("input_dependencies")
+                and "directory_reference" not in item):
+            return [Path(value)]
+        return []
+    if item.get("kind") not in ("samplesheet", "build"):
+        return []
+    published = recorded_outputs(upstream)
+    paths = set()
+    with Path(value).open(newline="", encoding="utf-8-sig") as stream:
+        for row in csv.DictReader(stream, delimiter=samplesheet.delimiter_for(Path(value)), strict=True):
+            for cell in row.values():
+                if not isinstance(cell, str) or inputs.is_remote_url(cell):
+                    continue
+                path = Path(cell.strip())
+                relative = _under(path, upstream)
+                if path.is_absolute() and relative is not None and (
+                        relative in published or path.is_dir()
+                        or any(char in str(path) for char in "*?[{")):
+                    paths.add(path)
+    return sorted(paths)
+
+
 def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
             ) -> tuple[Path, list[str], dict[str, Any]]:
     sheet = _one_match(root, src.spec["samplesheet"])
@@ -524,7 +594,7 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                               f"{', '.join(missing[:5])} "
                               + ("have none" if len(missing) > 1 else "has none"))
     derived = [sheet.relative_to(root).as_posix()]
-    path_cols = {c.name for c in sheet_schema.columns if c.is_path}
+    path_cols = {c.name for c in sheet_schema.columns if c.fmt in schema_mod.PATH_FORMATS}
     for r in rows:
         for col in header:
             if not (value := (r.get(col) or "").strip()):
@@ -546,7 +616,7 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
            ) -> tuple[Path, list[str], dict[str, Any]]:
     spec = src.spec["build"]
     glob, rx = _pattern(spec["rows"])
-    path_cols = {c.name for c in sheet_schema.columns if c.is_path}
+    path_cols = {c.name for c in sheet_schema.columns if c.fmt in schema_mod.PATH_FORMATS}
     rows: list[dict[str, str]] = []
     derived: list[str] = []
     for match in sorted(p for p in root.glob(glob) if p.is_file()):
@@ -559,8 +629,9 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
             optional = template.endswith("?")
             text = _fill(template[:-1] if optional else template, m.groupdict())
             if col in path_cols and text:
-                if (root / text).is_file():
-                    derived.append(PurePosixPath(text).as_posix())
+                if (root / text).is_file() or (root / text).is_dir():
+                    if (root / text).is_file():
+                        derived.append(PurePosixPath(text).as_posix())
                     text = os.path.normpath(root / text)
                 elif optional:
                     text = ""
@@ -594,10 +665,13 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                 fix=(f"Inspect {path}. Fix the rule, or the {rule.upstream} stage's options, then "
                      "resume the chain."),
                 details={"issues": issues, "snapshot": str(path)})
-        return str(path), derived, {"sha256": sha256_file(path), **extra}
+        consumption = consumption_evidence(provenance.samplesheet_input_paths(path, sheet_schema),
+                                           upstream_outdir)
+        return str(path), derived, {"sha256": sha256_file(path), **extra, **consumption}
     if src.kind == "file":
         found = _first_match(upstream_outdir, src.spec["file"])
-        return str(found), [found.relative_to(upstream_outdir).as_posix()], {}
+        return (str(found), [found.relative_to(upstream_outdir).as_posix()],
+                {**consumption_evidence([found], upstream_outdir), "consumed_scalar": True})
     params, recorded_in = used
     value = params.get(src.spec["upstream_param"])
     if value is None or value == "" or value is False:
@@ -623,6 +697,9 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                     raise NfclawError(ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: cannot verify local upstream reference {value}: {exc}",
                         fix=remedy) from exc
+            elif _under(path, upstream_outdir) is not None:
+                extra.update(consumption_evidence([path], upstream_outdir))
+                extra["consumed_scalar"] = True
             elif _under(path, upstream_outdir) is None:
                 try:
                     historical = provenance.read_checksums(
@@ -684,6 +761,12 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
         try:
             value, derived, extra = _resolve(rule, target, src, upstream_outdir=upstream_outdir,
                                              downstream_tree=downstream_tree, dest=dest, used=used)
+        except (OSError, ValueError) as exc:
+            raise NfclawError(
+                ErrorCode.HANDOFF_FAILED,
+                f"{rule.origin}: cannot verify local data consumed by {rule.downstream} "
+                f"{_flag(target)}: {exc}",
+                fix="Restore the producer's recorded data and provenance before resuming.") from exc
         except _Unresolved as why:
             if src.optional:
                 continue

@@ -72,6 +72,8 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
     require a fresh session because size/mtime can be unchanged. Directory namespaces also
     need comparison because nested additions/renames can leave directory metadata unchanged.
     Unchanged inputs retain normal cache reuse. Already captured SHA-256 values are reused.
+    A changed set of local input files also needs a new session in a fresh --outdir: resuming
+    after a sample was removed would leave its earlier publications beside the new results.
     """
     current_nodes = _directory_nodes(current)
     previous_state = runlog.read_state(outdir / "provenance/logs/run.log")
@@ -111,6 +113,10 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             reason = "the input-directory inventory changed"
         elif files != historical_files:
             reason = "the input-directory namespace and content records disagree"
+        elif current != previous:
+            # A changed selection of input files (a sample removed, added or replaced) would mix
+            # fresh publications with an earlier selection's: a removed sample's results remain.
+            reason = "the local-input inventory changed"
         elif ({name for name, entry in current.items() if entry["type"] == "file"}
               != current_digests.keys()
               or {name for name, entry in previous.items() if entry["type"] == "file"}
@@ -339,6 +345,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     for sheet_path, sheet_schema in sheet_inputs:
         try:
             sheet_dependencies.extend(provenance.samplesheet_input_paths(sheet_path, sheet_schema))
+            sheet_dependencies.extend(provenance.samplesheet_file_paths(sheet_path, sheet_schema))
         except (csv.Error, UnicodeDecodeError) as exc:
             raise NfclawError(
                 ErrorCode.SAMPLESHEET_INVALID,
@@ -386,6 +393,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     local_dependencies = tuple(dict.fromkeys([*prov_inputs, st.path, *extra_configs,
                                               *([params_file] if params_file else [])]))
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
+    repair_input = resolved_input.local_path if resolved_input is not None else None
+    if repair_compat:
+        try:
+            if sheet is not None:
+                fastqrepair_compat.paired_row_roles(sheet.rows)
+            else:
+                fastqrepair_compat.paired_input_roles(repair_input)
+        except (OSError, ValueError, csv.Error) as exc:
+            raise NfclawError(
+                ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
+                fix="Use one row per sample, distinct staged mate names, and matching compression formats.") from exc
     writes = [("--outdir", outdir, True),
               ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
               ("Nextflow work directory", work_dir, False),
@@ -458,7 +476,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: split FASTQ only "
                         "where wiping the chunks equals wiping the whole file, sum repair reports "
-                        "exactly, pass the declared quality offset to BBMap, and keep "
+                        "exactly, preserve declared mate identity, pass the declared quality offset to BBMap, and keep "
                         "singleton reads, logs and mate reports in distinct publications. "
                         "Pinned source stays unchanged; generated task recipes and the complete "
                         "splitter implementation are recorded in the compatibility config.")
@@ -565,7 +583,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
         if repair_compat:
             extra_configs.insert(0, fastqrepair_compat.write_config(
-                staging / "fastqrepair_compat.config"))
+                staging / "fastqrepair_compat.config", input_path=sheet_path or repair_input))
 
         # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
         # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a

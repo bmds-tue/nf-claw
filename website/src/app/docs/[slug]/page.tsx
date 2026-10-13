@@ -29,11 +29,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 function clean(md: string): string {
-  const base = md
-    // Frontmatter only at the very start: with a multiline flag `^` matched any `---` line, so a
-    // horizontal rule deleted everything up to the next `---` (even one inside a table separator).
-    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, "")
-    .replace(/<!--[\s\S]*?-->/g, "") // comments
+  // Frontmatter only at the very start: with a multiline flag `^` matched any `---` line, so a
+  // horizontal rule deleted everything up to the next `---` (even one inside a table separator).
+  let body = md.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, "");
+  // Comments, until stable: one pass can join "<!<!---->--" into a new "<!--".
+  for (let previous = ""; previous !== body; ) {
+    previous = body;
+    body = body.replace(/<!--[\s\S]*?-->/g, "");
+  }
+  const base = body
     .replace(/^<p[\s\S]*?<\/p>\s*/i, "") // leading centered logo block
     .trim();
 

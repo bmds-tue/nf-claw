@@ -11,6 +11,7 @@ scheduler, no daemon.
 from __future__ import annotations
 
 import contextlib
+import csv
 import hashlib
 import os
 import re
@@ -25,9 +26,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (discovery, engine_version, execution, handoff, inputs, input_safety, nextflow_command,
-                    orchestration, parameters, preflight, provenance, resources, runlog, sheetgen,
-                    versions)
+from runner import (consumption, discovery, engine_version, execution, handoff, inputs,
+                    input_safety, nextflow_command, orchestration, parameters, preflight,
+                    provenance, resources, runlog, sheetgen, versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
 from runner import exact_json as json
@@ -754,6 +755,12 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                 _run_stage(p, planned[i - 1] if i else None, entry, state, spec=spec,
                            repo_root=repo_root, outdir=outdir, deadline=deadline,
                            budget=timeout_seconds, log=log, on_warning=on_warning)
+                if issues := _integrity_problems(state, only_succeeded=True):
+                    raise NfclawError(
+                        ErrorCode.HANDOFF_FAILED, "Completed stage lineage does not verify.",
+                        fix="Keep source data unchanged throughout execution; restore verified "
+                            "evidence or run the chain into a fresh output directory.",
+                        details={"issues": issues})
             state["outcome"] = log.outcome = "success"
         except BaseException as exc:
             if state["outcome"] == "running":                 # not set by _run_stage: say why
@@ -1019,23 +1026,48 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 problems.append(f"{sid}: cannot verify upstream output checksums: {exc}")
                 up_out = {}
         down_in: dict[str, str] = {}
-        down_nodes = {}
-        if succeeded and any(isinstance(item, dict) and ("sha256" in item
-                                                        or item.get("input_dependencies")
-                                                        or item.get("output_dependencies")
-                                                        or "directory_reference" in item
-                                                        or "input_inventory" in item)
-                             for item in params.values()):
+        down_nodes = None
+        if succeeded and params:
             try:
                 down_in = _digests(down / "provenance" / "inputs.sha256", relative=False)
-                if any(isinstance(item, dict) and ("directory_reference" in item or "input_inventory" in item) for item in params.values()):
-                    down_nodes = handoff.recorded_input_inventory(down)
+                strict = any(isinstance(item, dict) and ("directory_reference" in item
+                             or "input_inventory" in item or "consumed_inventory" in item)
+                             for item in params.values())
+                down_nodes = handoff.recorded_input_inventory(down, allow_legacy=not strict)
             except (OSError, ValueError) as exc:
                 problems.append(f"{sid}: cannot verify its input checksums: {exc}")
+                down_nodes = {}
         for name, item in params.items():
             if not isinstance(item, dict) or not isinstance(item.get("derived_from"), dict):
                 problems.append(f"{sid}: --{name} has a malformed handoff source record")
                 continue
+            if any(key in item for key in ("consumed_sources", "consumed_dependencies", "consumed_inventory")):
+                try:
+                    sources = item.get("consumed_sources")
+                    if (not isinstance(sources, list) or not sources
+                            or any(not isinstance(value, str) or not Path(value).is_absolute()
+                                   for value in sources)):
+                        raise ValueError("malformed local consumed sources")
+                    evidence = handoff.consumption_evidence([Path(value) for value in sources], up_dir)
+                    if any(item.get(key) != value for key, value in evidence.items()):
+                        raise ValueError("local data changed since its handoff boundary")
+                    scalar = item.get("consumed_scalar", False)
+                    if type(scalar) is not bool:
+                        raise ValueError("malformed scalar consumption mode")
+                    if succeeded and not consumption.agrees(evidence, down_in, down_nodes, scalar=scalar):
+                        raise ValueError("local handoff data is not the input this stage hashed")
+                except (OSError, ValueError, RuntimeError, csv.Error) as exc:
+                    problems.append(f"{sid}: --{name}: cannot verify consumed data: {exc}")
+            elif succeeded:
+                try:
+                    paths = handoff.legacy_consumption_paths(item, up_dir)
+                    if paths:
+                        evidence = handoff.consumption_evidence(paths, up_dir)
+                        if not consumption.agrees(evidence, down_in, down_nodes,
+                                                  scalar=item.get("kind") in ("file", "upstream_param")):
+                            raise ValueError("legacy handoff data is not the input this stage hashed")
+                except (OSError, ValueError, RuntimeError, csv.Error) as exc:
+                    problems.append(f"{sid}: --{name}: cannot verify consumed data: {exc}")
             if "sha256" in item:
                 value = item.get("value")
                 if not isinstance(value, str) or _sha(Path(value)) != item["sha256"]:

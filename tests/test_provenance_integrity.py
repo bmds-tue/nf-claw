@@ -132,6 +132,40 @@ def test_samplesheet_data_paths_are_part_of_input_identity(tmp_path):
     assert provenance.samplesheet_input_paths(sheet, schema) == [reads]
 
 
+@pytest.mark.parametrize("suffix", [".csv", ".json"])
+def test_samplesheet_data_outside_path_fields_is_part_of_input_identity(tmp_path, suffix):
+    # hic types fastq_1 by its pattern alone; hgtseq's parser reads input1, which its schema omits.
+    reads = tmp_path / "A_1.fastq.gz"
+    parsed = tmp_path / "A_input1.fastq.gz"
+    declared = tmp_path / "declared.fastq.gz"
+    for path in (reads, parsed, declared):
+        path.write_bytes(path.name.encode())
+    index = tmp_path / "ref.idx"
+    notes = tmp_path / "notes"
+    index.mkdir()
+    notes.mkdir()
+    row = {"sample": "A", "fastq_1": str(reads), "index": str(index), "declared": str(declared),
+           "input1": str(parsed), "notes": str(notes), "relative": "A_1.fastq.gz",
+           "remote": "s3://bucket/A.fastq.gz", "missing": str(tmp_path / "gone.fastq.gz"),
+           "count": "3"}
+    sheet = tmp_path / f"samples{suffix}"
+    if suffix == ".csv":
+        sheet.write_text(",".join(row) + "\n" + ",".join(row.values()) + "\n")
+    else:
+        sheet.write_text(json.dumps([row]))
+    schema = InputSchema(columns=(
+        Column("sample", "string", True, None),
+        Column("fastq_1", "string", True, r"^\S+\.f(ast)?q\.gz$"),
+        Column("index", "string", False, r"^\S+\.idx$"),
+        Column("declared", "string", False, None, fmt="file-path"),
+        Column("missing", "string", False, r"^\S+\.fastq\.gz$"),
+    ))
+    # Typed columns give files and directories; any other column only an existing regular file.
+    # The declared path field stays with samplesheet_input_paths.
+    assert provenance.samplesheet_file_paths(sheet, schema) == sorted([reads, index, parsed])
+    assert provenance.samplesheet_input_paths(sheet, schema) == [declared]
+
+
 def test_input_identity_reader_refuses_malformed_quoting_instead_of_omitting_samples(tmp_path):
     import csv
     sheet = tmp_path / "samples.csv"

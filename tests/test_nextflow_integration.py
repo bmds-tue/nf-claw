@@ -563,7 +563,8 @@ def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_pa
 
     fastqrepair_compat.write_config(tmp_path / "compat.config")
     (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\nparams.outdir = 'wrong'\n")
-    report = (fastqrepair_compat._zero_report().replace("Total lines: 0", "Total lines: 12")
+    report = (fastqrepair_compat._zero_report().replace("(not applicable)", "(0.0%)")
+              .replace("Total lines: 0", "Total lines: 12")
               .replace("Well-formed lines: 0 (0.0%)", "Well-formed lines: 12 (100.0%)")
               .replace("Clean reads: 0", "Clean reads: 3"))
     (tmp_path / "chunk.report").write_text(report)
@@ -1126,3 +1127,130 @@ workflow {
                              cwd=relocated.parent, capture_output=True, text=True, timeout=60)
     assert refused.returncode != 0 and "dependency check failed" in refused.stderr
     assert not (relocated.parent / "refused/B.txt").exists()
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_data(tmp_path, monkeypatch, engine):
+    from runner.errors import NfclawError
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True},
+        "outdir": {"type": "string", "format": "directory-path"}}}))
+    (upstream / "nextflow.config").write_text("nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (upstream / "main.nf").write_text('''process DIGEST {
+    publishDir params.outdir, mode: 'copy'
+    input:
+    path data
+    output:
+    path 'result'
+    script:
+    """
+    mkdir result
+    shasum -a 256 ${data} > result/digest.txt
+    """
+}
+workflow { DIGEST(Channel.fromPath(params.input)) }
+''')
+    initial = tmp_path / "data.txt"
+    initial.write_bytes(b"original scientific data\n")
+    out = tmp_path / "chain"
+    spec = chain.parse_spec({"profile": "standard", "nxf_ver": engine, "stages": [
+        {"id": "producer", "pipeline": "fixture", "input": str(initial)},
+        {"id": "consumer", "pipeline": "fixture", "handoff": {
+            "params": {"input": {"file": "result/digest.txt"}}}}]})
+    real_run = orchestration.run_pipeline
+    altered = b"different data actually consumed\n"
+
+    def mutate_after_handoff(name, **options):
+        if options["check_only"] or options["outdir"] != out / "02-consumer":
+            return real_run(name, **options)
+        produced = out / "01-producer/result/digest.txt"
+        original = produced.read_bytes()
+        produced.write_bytes(altered)
+        try:
+            return real_run(name, **options)
+        finally:
+            produced.write_bytes(original)
+
+    monkeypatch.setattr(orchestration, "run_pipeline", mutate_after_handoff)
+    with pytest.raises(NfclawError, match="lineage"):
+        chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=180)
+    assert (out / "02-consumer/result/digest.txt").read_text().split()[0] == hashlib.sha256(altered).hexdigest()
+    state, problems = chain.status(out)
+    assert state["outcome"] != "success" and problems
+    assert chain.status_exit_code(state, problems) == 1
+
+
+@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
+@pytest.mark.parametrize("engine", ["25.10.4"])
+def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(tmp_path, engine):
+    from runner import fastqrepair_compat
+    sheet = tmp_path / "cohort.csv"
+    sheet.write_text("sample,fastq_1,fastq_2\n" + "".join(
+        f"S{index},/data/left.fastq,/data/right.fastq\n" for index in range(10000)))
+    config = fastqrepair_compat.write_config(tmp_path / "recorded.config", input_path=sheet)
+    pipeline = tmp_path / "pipeline"
+    pipeline.mkdir()
+    (pipeline / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
+    # Nextflow stringifies meta-dependent closures; embedding even fragmented
+    # cohort data inside such a closure overflows one JVM string constant.
+    result = subprocess.run(["nextflow", "-c", str(config), "config", str(pipeline), "-flat"],
+                            cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    # Exercise first/last keys through real task closures, using an argument
+    # recorder in place of BBMap. This validates transport and command order;
+    # the separate native scientific controls execute the real repair tools.
+    left, right = (tmp_path / f"{role}_gather__nfclaw_0123456789abcdef.fastq.gz"
+                   for role in ("left", "right"))
+    left.write_bytes(b"")
+    right.write_bytes(b"")
+    (pipeline / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nparams.publish_dir_mode='copy'\n")
+    (pipeline / "main.nf").write_text(r'''process BBMAP_REPAIR {
+    input:
+    tuple val(meta), path(left), path(right)
+    output:
+    path '*.repair.sh.log'
+    script:
+    """
+    repair.sh() { printf '%s\\n' "\$@"; }
+    repair.sh \\
+        threads=1
+        qin=33 \\
+        in=${right} in2=${left} \\
+        out=${task.ext.prefix}_1_repaired.fastq.gz \\
+        &> ${task.ext.prefix}.repair.sh.log
+    """
+}
+workflow {
+    Channel.of(tuple([id:'S0', single_end:false], file(params.left), file(params.right)),
+               tuple([id:'S9999', single_end:false], file(params.left), file(params.right)))
+        | BBMAP_REPAIR
+}
+''')
+    out, work = tmp_path / "results", tmp_path / "work"
+    executed = subprocess.run(["nextflow", "run", str(pipeline), "-c", str(config),
+                               "--left", str(left), "--right", str(right),
+                               "--outdir", str(out), "-work-dir", str(work)],
+                              cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                              capture_output=True, text=True, timeout=120)
+    assert executed.returncode == 0, executed.stdout + executed.stderr
+    import base64
+    import re
+    selections = []
+    for wrapper in work.rglob(".command.run"):
+        payloads = re.findall(r"--mate-orders ([A-Za-z0-9+/=]+)", wrapper.read_text())
+        assert len(payloads) == 1
+        selections.append(json.loads(base64.b64decode(payloads[0])))
+    assert sorted(selections, key=lambda item: next(iter(item))) == [
+        {"S0": ["left", "right"]}, {"S9999": ["left", "right"]}]
+    for sample in ("S0", "S9999"):
+        arguments = (out / "repaired" / f"{sample}.repair.sh.log").read_text().splitlines()
+        assert arguments[:2] == ["threads=1", "qin=33"]
+        assert arguments[2:4] == [f"in={left.name}", f"in2={right.name}"]
