@@ -50,7 +50,7 @@ batch,fastq_1,fastq_2,amp_batches,seq_batches,well_cells
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome
-`--genome` defaults to `mm10`. A genome name alone does not specify where reference files come from. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option.
+`--genome` defaults to `mm10`. The pinned configuration gives `--genome mm10` the FASTA `${params.genomes_base}/mm10/GRCm39.fa`; a genome key's name need not be the assembly it selects, so confirm it is the one you intend. A genome name alone does not specify where reference files come from. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option.
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
