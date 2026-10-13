@@ -425,3 +425,48 @@ def test_datasync_destination_exclusion_requires_the_audited_consumer(tmp_path, 
         source.write_text(source.read_text() + "\n// modified consumer\n")
     with pytest.raises(NfclawError, match="audited samplesheet"):
         schema.load_input_schema(copy)
+
+
+@pytest.mark.parametrize("destination", ['/archive/Study"A', '/archive/Study\\A'])
+@pytest.mark.parametrize("suffix", ["csv", "json"])
+def test_datasync_destination_must_survive_the_consumers_double_quoted_argument(tmp_path, destination, suffix):
+    _, contract = _pinned("datasync")
+    source, checksum = tmp_path / "source.data", tmp_path / "checksum.sha256"
+    source.write_bytes(b"source identity")
+    checksum.write_text("fixture checksum metadata")
+    row = {"sample": "A", "input": str(source), "output_path": destination,
+           "checksum_sha": str(checksum)}
+    sheet = tmp_path / f"samples.{suffix}"
+    if suffix == "json":
+        sheet.write_text(json.dumps([row]))
+    else:
+        with sheet.open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(row))
+            writer.writeheader()
+            writer.writerow(row)
+    assert any("double-quoted" in issue for issue in samplesheet.validate(sheet, contract))
+
+
+@pytest.mark.parametrize("destination", ["/archive/O'Brien", "s3://bucket/Study_A", "/archive/new-directory"])
+def test_datasync_valid_destination_is_not_required_to_exist_or_inspected_as_input(tmp_path, destination):
+    _, contract = _pinned("datasync")
+    source, checksum = tmp_path / "source.data", tmp_path / "checksum.sha256"
+    source.write_bytes(b"source identity")
+    checksum.write_text("fixture checksum metadata")
+    sheet = tmp_path / "samples.json"
+    sheet.write_text(json.dumps([{"sample": "A", "input": str(source), "output_path": destination,
+                                  "checksum_sha": str(checksum)}]))
+    assert samplesheet.validate(sheet, contract) == []
+    assert provenance.samplesheet_input_paths(sheet, contract) == sorted((source, checksum))
+    assert provenance.samplesheet_file_paths(sheet, contract) == []
+
+
+def test_datasync_checks_the_complete_source_string_including_parent_names(tmp_path):
+    _, contract = _pinned("datasync")
+    folder = tmp_path / 'Study"A'
+    folder.mkdir()
+    source = folder / "source.data"
+    source.write_bytes(b"source identity")
+    sheet = tmp_path / "samples.json"
+    sheet.write_text(json.dumps([{"sample": "A", "input": str(source), "output_path": "/archive/A"}]))
+    assert any("double-quoted" in issue for issue in samplesheet.validate(sheet, contract))

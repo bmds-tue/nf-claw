@@ -15,6 +15,10 @@ HGTseq's pinned 1.1.0 consumer reads `sample,input1` and optional `input2`, whil
 
 The audited roles also cover directory-valued sources (including Methylong POD5 inputs and microscopy datasets) and auxiliary reference sheets. Oncoanalyser FASTQ `filepath` values contain exactly two nonempty semicolon-delimited paths; both are validated, normalized during handoffs and hashed independently. `group_id`, `subject_id` and the `library_id`, `lane`, `flowcell` info values must be literal safe aliases. Info keys use the consumer's uppercase normalization. An apostrophe in `read_group_overrides` is unsupported by the pinned single-quoted BWA argument and is refused. Datasync `output_path` locations are destinations rather than consumed inputs. The composite interpretation and destination exclusion require the exact audited revision and source hashes.
 
+Datasync passes complete source and destination strings into double-quoted command arguments. The runner refuses double quotes, backslashes, dollar signs, backticks and control characters anywhere in those strings, including parent folders. Destinations are not required to exist or inspected as input directories; apostrophes remain supported by that quoted argument.
+
+Some upstream consumers infer companion files that are absent from the samplesheet (for example, Sarek's SnpSift database index defaults to `vcf.tbi`). Input hashes cover explicitly named paths; they do not comprehensively discover these inferred dependencies. Supply index paths explicitly where the consumer supports them, and preserve the complete reference dataset for reproducibility.
+
 ---
 
 ### Navigation

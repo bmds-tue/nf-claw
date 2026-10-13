@@ -302,6 +302,7 @@
     },
     "commit": "c48b5103cc568d275c7d65a9609771cfb3471931",
     "destination_columns": ["output_path"],
+    "double_quoted_columns": ["input", "output_path"],
     "pipeline": "datasync",
     "schema": "assets/schema_input.json",
     "source": [

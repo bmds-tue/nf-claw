@@ -122,6 +122,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                         issues.extend(_path_cell_issues(i, col, value, row))
                     if isinstance(value, str):
                         issues.extend(_info_identifier_issues(i, col, value))
+                        issues.extend(_quoted_value_issues(i, col, value))
             return issues
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter, strict=True)
@@ -161,6 +162,7 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                 issues.append(f"row {i}: empty required '{col.name}'")
             issues.extend(_identity_issues(i, col, raw))
             issues.extend(_info_identifier_issues(i, col, val))
+            issues.extend(_quoted_value_issues(i, col, raw))
             if val:
                 issues.extend(_value_issues(i, col, val))
             if val and col.path_format(val):
@@ -214,6 +216,18 @@ def _info_identifier_issues(row_num: int, col, value: str) -> list[str]:
                 issues.append(f"row {row_num}: '{col.name}.{key}' contains a single quote; "
                               "the pinned consumer cannot pass this value in its single-quoted argument")
     return issues
+
+
+def _quoted_value_issues(row_num: int, col, value: str) -> list[str]:
+    # Some consumers pass the complete scalar as a double-quoted shell argument
+    # rather than staging its basename. Check every character in the actual value;
+    # destinations need neither an existence check nor a directory inventory.
+    if col.audited_double_quoted and any(char in {'"', '\\', '$', '`'}
+                                         or ord(char) < 32 or ord(char) == 127 for char in value):
+        return [f"row {row_num}: '{col.name}' cannot be passed literally in the pinned "
+                "consumer's double-quoted argument; use a location without quotes, "
+                "backslashes, dollar signs, backticks or control characters"]
+    return []
 
 
 def _path_issues(row_num: int, col, value: str) -> list[str]:

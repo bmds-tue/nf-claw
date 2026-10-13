@@ -96,6 +96,7 @@ class Column:
     audited_identifier: bool = False
     info_identifier_keys: tuple[str, ...] = ()
     info_single_quoted_keys: tuple[str, ...] = ()
+    audited_double_quoted: bool = False
 
     def path_values(self, value: str, row: dict) -> tuple[str, ...]:
         if not self.path_format(value):
@@ -341,6 +342,7 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 audited_identifier=cname in audited.get("identifiers", []),
                 info_identifier_keys=tuple(audited.get("info_identifiers", {}).get(cname, [])),
                 info_single_quoted_keys=tuple(audited.get("info_single_quoted", {}).get(cname, [])),
+                audited_double_quoted=cname in audited.get("double_quoted_columns", []),
             ))
     header_prefix = tuple(audited.get("header_prefix", []))
     if header_prefix:
@@ -369,7 +371,7 @@ def _audited_input_contract(content: bytes, repo: Path) -> dict:
     """
     registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest(), {})
-    if ("replacement" in audited or audited.get("destination_columns")
+    if ("replacement" in audited or audited.get("destination_columns") or audited.get("double_quoted_columns")
             or any(role.get("separator") for role in audited.get("columns", {}).values())):
         from runner.submodule import _own_head
         if _own_head(repo) != audited["commit"]:
