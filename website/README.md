@@ -4,8 +4,6 @@ A **living digital interface** for the nf-claw repository — futuristic, dark, 
 fully data-driven. Nothing about pipelines, versions, skills, parameters or docs is
 hardcoded: every value on the site is read from the repository at build time.
 
-> _Augen Pro meets GitHub, documentation portals and data-visualization platforms._
-
 ## Stack
 
 - **Next.js 15** (App Router, React Server Components) · **TypeScript**
@@ -13,9 +11,7 @@ hardcoded: every value on the site is read from the repository at build time.
 - **Framer Motion** (scroll storytelling, micro-interactions)
 - **react-markdown** (documentation hub)
 
-shadcn/ui was in the preferred stack; rather than vendor its CLI, the UI uses the same
-Radix-style primitives reimplemented as local components in `src/components/ui` — same
-philosophy, zero extra config.
+Shared UI components live in `src/components/ui`.
 
 ## The repository is the CMS
 
