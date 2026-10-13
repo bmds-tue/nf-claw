@@ -28,16 +28,16 @@ Tracking policies are declared in `sources.tsv`:
 The `.github/workflows/auto-update.yml` workflow executes daily:
 
 ```
-┌─────────────────────────┐     ┌───────────────────────────┐     ┌─────────────────────────┐
-│ 1. Git Tag Discovery    │ ──► │ 2. Submodule Checkout     │ ──► │ 3. Context Generation   │
-│ git ls-remote --tags    │     │ Pinned to latest tag      │     │ make build              │
-└─────────────────────────┘     └───────────────────────────┘     └─────────────────────────┘
-                                                                               │
-                                ┌───────────────────────────┐                  ▼
-                                │ 5. Automated Merge        │ ◄── ┌─────────────────────────┐
-                                │ Squash merge into main    │     │ 4. Validation Gate      │
-                                └───────────────────────────┘     │ Nextflow + Tests + Drift│
-                                                                  └─────────────────────────┘
+┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
+│ 1. Git Tag Discovery      │ ──► │ 2. Submodule Checkout     │ ──► │ 3. Context Generation     │
+│ git ls-remote --tags      │     │ Pinned to latest tag      │     │ make build                │
+└───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
+                                                                                  │
+                                  ┌───────────────────────────┐                   ▼
+                                  │ 5. Automated Merge        │ ◄── ┌───────────────────────────┐
+                                  │ Squash merge into main    │     │ 4. Validation Gate        │
+                                  └───────────────────────────┘     │ Nextflow + Tests + Drift  │
+                                                                    └───────────────────────────┘
 ```
 
 1. **Tag Discovery:** Queries upstream remotes via `git ls-remote --tags` (using standard git protocol to bypass GitHub REST API rate limits).

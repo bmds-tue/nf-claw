@@ -298,23 +298,23 @@ Detailed contributor standards, naming constraints, and test procedures are prov
 Automated GitHub Actions workflows keep the library, test suites, and website synchronized with upstream releases:
 
 ```
-┌────────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
-│     auto-update.yml    │      │   discover-pipelines.yml  │      │     deploy-pages.yml    │
-│  Daily tag discovery   │      │   Weekly DSL2 discovery   │      │ Rebuild & deploy portal │
-│   & acceptance gating  │      │  & strict exit-code 0 gate│      │    on push to main      │
-└────────────────────────┘      └───────────────────────────┘      └─────────────────────────┘
-               │                              │                                 │
-               └──────────────────────┬───────┴─────────────────────────────────┘
-                                      ▼
-                      ┌───────────────────────────────┐
-                      │    Continuous Verification    │
-                      │  • smoke.yml (preflight)      │
-                      │  • nextflow-validate.yml (DAG)│
-                      │  • tests.yml (matrix & run)   │
-                      │  • drift-check.yml (schemas)  │
-                      │  • demo-validation.yml (demo) │
-                      │  • pipeline-execution.yml(PR) │
-                      └───────────────────────────────┘
+┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
+│      auto-update.yml      │      │  discover-pipelines.yml   │      │     deploy-pages.yml      │
+│    Daily tag discovery    │      │   Weekly DSL2 discovery   │      │  Rebuild & deploy portal  │
+│    & acceptance gating    │      │ & strict exit-code 0 gate │      │      on push to main      │
+└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
+              │                                  │                                  │
+              └──────────────────────────────────┼──────────────────────────────────┘
+                                                 ▼
+                                ┌─────────────────────────────────┐
+                                │     Continuous Verification     │
+                                │  • smoke.yml (preflight)        │
+                                │  • nextflow-validate.yml (DAG)  │
+                                │  • tests.yml (matrix & run)     │
+                                │  • drift-check.yml (schemas)    │
+                                │  • demo-validation.yml (demo)   │
+                                │  • pipeline-execution.yml (PR)  │
+                                └─────────────────────────────────┘
 ```
 
 - **`auto-update.yml`** (Daily): Discovers new upstream release tags via `git ls-remote --tags`, checks out new versions, regenerates context files, verifies Nextflow acceptance (`nextflow -preview`), runs the test suite and drift gate, and auto-merges the update.
