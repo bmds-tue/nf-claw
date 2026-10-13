@@ -161,6 +161,46 @@ class RunResult:
     generated_samplesheet: Path | None = None
 
 
+def _check_pipeline_identity(st: SubmoduleStatus, pin_doc: Path | None) -> None:
+    if tree_problems := submodule.tree_issues(st, pin_doc):
+        rel = f"pipelines/{st.name}/upstream" if pin_doc is not None else str(st.path)
+        raise NfclawError(
+            ErrorCode.SUBMODULE_INCOMPLETE,
+            "The pipeline code is not the unmodified release nfclaw would record.",
+            fix=(f"Restore it with `git submodule update --force {rel}`" if pin_doc is not None else
+                 f"Move {rel} aside (preserving any changes you need); nfclaw recreates it")
+                + (", or pass --pipeline-version to run another release deliberately."
+                   if pin_doc is not None else "."),
+            details={"issues": tree_problems})
+
+
+def _samplesheet_snapshot(path: Path, *, validating: bool = False):
+    try:
+        return provenance.snapshot_inputs([path])
+    except OSError as exc:
+        raise NfclawError(
+            ErrorCode.SAMPLESHEET_INVALID if validating else ErrorCode.ENVIRONMENT,
+            f"Cannot read samplesheet dependencies: {path}: {exc}",
+            fix="Restore the samplesheet and make it readable before launching.") from exc
+
+
+def _check_samplesheet_snapshots(expected: dict, current=None) -> None:
+    """Bind validation and dependency discovery to the descriptor bytes and namespace.
+
+    Checking only execution's input baseline can silently pair an edited descriptor with the
+    previous selection's data. Refuse a changed descriptor instead of reusing stale validation
+    or write-boundary checks. `current` is the exact input baseline when already captured.
+    """
+    for path, (hashes, inventory) in expected.items():
+        after_hashes, after_inventory = current if current is not None else _samplesheet_snapshot(path)
+        if (any(after_hashes.get(name) != digest for name, digest in hashes.items())
+                or any(after_inventory.get(name) != entry for name, entry in inventory.items())):
+            raise NfclawError(
+                ErrorCode.SAMPLESHEET_INVALID,
+                f"Samplesheet changed after validation began: {path}",
+                fix="Keep the samplesheet unchanged during preflight, then retry the run.")
+
+
 def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  outdir: Path, profile: str, params_file: Path | None,
                  cli_overrides: dict, resume: bool, demo: bool,
@@ -215,18 +255,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         raise ValueError("resolved_tree must belong to the requested pipeline")
     # The code that runs must be the code provenance will name: the pin its docs describe (for the
     # pinned submodule) and, for any tree, without local edits.
-    pinned_tree = not versions.is_cached(st)
-    if tree_problems := submodule.tree_issues(
-            st, pipelines_dir / name / "skill.md" if pinned_tree else None):
-        rel = f"pipelines/{name}/upstream" if pinned_tree else str(st.path)
-        raise NfclawError(
-            ErrorCode.SUBMODULE_INCOMPLETE,
-            "The pipeline code is not the unmodified release nfclaw would record.",
-            fix=(f"Restore it with `git submodule update --force {rel}`" if pinned_tree else
-                 f"Move {rel} aside (preserving any changes you need); nfclaw recreates it")
-                + (", or pass --pipeline-version to run another release deliberately."
-                   if pinned_tree else "."),
-            details={"issues": tree_problems})
+    pin_doc = pipelines_dir / name / "skill.md" if not versions.is_cached(st) else None
+    _check_pipeline_identity(st, pin_doc)
     # The Nextflow runtime env nfclaw applies for this run: --nxf-env vars plus --nxf-ver
     # (sugar for NXF_VER, which wins if both set it). Threaded to the engine check, the
     # subprocess and provenance so the engine actually used is consistent and recorded.
@@ -271,11 +301,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     resolved_input = (inputs.ResolvedInput(str(outdir / "provenance" / sheet.filename), None, None)
                       if sheet is not None else inputs.resolve(raw_input, st.path))
     sheet_inputs = []
+    sheet_snapshots = {}
     if resolved_input is not None and resolved_input.local_path is not None:
         input_schema = (schema_mod.load_input_schema(st.path, resolved_input.samplesheet_schema)
                         if resolved_input.samplesheet_schema else None)
         if input_schema is not None:
             sheet_inputs.append((resolved_input.local_path, input_schema))
+            sheet_snapshots[resolved_input.local_path] = _samplesheet_snapshot(
+                resolved_input.local_path, validating=True)
             problems = samplesheet.validate(resolved_input.local_path, input_schema)
             if problems:
                 raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
@@ -306,6 +339,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         sheet_schema = schema_mod.load_input_schema(st.path, auxiliary.samplesheet_schema)
         if sheet_schema is None:
             continue
+        sheet_snapshots[auxiliary.local_path] = _samplesheet_snapshot(auxiliary.local_path, validating=True)
         problems = samplesheet.validate(auxiliary.local_path, sheet_schema)
         if problems:
             raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
@@ -356,6 +390,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 ErrorCode.ENVIRONMENT,
                 f"Cannot read samplesheet dependencies: {sheet_path}: {exc}",
                 fix="Restore the samplesheet and make it readable before launching.") from exc
+    _check_samplesheet_snapshots(sheet_snapshots)
 
     resolved = parameters.resolve_path_params(merged, param_schema)
     refs = param_schema.reference_path_params()
@@ -506,6 +541,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
                           details={"issues": issues})
 
+    _check_pipeline_identity(st, pin_doc)
+    _check_samplesheet_snapshots(sheet_snapshots)
+
     with output_writer(outdir, check_only=check_only):
         # A competing writer may have completed between validation and lock acquisition.
         if issue := preflight._outdir_issue(outdir, resume=resume, check_only=check_only):
@@ -523,6 +561,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 raise NfclawError(
                     ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
                     fix="Make the input data and configuration files readable before launching.") from exc
+            _check_samplesheet_snapshots(sheet_snapshots, (input_snapshot, input_inventory))
             if unverified_paths:
                 warning = ("Local path parameters absent before launch were not input-snapshotted: "
                            + ", ".join(sorted(unverified_paths))
@@ -627,6 +666,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot snapshot local run dependencies: {exc}",
                                   fix="Make the configuration and pipeline files readable before launching.") from exc
+
+            if st.commit and git_head != st.commit:
+                raise NfclawError(
+                    ErrorCode.SUBMODULE_INCOMPLETE,
+                    "The pipeline code revision changed while capturing the launch snapshot.",
+                    fix="Restore the selected pipeline revision, then retry the run.")
+
+        _check_pipeline_identity(st, pin_doc)
+        _check_samplesheet_snapshots(sheet_snapshots)
 
         if check_only:
             return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
