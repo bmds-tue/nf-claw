@@ -303,8 +303,9 @@ Further details on drift prevention and update automation: [`docs/updating.md`](
 >
 > Prior to relying on results in production scientific research:
 > 1. Validate chosen pipelines, parameters, and reference genomes using domain-appropriate benchmark datasets.
-> 2. Use `nfclaw verify ... --strict` to verify byte agreement; employ format-aware bioinformatics tools to inspect numerical differences.
-> 3. Consult [known issues](docs/known-issues.md) for documented engine boundaries, upstream workarounds, and runtime guidance.
+> 2. Read the caveats `nfclaw status` reports for a successful run: a pipeline can exit 0 after skipping samples or ignoring failed tasks (`completion_caveats` in the run manifest).
+> 3. Use `nfclaw verify ... --strict` to verify byte agreement; employ format-aware bioinformatics tools to inspect numerical differences.
+> 4. Consult [known issues](docs/known-issues.md) for documented engine boundaries, upstream workarounds, and runtime guidance.
 
 ---
 

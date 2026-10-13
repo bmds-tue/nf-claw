@@ -218,3 +218,26 @@ def test_launch_path_line_breaks_are_refused_even_with_the_space_override(tmp_pa
         paths[field] = tmp_path / f"parent{separator}next" / field
         assert any("line break" in issue for issue in preflight._space_issues(
             **paths, allow_spaces=allow_spaces))
+
+
+@pytest.mark.parametrize("profile,present,expected", [
+    ("apptainer,test", set(), "profile uses apptainer but apptainer/singularity not found"),
+    ("podman", set(), "profile uses podman but podman not found"),
+    ("conda", set(), "profile uses conda but conda/mamba/micromamba not found"),
+    ("charliecloud", set(), "profile uses charliecloud but ch-run not found"),
+    ("apptainer", {"singularity"}, None),          # Apptainer's `singularity` alias serves it
+    ("mamba", {"micromamba"}, None),
+    ("test,docker", {"docker"}, None),
+])
+def test_every_engine_profile_needs_its_engine(tmp_path, monkeypatch, profile, present, expected):
+    # A missing engine otherwise only surfaces once Nextflow starts the first task.
+    base = {"git", "nextflow", "java"}
+    monkeypatch.setattr(preflight.shutil, "which",
+                        lambda x: "/usr/bin/" + x if x in base | present else None)
+    monkeypatch.setattr(preflight.subprocess, "run",
+                        lambda *a, **k: type("R", (), {"returncode": 0})())
+    issues = preflight.check_environment(profile=profile, output_dir=tmp_path.parent / "out_eng",
+                                         submodule=_st(tmp_path / "up"),
+                                         repo_root=tmp_path, resume=False)
+    engine_issues = [i for i in issues if i.startswith("profile uses")]
+    assert engine_issues == ([expected + " on PATH"] if expected else [])

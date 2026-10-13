@@ -64,10 +64,11 @@ def test_mag_handoff_keeps_different_samples_separate(library, finished_run, tmp
     rule = RULES[(upstream, "mag")]
     source = rule.params["input"].spec["samplesheet"]
     if upstream == "fetchngs":
-        text = ("sample,fastq_1,fastq_2,group,short_reads_platform,run_accession\n"
-                "A,{outdir}/A_1.fastq.gz,,0,ILLUMINA,run1\n"
-                "A,{outdir}/A_2.fastq.gz,,0,ILLUMINA,run2\n"
-                "B,{outdir}/B_1.fastq.gz,,0,ILLUMINA,run3\n")
+        text = ("sample,fastq_1,fastq_2,group,short_reads_platform,run_accession,"
+                "instrument_platform\n"
+                "A,{outdir}/A_1.fastq.gz,,0,ILLUMINA,run1,ILLUMINA\n"
+                "A,{outdir}/A_2.fastq.gz,,0,ILLUMINA,run2,ILLUMINA\n"
+                "B,{outdir}/B_1.fastq.gz,,0,ILLUMINA,run3,ILLUMINA\n")
     else:
         text = ("sample,run,group,short_reads_1,short_reads_2,long_reads\n"
                 "A,run1,,{outdir}/A_1.fastq.gz,,\n"
@@ -80,3 +81,96 @@ def test_mag_handoff_keeps_different_samples_separate(library, finished_run, tmp
     with Path(result.params["input"]).open() as fh:
         rows = list(csv.DictReader(fh))
     assert [(row["sample"], row["group"]) for row in rows] == [("A", "A"), ("A", "A"), ("B", "B")]
+
+
+# mag 5.5.0's platform columns: the short-read enum mirrors ENA's instrument_platform names, and the
+# long-read platform picks the long-read preprocessing and assembler mode.
+_MAG_PLATFORMS = {
+    "sample": {"type": "string"}, "group": {"type": ["string", "integer"]},
+    "run": {"type": ["string", "integer"]},
+    "short_reads_1": {"type": "string", "format": "file-path"},
+    "short_reads_2": {"type": "string", "format": "file-path"},
+    "short_reads_platform": {"type": "string", "enum": [
+        "ILLUMINA", "BGISEQ", "LS454", "ION_TORRENT", "DNBSEQ", "ELEMENT", "ULTIMA",
+        "VELA_DIAGNOSTICS", "GENAPSYS", "GENEMIND", "TAPESTRI"]},
+    "long_reads": {"type": "string", "format": "file-path"},
+    "long_reads_platform": {"type": "string", "enum": [
+        "OXFORD_NANOPORE", "OXFORD_NANOPORE_HQ", "PACBIO_CLR", "PACBIO_HIFI"]},
+}
+
+
+def _mag_like(library):
+    down = library("mini") / "pipelines/mini/upstream"
+    path = down / "assets/schema_input.json"
+    sheet_schema = json.loads(path.read_text())
+    sheet_schema["items"]["properties"] = _MAG_PLATFORMS
+    sheet_schema["items"]["required"] = ["sample", "group"]
+    sheet_schema["items"]["dependentRequired"] = {"short_reads_1": ["short_reads_platform"],
+                                                  "long_reads": ["long_reads_platform"]}
+    path.write_text(json.dumps(sheet_schema))
+    return down
+
+
+def test_fetchngs_mag_platform_is_the_runs_ena_platform(library, finished_run, tmp_path):
+    """fetchngs labels every run ILLUMINA; ENA's instrument_platform says what produced it."""
+    from runner.errors import NfclawError
+    down, rule = _mag_like(library), RULES[("fetchngs", "mag")]
+    header = ("sample,fastq_1,fastq_2,group,short_reads_platform,long_reads_platform,run_accession,"
+              "instrument_platform\n")
+    up = finished_run(tmp_path / "up", {"samplesheet/samplesheet.csv": header
+                      + "A,{outdir}/A_1.fastq.gz,{outdir}/A_2.fastq.gz,,ILLUMINA,,run1,ILLUMINA\n"
+                      + "B,{outdir}/B_1.fastq.gz,{outdir}/B_2.fastq.gz,,ILLUMINA,,run2,BGISEQ\n",
+                      "A_1.fastq.gz": "a1", "A_2.fastq.gz": "a2", "B_1.fastq.gz": "b1",
+                      "B_2.fastq.gz": "b2"})
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "handoff")
+    with Path(result.params["input"]).open() as fh:
+        rows = list(csv.DictReader(fh))
+    assert [(r["sample"], r["short_reads_platform"]) for r in rows] == [("A", "ILLUMINA"),
+                                                                        ("B", "BGISEQ")]
+    # A long-read run in fetchngs's short-read columns is refused, not assembled as short reads.
+    ont = finished_run(tmp_path / "ont", {"samplesheet/samplesheet.csv": header
+                       + "C,{outdir}/C.fastq.gz,,,ILLUMINA,,run3,OXFORD_NANOPORE\n",
+                       "C.fastq.gz": "c"})
+    with pytest.raises(NfclawError, match="OXFORD_NANOPORE"):
+        handoff.materialize(rule, upstream_outdir=ont, downstream_tree=down,
+                            dest=tmp_path / "handoff-ont")
+
+
+def test_detaxizer_mag_never_assumes_a_long_read_platform(library, finished_run, tmp_path):
+    from runner.errors import NfclawError
+    down, rule = _mag_like(library), RULES[("detaxizer", "mag")]
+    header = "sample,run,group,short_reads_1,short_reads_2,long_reads\n"
+    files = {"A_1.fastq.gz": "a1", "A_2.fastq.gz": "a2", "A_long.fastq.gz": "al"}
+    short = finished_run(tmp_path / "short", {"downstream_samplesheets/mag-pe.csv": header
+                         + "A,A,,{outdir}/A_1.fastq.gz,{outdir}/A_2.fastq.gz,\n", **files})
+    result = handoff.materialize(rule, upstream_outdir=short, downstream_tree=down,
+                                 dest=tmp_path / "handoff")
+    with Path(result.params["input"]).open() as fh:
+        (row,) = csv.DictReader(fh)
+    assert (row["short_reads_platform"], row["long_reads_platform"]) == ("ILLUMINA", "")
+    hybrid = finished_run(tmp_path / "hybrid", {"downstream_samplesheets/mag-pe.csv": header
+                          + "A,A,,{outdir}/A_1.fastq.gz,{outdir}/A_2.fastq.gz,"
+                            "{outdir}/A_long.fastq.gz\n", **files})
+    with pytest.raises(NfclawError, match="'long_reads' requires 'long_reads_platform'"):
+        handoff.materialize(rule, upstream_outdir=hybrid, downstream_tree=down,
+                            dest=tmp_path / "handoff-hybrid")
+
+
+@pytest.mark.parametrize("down", ["rnaseq", "atacseq", "sarek", "metatdenovo", "viralrecon"])
+def test_fetchngs_short_read_handoffs_refuse_other_platforms(library, finished_run, tmp_path, down):
+    """fetchngs's own test accessions include ABI_SOLID (colour-space) and CAPILLARY runs."""
+    from runner.errors import NfclawError
+    rule = RULES[("fetchngs", down)]
+    allowed = rule.params["input"].spec["allowed_values"]["instrument_platform"]
+    assert "ILLUMINA" in allowed and not {"OXFORD_NANOPORE", "PACBIO_SMRT", "ABI_SOLID",
+                                          "CAPILLARY"} & set(allowed)
+    root = library("mini")
+    mini = root / "pipelines/mini/upstream"
+    up = finished_run(tmp_path / "up", {
+        "samplesheet/samplesheet.csv": "sample,fastq_1,fastq_2,patient,run_accession,"
+                                       "instrument_platform\n"
+                                       "A,{outdir}/A_1.fastq.gz,,P1,SRR1,ABI_SOLID\n",
+        "A_1.fastq.gz": "a"})
+    with pytest.raises(NfclawError, match="row 2 \\(A: ABI_SOLID\\)"):
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=mini, dest=tmp_path / "h")

@@ -881,7 +881,17 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
     entry["attempts"][-1].update(finished=runlog.now(), outcome="success")
     entry.update(status="success", version=manifest.get("version"), commit=manifest.get("commit"))
     _write_json(record / "state.json", state)
-    _say(log, f"{stage.dirname}: success ({stage.pipeline} {manifest.get('version') or ''})".rstrip())
+    caveats = _caveats(manifest)
+    _say(log, f"{stage.dirname}: success ({stage.pipeline} {manifest.get('version') or ''})".rstrip()
+         + (" — with caveats the pipeline reported about its results" if caveats else ""))
+    for caveat in caveats:
+        _say(log, f"{stage.dirname}: caveat: {caveat}")
+
+
+def _caveats(manifest: Any) -> list[str]:
+    """What a succeeded stage's pipeline reported missing from its results (its run manifest)."""
+    found = manifest.get("completion_caveats") if isinstance(manifest, dict) else None
+    return [c for c in found if isinstance(c, str)] if isinstance(found, list) else []
 
 
 # --- lineage: reconstructing and verifying a chain from disk -----------------------------------
@@ -1194,6 +1204,9 @@ def format_status(state: dict, problems: list[str]) -> str:
         ver = f"{s.get('version') or '?'} ({(s.get('commit') or '')[:12]})"
         lines.append(f"  {s['index']:02d}-{s['id']:<18} {s['pipeline']} {ver}  {s['status']}  "
                      f"{s['outdir']}")
+        if s["status"] == "success":
+            lines += [f"      caveat: {c}" for c in _caveats(
+                _read_json(Path(s["outdir"]) / "provenance" / "run_manifest.json"))]
         if s.get("handoff") and i and _valid_entry(stages[i - 1]):
             prev = stages[i - 1]
             lines.append(f"      input ← {prev['index']:02d}-{prev['id']}  ({s['handoff']})")

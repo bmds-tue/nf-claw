@@ -168,6 +168,24 @@ def test_link_retargeting_with_identical_bytes_is_reported_separately(tmp_path):
     assert comparison.structurally_equal and not comparison.byte_identical
 
 
+@pytest.mark.parametrize("strict", [False, True])
+def test_strict_cli_verification_fails_on_changed_link_identity(tmp_path, capsys, strict):
+    """`--strict` promises identical bytes AND recorded link identities; the default does not."""
+    from runner import cli
+    out = tmp_path / "out"
+    out.mkdir()
+    a, b = tmp_path / "a.txt", tmp_path / "b.txt"
+    a.write_bytes(b"same bytes")
+    b.write_bytes(b"same bytes")
+    (out / "data.txt").symlink_to(a)
+    record(out)
+    (out / "data.txt").unlink()
+    (out / "data.txt").symlink_to(b)
+    args = ["verify", str(out), "--against", str(out)] + (["--strict"] if strict else [])
+    assert cli.main(args) == (1 if strict else 0)
+    assert "changed links       : 1" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("mode", ["external", "internal", "alias", "bundle", "file_alias"])
 @pytest.mark.parametrize("legacy_resolution", [False, True])
 def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(library, tmp_path, mode,

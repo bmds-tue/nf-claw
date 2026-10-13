@@ -69,7 +69,7 @@ RNA_ID	DROP_GROUP	STRAND	GENE_COUNTS_FILE	GENE_ANNOTATION
 RNA_ID	DROP_GROUP	STRAND	SPLICE_COUNTS_DIR
 ```
 
-**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `RNA_ID` from file names; `RNA_BAM_FILE`, `RNA_BAI_FILE`, `DNA_VCF_FILE`, `DNA_TBI_FILE`, `GENE_COUNTS_FILE` from files matching their patterns, by sample name. Schema defaults fill `STRAND` = `no`. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `DROP_GROUP` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
+**From data files.** `--input` may also be the data files — a directory (searched recursively), a quoted glob, or files (`--input` once per file) — from which nfclaw writes this samplesheet: `RNA_ID` from file names; `RNA_BAM_FILE`, `RNA_BAI_FILE`, `DNA_VCF_FILE`, `DNA_TBI_FILE`, `GENE_COUNTS_FILE` from files matching their patterns, by sample name. Schema defaults fill `STRAND` = `no`. Optional columns left out take their schema defaults in the pipeline: `PAIRED_END` = `true`, `COUNT_MODE` = `IntersectionStrict`, `COUNT_OVERLAPS` = `true`, `GENOME` = `ucsc` — set them with `--sheet-set` where your design differs. Set the required columns no file determines with `--sheet-set COLUMN=VALUE` (a constant or a `{sample}`/`{lane}` template): `DROP_GROUP` (matching ^\S+$). Preview it with `--check`; a run records it in `<outdir>/provenance/` for replay.
 
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |

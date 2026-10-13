@@ -382,6 +382,18 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
                 fix="Make the input data and configuration files readable before launching.") from exc
         prov_inputs.append(path)
+    # A parameter whose schema declares no path format can still name a local file the pipeline
+    # opens (differentialabundance's --feature-length-matrix, which a chain hands over). An existing
+    # absolute file there is an input too: hashed, checked by the replay guard and traced by a chain.
+    for key, value in resolved.items():
+        if (key in refs or key in {"input", "outdir"} or not isinstance(value, str)
+                or not value.startswith("/") or inputs.is_remote_url(value)):
+            continue
+        try:
+            if Path(value).is_file():
+                prov_inputs.append(Path(value))
+        except (OSError, ValueError):
+            continue
     # A local --input is an input whatever its declared format (mhcquant's carries none).
     if resolved_input is not None and resolved_input.local_path is not None:
         prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
@@ -628,6 +640,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                  "sha256": provenance._sha256(sheet_path)}
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
+        caveats: list[str] = []                 # what a successful pipeline said its results lack
 
         def record(outcome: str) -> None:
             provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
@@ -640,7 +653,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
-                             dependency_stability=stability)
+                             dependency_stability=stability, completion_caveats=caveats)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -680,6 +693,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         pass
                 raise
             run_log.outcome = "success"
+            # Exit status 0 is not proof that every sample and task made it into the results: say
+            # what the pipeline itself reported missing (skipped samples, ignored task failures).
+            caveats = runlog.completion_caveats(run_log.console_tail("out"), run_log.nextflow_log)
+            for caveat in caveats:
+                message = f"the pipeline completed but reported: {caveat}"
+                warnings.append(message)
+                if on_warning is not None:
+                    on_warning(message)
             try:
                 report = outputs.collect(outdir)
                 stability = dependency_stability.compare(
