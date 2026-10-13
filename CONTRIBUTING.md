@@ -137,8 +137,9 @@ git submodule update --init
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 4. Install in editable mode
-pip install -e .
+# 4. Install in editable mode with test dependencies and lint tooling
+pip install -e ".[dev,yaml]"
+pip install ruff
 ```
 
 ### 2. Branching & Commit Conventions
@@ -163,6 +164,8 @@ Before opening a PR:
 3. Check linting as CI does: `ruff check .`.
 4. If documentation or data files were modified, verify the static site build:
    ```bash
+   # Use Node.js 24 LTS, matching CI
+   npm --prefix website ci
    npm --prefix website run typecheck
    npm --prefix website run build
    ```
@@ -181,7 +184,7 @@ When submitting the PR on GitHub:
 - **Path Handling:** Always use `pathlib.Path` for filesystem operations. Do not concatenate strings for paths.
 - **Subprocess Execution:** Never invoke bare shell strings (`shell=True`). Use `subprocess.Popen` or `subprocess.run` with discrete argument lists (`list[str]`) to prevent word splitting and shell injection vulnerabilities.
 - **Process Signals:** Ensure background processes cleanly trap `SIGINT` and `SIGTERM` and shut down child tasks.
-- **Space-Free Path Invariant:** Use `runner/paths.py` checks to validate that user-provided paths do not contain unquoted spaces.
+- **Space-Free Path Invariant:** Use `runner/preflight.py` checks to validate that repository, output, and Nextflow work paths contain no spaces unless `--allow-spaces` is explicit. Line breaks remain refused.
 
 ### Code Style & Linting
 We enforce Ruff configuration defined in `pyproject.toml`:
@@ -199,7 +202,7 @@ All pipelines in nf-claw must be **DSL2** (DSL1 was removed in Nextflow 22.12 an
 ### Step 1: Validate the Pipeline Name
 Pipeline names must consist solely of ASCII letters, digits, dots, hyphens, and underscores, beginning and ending with an alphanumeric character:
 ```regex
-^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$
+^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$
 ```
 
 | Candidate Name | Status | Rationale |
