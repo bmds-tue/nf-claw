@@ -7,14 +7,14 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="https://nextflow.io"><img src="https://img.shields.io/badge/Nextflow-DSL2-brightgreen.svg" alt="Nextflow DSL2"></a>
   <a href="https://nf-co.re"><img src="https://img.shields.io/badge/nf--core-compatible-green.svg" alt="nf-core compatible"></a>
-  <a href="https://danilomonge.github.io/nf-claw/"><img src="https://img.shields.io/badge/portal-live%20site-00ffff.svg" alt="Live Portal"></a>
+  <a href="https://bmds-tue.github.io/nf-claw/"><img src="https://img.shields.io/badge/portal-live%20site-00ffff.svg" alt="Live Portal"></a>
 </p>
 
 # nf-claw
 
 A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree.
 
-**🌐 Live Portal: [danilomonge.github.io/nf-claw](https://danilomonge.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and live automation status), rebuilt continuously from the repository.
+**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and live automation status), rebuilt continuously from the repository.
 
 ---
 
@@ -74,7 +74,7 @@ and install Git, Nextflow, Java 17+ and the selected container runtime separatel
 
 ```bash
 # Clone the library and its pinned pipeline sources
-git clone --recurse-submodules https://github.com/danilomonge/nf-claw.git
+git clone --recurse-submodules https://github.com/bmds-tue/nf-claw.git
 cd nf-claw
 python3 -m venv .venv
 source .venv/bin/activate
