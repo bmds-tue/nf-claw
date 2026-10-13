@@ -327,12 +327,14 @@ def test_discovery_keeps_a_completed_acceptance(tmp_path):
     assert not rollback.exists()
 
 
-@pytest.mark.parametrize("inventory_exit", [0, 1])
+@pytest.mark.parametrize("staged, inventory_exit", [("pipelines/mini/upstream", 0),
+                                                    ("pipelines/mini/upstream", 1), ("", 1)])
 @pytest.mark.parametrize("verdict", [
     "mini\tknown-timeout\n", "mini\tknown-rejected\n", "mini\tknown-staging-unverified\n",
     "", "other\taccepted\n", "mini\taccepted\nmini\taccepted\n", "mini\taccepted\n"
 ])
-def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path, verdict, inventory_exit):
+def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path, verdict, staged,
+                                                                        inventory_exit):
     raw = (ROOT / ".github/workflows/auto-update.yml").read_text()
     step = raw.split("- name: Validate updated pipelines through Nextflow", 1)[1].split(
         "\n      # PRs", 1)[0]
@@ -340,12 +342,13 @@ def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path
     script = "\n".join(line[10:] for line in script.splitlines())
     fake = tmp_path / "bin"
     fake.mkdir()
-    _executable(fake / "git", f'#!/bin/sh\necho pipelines/mini/upstream\nexit {inventory_exit}\n')
+    _executable(fake / "git", f'#!/bin/sh\necho {staged}\nexit {inventory_exit}\n')
     (tmp_path / "scripts").mkdir()
     _executable(tmp_path / "scripts/nextflow_accept.sh", '#!/bin/sh\n'
                 '[ -z "$NFCLAW_RESULT_FILE" ] || printf "%s" "$FAKE_VERDICT" > "$NFCLAW_RESULT_FILE"\n'
                 'exit 0\n')
-    process = subprocess.run(["bash", "-eo", "pipefail", "-c", script], cwd=tmp_path,
+    # GitHub runs a step without an explicit shell as `bash -e {0}`, without pipefail.
+    process = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path,
                              env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
                                   "RUNNER_TEMP": str(tmp_path), "FAKE_VERDICT": verdict},
                              capture_output=True, text=True)

@@ -40,6 +40,9 @@ jobs:
       # auto-merged. Quoting the array preserves every validated pipeline slug as one argument.
       - name: Validate updated pipelines through Nextflow
         run: |
+          # GitHub runs this step as `bash -e` without pipefail: a failed staged-diff inventory
+          # must fail the job, not read as "No pipeline release changed." and skip acceptance.
+          set -eo pipefail
           inventory=$(
             git diff --cached --name-only --diff-filter=AM \
               | sed -nE 's#^pipelines/([A-Za-z0-9._-]+)/upstream$#\1#p'
