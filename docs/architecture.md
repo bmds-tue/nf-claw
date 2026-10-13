@@ -89,6 +89,10 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **`nfclaw status <outdir>`**: Reads `run.log` and, for an unfinished run on the same host,
   checks the recorded process identity. Reports `success`, `running`, `failed`, `terminated`, or
   `stopped without an outcome`. Remote unfinished runs cannot be inspected locally.
+- **Completion caveats:** A pipeline can exit 0 without some samples or tasks. `runner/runlog.py`
+  quotes what it reported (nf-core's "…, but with errored process(es)", rnaseq's skipped samples)
+  and Nextflow's count of ignored task failures; `nfclaw run` prints them, `nfclaw status` reports
+  `success — with caveats …`, and the manifest records them as `completion_caveats`.
 
 ### 2.5 Provenance Bundles & Dependency Hashing
 Executions attempt to record a provenance bundle in `<outdir>/provenance/`, including failed runs. Individual records are replaced atomically and the manifest is published last. Recording errors prevent a successful outcome; the replay guard refuses an incomplete bundle.
