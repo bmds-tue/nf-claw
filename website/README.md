@@ -53,6 +53,10 @@ every node fits, and the explorers page, group and search rather than render eve
 Use the current patch release of Node.js 24 LTS, matching CI and deployment builds.
 [Node.js 20 is end-of-life](https://nodejs.org/en/about/eol) and receives no security fixes.
 
+Build from a repository checkout with Git; initialize pinned submodules with
+`git submodule update --init` for release dates and module counts, and retain full
+Git history for the activity timeline.
+
 ```bash
 cd website
 npm ci
@@ -68,6 +72,9 @@ server runtime is required.
 npm run build          # writes ./out
 npx serve out          # preview the static bundle
 ```
+
+`npm run typecheck` checks TypeScript without building. `npm start` invokes `next start`,
+which cannot serve this static export; preview the generated `out/` directory instead.
 
 The Tailwind 4 build targets Safari 16.4+, Chrome 111+ and Firefox 128+; see the
 [official browser requirements](https://tailwindcss.com/docs/upgrade-guide#browser-requirements).
@@ -86,12 +93,14 @@ NEXT_PUBLIC_BASE_PATH=/nf-claw NEXT_PUBLIC_SITE_URL=https://<user>.github.io npm
    counts, tags and the commit log, and it derives the base path/origin from the Pages
    configuration. Every push to `main` rebuilds the site from the current repository state.
    A bot merge (`auto-update`, `discover-pipelines`) is made with `GITHUB_TOKEN` and triggers
-   no push workflow, so those jobs dispatch the deploy after merging. No tokens required.
+   no push workflow, so those jobs dispatch the deploy after merging. Deployment uses the workflow's built-in
+   `GITHUB_TOKEN` and Pages OIDC permissions; no personal access token is required.
 2. **Live GitHub augmentation (optional).** If a `GITHUB_TOKEN` (or `GH_TOKEN`) is present
    at build time, `src/lib/data/github.ts` augments the Activity section with live Actions
    runs and Releases via the REST API. Without it, the site falls back to local git tags
    and workflow definitions. The token is only ever read at build time and is never shipped
-   to the client.
+   to the client. Actions and release data are snapshots captured during the build;
+   the deployed static site does not poll GitHub and updates on the next deployment.
 
 Override the data root with `NFCLAW_REPO_ROOT` if the website is built outside the repo.
 
@@ -103,7 +112,8 @@ Defined in `tailwind.config.ts` and `src/app/globals.css`, derived from the logo
 - **Surfaces** — a near-black `ink` scale with subtle elevation
 - **Primary** — apple-green `claw` scale
 - **Secondary** — warm `cream` (the apple's bite)
-- **Text** — `fog` scale; even the dimmest step clears WCAG AA (4.5:1) on every surface
+- **Text** — `fog` scale; body text uses the default, muted and dim steps, while the
+  darker `faint` step is reserved for decoration
 - **Domains** — eight categorical colors validated for the dark surface (lightness band,
   ≥ 3:1 contrast, adjacent pairs distinct under protan/deutan simulation, in wedge order);
   reordering them re-pairs neighbours, so re-validate before changing `CATEGORIES`

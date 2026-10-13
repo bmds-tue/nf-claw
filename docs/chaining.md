@@ -25,7 +25,7 @@ nfclaw chain status /abs/chain                           # inspect stage outcome
 
 ## 1. The Specification File (`spec.json`)
 
-The chain spec is authored in JSON (or YAML if `pyyaml` is installed). Relative file paths in the spec resolve against the caller's working directory. The specification recorded in `<outdir>/chain/chain.json` is normalized to absolute paths.
+The chain spec is authored in JSON (or YAML with `pip install -e ".[yaml]"`). Relative file paths in the spec resolve against the caller's working directory. The specification recorded in `<outdir>/chain/chain.json` is normalized to absolute paths.
 
 ```json
 {
@@ -54,7 +54,7 @@ These settings apply globally to all stages unless overridden by an individual s
 |---|---|---|---|
 | `profile` | string | `"docker"` | Nextflow execution profile. |
 | `nxf_ver` | string | `null` | Pin Nextflow engine version (`NXF_VER`) across all stages. |
-| `nxf_env` | object | `{}` | Environment variables passed to Nextflow (e.g. `{"NXF_OFFLINE": "true"}`). |
+| `nxf_env` | object | `{}` | `NXF_*` variables with string values passed to Nextflow (e.g. `{"NXF_OFFLINE": "true"}`). |
 | `config` | array | `[]` | Additional Nextflow configuration files passed via `-c`. |
 | `limits` | object | `null` | Global resource ceiling: `{"cpus": N, "memory": "SIZE", "time": "DURATION"}` (`process.resourceLimits`, Nextflow ≥ 24.04.0). `time` caps every task's run time, retries included: set it only as a deliberate ceiling. |
 | `allow_spaces` | boolean | `false` | Allow filesystem paths containing spaces. |
@@ -76,8 +76,8 @@ Options set on a stage override or merge with chain-level options:
 | `handoff` | object/string | No | Custom inline handoff rule object or path to a custom rule JSON file, replacing the library registry rule. |
 | `nxf_ver` | string | No | Overrides engine version for this specific stage (essential when chaining an older pipeline release with a modern one). |
 | `nxf_env` | object | No | Merges stage-specific `NXF_*` environment variables over chain-level variables. |
-| `config` | array | No | Additional stage-specific configuration files passed via `-c`. |
-| `limits` | object | No | Stage-specific resource ceilings overriding chain-level limits. |
+| `config` | array | No | Replaces the chain-level config list; include shared configs here too if needed. |
+| `limits` | object | No | Replaces the entire chain-level limits object; `null` or `{}` disables inherited ceilings. |
 
 ---
 
@@ -105,11 +105,16 @@ Options set on a stage override or merge with chain-level options:
 ```
 
 ### Preflight Probing Before Launch
-Before starting any process, `nfclaw chain run` validates:
+Before launching any pipeline, `nfclaw chain run` validates:
 1. Every stage's pipeline and requested version exists and resolves.
-2. Every handoff rule satisfies both upstream output schemas and downstream input schemas.
-3. Every stage's explicit parameters pass schema validation (parameters supplied by upstream handoffs are deferred).
+2. Every handoff rule names valid parameters and provides columns compatible with the downstream input schema. Published paths are checked at handoff time; there is no general upstream output schema.
+3. Every stage's explicit parameters pass preflight validation (parameters supplied by upstream handoffs and complex schema rules are deferred).
 4. `nextflow config` resolves and parses configuration files under the exact Nextflow engine specified for each stage. A configuration syntax error in stage 3 fails immediately at minute 0, rather than crashing after stage 1 has executed for hours.
+
+`--check` performs the same preflight and configuration probes, leaving `--outdir`
+untouched. It can fetch pipeline versions and populate engine caches. Each config probe
+is bounded at 300 seconds; `--timeout SECONDS` sets an overall chain deadline, including
+preflight, stages and retries. No overall deadline is set by default.
 
 ### Concurrency Locking
 `runner/chain.py` locks `<outdir>/chain/.lock` via a non-blocking POSIX flock. If another chain process is active in the same directory, it terminates immediately with `ErrorCode.ENVIRONMENT`.
@@ -151,6 +156,18 @@ Example: `handoffs/fetchngs/rnaseq.json`:
 | `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. A list of patterns is tried in order; `"paired_with": "<param>"` instead takes the pattern at the position the named parameter's list chose, so two files come from the same producer step. | `rnaseq` → `differentialabundance` (`--matrix`, and `--feature-length-matrix` paired with it) |
 | `upstream_param` | Reuses a resolved parameter value from the upstream run's `params.json`. | `rnaseq` `--gtf` → `differentialabundance` `--gtf` |
 
+Source paths are relative to the upstream output directory. A `file` source can be
+an ordered list of fallback patterns; the first matching pattern must select exactly
+one published file. Any source may set `"optional": true` to omit an unavailable
+value, but checksum, namespace and downstream validation failures remain errors.
+A `build` source supplies `rows` (a relative pattern with `{placeholders}`), `columns`
+(column-to-template mappings) and optional `format` (`csv` by default, or `tsv`).
+For a path column, a template ending in `?` leaves a missing companion file empty.
+
+Explicit stage `input` and `params` values override mapped handoff parameters with an
+advisory; unused sources are not materialized. The rule must still pass static checks.
+A `params_file` supplies lower-priority values and does not suppress a mapped source.
+
 ### Samplesheet Transformations
 When `samplesheet` is used, transformations are applied in a strict, predictable order:
 1. `rename`: Rename columns (`{"fastq_1": "short_reads_1"}`).
@@ -186,7 +203,7 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 
 | Condition | Engine Behavior | Exit Code |
 |---|---|---|
-| **Preflight check failure** | No processes launched; detailed error diagnostic printed. | `1` |
+| **Preflight check failure** | No pipeline tasks launched; configuration probes may have run. Detailed diagnostic printed. | `1` |
 | **Pipeline failure with `retries > 0`** | The failed stage is automatically relaunched using Nextflow `-resume`. | — |
 | **Exhausted retries or non-retryable failure** | Chain execution halts immediately; downstream stages remain `pending`. | `1` |
 | **Handoff generation failure (`[handoff_failed]`)** | Upstream stage marked succeeded; downstream stage not launched. | `1` |
@@ -198,9 +215,11 @@ To continue a chain after fixing a parameter or environmental issue:
 nfclaw chain run spec.json --outdir /abs/chain --resume
 ```
 
+Omit `spec.json` to reuse the recorded specification unchanged.
+
 When resuming:
 1. **Succeeded Stages Frozen:** Succeeded stages are frozen and verified; modifying the spec for an already-succeeded stage is rejected.
-2. **Cached Retries:** The failed stage resumes execution using Nextflow's cached intermediate tasks.
+2. **Cached Retries:** The failed stage resumes using Nextflow's cache when declared local input bytes and namespaces are unchanged. Changed inputs or an unavailable previous snapshot archive that stage's prior run and recompute all its tasks.
 3. **Pipeline Extension:** New stages may be appended to the end of a completed chain to extend an existing analysis.
 
 ---

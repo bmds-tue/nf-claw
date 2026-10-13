@@ -67,12 +67,24 @@ The repository is structured into four functional zones:
 
 ### 1. Installation & Basic Execution
 
+Clone into a space-free path (on macOS, avoid iCloud folders), use Python 3.11+,
+and install Git, Nextflow, Java 17+ and the selected container runtime separately.
+
 ```bash
+# Clone the library and its pinned pipeline sources
+git clone --recurse-submodules https://github.com/danilomonge/nf-claw.git
+cd nf-claw
+python3 -m venv .venv
+source .venv/bin/activate
+
 # Editable install places `nfclaw` on PATH (or use `python3 -m runner <cmd>` without installation)
 pip install -e .
 
 # List all available pipelines and descriptions
 nfclaw list
+
+# Read the pinned release's inputs and required parameters before preparing data
+nfclaw show rnaseq
 
 # Execute a pipeline run
 nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker
@@ -81,8 +93,13 @@ nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker
 nfclaw status results
 ```
 
+Data paths inside samplesheets must be absolute. Use a fresh `--outdir` for each
+analysis; a non-empty directory requires `--resume`. Docker is the default profile;
+`-profile` / `--profile` accepts comma-separated profiles, and `--demo` adds the bundled
+`test` profile, whose data and references can require network access.
+
 > [!NOTE]
-> The editable install is intentional: `nfclaw` resolves pinned submodules and generated schema context directly from the repository tree. Running outside a checked-out repository emits a clear setup error instead of an empty catalog.
+> The editable install is intentional: `nfclaw` resolves pinned submodules and generated schema context directly from the repository tree, even when invoked from another directory. An installation without that repository content emits a clear setup error instead of an empty catalog.
 
 ### 2. Command Inspection (Dry-Run)
 
@@ -91,6 +108,13 @@ nfclaw status results
 # Validates parameters, schemas, and paths without creating or modifying --outdir
 nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker --check
 ```
+
+`--check` validates explicit values and environment requirements; conditional and
+complex schema rules remain subject to upstream runtime validation. It can initialize
+submodules, fetch requested versions and probe Nextflow, while leaving `--outdir`
+untouched. `--params-file params.json` loads pipeline parameters (YAML requires the
+`yaml` extra); explicit CLI values override the file. Extra Nextflow configs use
+repeatable `--config PATH` / `-c PATH`.
 
 ### Samplesheet from Data Files
 
@@ -186,6 +210,11 @@ unavailable version probe cannot establish that a requested ceiling will be enfo
 
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
+`--timeout SECONDS` instead limits the Nextflow invocation; for a chain it sets an
+overall deadline including preflight and retries. By default neither has a time limit.
+`--no-provenance` disables the replay bundle and checksum recording,
+while keeping the parameter file and run logs needed for execution and status inspection.
+
 ---
 
 ## Provenance, Replay & Verification
@@ -217,6 +246,7 @@ inside a recorded input directory are refused before any lock or log is written.
 | **Dependency Inventories** | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch directory entries, empty directories, entry types and symlink identities; replay checks these alongside file bytes. |
 | **Checksum Manifests** | `inputs.sha256` / `configs.sha256` / `pipeline.sha256` / `outputs.sha256` | SHA-256 digests of declared local inputs (including samplesheet data paths: path fields, data columns typed only by their pattern, and absolute paths of existing files in other columns), the params file and configs, the tracked pipeline source, and generated result files. Remote inputs and container image digests are not frozen by these manifests. |
 | **Resource Limits** | `resource_limits.config` | Nextflow `process.resourceLimits` configuration generated when `--limit-*` flags are specified. |
+| **Compatibility Records** | `nf_schema_compat.config` / `fastqrepair_compat.config` | Generated only for affected source trees; record plugin adjustments and task corrections for replay. |
 
 > [!IMPORTANT]
 > **Run Isolation & Sibling File Locking:** On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) across the execution lifecycle. Overlapping or concurrent runs targeting the same output directory fail fast with `ErrorCode.ENVIRONMENT`, eliminating race conditions and cache corruption.
@@ -228,6 +258,7 @@ inside a recorded input directory are refused before any lock or log is written.
 Repository context and validation are managed via standard `make` targets:
 
 ```bash
+pip install -e ".[dev,yaml]"  # Install pytest and optional YAML support for the test suite
 make build     # Regenerate skill.md, reference.md, and catalog.* from pinned submodules
 make update    # Bump submodules to newest release tags and rebuild context
 make check     # Run schema drift gate and complete test suite
@@ -283,7 +314,7 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 - **`auto-update.yml`** (Daily): Discovers new upstream release tags via `git ls-remote --tags`, checks out new versions, regenerates context files, verifies Nextflow acceptance (`nextflow -preview`), runs the test suite and drift gate, and auto-merges the update.
 - **`discover-pipelines.yml`** (Weekly): Identifies newly published **DSL2** nf-core pipelines, scaffolds submodules, enforces strict exit code 0 acceptance, and merges validated pipelines.
 - **`deploy-pages.yml`** (Push to `main`): Rebuilds and publishes the interactive static portal to GitHub Pages.
-- **`smoke.yml`** (Weekly & on changes): Validates command synthesis, schema parsing, and CLI arguments across all pipelines (`nfclaw run --check --demo`), as well as registered registry chains.
+- **`smoke.yml`** (Weekly & on changes): Validates command synthesis, schema parsing, and CLI arguments across all pipelines (`nfclaw run --check --demo`), as well as registered chains.
 - **`nextflow-validate.yml`** (Nightly & on changes): Executes `nextflow -preview` under pinned minimum Nextflow versions across parallel shards to verify pipeline compilation, profile resolution, schema validation, and DAG construction.
 - **`tests.yml`** (Push & PR): Executes the complete pytest test matrix across Python 3.11–3.13 on Ubuntu and macOS, deterministic Nextflow execution/replay/chaining, and static site validation.
 - **`drift-check.yml`** (PR, daily & manual): Re-audits the repository to guarantee zero schema drift between submodules, skills, references, manifests, and handoff rules.

@@ -12,6 +12,8 @@ Install once, from the repo root, so the `nfclaw` command is on PATH:
 pip install -e .
 ```
 (Use a virtualenv on a space-free path; on macOS also avoid iCloud paths).
+Use Python 3.11+ for both installation and the no-install command. For maintenance
+tests, install `pip install -e ".[dev,yaml]"` to include pytest and YAML support.
 
 **No-install equivalent:** run `python3 -m runner <cmd>` from the repo root anywhere this doc shows `nfclaw <cmd>`.
 
@@ -34,6 +36,15 @@ pip install -e .
 
 > [!NOTE]
 > `nfclaw run` executes the pipeline for real — there is no preview/dry-run default. To see the exact `nextflow` command that *would* run without launching it, add `--check` (it validates inputs and parameters, prints the command — prefixed with the `NXF_*` variables `--nxf-ver`/`--nxf-env` set for it, e.g. `NXF_VER=25.10.4 nextflow run …` — and exits; it writes nothing into `--outdir`, so you can still use that directory for the real run). Add `--demo` to run the pinned release's bundled test profile end to end. A run has no overall time limit unless you pass `--timeout SECONDS`.
+
+`--check` also checks environment requirements and can initialize submodules, fetch
+requested versions and probe Nextflow; conditional and complex constraints remain
+subject to upstream runtime validation. Docker is the default profile; `-profile` /
+`--profile` accepts comma-separated profiles. `--params-file PATH` loads JSON (or
+YAML with the `yaml` extra), and explicit CLI values override file values. Pipeline
+flags accept hyphens or underscores; raw Nextflow requires their exact schema spelling.
+`--no-provenance` disables the replay bundle and checksum records, while retaining
+the parameter file and run logs required for execution and status inspection.
 
 > [!IMPORTANT]
 > **Run Concurrency Locking:** On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling lock (`.{outdir.name}.nfclaw.lock`) around the run. Overlapping or concurrent runs into the same `--outdir` fail fast with an environment error, preventing race conditions or output corruption. Before creating that lock or any run files, explicit local dependencies and samplesheet data paths are checked against output, work, engine-state and log destinations. Keep execution writes outside consumed directories, including nested aliases and directory glob matches; keep data, pipeline code and configuration outside the output tree. Chain preflight also checks its whole output tree before writing its record. Existing output aliases and hard-linked files are inspected too: a different pathname does not establish different data. Declared work/cache trees retain their staged-read policy; input slots within output trees remain protected even when their symlinks point outside. Boundary refusals preserve input files, directory entries and existing logs.
@@ -129,8 +140,9 @@ It validates every stage, every handoff, and verifies that every stage's config 
 
 Which pipeline can follow which: `nfclaw chain edges [name]`, or the `## Chaining` section of a `skill.md`; without a rule there is no chain (or give the stage an inline `"handoff"`).
 
-- **Stage parameters:** A stage's `params` are its own flags (look them up in its `reference.md`); the handed-over ones (rnaseq's `--input`) are not yours to set. `demo: true` adds that release's `test` profile.
+- **Stage parameters:** A stage's `params` are its own flags (look them up in its `reference.md`). Explicit stage `input` and `params` values override mapped handoff values with an advisory; unused sources are not materialized, though the rule must still pass static checks. Values in `params_file` have lower priority and do not suppress mapped sources. `demo: true` adds that release's `test` profile.
 - **Engine tuning:** Run options (`profile`, `nxf_ver`, `nxf_env`, `config`, `limits`) go on the chain or on a stage: releases of different ages can need different engines (`"nxf_ver": "25.10.4"` on an older one).
+- **Option inheritance:** Stage `nxf_env` merges over chain-level values; stage `config` and `limits` replace the entire inherited list/object. Include shared configs explicitly when overriding. `--timeout SECONDS` limits the whole chain, including preflight and retries; each configuration probe also has a 300-second bound.
 - **Chain locking:** Concurrent chain processes targeting the same `--outdir` are blocked by an exclusive POSIX flock on `<outdir>/chain/.lock`.
 - **Logs and state:** Each stage is an ordinary run in `<outdir>/NN-<stage>/`, with its own run log and provenance. The chain logs to `<outdir>/chain/logs/chain.log`; its **last line** is `==> nfclaw chain finished <time>: <outcome>` — poll it with `tail -n 1` for a background chain (`nohup nfclaw chain run ... &`); `kill <pid>` stops it cleanly. Per-stage state: `<outdir>/chain/state.json`.
 - **Verification and safety:** Before feeding stage outputs into a downstream stage, the handoff engine verifies upstream file bytes against `outputs.sha256` and the complete published namespace against `outputs.inventory.json`, including empty directories, entry types and link identities. Local reference handoffs also require the producer's input namespace and byte records. Directory handoffs record their complete boundary inventory, and chain status compares it with the downstream prelaunch inventory after the schema-defined root canonicalization. A whole-run-directory handoff preserves every entry, including execution records; published results remain anchored to their original manifest, while the complete directory is recorded separately at the handoff boundary. Metagenomic assembly handoffs (fetchngs → mag, detaxizer → mag) isolate individual samples (`group: {sample}`) to avoid accidental multi-sample co-assembly pooling.
@@ -190,13 +202,13 @@ Prefer a release for results you need to reproduce from a version number; use `d
 
 ## Running on a machine smaller than the pipeline assumes
 
-nf-core sizes every process from a label in the pipeline's `conf/base.config`, tuned for a server: one step can request far more memory than a workstation has (`Process requirement exceeds available memory`), and Nextflow retries a failed step with *more*. `--demo` never shows this because nf-core's `test` profile ships its own small ceiling; a real run has none. Set one:
+nf-core commonly sizes processes from labels in the pipeline's `conf/base.config`, tuned for a server: one step can request far more memory than a workstation has (`Process requirement exceeds available memory`), and retry rules can increase requests. Many bundled `test` profiles set small ceilings; real runs often need an explicit one. Set one:
 ```bash
 nfclaw run <name> ... --limit-cpus 4 --limit-memory 15.GB
 ```
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
-These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one (pin a newer engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those re-size one named process's initial request, so you must name every step that could exceed the host, and they do not cap the retry. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
+These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one (pin a newer engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those size only selected processes. A constant override also applies to that process's retries, but expressions using `task.attempt` can grow and every other process still needs coverage. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
 
 Any other environment (proxies, `JAVA_HOME`, …) is inherited from your shell unchanged. Each run launches Nextflow from its `--outdir`, so its `.nextflow/` history is isolated and `--resume` resumes that run (use a distinct `--outdir` per pipeline).
 

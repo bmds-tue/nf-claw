@@ -45,7 +45,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 - **How nfclaw handles it:** `nfclaw run` checks the **repo path, the Nextflow work directory and `--outdir`** *before* launching and **fails fast**, naming exactly which path has the space — a deterministic check, no guessing.
 - **Fix:**
   - Move the repository to a space-free path (strongly recommended).
-  - Or set a space-free work directory: `--nxf-env NXF_WORK=/a/space-free/dir`, and use a space-free `--outdir`.
+  - Keep the repository space-free and set a space-free work directory: `--nxf-env NXF_WORK=/a/space-free/dir`, and use a space-free `--outdir`.
   - Or, if you know your pipeline tolerates spaces, pass `--allow-spaces` to bypass the preflight check.
 
 ### IPv6-only host — JVM can't reach GitHub
@@ -71,9 +71,9 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
     --limit-cpus 4 --limit-memory 15.GB
   ```
   `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
-  nfclaw writes these as Nextflow's [`process.resourceLimits`](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources) and passes the generated config with `-c` — the mechanism nf-core prescribes, and the same one its own `test` profiles use (which is why `--demo` never hits this and a real run does). The ceiling applies to **every** process *and every retry*, so one flag covers whatever the pipeline asks for next; the generated config is kept in `<outdir>/provenance/resource_limits.config`, so `commands.sh` replays the run under the same ceiling.
+  nfclaw writes these as Nextflow's [`process.resourceLimits`](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources) and passes the generated config with `-c` — the mechanism nf-core prescribes, and the same one its own `test` profiles use (many bundled test profiles set small ceilings, while real runs often need explicit limits). The ceiling applies to **every** process *and every retry*, so one flag covers whatever the pipeline asks for next; the generated config is kept in `<outdir>/provenance/resource_limits.config`, so `commands.sh` replays the run under the same ceiling.
 
-  Do **not** cap by naming processes (`withName: 'STAR_GENOMEGENERATE' { memory = '15.GB' }`) unless you mean to re-size that one step: `withName` changes a single process's *initial* request, so you must name every step that might exceed the host — miss one and the run dies there instead (`STAR_GENOMEGENERATE`, then `BBMAP_BBSPLIT`, then the next). It also does not cap the retry, which asks for more. Use `withName` (via `--config`) only to tune one specific step, e.g. giving a tool *less* than its label implies:
+  A named override (`withName: 'STAR_GENOMEGENERATE' { memory = '15.GB' }`) sizes only that selected process. A constant override applies to its retries too, while an expression using `task.attempt` can grow; neither establishes a ceiling for the other processes. You would need to cover every step that might exceed the host (`STAR_GENOMEGENERATE`, then `BBMAP_BBSPLIT`, then the next). Use `withName` (via `--config`) only to tune one specific step, e.g. giving a tool *less* than its label implies:
   ```groovy
   // tune-one-step.config
   process {
@@ -112,7 +112,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 - **Fix:** Give containers the host network via a config file passed with `--config`. `docker.runOptions` is a single string that a `--config` **replaces** (it does not merge with the pipeline's value), so preserve nf-core's default user mapping in the same string — otherwise the container reverts to running as root and outputs become root-owned:
   ```groovy
   // host-net.config — host network + nf-core's default user mapping
-  docker { runOptions = "--network host -u $(id -u):$(id -g)" }
+  docker { runOptions = '--network host -u $(id -u):$(id -g)' }
   ```
   Run with `nfclaw run <name> --config host-net.config …`.
 
@@ -122,9 +122,9 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 - **Fix:** Keep the user mapping folded into the same `runOptions` string in your `--config`:
   ```groovy
   // run-as-user.config
-  docker { runOptions = "-u $(id -u):$(id -g)" }
+  docker { runOptions = '-u $(id -u):$(id -g)' }
   ```
-  If your shell trips over substitution (`syntax error near unexpected token ')'`), hardcode numeric ids (`id -u` / `id -g`): `docker { runOptions = "-u 1000:1000" }`.
+  Keep `$(id ...)` inside single-quoted Groovy strings so the task shell expands it; double quotes cause a config parse error. Alternatively, hardcode numeric ids (`id -u` / `id -g`): `docker { runOptions = "-u 1000:1000" }`.
 
 ### Numeric parameters can change before Nextflow receives them
 - **Status: Fixed at the wrapper boundary.** Binary-float conversion changed `9007199254740993e0` into `9007199254740992`, changed `0.1000000000000000000001` into `0.1`, and underflowed `1e-9999` to zero. Converting the float `1e23` directly to an integer also emitted `99999999999999991611392` rather than the JSON value `100000000000000000000000`.
@@ -143,6 +143,10 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 
 ### `--resume` resumed the wrong session
 - **Status: Fixed.** `nfclaw run` launches Nextflow **from the `--outdir`**, so each run owns its own `.nextflow/` history and cache. `--resume` resumes *this* outdir's session — it can no longer pick up another pipeline's run. Always use a distinct `--outdir` per pipeline.
+
+### `No space left on device` while writing results or run records
+- **Symptom:** Nextflow, provenance recording or a chain state write fails with `No space left on device`; the final outcome may be incomplete if the log cannot be written either.
+- **Fix:** Check free space on the output, work, temporary and engine-cache volumes (`df -h`). Free space or choose a larger writable work directory with `--nxf-env NXF_WORK=/path/to/work`. Preserve the existing run and work files needed for `--resume`, provenance checks and replay; moving only the output directory does not relocate recorded external dependencies.
 
 ### Existing output aliases can expose input data to execution writes
 - **Status: Fixed for explicitly declared local dependencies.** Resolved root paths alone do not establish separation. A run log hard-linked to an external FASTQ shares its bytes, and an output directory can contain a symlink into an external input tree. The production log writer was reproduced appending header text to a hard-linked input fixture.
@@ -441,7 +445,7 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 | `multiplesequencealign` 1.1.1 | default `-preview` acceptance times out | Its own completion handler waits on `summary_reports.getVal()`; preview cannot produce the required process results. A newer engine does not resolve this dependency. | The unchanged official `test_tiny,docker` profile completed all 78 tasks on the declared Nextflow 25.04.2, using a matched immutable test-data snapshot. FAMSA, MAFFT and consensus outputs preserved all sequence IDs and ungapped amino-acid sequences; all six summary rows had finite configured metrics. This covers the tiny profile's two aligners and completion lifecycle, not every aligner or biological alignment accuracy. The default preview remains rejected. |
 | `multiplesequencealign` 1.1.1 (full `test` profile) | Docker exits 125 at `LEARNMSA_ALIGN`: `manifest unknown` | The pinned module requests `felbecker/learnmsa:2.0.9`, which was unavailable in a [native full-test execution](https://github.com/danilomonge/nf-claw/actions/runs/37919738383). Other aligners' partial outputs do not make this a successful run. | The validated `test_tiny,docker` profile covers FAMSA and MAFFT, not learnMSA. Full-profile validation requires the exact unavailable image to be restored or a separately validated tool/configuration change. Do not silently substitute `latest` or a newer image: [learnMSA changed its sequence-weight defaults and removed `--sequence_weights` from 2.0.10](https://github.com/Gaius-Augustus/learnMSA#using-learnmsa), while this pinned full test uses that flag. |
 | `marsseq` 1.0.3 | bundled `test` analysis preview fails with missing local references | `test.config` selects `mm10`, but analysis requires prebuilt FASTA, GTF, Bowtie2 and STAR references. `main.nf` chooses either reference building or analysis, so build and analysis are separate invocations. | Build with `--build-references true --velocity true` so both Bowtie2 and STAR indexes are generated (analysis checks the STAR path even when velocity is disabled), then supply the resulting reference base using `--genomes-base`. The complete bundled reference workflow, including real Bowtie2 and STAR indexes, completed on Nextflow 23.04.0; default and velocity-enabled analysis previews then passed with matched SB26-AB339 test inputs. These previews do not execute quantification or establish expression accuracy. **Assembly warning:** the [pinned `mm10` key](https://github.com/nf-core/marsseq/blob/b02ede773092f8a8a5999400acda6894d51b4d26/conf/genomes.config) selects **GRCm39 / GENCODE M27**, plus ERCC sequences; [GENCODE identifies M27 as GRCm39](https://www.gencodegenes.org/mouse/release_M27.html), whereas [UCSC mm10 is GRCm38](https://hgdownload.cse.ucsc.edu/gbdb/mm10/html/description.html). Record the actual assembly, annotation and reference checksums; never silently substitute GRCm38 or infer the assembly from this key. |
-| `tumourevo` 1.0.0 | CNAqc parameter description links to an absent parameter | The pinned schema's `cnaqc_min_absolute_karyotype_mutations` description refers to `cnaqc_min_karyotype_size`, which is not declared in that schema or passed by its CNAqc module configuration. This upstream cross-reference has no target in the generated documentation. | Use only parameters declared by the pinned schema; nfclaw rejects the absent flag. `--cnaqc-min-absolute-karyotype-mutations` sets an absolute mutation-count threshold. The missing reference does not establish an equivalent relative threshold or a replacement flag; consult the pinned module and CNAqc tool documentation for interpretation. |
+| `tumourevo` 1.0.0 | CNAqc parameter description links to an absent parameter | The pinned schema's `cnaqc_min_absolute_karyotype_mutations` description refers to `cnaqc_min_karyotype_size`, which is not declared in that schema or passed by its CNAqc module configuration. This upstream cross-reference has no target; the generated reference marks it as undeclared instead of linking to a missing heading. | Use only parameters declared by the pinned schema; nfclaw rejects the absent flag. `--cnaqc-min-absolute-karyotype-mutations` sets an absolute mutation-count threshold. The missing reference does not establish an equivalent relative threshold or a replacement flag; consult the pinned module and CNAqc tool documentation for interpretation. |
 
 ---
 
