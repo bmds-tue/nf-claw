@@ -1,5 +1,5 @@
 {
-  "description": "demultiplex writes samplesheet/sarek_samplesheet.csv with an empty patient; each sample is made its own patient (set it per sample yourself if several samples share one); sarek reads paired-end FastQ only, so every row needs a fastq_2.",
+  "description": "demultiplex writes samplesheet/sarek_samplesheet.csv with an empty patient; each sample is made its own patient (set it per sample yourself if several samples share one); sarek reads paired-end FastQ only, so every row needs a fastq_2. No status or sex column is written: sarek treats every sample as normal tissue (status 0, sex NA) and runs germline analyses only; a tumour/normal design needs its own sarek samplesheet (a handoff's set gives every row the same value).",
   "params": {
     "input": {
       "samplesheet": "samplesheet/sarek_samplesheet.csv",

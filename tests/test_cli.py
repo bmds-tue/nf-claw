@@ -254,6 +254,24 @@ def test_run_threads_config(tmp_path, monkeypatch):
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
                      "-c", str(cfg), "--config", str(cfg)]) == 0
     assert captured["configs"] == [str(cfg), str(cfg)]            # repeatable, threaded through
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), f"-c={cfg}"]) == 0
+    assert captured["configs"] == [str(cfg)]
+
+
+@pytest.mark.parametrize("token,hint", [
+    ("-config", "Nextflow's `-config` is `--config PATH`"),
+    ("-config=x.config", "Nextflow's `-config` is `--config PATH`"),
+    ("-cpus", "single-dash options itself")])
+def test_attached_short_config_values_are_named_not_split(tmp_path, monkeypatch, capsys, token,
+                                                          hint):
+    # argparse would read `-config x.config` as `-c onfig` and report the real path as a stray
+    # extra argument; the Nextflow spelling is named instead, before anything runs.
+    from runner import orchestration
+    monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), token, "x.config"]) == 1
+    err = capsys.readouterr().err
+    assert hint in err and "onfig" not in err.replace("config", "")
 
 
 def test_run_passes_through_pipeline_flag_that_prefixes_a_reserved_flag(tmp_path, monkeypatch):

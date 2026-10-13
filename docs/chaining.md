@@ -165,6 +165,19 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 > - The default registered rules assign each sample its own independent group: `"group": "{sample}"`.
 > - Pooling samples requires an explicit custom inline handoff rule accompanied by domain justification.
 
+> [!IMPORTANT]
+> **Sequencing platforms and study design are not inferred:**
+> - nf-core/mag chooses its long-read preprocessing and assembler mode (e.g. Flye's ONT vs PacBio mode) by `long_reads_platform`. The `fetchngs` → `mag` rule takes each run's short-read platform from its ENA `instrument_platform` (fetchngs itself labels every run `ILLUMINA`), so a long-read run is refused instead of being analysed as Illumina short reads. detaxizer records no long-read platform: the `detaxizer` → `mag` rule refuses samples with long reads until an inline handoff names their platform, e.g. for PacBio HiFi data:
+>   ```json
+>   {"pipeline": "mag", "handoff": {
+>     "upstream_params": {"generate_downstream_samplesheets": true, "generate_pipeline_samplesheets": "mag"},
+>     "params": {"input": {"samplesheet": "downstream_samplesheets/mag-pe.csv",
+>       "provides": ["sample", "run", "group", "short_reads_1", "short_reads_2", "long_reads"],
+>       "set": {"group": "{sample}", "short_reads_platform": "ILLUMINA", "long_reads_platform": "PACBIO_HIFI"}}}}}
+>   ```
+> - `fetchngs` → `ampliseq` leaves `run` empty, so ampliseq learns one DADA2 error model for all samples; data from several sequencing runs needs `run` filled per sequencing run — an inline handoff whose `set` templates it from a column that identifies the run, or your own samplesheet.
+> - `fetchngs` → `sarek` and `demultiplex` → `sarek` write no `status` or `sex`: sarek treats every sample as normal tissue and runs germline analyses only. A tumour/normal design needs its own sarek samplesheet: a handoff's `set` gives every row the same value.
+
 ---
 
 ## 4. Failure, Recovery and Resume

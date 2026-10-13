@@ -176,6 +176,34 @@ def test_rename_set_and_relative_paths(library, finished_run, tmp_path):
     assert row["lane"] == "SRR1" and "reads_1" not in row
 
 
+def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, finished_run, tmp_path):
+    # atacseq's FastQ columns carry a file pattern but no path format: a relative value names a file
+    # in the upstream outdir there too, and must not reach the downstream as a relative path.
+    import json
+    root = library("mini_up", "mini")
+    _, down = _trees(root)
+    (down / "assets/schema_input.json").write_text(json.dumps({"items": {
+        "properties": {"sample": {"type": "string"},
+                       "fastq_1": {"type": "string", "pattern": "^\\S+\\.f(ast)?q\\.gz$"},
+                       "fastq_2": {"type": "string",
+                                   "pattern": "^(\\S+\\.f(ast)?q\\.gz|NA)$"}},
+        "required": ["sample", "fastq_1"]}}))
+    up = finished_run(tmp_path / "up", {
+        "s.csv": "sample,fastq_1,fastq_2\nA,fastq/A_1.fastq.gz,NA\n", **FASTQS})
+    rule = _rule({"params": {"input": {"samplesheet": "s.csv",
+                                       "provides": ["sample", "fastq_1", "fastq_2"]}}})
+    handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    row = _rows(tmp_path / "h" / "input.csv")[0]
+    assert row["fastq_1"] == f"{up}/fastq/A_1.fastq.gz" and row["fastq_2"] == "NA"
+    built = _rule({"params": {"input": {"build": {
+        "rows": "fastq/{s}_1.fastq.gz",
+        "columns": {"sample": "{s}", "fastq_1": "fastq/{s}_1.fastq.gz",
+                    "fastq_2": "fastq/{s}_2.fastq.gz"}}}}})
+    handoff.materialize(built, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "b")
+    row = _rows(tmp_path / "b" / "input.csv")[0]
+    assert (row["fastq_1"], row["fastq_2"]) == (f"{up}/fastq/A_1.fastq.gz", f"{up}/fastq/A_2.fastq.gz")
+
+
 def test_a_rename_onto_an_existing_column_is_refused(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"s.csv": "sample,fastq_1,r1\nA,x,y\n"})

@@ -1,5 +1,5 @@
 {
-  "description": "fetchngs writes a sarek samplesheet (patient = the ENA sample accession) with --nf-core-pipeline sarek; it has no lane, so each run's accession becomes its lane \u2014 sarek needs patient, sample and lane to be unique together; sarek reads paired-end FastQ only, so every row needs a fastq_2.",
+  "description": "fetchngs writes a sarek samplesheet (patient = the ENA sample accession) with --nf-core-pipeline sarek; it has no lane, so each run's accession becomes its lane \u2014 sarek needs patient, sample and lane to be unique together; sarek reads paired-end FastQ only, so every row needs a fastq_2. No status or sex column is written: sarek treats every sample as normal tissue (status 0, sex NA) and runs germline analyses only; a tumour/normal design needs its own sarek samplesheet (a handoff's set gives every row the same value).",
   "upstream_params": {
     "nf_core_pipeline": "sarek"
   },

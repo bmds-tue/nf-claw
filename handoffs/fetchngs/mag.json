@@ -1,5 +1,5 @@
 {
-  "description": "fetchngs writes a mag samplesheet whose read columns predate mag's short_reads_1/short_reads_2; the columns are renamed, each sample gets its own group, and each run keeps its own run id. Different samples are not pooled for binning or assembly; use an inline handoff to supply study-specific pooling groups.",
+  "description": "fetchngs writes a mag samplesheet whose read columns predate mag's short_reads_1/short_reads_2; the columns are renamed, each sample gets its own group, and each run keeps its own run id. fetchngs labels every run's reads ILLUMINA short reads; the short-read platform is taken from the run's ENA instrument_platform instead, so a long-read run (OXFORD_NANOPORE, PACBIO_SMRT) is refused rather than analysed as short reads. Different samples are not pooled for binning or assembly; use an inline handoff to supply study-specific pooling groups.",
   "upstream_params": {
     "nf_core_pipeline": "mag"
   },
@@ -12,7 +12,8 @@
         "fastq_2",
         "group",
         "short_reads_platform",
-        "run_accession"
+        "run_accession",
+        "instrument_platform"
       ],
       "rename": {
         "fastq_1": "short_reads_1",
@@ -20,7 +21,8 @@
       },
       "set": {
         "group": "{sample}",
-        "run": "{run_accession}"
+        "run": "{run_accession}",
+        "short_reads_platform": "{instrument_platform}"
       }
     }
   }

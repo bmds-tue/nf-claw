@@ -237,8 +237,9 @@ def _main(argv: list[str] | None = None) -> int:
     p_verify.add_argument("--against", dest="against", required=True,
                           help="--outdir of the original run it should reproduce")
     p_verify.add_argument("--strict", action="store_true",
-                          help="also fail when any output bytes differ; inspect timestamped "
-                               "reports separately from analytical results")
+                          help="also fail when any output bytes or recorded link identities "
+                               "differ; inspect timestamped reports separately from analytical "
+                               "results")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -314,6 +315,21 @@ def _main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
                        help="stop the whole run after SECONDS (default: no limit)")
 
+    # argparse reads a value attached to a short option, so Nextflow's own `-config x.config` (or a
+    # stray `-cpus 4`) would silently become `-c onfig` and leave the real path behind as a
+    # misleading "extra argument". Name the nfclaw spelling before parsing instead.
+    if argv[:1] == ["run"]:
+        for tok in argv[1:]:
+            name = tok.split("=", 1)[0]
+            if name.startswith("-c") and not name.startswith("--") and name != "-c":
+                print(NfclawError(
+                    ErrorCode.PARAMS_INVALID, f"unexpected argument: {tok!r}",
+                    fix=("Nextflow's `-config` is `--config PATH` (or `-c PATH`) for nfclaw."
+                         if name == "-config" else
+                         "nfclaw sets Nextflow's own single-dash options itself; pass a config "
+                         "file with `--config PATH` (or `-c PATH`) and pipeline parameters as "
+                         "--param value.")), file=sys.stderr)
+                return 1
     args, extras = parser.parse_known_args(argv)
     # Only `run` forwards unrecognised flags (to the pipeline). Anywhere else an unknown flag is a typo
     # that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
@@ -382,9 +398,9 @@ def _main(argv: list[str] | None = None) -> int:
             print(str(exc), file=sys.stderr)
             return 1
         print(verify.report(cmp), end="")
-        # The default compares file presence. Strict verification additionally checks every byte;
-        # neither comparison by itself establishes analytical accuracy.
-        return 0 if cmp.structurally_equal and (not args.strict or not cmp.changed) else 1
+        # The default compares file presence. Strict verification additionally checks every byte and
+        # recorded link identity; neither comparison by itself establishes analytical accuracy.
+        return 0 if (cmp.byte_identical if args.strict else cmp.structurally_equal) else 1
 
     if args.cmd == "status":
         log = _run_log_path(args.outdir)

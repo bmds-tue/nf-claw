@@ -595,11 +595,13 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                               + ("have none" if len(missing) > 1 else "has none"))
     derived = [sheet.relative_to(root).as_posix()]
     path_cols = {c.name for c in sheet_schema.columns if c.fmt in schema_mod.PATH_FORMATS}
+    pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     for r in rows:
         for col in header:
             if not (value := (r.get(col) or "").strip()):
                 continue
-            if col in path_cols:                          # the downstream reads it as a path
+            if col in path_cols or (col in pattern_cols and samplesheet.names_relative_file(
+                    pattern_cols[col], value)):           # the downstream reads it as a path
                 value = r[col] = _absolute(value, root)
             # Trace every upstream result the sheet points at — also in a column the downstream
             # schema declares no path format for (atacseq's fastq_1), so lineage misses none.
@@ -617,6 +619,7 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
     spec = src.spec["build"]
     glob, rx = _pattern(spec["rows"])
     path_cols = {c.name for c in sheet_schema.columns if c.fmt in schema_mod.PATH_FORMATS}
+    pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     rows: list[dict[str, str]] = []
     derived: list[str] = []
     for match in sorted(p for p in root.glob(glob) if p.is_file()):
@@ -628,7 +631,8 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         for col, template in spec["columns"].items():
             optional = template.endswith("?")
             text = _fill(template[:-1] if optional else template, m.groupdict())
-            if col in path_cols and text:
+            if text and (col in path_cols or (col in pattern_cols and samplesheet.names_relative_file(
+                    pattern_cols[col], text))):
                 if (root / text).is_file() or (root / text).is_dir():
                     if (root / text).is_file():
                         derived.append(PurePosixPath(text).as_posix())
