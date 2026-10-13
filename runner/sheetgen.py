@@ -512,8 +512,8 @@ def _names_readable(path: Path) -> bool:
     return path.suffix.lower() != ".zst"
 
 
-def _first_read_name(path: Path) -> str | None:
-    """The name of a FastQ file's first read (None for an empty file)."""
+def _first_read_identity(path: Path) -> tuple[str | None, int | None]:
+    """The first read's molecule name and explicit mate role, retaining contradictions."""
     suffix = path.suffix.lower()
     opener = {".gz": gzip.open, ".bz2": bz2.open, ".xz": lzma.open}.get(suffix, open)
     if not _names_readable(path):
@@ -528,13 +528,29 @@ def _first_read_name(path: Path) -> str | None:
         raise _bad(f"cannot read FastQ file {path}: {exc}",
                    fix="Restore a valid FastQ file (compressed as its name says).") from exc
     if not line:
-        return None
+        return None, None
     text = line.decode("utf-8", "replace").rstrip("\r\n")
     if not text.startswith("@"):
         raise _bad(f"{path} is not a FastQ file: its first line does not start with '@'",
                    fix="Pass FastQ files (or leave this one out of --input).")
     words = text[1:].split()
-    return words[0] if words else ""
+    name = words[0] if words else ""
+    roles = set()
+    if match := re.search(r"[/._]([12])$", name):
+        # The terminal SRA spot number is a molecule identity, not a mate label.
+        if not _ACCESSION.fullmatch(name):
+            roles.add(int(match[1]))
+    if len(words) > 1 and re.match(r"^[12]:", words[1]):
+        roles.add(int(words[1][0]))
+    return name, next(iter(roles)) if len(roles) == 1 else -1 if roles else None
+
+
+def _first_read_name(path: Path) -> str | None:
+    return _first_read_identity(path)[0]
+
+
+def _compatible_roles(first: int | None, second: int | None) -> bool:
+    return first in (None, 1) and second in (None, 2)
 
 
 def _mates(first: str, second: str) -> bool:
@@ -610,11 +626,16 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                                "reads of one library: zstd-compressed read names cannot be read "
                                "to compare", fix="Name mates _R1/_R2, or write the samplesheet "
                                                  "yourself.")
-                first, second = _first_read_name(slot[1]), _first_read_name(slot[2])
+                (first, first_role), (second, second_role) = (
+                    _first_read_identity(slot[1]), _first_read_identity(slot[2]))
                 if first is None or second is None:
                     raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
                                "reads of one library: an empty file has no read names to compare",
                                fix="Name them _R1/_R2, or write the samplesheet yourself.")
+                if _mates(first, second) and not _compatible_roles(first_role, second_role):
+                    raise _bad(f"cannot infer mate orientation for {slot[1].name} and {slot[2].name}: "
+                               "their explicit read-header mate labels contradict the proposed pairing",
+                               fix="Check the original data and write an explicit samplesheet.")
                 if _mates(first, second) and not _strong(first, second):
                     raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
                                f"reads of one library: both start with the generic read name "
@@ -671,17 +692,22 @@ def _refuse_unnamed_mates(units: list[_Unit], notes: list[str]) -> None:
             if char in _READ_MARKS or char in _READ_MARKS.values():
                 key = (path.parent, f"{stem[:i]}\0{stem[i + 1:]}")
                 partners.setdefault(key, {})[char] = path
-    names: dict[Path, str | None] = {}
+    names: dict[Path, tuple[str | None, int | None]] = {}
 
-    def read_name(path: Path) -> str | None:
+    def read_name(path: Path) -> tuple[str | None, int | None]:
         if path not in names:
-            names[path] = _first_read_name(path) if _names_readable(path) else None
+            names[path] = _first_read_identity(path) if _names_readable(path) else (None, None)
         return names[path]
 
     for marks in partners.values():
         for first, second in _READ_MARKS.items():
             if first in marks and second in marks:
-                a, b = read_name(marks[first]), read_name(marks[second])
+                (a, a_role), (b, b_role) = read_name(marks[first]), read_name(marks[second])
+                if a and b and _mates(a, b) and not _compatible_roles(a_role, b_role):
+                    raise _bad(f"cannot infer mate orientation for {marks[first].name} and "
+                               f"{marks[second].name}: their explicit read-header mate labels "
+                               "contradict the proposed pairing",
+                               fix="Check the original data and write an explicit samplesheet.")
                 if a and b and _mates(a, b) and not _strong(a, b):
                     notes.append(f"{marks[first].name} and {marks[second].name} start with the same "
                                  f"generic read name ({a!r}); they are taken for two single-end "
@@ -700,7 +726,7 @@ def _confirm(first: Path, second: Path, notes: list[str]) -> None:
         notes.append(f"Paired {first.name} with {second.name} by name only: zstd-compressed read "
                      "names cannot be read to compare.")
         return
-    a, b = _first_read_name(first), _first_read_name(second)
+    (a, a_role), (b, b_role) = _first_read_identity(first), _first_read_identity(second)
     if a is None or b is None:
         notes.append(f"Paired {first.name} with {second.name} by name only: an empty file has no "
                      "read names to compare.")
@@ -710,6 +736,10 @@ def _confirm(first: Path, second: Path, notes: list[str]) -> None:
         notes.append(f"{first.name} and {second.name} are paired as their names say, but their first "
                      f"read names differ ({a!r}, {b!r}): check that they belong together (a "
                      "swapped, truncated or desynchronised mate).")
+    elif not _compatible_roles(a_role, b_role):
+        notes.append(f"Paired {first.name} with {second.name} as their filenames declare, but "
+                     "their explicit read-header mate labels disagree with that orientation; "
+                     "check the original data and the generated samplesheet before analysis.")
 
 
 # --- other data files ---------------------------------------------------------------------------

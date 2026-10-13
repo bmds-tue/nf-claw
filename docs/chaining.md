@@ -239,6 +239,14 @@ nested aliases. Empty reference directories are permitted when their complete
 namespace is recorded; downstream schemas and tools decide whether they are valid
 analytical inputs.
 
+Samplesheet handoffs also record the local data named by schema-declared path columns,
+including directory and glob membership. Checking the generated sheet alone is insufficient:
+the consumer's recorded file hashes and namespace must agree with the producer's historical
+data and the handoff boundary. Glob comparison uses the recorded consumer membership, so
+additional files consumed and later removed remain detectable. Every completed stage undergoes
+these checks before the chain can launch another stage or report success. Older file-only
+records retain checksum checks; missing directory identity cannot be inferred retrospectively.
+
 When a rule passes an entire run directory, execution records and engine state are
 part of that directory too. They are recorded at the handoff boundary, separately
 from the published results whose original byte and namespace manifests remain
