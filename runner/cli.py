@@ -164,7 +164,11 @@ def _status_report(st: runlog.RunState) -> str:
                 "(invalid parameters or samplesheet, a failed preflight check) leaves a fresh "
                 "--outdir untouched: run the same command in the foreground to see why.\n")
     if st.state == "success":
-        lines.append("status: success")
+        lines.append("status: success" + (" — with caveats the pipeline reported about its results"
+                                          if st.caveats else ""))
+        if st.caveats:
+            lines += ["caveats (as reported; results may be incomplete):",
+                      *(f"  {caveat}" for caveat in st.caveats)]
     elif st.state == "ended":
         lines.append(f"status: {st.outcome}")
     elif st.state == "running":

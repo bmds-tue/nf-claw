@@ -628,6 +628,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                  "sha256": provenance._sha256(sheet_path)}
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
+        caveats: list[str] = []                 # what a successful pipeline said its results lack
 
         def record(outcome: str) -> None:
             provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
@@ -640,7 +641,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
-                             dependency_stability=stability)
+                             dependency_stability=stability, completion_caveats=caveats)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -680,6 +681,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         pass
                 raise
             run_log.outcome = "success"
+            # Exit status 0 is not proof that every sample and task made it into the results: say
+            # what the pipeline itself reported missing (skipped samples, ignored task failures).
+            caveats = runlog.completion_caveats(run_log.console_tail("out"), run_log.nextflow_log)
+            for caveat in caveats:
+                message = f"the pipeline completed but reported: {caveat}"
+                warnings.append(message)
+                if on_warning is not None:
+                    on_warning(message)
             try:
                 report = outputs.collect(outdir)
                 stability = dependency_stability.compare(

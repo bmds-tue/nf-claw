@@ -250,6 +250,49 @@ def nextflow_log_causes(log: Path) -> list[str]:
     return [line for cause in distinct[:_MAX_CAUSES] for line in cause]
 
 
+# The nf-core template's completion summary, `-[nf-core/<name>] Pipeline completed successfully…-`,
+# and the lines a pipeline prints right after it in the same form (rnaseq's skipped samples).
+_SUMMARY_LINE = re.compile(r"^-\[(?P<name>[^\]\s]+)\]\s+(?P<message>.*?)\s*-?$")
+_COMPLETED = "Pipeline completed successfully"
+_WORKFLOW_STATS = re.compile(r"Workflow completed > WorkflowStats\[.*?\bignoredCount=(\d+)")
+
+
+def completion_caveats(console: str, nextflow_log: Path | None = None) -> list[str]:
+    """What a pipeline that exited 0 reported as missing from its results, in its own words.
+
+    An exit status of 0 is all Nextflow and nfclaw judge a run by, yet a pipeline can finish
+    "successfully" without some of its samples or tasks: nf-core's template says so in its
+    completion summary ("…, but with errored process(es)" when failed tasks were ignored), rnaseq
+    adds "with skipped sampl(es)" and names the QC threshold each sample failed, and Nextflow counts
+    the ignored task failures in its log. These are quoted, never interpreted, so they reach the
+    reader with the success instead of staying buried in the console."""
+    caveats: list[str] = []
+    lines = _clean(console)
+    starts = [i for i, line in enumerate(lines)
+              if (m := _SUMMARY_LINE.match(line)) and m["message"].startswith(_COMPLETED)]
+    if starts:
+        first = _SUMMARY_LINE.match(lines[starts[-1]])
+        if first["message"][len(_COMPLETED):].strip(" ,."):
+            caveats.append(f"[{first['name']}] {first['message']}")
+        for line in lines[starts[-1] + 1:]:
+            m = _SUMMARY_LINE.match(line)
+            if m is None or m["name"] != first["name"]:
+                break
+            caveats.append(f"[{m['name']}] {m['message']}")
+    if nextflow_log is not None:
+        try:
+            with nextflow_log.open("rb") as fh:
+                fh.seek(0, os.SEEK_END)
+                fh.seek(max(0, fh.tell() - _LOG_TAIL_BYTES))
+                stats = _WORKFLOW_STATS.findall(fh.read().decode("utf-8", errors="replace"))
+        except OSError:
+            stats = []
+        if stats and int(stats[-1]) > 0:
+            caveats.append(f"Nextflow ignored {stats[-1]} failed task(s) (errorStrategy 'ignore'); "
+                           "their results are missing")
+    return caveats
+
+
 class RunLog:
     """`run.log` for one launch: appended to (never truncated) and safe to write from both of the
     child's stream readers at once. Keeps the tail of this launch's console for quoting its error.
@@ -439,6 +482,8 @@ class RunState:
     error: list[str] = field(default_factory=list)
     console: str = ""                                    # the tail of the launch's console output
     last_output: list[str] = field(default_factory=list)
+    # A successful launch's own report of what its results lack (`completion_caveats`).
+    caveats: list[str] = field(default_factory=list)
 
 
 def _argv(pid: int) -> list[str] | None:
@@ -553,6 +598,12 @@ def read_state(log: Path) -> RunState:
     st.last_output = [line for line in _clean(st.console) if line][-_LAST_OUTPUT_LINES:]
     if st.outcome is not None:
         st.state = "success" if st.outcome == "success" else "ended"
+        if st.state == "success":
+            # A replay's header names no Nextflow log: it runs from its target, as a run does.
+            nextflow_log = (Path(st.nextflow_log) if st.nextflow_log else
+                            log.parent.parent.parent / ".nextflow.log" if st.kind == "replay"
+                            else None)
+            st.caveats = completion_caveats(st.console, nextflow_log)
     elif ((st.host_id and st.host_id != host_identity())
           or (not st.host_id and st.host and st.host != socket.gethostname())):
         st.state = "elsewhere"

@@ -60,6 +60,30 @@ def test_full_run_invokes_execution(tmp_path, monkeypatch):
     assert called.get("ran") and not res.checked_only
 
 
+@pytest.mark.parametrize("console,expected", [
+    (b"-[nf-core/mini] Pipeline completed successfully-\n", []),
+    (b"-[nf-core/mini] Pipeline completed successfully, but with errored process(es) -\n",
+     ["[nf-core/mini] Pipeline completed successfully, but with errored process(es)"])])
+def test_a_successful_run_reports_the_caveats_its_pipeline_printed(tmp_path, monkeypatch, console,
+                                                                   expected):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: k["run_log"].write(console))
+    shown = []
+    res = orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+        profile="docker", params_file=None, cli_overrides={}, resume=False,
+        demo=True, check_only=False, write_provenance=True, timeout_seconds=10,
+        on_warning=shown.append)
+    said = [f"the pipeline completed but reported: {c}" for c in expected]
+    assert [w for w in res.warnings if w.startswith("the pipeline completed")] == said
+    assert [w for w in shown if w.startswith("the pipeline completed")] == said
+    manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
+    assert manifest["outcome"] == "success"
+    assert manifest.get("completion_caveats", []) == expected
+
+
 def test_engine_provenance_uses_the_executed_banner_without_probing_a_changed_launcher(
         tmp_path, monkeypatch):
     import json

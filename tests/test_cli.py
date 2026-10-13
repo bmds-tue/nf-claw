@@ -841,3 +841,18 @@ def test_an_odd_extra_token_is_a_clear_error_not_a_traceback(tmp_path, monkeypat
     for token in ("~nosuchuser_nfclaw/x", "x" * 300):
         assert cli.main(["run", "rnaseq", "--outdir", str(tmp_path / "o"), token]) == 1
         assert "unexpected extra argument" in capsys.readouterr().err
+
+
+def test_status_of_a_success_names_the_caveats_the_pipeline_reported(tmp_path, monkeypatch, capsys):
+    # rnaseq exits 0 after dropping a sample below its trimmed-read threshold; `status: success`
+    # alone told an agent every sample had been analysed.
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    body = ("    console format: prefixed\n"
+            "| -[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)-\n"
+            "| -[nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped since they "
+            "failed 10000 trimmed read threshold.-\n")
+    _write_run_log(tmp_path / "out", _finished_block("success", body))
+    assert cli.main(["status", str(tmp_path / "out")]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("status: success — with caveats the pipeline reported")
+    assert "  [nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped" in out
