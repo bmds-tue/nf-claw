@@ -95,7 +95,7 @@ Check a run — in the foreground or the background — with `nfclaw status <out
 Run metatdenovo as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` starts each stage only after the one before it succeeded, and prepares its inputs from that stage's outputs. The rules live in `handoffs/` (format and spec in [docs/chaining.md](../../docs/chaining.md)); list them with `nfclaw chain edges metatdenovo`.
 
 Fed by:
-- `fetchngs` — fetchngs writes a metatdenovo samplesheet (sample, fastq_1, fastq_2) with --nf-core-pipeline metatdenovo.
+- `fetchngs` — fetchngs writes a metatdenovo samplesheet (sample, fastq_1, fastq_2) with --nf-core-pipeline metatdenovo. Runs whose ENA instrument_platform is not a short-read platform (the ones nf-core/mag accepts as short reads: ILLUMINA, BGISEQ, DNBSEQ, ELEMENT, ULTIMA, ION_TORRENT, LS454, …) are refused: metatdenovo analyses short reads, and long-read, capillary or colour-space runs would be processed as if they were.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: FastQC, MultiQC, Trim Galore!, Seqtk, SPAdes, Megahit, TransDecoder, MetaEuk, Prokka, Prodigal, BBmap, FeatureCounts, BEDTools, MMseqs2, SAMtools, SeqKit, Eggnog, Kofamscan, dbCAN, HMMsearch, EUKulele, Diamond, TaxonKit, QUAST, DuckDB.

@@ -86,7 +86,7 @@ script refuses to launch a preview when neither timeout utility is available.
 
 | Requirement | Supported Version | Notes & Invariants |
 |---|---|---|
-| **Operating System** | Linux (x86_64, aarch64) or macOS | Tested on Ubuntu, Debian, Red Hat, and macOS Sonoma+. |
+| **Operating System** | Linux or macOS | The test suite runs on Ubuntu and macOS (GitHub-hosted runners); pipeline executions are validated on native Linux x86_64 with Docker. On arm64 hosts a pipeline depends on arm64 containers or emulation of amd64 ones, which can fail (see [known-issues](known-issues.md#pipeline-specific-run-notes)). |
 | **Python** | 3.11+ | Required for `nfclaw` CLI runtime and `librarian`. |
 | **Java** | OpenJDK 17+ | Runtime requirement for Nextflow workflow engine. |
 | **Nextflow** | Latest or matching `--nxf-ver` | Installed on system PATH. |

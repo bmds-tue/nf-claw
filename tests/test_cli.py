@@ -254,6 +254,24 @@ def test_run_threads_config(tmp_path, monkeypatch):
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
                      "-c", str(cfg), "--config", str(cfg)]) == 0
     assert captured["configs"] == [str(cfg), str(cfg)]            # repeatable, threaded through
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), f"-c={cfg}"]) == 0
+    assert captured["configs"] == [str(cfg)]
+
+
+@pytest.mark.parametrize("token,hint", [
+    ("-config", "Nextflow's `-config` is `--config PATH`"),
+    ("-config=x.config", "Nextflow's `-config` is `--config PATH`"),
+    ("-cpus", "single-dash options itself")])
+def test_attached_short_config_values_are_named_not_split(tmp_path, monkeypatch, capsys, token,
+                                                          hint):
+    # argparse would read `-config x.config` as `-c onfig` and report the real path as a stray
+    # extra argument; the Nextflow spelling is named instead, before anything runs.
+    from runner import orchestration
+    monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), token, "x.config"]) == 1
+    err = capsys.readouterr().err
+    assert hint in err and "onfig" not in err.replace("config", "")
 
 
 def test_run_passes_through_pipeline_flag_that_prefixes_a_reserved_flag(tmp_path, monkeypatch):
@@ -823,3 +841,18 @@ def test_an_odd_extra_token_is_a_clear_error_not_a_traceback(tmp_path, monkeypat
     for token in ("~nosuchuser_nfclaw/x", "x" * 300):
         assert cli.main(["run", "rnaseq", "--outdir", str(tmp_path / "o"), token]) == 1
         assert "unexpected extra argument" in capsys.readouterr().err
+
+
+def test_status_of_a_success_names_the_caveats_the_pipeline_reported(tmp_path, monkeypatch, capsys):
+    # rnaseq exits 0 after dropping a sample below its trimmed-read threshold; `status: success`
+    # alone told an agent every sample had been analysed.
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    body = ("    console format: prefixed\n"
+            "| -[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)-\n"
+            "| -[nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped since they "
+            "failed 10000 trimmed read threshold.-\n")
+    _write_run_log(tmp_path / "out", _finished_block("success", body))
+    assert cli.main(["status", str(tmp_path / "out")]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("status: success — with caveats the pipeline reported")
+    assert "  [nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped" in out

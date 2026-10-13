@@ -16,11 +16,13 @@ abstract: >-
   themselves are authored by the nf-core community and wrapped unmodified as
   git submodules pinned to a release tag; nf-claw pairs each with an
   auto-generated, token-minimal skill.md (the exact run command and required
-  inputs) and a full reference.md — every fact derived from the pipeline's own
-  nextflow_schema.json, so nothing is hardcoded. A generic runner executes any
-  pipeline through a single command and records a provenance bundle, while a
-  scheduled pure-git workflow keeps every pipeline pinned to its latest release
-  and the generated context drift-free.
+  inputs) and a full reference.md — every parameter fact derived from the
+  pipeline's own nextflow_schema.json and samplesheet schema. A generic runner
+  executes any pipeline through a single command and records a provenance
+  bundle; curated, schema-checked handoff rules chain pipelines, and documented
+  runtime corrections for one release (fastqrepair 1.1.1) are applied through a
+  recorded config. A scheduled pure-git workflow keeps every pipeline pinned to
+  its latest release and the generated context drift-free.
 keywords:
   - nextflow
   - nf-core

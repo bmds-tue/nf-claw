@@ -148,7 +148,7 @@ Example: `handoffs/fetchngs/rnaseq.json`:
 |---|---|---|
 | `samplesheet` | Copies and adapts an upstream samplesheet. `provides` declares guaranteed columns checked during static drift checks. | `fetchngs` → `rnaseq`, `fetchngs` → `mag` |
 | `build` | Synthesizes a new samplesheet from matching output files. Uses `{placeholders}` for row grouping and column templating. | `bamtofastq` → `rnaseq` |
-| `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. | `rnaseq` → `differentialabundance` (`--matrix`) |
+| `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. A list of patterns is tried in order; `"paired_with": "<param>"` instead takes the pattern at the position the named parameter's list chose, so two files come from the same producer step. | `rnaseq` → `differentialabundance` (`--matrix`, and `--feature-length-matrix` paired with it) |
 | `upstream_param` | Reuses a resolved parameter value from the upstream run's `params.json`. | `rnaseq` `--gtf` → `differentialabundance` `--gtf` |
 
 ### Samplesheet Transformations
@@ -157,13 +157,28 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 2. `set`: Set values or template expressions for every row (`{"lane": "{run_accession}"}`).
 3. `add_empty`: Insert declared columns that the upstream sheet lacks.
 4. `drop_rows_not_allowed`: Filter out rows containing values rejected by the downstream schema.
-5. `require_values`: Assert that specific columns must contain non-empty values before launch.
+5. `allowed_values`: Refuse (never drop) the handoff when a column holds a value outside a list — rows the downstream must not analyse although its schema cannot tell, such as a long-read or colour-space run in fetchngs's sheet for a short-read pipeline (`{"instrument_platform": ["ILLUMINA", …]}`).
+6. `require_values`: Assert that specific columns must contain non-empty values before launch.
 
 > [!IMPORTANT]
 > **Metagenomic Co-Assembly Safety:**
 > In metagenomic workflows (`fetchngs` → `mag`, `detaxizer` → `mag`), nf-core/mag treats identical sample `group` identifiers as an instruction to pool reads across samples for co-assembly. To preserve biological integrity:
 > - The default registered rules assign each sample its own independent group: `"group": "{sample}"`.
 > - Pooling samples requires an explicit custom inline handoff rule accompanied by domain justification.
+
+> [!IMPORTANT]
+> **Sequencing platforms and study design are not inferred:**
+> - nf-core/mag chooses its long-read preprocessing and assembler mode (e.g. Flye's ONT vs PacBio mode) by `long_reads_platform`. The `fetchngs` → `mag` rule takes each run's short-read platform from its ENA `instrument_platform` (fetchngs itself labels every run `ILLUMINA`), so a long-read run is refused instead of being analysed as Illumina short reads. detaxizer records no long-read platform: the `detaxizer` → `mag` rule refuses samples with long reads until an inline handoff names their platform, e.g. for PacBio HiFi data:
+>   ```json
+>   {"pipeline": "mag", "handoff": {
+>     "upstream_params": {"generate_downstream_samplesheets": true, "generate_pipeline_samplesheets": "mag"},
+>     "params": {"input": {"samplesheet": "downstream_samplesheets/mag-pe.csv",
+>       "provides": ["sample", "run", "group", "short_reads_1", "short_reads_2", "long_reads"],
+>       "set": {"group": "{sample}", "short_reads_platform": "ILLUMINA", "long_reads_platform": "PACBIO_HIFI"}}}}}
+>   ```
+> - The `fetchngs` rules into short-read pipelines (`rnaseq`, `atacseq`, `sarek`, `metatdenovo`, `viralrecon`) refuse runs whose ENA `instrument_platform` is not a short-read platform: long-read, capillary and colour-space runs are not analysed as if they were Illumina reads. ampliseq needs `--pacbio`/`--iontorrent` set for such runs.
+> - `fetchngs` → `ampliseq` leaves `run` empty, so ampliseq learns one DADA2 error model for all samples; data from several sequencing runs needs `run` filled per sequencing run — an inline handoff whose `set` templates it from a column that identifies the run, or your own samplesheet.
+> - `fetchngs` → `sarek` and `demultiplex` → `sarek` write no `status` or `sex`: sarek treats every sample as normal tissue and runs germline analyses only. A tumour/normal design needs its own sarek samplesheet: a handoff's `set` gives every row the same value.
 
 ---
 

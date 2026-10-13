@@ -878,3 +878,20 @@ def test_resume_tolerates_data_removed_from_a_kept_directory(library, fake_runs,
     for f in data.glob("A_*"):
         f.unlink()
     assert chain.run_chain(spec, repo_root=root, outdir=out, resume=True).outcome == "success"
+
+
+def test_chain_status_names_each_stages_completion_caveats(tmp_path):
+    # A stage that succeeded without some samples says so beside its success.
+    import json
+    stage = tmp_path / "01-rnaseq"
+    (stage / "provenance").mkdir(parents=True)
+    (stage / "provenance/run_manifest.json").write_text(json.dumps(
+        {"outcome": "success", "completion_caveats": [
+            "[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)"]}))
+    state = {"chain_id": "c1", "outcome": "success", "stages": [
+        {"id": "rnaseq", "pipeline": "rnaseq", "index": 1, "outdir": str(stage),
+         "status": "success", "version": "3.27.0", "commit": "a" * 40}]}
+    text = chain.format_status(state, [])
+    assert ("      caveat: [nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)"
+            in text)
+    assert chain._caveats({"completion_caveats": "not a list"}) == []

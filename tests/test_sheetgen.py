@@ -228,6 +228,25 @@ def test_illumina_names_lanes_and_paired_rows(tmp_path):
     assert g.record["samples"] == 2 and g.record["rows"] == 3 and g.record["paired_end"] == 3
 
 
+def test_optional_columns_left_to_their_schema_defaults_are_named(tmp_path):
+    # sarek's status defaults to 0: a generated sheet without it analyses every sample as normal
+    # tissue, a scientific choice the caller must see before launch, not discover afterwards.
+    data = tmp_path / "data"
+    pair(data, "T1_S1_L001_R1_001.fastq.gz", "T1_S1_L001_R2_001.fastq.gz", "r:1")
+    g = gen(tmp_path, S.SAREK, [data], {"patient": "{sample}"})
+    assert "status" not in rows(g)[0] and "sex" not in rows(g)[0]
+    assert g.record["implicit_defaults"] == {"sex": "NA", "status": "0"}
+    assert "schema default on every row: sex = NA, status = 0" in g.summary
+    up = S.make_pipeline(tmp_path / "doc", S.SAREK)
+    text = sheetgen.describe(schema_mod.load_input_schema(up),
+                             schema_mod.load_param_schema(up).params["input"])
+    assert "Optional columns left out take their schema defaults in the pipeline: `sex` = `NA`, " \
+           "`status` = `0`" in text
+    # Set explicitly, the column is written and no longer implicit.
+    g = gen(tmp_path / "set", S.SAREK, [data], {"patient": "{sample}", "status": "1"})
+    assert rows(g)[0]["status"] == "1" and g.record["implicit_defaults"] == {"sex": "NA"}
+
+
 @pytest.mark.parametrize("r1, r2, sample", [
     ("A_R1.fastq.gz", "A_R2.fastq.gz", "A"),
     ("A.R1.fq.gz", "A.R2.fq.gz", "A"),

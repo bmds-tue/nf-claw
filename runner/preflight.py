@@ -7,6 +7,19 @@ from pathlib import Path
 
 from runner.submodule import SubmoduleStatus
 
+# The software an nf-core template engine profile runs every task with, and the commands that
+# provide it (Apptainer installs a `singularity` alias; Nextflow's conda engine also drives mamba
+# and micromamba).
+_ENGINE_COMMANDS = {
+    "singularity": ("singularity", "apptainer"),
+    "apptainer": ("apptainer", "singularity"),
+    "podman": ("podman",),
+    "conda": ("conda", "mamba", "micromamba"),
+    "mamba": ("mamba", "micromamba"),
+    "charliecloud": ("ch-run",),
+    "shifter": ("shifter",),
+}
+
 
 def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleStatus,
                       repo_root: Path, resume: bool, work_dir: Path | None = None,
@@ -18,8 +31,9 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
     tokens = {t.strip() for t in profile.split(",")}
     if "docker" in tokens and shutil.which("docker") is None:
         issues.append("profile uses docker but docker not found on PATH")
-    if "singularity" in tokens and not (shutil.which("singularity") or shutil.which("apptainer")):
-        issues.append("profile uses singularity but singularity/apptainer not found")
+    for engine, commands in _ENGINE_COMMANDS.items():
+        if engine in tokens and not any(shutil.which(c) for c in commands):
+            issues.append(f"profile uses {engine} but {'/'.join(commands)} not found on PATH")
     if "docker" in tokens and shutil.which("docker"):
         try:
             ok = subprocess.run(["docker", "info"], capture_output=True, timeout=10).returncode == 0

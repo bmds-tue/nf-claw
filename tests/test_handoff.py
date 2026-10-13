@@ -176,6 +176,80 @@ def test_rename_set_and_relative_paths(library, finished_run, tmp_path):
     assert row["lane"] == "SRR1" and "reads_1" not in row
 
 
+def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, finished_run, tmp_path):
+    # atacseq's FastQ columns carry a file pattern but no path format: a relative value names a file
+    # in the upstream outdir there too, and must not reach the downstream as a relative path.
+    import json
+    root = library("mini_up", "mini")
+    _, down = _trees(root)
+    (down / "assets/schema_input.json").write_text(json.dumps({"items": {
+        "properties": {"sample": {"type": "string"},
+                       "fastq_1": {"type": "string", "pattern": "^\\S+\\.f(ast)?q\\.gz$"},
+                       "fastq_2": {"type": "string",
+                                   "pattern": "^(\\S+\\.f(ast)?q\\.gz|NA)$"}},
+        "required": ["sample", "fastq_1"]}}))
+    up = finished_run(tmp_path / "up", {
+        "s.csv": "sample,fastq_1,fastq_2\nA,fastq/A_1.fastq.gz,NA\n", **FASTQS})
+    rule = _rule({"params": {"input": {"samplesheet": "s.csv",
+                                       "provides": ["sample", "fastq_1", "fastq_2"]}}})
+    handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    row = _rows(tmp_path / "h" / "input.csv")[0]
+    assert row["fastq_1"] == f"{up}/fastq/A_1.fastq.gz" and row["fastq_2"] == "NA"
+    built = _rule({"params": {"input": {"build": {
+        "rows": "fastq/{s}_1.fastq.gz",
+        "columns": {"sample": "{s}", "fastq_1": "fastq/{s}_1.fastq.gz",
+                    "fastq_2": "fastq/{s}_2.fastq.gz"}}}}})
+    handoff.materialize(built, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "b")
+    row = _rows(tmp_path / "b" / "input.csv")[0]
+    assert (row["fastq_1"], row["fastq_2"]) == (f"{up}/fastq/A_1.fastq.gz", f"{up}/fastq/A_2.fastq.gz")
+
+
+PLATFORM_SHEET = ("sample,fastq_1,fastq_2,instrument_platform\n"
+                  "A,{outdir}/fastq/A_1.fastq.gz,{outdir}/fastq/A_2.fastq.gz,ILLUMINA\n"
+                  "B,{outdir}/fastq/A_1.fastq.gz,,OXFORD_NANOPORE\n"
+                  "C,{outdir}/fastq/A_1.fastq.gz,,\n")
+SHORT_ONLY = {"params": {"input": {"samplesheet": "s.csv",
+                                   "provides": ["sample", "fastq_1", "fastq_2", "instrument_platform"],
+                                   "allowed_values": {"instrument_platform": ["ILLUMINA", "BGISEQ"]}}}}
+
+
+def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library, finished_run, tmp_path):
+    # A Nanopore run in fetchngs's sheet would reach a short-read aligner as if it were Illumina.
+    _, down = _trees(library("mini_up", "mini"))
+    up = finished_run(tmp_path / "up", {"s.csv": PLATFORM_SHEET, **FASTQS})
+    with pytest.raises(NfclawError) as err:
+        handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h")
+    assert err.value.code is ErrorCode.HANDOFF_FAILED
+    assert ("takes only instrument_platform ILLUMINA, BGISEQ; row 3 (B: OXFORD_NANOPORE), "
+            "row 4 (C: empty)") in err.value.message
+    ok = finished_run(tmp_path / "ok", {"s.csv": PLATFORM_SHEET.split("B,")[0], **FASTQS})
+    hand = handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=ok, downstream_tree=down,
+                               dest=tmp_path / "h2")
+    assert [r["sample"] for r in _rows(tmp_path / "h2" / "input.csv")] == ["A"]
+    assert hand.params["input"] == str(tmp_path / "h2" / "input.csv")
+
+
+def test_allowed_values_need_their_column(library, finished_run, tmp_path):
+    _, down = _trees(library("mini_up", "mini"))
+    up = finished_run(tmp_path / "up", {"s.csv": SHEET.replace("{outdir}", "{outdir}"), **FASTQS})
+    with pytest.raises(NfclawError, match="has no column 'instrument_platform'"):
+        handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h")
+    up_tree, down_tree = _trees(library("mini_up", "mini"))
+    body = {"params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"],
+                                 "allowed_values": {"instrument_platform": ["ILLUMINA"]}}}}
+    assert any("'instrument_platform' is not among the columns the handoff provides" in issue
+               for issue in handoff.check_rule(_rule(body), up_tree, down_tree))
+
+
+@pytest.mark.parametrize("allowed", [["ILLUMINA"], {"col": []}, {"col": "ILLUMINA"}, {"": ["x"]}])
+def test_allowed_values_must_map_columns_to_value_lists(allowed):
+    with pytest.raises(NfclawError, match="'allowed_values' must map column names"):
+        _rule({"params": {"input": {"samplesheet": "s.csv", "provides": ["sample"],
+                                    "allowed_values": allowed}}})
+
+
 def test_a_rename_onto_an_existing_column_is_refused(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"s.csv": "sample,fastq_1,r1\nA,x,y\n"})
@@ -322,6 +396,61 @@ def test_file_source_takes_the_first_candidate_that_matches(library, finished_ru
                                                 "salmon/counts.tsv"]}}})
     hand = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
     assert hand.params == {"fasta": str(up / "star_salmon" / "counts.tsv")}
+
+
+def _with_lengths(down):
+    """The mini fixture with a second file parameter, as differentialabundance takes counts and
+    lengths."""
+    import json
+    path = down / "nextflow_schema.json"
+    schema = json.loads(path.read_text())
+    schema["definitions"]["reference_genome_options"]["properties"]["lengths"] = {
+        "type": "string", "format": "file-path"}
+    path.write_text(json.dumps(schema))
+    return down
+
+
+PAIRED = {"params": {
+    "fasta": {"file": ["star_rsem/counts.tsv", "salmon/counts.tsv"]},
+    "lengths": {"file": ["star_rsem/lengths.tsv", "salmon/lengths.tsv"], "paired_with": "fasta"}}}
+
+
+def test_paired_file_sources_come_from_the_same_producer(library, finished_run, tmp_path):
+    # rnaseq 3.15-3.22 published Salmon gene lengths but none for RSEM: independent first matches
+    # handed RSEM counts on with Salmon's lengths, silently mixing two quantifications.
+    _, down = _trees(library("mini_up", "mini"))
+    down = _with_lengths(down)
+    both = finished_run(tmp_path / "both", {
+        "star_rsem/counts.tsv": "rc", "star_rsem/lengths.tsv": "rl",
+        "salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    hand = handoff.materialize(_rule(PAIRED), upstream_outdir=both, downstream_tree=down,
+                               dest=tmp_path / "h")
+    assert hand.params == {"fasta": str(both / "star_rsem/counts.tsv"),
+                           "lengths": str(both / "star_rsem/lengths.tsv")}
+    rsem_without = finished_run(tmp_path / "old", {
+        "star_rsem/counts.tsv": "rc", "salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    with pytest.raises(NfclawError, match="star_rsem/lengths.tsv"):
+        handoff.materialize(_rule(PAIRED), upstream_outdir=rsem_without, downstream_tree=down,
+                            dest=tmp_path / "h2")
+
+
+def test_a_paired_source_is_not_chosen_without_its_partner(library, finished_run, tmp_path):
+    _, down = _trees(library("mini_up", "mini"))
+    down = _with_lengths(down)
+    up = finished_run(tmp_path / "up", {"salmon/counts.tsv": "sc", "salmon/lengths.tsv": "sl"})
+    with pytest.raises(NfclawError, match="supply both --fasta and --lengths"):
+        handoff.materialize(_rule(PAIRED), upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / "h", exclude_params=frozenset({"fasta"}))
+
+
+@pytest.mark.parametrize("lengths", [
+    {"file": ["a.tsv", "b.tsv"], "paired_with": "nope"},
+    {"file": ["a.tsv"], "paired_with": "fasta"},
+    {"file": "a.tsv", "paired_with": "fasta"},
+    {"file": ["a.tsv", "b.tsv"], "paired_with": "lengths"}])
+def test_paired_with_must_name_an_equally_long_file_list(lengths):
+    with pytest.raises(NfclawError, match="paired_with"):
+        _rule({"params": {"fasta": {"file": ["x.tsv", "y.tsv"]}, "lengths": lengths}})
 
 
 def test_file_source_candidates_none_matching(library, finished_run, tmp_path):
