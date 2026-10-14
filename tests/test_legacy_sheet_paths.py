@@ -54,6 +54,8 @@ def test_legacy_read_validation_rejects_unresolvable_data(tmp_path, damage, expe
 
 @pytest.mark.parametrize("suffix", ["csv", "json", "yaml"])
 def test_legacy_reads_remain_replay_dependencies_in_flat_sheets(tmp_path, suffix):
+    if suffix == "yaml":
+        pytest.importorskip("yaml")              # YAML sheets need the optional nfclaw[yaml]
     _, contract, sheet, reads = _sheet(tmp_path)
     if suffix != "csv":
         sheet = tmp_path / f"samples.{suffix}"

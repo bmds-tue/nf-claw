@@ -440,6 +440,46 @@ def test_a_failed_stage_stops_the_chain(library, fake_runs, tmp_path):
     assert _last_log_line(out).endswith("failed at stage 01-mini_up: failed (exit status 1)")
 
 
+def test_a_failed_stage_names_the_release_it_executed(library, fake_runs, tmp_path, monkeypatch):
+    # nfclaw writes the run manifest for a launched run that fails, so `chain status` can say
+    # which release and commit failed instead of "? ()".
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    out = tmp_path / "c"
+    checked = chain.orchestration.run_pipeline
+
+    def launch_then_fail(name, **kw):
+        if kw["check_only"]:
+            return checked(name, **kw)
+        (kw["outdir"] / "provenance").mkdir(parents=True)
+        (kw["outdir"] / "provenance/run_manifest.json").write_text(json.dumps(
+            {"outcome": "failed", "version": "1.2.0", "commit": "b" * 40}))
+        raise _boom()
+
+    monkeypatch.setattr(chain.orchestration, "run_pipeline", launch_then_fail)
+    with pytest.raises(NfclawError, match="exit status 1"):
+        chain.run_chain(_spec(), repo_root=root, outdir=out)
+    first, second = _state(out)["stages"]
+    assert (first["status"], first["version"], first["commit"]) == ("failed", "1.2.0", "b" * 40)
+    text = chain.format_status(*chain.status(out))
+    assert f"01-mini_up            mini_up 1.2.0 ({'b' * 12})  failed" in text
+    assert "02-mini               mini  pending" in text and "?" not in text
+
+
+def test_a_stage_ignores_a_manifest_from_an_earlier_attempt(tmp_path):
+    stage = tmp_path / "s"
+    (stage / "provenance").mkdir(parents=True)
+    (stage / "provenance/run_manifest.json").write_text(
+        json.dumps({"version": "0.9.0", "commit": "c" * 40}))
+    entry = {"version": None, "commit": None}
+    later = (stage / "provenance/run_manifest.json").stat().st_mtime + 60
+    chain._record_attempted_release(entry, stage, launched=later)
+    assert entry == {"version": None, "commit": None}
+    chain._record_attempted_release(entry, tmp_path / "never-launched", launched=0)
+    assert entry == {"version": None, "commit": None}
+    chain._record_attempted_release(entry, stage, launched=0)
+    assert entry == {"version": "0.9.0", "commit": "c" * 40}
+
+
 def test_retries_relaunch_with_resume_only_for_execution_failures(library, fake_runs, tmp_path):
     fake_runs.failures["mini_up"] = [_boom(), _boom()]
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})

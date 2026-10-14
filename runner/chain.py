@@ -403,6 +403,20 @@ def _read_json(path: Path) -> Any:
         return None
 
 
+def _record_attempted_release(entry: dict, stage_dir: Path, launched: float) -> None:
+    """A failed or stopped stage still names the release and commit it executed: nfclaw writes
+    the run manifest when a launched run ends any way. A manifest older than this attempt (from
+    an earlier one, perhaps of a since-redefined stage) is not this attempt's, so it is ignored."""
+    path = stage_dir / "provenance" / "run_manifest.json"
+    try:
+        current = path.stat().st_mtime >= launched
+    except OSError:
+        return
+    manifest = _read_json(path) if current else None
+    if isinstance(manifest, dict):
+        entry.update(version=manifest.get("version"), commit=manifest.get("commit"))
+
+
 @contextlib.contextmanager
 def _lock(record: Path, outdir: Path) -> Iterator[None]:
     """One chain process per --outdir: two would race on the same stages and state."""
@@ -850,6 +864,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                                                            else "") + "started — log "
                   f"{stage_dir / 'provenance' / 'logs' / runlog.RUN_LOG_NAME}")
         opts = options(spec, stage)
+        launched = time.time()
         try:
             orchestration.run_pipeline(
                 stage.pipeline, repo_root=repo_root, input_path=input_path, outdir=stage_dir,
@@ -867,6 +882,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 resume = True
                 continue
             entry["status"] = "failed"
+            _record_attempted_release(entry, stage_dir, launched)
             state["outcome"] = (f"timed out after {budget} s" if "timeout_seconds" in exc.details
                                 else f"failed at stage {stage.dirname}: {_short(exc)}")
             raise
@@ -874,6 +890,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
             entry["attempts"][-1].update(finished=runlog.now(),
                                          outcome=execution.stop_outcome(exc))
             entry["status"] = "stopped"
+            _record_attempted_release(entry, stage_dir, launched)
             state["outcome"] = f"{execution.stop_outcome(exc)} (stage {stage.dirname})"
             raise
         break
@@ -1201,8 +1218,10 @@ def format_status(state: dict, problems: list[str]) -> str:
     for i, s in enumerate(stages):
         if not _valid_entry(s):
             continue
-        ver = f"{s.get('version') or '?'} ({(s.get('commit') or '')[:12]})"
-        lines.append(f"  {s['index']:02d}-{s['id']:<18} {s['pipeline']} {ver}  {s['status']}  "
+        # A stage that never launched (pending, or refused before Nextflow ran) has no release.
+        release = "".join([f" {s['version']}" if s.get("version") else "",
+                           f" ({str(s['commit'])[:12]})" if s.get("commit") else ""])
+        lines.append(f"  {s['index']:02d}-{s['id']:<18} {s['pipeline']}{release}  {s['status']}  "
                      f"{s['outdir']}")
         if s["status"] == "success":
             lines += [f"      caveat: {c}" for c in _caveats(
