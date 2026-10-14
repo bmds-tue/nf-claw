@@ -1854,3 +1854,54 @@ def test_unidentified_engine_cannot_launch_with_a_requested_resource_ceiling(tmp
             params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
             write_provenance=False, timeout_seconds=10, limits=resources.parse(2, None, None))
     assert not launches and not (tmp_path / "out").exists()
+
+
+def test_a_stub_test_profile_is_announced_and_reported_as_a_caveat(tmp_path, monkeypatch):
+    # proteinfold 2.0.0's test profile sets `stubRun = true`: --demo "succeeded" with every output an
+    # empty placeholder, and nothing said the run had computed nothing.
+    import json
+    from runner import runlog
+    root = _make_pipeline(tmp_path, "mini")
+    up = root / "pipelines/mini/upstream"
+    (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
+    (up / "conf").mkdir()
+    (up / "conf/test.config").write_text("stubRun = true\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    launched = []
+    def run(*args, **kwargs):
+        launched.append(len(shown))
+        kwargs["run_log"].write(b"-[nf-core/mini] Pipeline completed successfully-\n")
+    monkeypatch.setattr(orchestration.execution, "run", run)
+    shown = []
+    out = tmp_path / "out"
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=out, profile="docker", params_file=None,
+        cli_overrides={}, resume=False, demo=True, check_only=False, write_provenance=True,
+        timeout_seconds=10, on_warning=shown.append)
+    assert any("stubRun = true" in w for w in shown[:launched[0]])      # said before launch
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["stub_profiles"] == ["test"]
+    assert any(c.startswith("stub run:") for c in manifest["completion_caveats"])
+    state = runlog.read_state(out / "provenance/logs/run.log")
+    assert state.state == "success"
+    assert any(c.startswith("stub run:") for c in state.caveats)
+
+
+def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    up = root / "pipelines/mini/upstream"
+    (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
+    (up / "conf").mkdir()
+    (up / "conf/test.config").write_text("params { input = 'x' }\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: k["run_log"].write(
+        b"-[nf-core/mini] Pipeline completed successfully-\n"))
+    shown = []
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+        params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
+        write_provenance=True, timeout_seconds=10, on_warning=shown.append)
+    assert not any("stub" in w for w in shown)
+    manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
+    assert "stub_profiles" not in manifest and not manifest.get("completion_caveats")

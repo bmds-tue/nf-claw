@@ -291,7 +291,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           nextflow_version: str | None = None,
           generated_samplesheet: dict | None = None,
           dependency_stability: dict | None = None,
-          completion_caveats: list[str] | None = None) -> Path:
+          completion_caveats: list[str] | None = None,
+          stub_profiles: list[str] | None = None) -> Path:
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -338,6 +339,9 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # What the pipeline reported missing from a successful run, in its own words (runner.runlog).
     if completion_caveats:
         manifest["completion_caveats"] = list(completion_caveats)
+    # Selected profiles that run every task as a stub; a replay (replay_guard) reports it too.
+    if stub_profiles:
+        manifest["stub_profiles"] = list(stub_profiles)
     if pipeline_checksums is not None or submodule.path.is_dir():
         manifest["pipeline_path"] = str(submodule.path.absolute())
         manifest["pipeline_git_head"] = (

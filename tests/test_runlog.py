@@ -538,3 +538,20 @@ def test_completion_caveats_count_ignored_task_failures_from_the_nextflow_log(tm
     assert runlog.completion_caveats("", log) == [
         "Nextflow ignored 2 failed task(s) (errorStrategy 'ignore'); their results are missing"]
     assert runlog.completion_caveats("", tmp_path / "absent.log") == []
+
+
+def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
+    import json
+    from runner import replay_guard
+    original = tmp_path / "orig"
+    (original / "provenance").mkdir(parents=True)
+    (original / "provenance/run_manifest.json").write_text(json.dumps({"stub_profiles": ["test"]}))
+    log = tmp_path / "replay/provenance/logs/run.log"
+    log.parent.mkdir(parents=True)
+    replay_guard.start_replay_log(log, str(original), "123")
+    with log.open("a") as fh:
+        fh.write("| -[nf-core/mini] Pipeline completed successfully-\n"
+                 "==> nfclaw replay finished 2026-10-14T00:00:00+00:00: success\n")
+    state = runlog.read_state(log)
+    assert state.state == "success"
+    assert [c for c in state.caveats if c.startswith("stub run:")] == [replay_guard.stub_caveat(["test"])]

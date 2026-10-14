@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shlex
 from pathlib import Path
 
@@ -18,6 +19,34 @@ ENGINE_PROFILES = frozenset({
 def may_set_params(profile: str) -> bool:
     """Whether a profile in this composition can set pipeline parameters (anything but an engine)."""
     return any(p.strip() not in ENGINE_PROFILES for p in profile.split(",") if p.strip())
+
+
+# `<name> { includeConfig '<file>' }` in a pinned nextflow.config's profiles block, and a top-level
+# `stubRun = true` in the included file: Nextflow then runs every task's stub block, which writes
+# placeholder outputs instead of running the tool (proteinfold 2.0.0's `test` profile does).
+_PROFILE_INCLUDE = re.compile(r"\b(\w+)\s*\{\s*includeConfig\s+['\"]([^'\"]+)['\"]\s*\}")
+_STUB_RUN = re.compile(r"^\s*stubRun\s*=\s*true\b", re.M)
+_COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
+
+
+def stub_profiles(upstream: Path, profile: str) -> list[str]:
+    """The selected profiles whose pinned config runs every task as a stub (`stubRun = true`)."""
+    try:
+        config = (upstream / "nextflow.config").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    included = dict(_PROFILE_INCLUDE.findall(config))
+    stubbed = []
+    for name in dict.fromkeys(p.strip() for p in profile.split(",") if p.strip()):
+        if name not in included:
+            continue
+        try:
+            text = (upstream / included[name]).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _STUB_RUN.search(_COMMENTS.sub(" ", text)):
+            stubbed.append(name)
+    return stubbed
 
 
 def compose_profile(profile: str, *, demo: bool = False,

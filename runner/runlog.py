@@ -319,7 +319,8 @@ class RunLog:
     @classmethod
     def open(cls, logs_dir: Path, *, command: list[str], launch_dir: Path,
              nextflow_log: Path | None = None, notes: list[str] | tuple[str, ...] = (),
-             env: dict[str, str] | None = None) -> "RunLog":
+             env: dict[str, str] | None = None,
+             caveats: list[str] | tuple[str, ...] = ()) -> "RunLog":
         """Start the record of a launch: its header, and one line on the terminal saying where it
         is — before anything else prints, since a long run's own output soon buries it. `env` is
         the overlay the command runs under (NXF_VER, …); the header's command line carries it."""
@@ -336,6 +337,10 @@ class RunLog:
         log.note(f"    pid: {os.getpid()}")
         for note in notes:
             log.note(f"    warning: {note}")
+        # Known before launch and true of any success it ends in (a stub-run profile): `status`
+        # reports these with the success, ahead of what the pipeline itself prints.
+        for caveat in caveats:
+            log.note(f"    caveat: {caveat}")
         print(f"nfclaw: logging this run to {log.path}", file=sys.stderr, flush=True)
         return log
 
@@ -448,7 +453,7 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
 _STARTED = re.compile(r"^==> nfclaw (run|replay|chain) started (\S+)")
 _FINISHED = re.compile(r"^==> nfclaw (run|replay|chain) finished (\S+): (.*)$")
 _HEADER = re.compile(r"^    (command|launch dir|nextflow log|replay of|host|host id|pid|nextflow pid|"
-                     r"replay supervisor pid|warning|console format): (.*)$")
+                     r"replay supervisor pid|warning|caveat|console format): (.*)$")
 _HEAD_BYTES = 64 * 1024
 _STATE_TAIL_BYTES = 512 * 1024
 _LAST_OUTPUT_LINES = 5
@@ -564,6 +569,7 @@ def read_state(log: Path) -> RunState:
     st = RunState(log, "missing", kind=m.group(1), started=m.group(2))
     header_lines = 1
     prefixed_console = False
+    header_caveats: list[str] = []
     for line in head[1:]:
         h = _HEADER.match(line)
         if not h:
@@ -584,6 +590,8 @@ def read_state(log: Path) -> RunState:
             st.supervisor_pid = int(value)
         elif key == "nextflow log":
             st.nextflow_log = value
+        elif key == "caveat":
+            header_caveats.append(value)
     body = tail[header_lines:] if tail_from == start else tail
 
     if body and (f := _FINISHED.match(body[-1])):
@@ -604,7 +612,7 @@ def read_state(log: Path) -> RunState:
             nextflow_log = (Path(st.nextflow_log) if st.nextflow_log else
                             log.parent.parent.parent / ".nextflow.log" if st.kind == "replay"
                             else None)
-            st.caveats = completion_caveats(st.console, nextflow_log)
+            st.caveats = header_caveats + completion_caveats(st.console, nextflow_log)
     elif ((st.host_id and st.host_id != host_identity())
           or (not st.host_id and st.host and st.host != socket.gethostname())):
         st.state = "elsewhere"

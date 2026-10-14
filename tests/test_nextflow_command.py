@@ -53,3 +53,22 @@ def test_only_engine_profiles_are_known_not_to_set_params():
     assert not may_set_params("singularity, arm64,debug")
     assert may_set_params("test,docker")
     assert may_set_params("docker,uppmax")                  # an institutional profile can set params
+
+
+def test_stub_profiles_names_the_selected_profiles_whose_config_runs_stubs(tmp_path):
+    (tmp_path / "conf").mkdir()
+    (tmp_path / "nextflow.config").write_text(
+        "profiles {\n    docker { docker.enabled = true }\n"
+        "    test      { includeConfig 'conf/test.config'      }\n"
+        "    test_full {\n        includeConfig 'conf/test_full.config'\n    }\n}\n")
+    (tmp_path / "conf/test.config").write_text(
+        "/*\n    stubRun = true only below, not in this comment\n*/\n\nstubRun = true\n"
+        "params { input = 'x' }\n")
+    (tmp_path / "conf/test_full.config").write_text(
+        "// stubRun = true\n/*\nstubRun = true\n*/\nparams { input = 'y' }  // stubRun = true\n")
+    assert nc.stub_profiles(tmp_path, "test,docker") == ["test"]
+    assert nc.stub_profiles(tmp_path, "test_full,docker") == []
+    assert nc.stub_profiles(tmp_path, "docker") == []
+    assert nc.stub_profiles(tmp_path / "missing", "test") == []
+    (tmp_path / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
+    assert nc.stub_profiles(tmp_path, "test") == ["test"]

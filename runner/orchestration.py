@@ -13,7 +13,7 @@ from runner import (dependency_stability, discovery, engine_version, execution, 
                     reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
                     submodule, versions)
 from runner import schema as schema_mod
-from runner.replay_guard import _capture_input_inventory, pipeline_head
+from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
 from runner.submodule import SubmoduleStatus
@@ -513,6 +513,16 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
     warnings += reproducibility.advisories(st.path, merged, demo=demo)
+    # A selected profile that runs every task as a stub (proteinfold's `test`): the run exercises
+    # the workflow, not the tools, so its success must not read as analysis results.
+    stubbed = nextflow_command.stub_profiles(st.path, composed_profile)
+    stub_caveats = [stub_caveat(stubbed)] if stubbed else []
+    if stubbed:
+        warnings.append(
+            f"the selected {', '.join(f'`{n}`' for n in stubbed)} profile sets `stubRun = true`: "
+            "every task runs its stub block, which writes placeholder files instead of running its "
+            "tool, so this run checks the workflow's wiring, not its analysis, and its outputs "
+            "will hold no results.")
     if sheet is not None:
         # What the generated samplesheet holds and where it is, before the run starts (a --check
         # stages it in a temp directory: the result and the printed command name it).
@@ -702,7 +712,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
-                             dependency_stability=stability, completion_caveats=caveats)
+                             dependency_stability=stability, completion_caveats=caveats,
+                             stub_profiles=stubbed)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -714,7 +725,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         logs_dir = outdir / "provenance" / "logs"
         run_log = runlog.RunLog.open(logs_dir, command=cmd, launch_dir=outdir,
                                      nextflow_log=runlog.nextflow_log_path(outdir, nxf_overlay),
-                                     notes=warnings, env=nxf_overlay)
+                                     notes=warnings, env=nxf_overlay, caveats=stub_caveats)
         try:
             try:
                 execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
@@ -745,7 +756,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             run_log.outcome = "success"
             # Exit status 0 is not proof that every sample and task made it into the results: say
             # what the pipeline itself reported missing (skipped samples, ignored task failures).
-            caveats = runlog.completion_caveats(run_log.console_tail("out"), run_log.nextflow_log)
+            caveats = stub_caveats + runlog.completion_caveats(run_log.console_tail("out"),
+                                                                run_log.nextflow_log)
             for caveat in caveats:
                 message = f"the pipeline completed but reported: {caveat}"
                 warnings.append(message)
