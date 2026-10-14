@@ -15,17 +15,17 @@ nf-claw derives its parameter documentation and general input validation from ea
 The repository is structured into four distinct, decoupled functional zones:
 
 ```
-                          ┌────────────────────────────────────────┐
-                          │             nf-claw Core               │
-                          └────────────────────────────────────────┘
-                                              │
-             ┌──────────────────┬─────────────┴────────────┬──────────────────┐
-             ▼                  ▼                          ▼                  ▼
-       ┌──────────────┐   ┌──────────────┐          ┌──────────────┐   ┌────────────────┐
-       │  pipelines/  │   │   handoffs/  │          │   runner/    │   │   librarian/   │
-       │ (Submodules  │   │  (Chaining   │          │ (CLI, Engine │   │ (Drift Gate,   │
-       │  & Skills)   │   │    Rules)    │          │  & Runtime)  │   │  Generators)   │
-       └──────────────┘   └──────────────┘          └──────────────┘   └────────────────┘
+                        ┌─────────────────────────────────┐
+                        │           nf-claw Core          │
+                        └─────────────────────────────────┘
+                                         │
+        ┌─────────────────────┬──────────┴──────────┬─────────────────────┐
+        ▼                     ▼                     ▼                     ▼
+┌───────────────┐     ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+│   pipelines/  │     │   handoffs/   │     │    runner/    │     │   librarian/  │
+│  (Submodules  │     │   (Chaining   │     │  (CLI, Engine │     │  (Drift Gate, │
+│   & Skills)   │     │     Rules)    │     │   & Runtime)  │     │  Generators)  │
+└───────────────┘     └───────────────┘     └───────────────┘     └───────────────┘
 ```
 
 | Architectural Zone | Primary Responsibility | Key Files & Directories |
@@ -66,6 +66,7 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Type Coercion Safeguards:** Translates `--input false` to an unset `input` parameter in `params.json` for pipelines that support running without a samplesheet (e.g. sarek), preventing nf-schema type validation crashes.
 - **Pipeline Code Integrity:** Refuses a pinned `upstream/` that is not at the commit its `skill.md` documents, and any tree (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names code that did not run.
 - **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0 or cannot be identified; older engines ignore `process.resourceLimits` silently.
+- **Reproducibility Advisories:** `runner/reproducibility.py` scans pinned task scripts before launch to detect known sources of run-to-run variability (such as dada2 `assignTaxonomy` tie-breaking or unseeded QIIME2 rarefaction) and announces prelaunch advisories unless those steps are explicitly skipped.
 - **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
 
 ### 2.2 Run Execution & Sibling Directory Locking

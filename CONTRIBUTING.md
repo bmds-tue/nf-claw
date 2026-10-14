@@ -28,17 +28,17 @@ All contributions must uphold four architectural invariants:
 The repository is structured into four distinct, decoupled functional zones:
 
 ```
-                          ┌────────────────────────────────────────┐
-                          │             nf-claw Core               │
-                          └────────────────────────────────────────┘
-                                              │
-             ┌──────────────────┬─────────────┴────────────┬──────────────────┐
-             ▼                  ▼                          ▼                  ▼
-       ┌──────────────┐   ┌──────────────┐          ┌──────────────┐   ┌────────────────┐
-       │  pipelines/  │   │   handoffs/  │          │   runner/    │   │   librarian/   │
-       │ (Submodules  │   │  (Chaining   │          │ (CLI, Engine │   │ (Drift Gate,   │
-       │  & Skills)   │   │    Rules)    │          │  & Runtime)  │   │  Generators)   │
-       └──────────────┘   └──────────────┘          └──────────────┘   └────────────────┘
+                        ┌─────────────────────────────────┐
+                        │           nf-claw Core          │
+                        └─────────────────────────────────┘
+                                         │
+        ┌─────────────────────┬──────────┴──────────┬─────────────────────┐
+        ▼                     ▼                     ▼                     ▼
+┌───────────────┐     ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+│   pipelines/  │     │   handoffs/   │     │    runner/    │     │   librarian/  │
+│  (Submodules  │     │   (Chaining   │     │  (CLI, Engine │     │  (Drift Gate, │
+│   & Skills)   │     │     Rules)    │     │   & Runtime)  │     │  Generators)  │
+└───────────────┘     └───────────────┘     └───────────────┘     └───────────────┘
 ```
 
 | Path | Zone | Function & Responsibility |
