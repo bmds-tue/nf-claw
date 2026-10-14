@@ -149,6 +149,19 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   ```
   With it, pathogensurveillance's `BBMAP_SENDSKETCH`, which had failed every attempt, completed on resume.
 
+### Python tools cannot download `ftp://` URLs (IPv6-only host)
+- **Symptom:** a Python task that fetches an `ftp://` URL fails even with the host-network config — e.g. coproid 2.0.1's `SAM2LCA_UPDATEDB`: `Download of taxonomy files failed. NCBI's server may be offline.` (taxopy downloads `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz`), while `curl` fetches the same URL on the host.
+- **Why:** Python's `urllib` FTP handler resolves the server with `socket.gethostbyname`, which returns IPv4 addresses only (`OSError: [Errno 101] Network is unreachable`). `ftplib` itself works over IPv6 (EPSV); only the `urllib` route is IPv4-bound.
+- **Fix:** `urllib` honours `ftp_proxy`. Run a small HTTP proxy on the host that fetches `ftp://` URLs with `curl`, and pass it to that process together with the host-network config:
+  ```groovy
+  process {
+      withName: 'SAM2LCA_UPDATEDB' {
+          containerOptions = '-e ftp_proxy=http://127.0.0.1:38128'
+      }
+  }
+  ```
+  With such a proxy, coproid's bundled test, resumed with the host-network config and this one, completed. Avoid ports already taken by a host proxy (here `tinyproxy` held 3128 and answered `403 Filtered`).
+
 ### sra-tools cannot reach NCBI (IPv6-only host)
 - **Symptom:** `SRATOOLS_FASTERQDUMP` or `SRATOOLS_PREFETCH` fails with `Failed to call external services` (exit status 64) after its retries, also with the host-network config, while `curl` on the same host reaches NCBI.
 - **Why:** sra-tools 3.0.8 (ncbi-vdb) connects over IPv4 only. Traced on such a host, `srapath` opened only IPv4 sockets — 244 attempts to NCBI (`130.14.29.113:443`) and its cloud-metadata probe (`169.254.169.254`), each refused with `ENETUNREACH` — and exited 3. No configuration of the container changes this.
@@ -598,6 +611,7 @@ When a stage specifies `demo: true`, it executes with its bundled test profile d
 - **`createtaxdb`:** The test profile also builds sourmash databases, which taxprofiler does not use and which trigger the 3.1.0 `ConcurrentModificationException` race ([upstream bugs](#upstream-pipeline-bugs-documented-not-patched)). Give the stage `"params": {"build_sourmash_dna": false, "build_sourmash_protein": false}`.
 - **`detaxizer`:** The test profile filters reads with an empty database, removing all reads and leaving empty FastQ files. For downstream chaining, provide active classification parameters: `"params": {"classification_kraken2": false, "classification_bbduk": true, "fasta_bbduk": "<host fasta>"}`.
 - **`rnaseq` → `differentialabundance`:** rnaseq's test data leave 100 genes after differentialabundance's default abundance filter — fewer than DESeq2's default variance-stabilisation subsample (`--deseq2-vst-nsub`, 1000), so `DESEQ2_DIFFERENTIAL` fails with `less than 'nsub' rows`. Give the stage `"deseq2_vst_nsub": 50` along with its own `input` (a design sheet naming rnaseq's samples) and `contrasts`. With that, an rnaseq `demo: true` → differentialabundance chain completed (the failed stage resumed after editing the spec, rnaseq skipped as already succeeded) and `nfclaw chain status` verified the lineage; DESeq2 tested all 100 genes.
+- **`bamtofastq` → `rnaseq`:** the bamtofastq stage needs its `fasta` (see the upstream table). Its test BAMs hold 2,821 and 2,718 read pairs of human `chr22:1-40001`, below rnaseq's `--min-trimmed-reads` (10,000): rnaseq then skips both samples and reports it as a caveat. Give the rnaseq stage the same chr22 test `fasta` and `gtf` (six genes), `"min_trimmed_reads": 1000`, and skip the steps that need more genes than that, `"skip_dupradar": true` and `"skip_deseq2_qc": true`. With these, the chain (the `build` handoff) completed with verified lineage and Salmon counts for both samples.
 - **`demultiplex`:** Test data consists of human amplicon reads. Downstream stages requiring reference genomes need human references (`fasta`/`gtf`), and paired-end profiles: `"profile": "test_pe,docker"`.
 - **`taxprofiler`:** Test profiling on unrecognized reads fails in unhandled zero-hit modules; enable only resilient profilers (`run_kraken2`, `run_kaiju`) with `"run_profile_standardisation": false`.
 
