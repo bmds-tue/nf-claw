@@ -11,7 +11,7 @@ from pathlib import Path
 
 from librarian import write_catalog, write_skill
 from librarian.add_pipeline import read_sources
-from runner import handoff
+from runner import discovery, handoff
 from runner import submodule as submod
 from runner.errors import NfclawError
 
@@ -107,7 +107,7 @@ def _handoff_drift(repo: Path, pipelines_dir: Path) -> list[str]:
         rules = handoff.load_registry(repo)
     except NfclawError as exc:
         return [exc.message]
-    names = {d.name for d in pipelines_dir.iterdir() if d.is_dir()}
+    names = {d.name for d in discovery.pipeline_dirs(pipelines_dir)}
     drift: list[str] = []
     for (up, down), rule in sorted(rules.items()):
         if missing := [n for n in (up, down) if n not in names]:
@@ -121,7 +121,7 @@ def _handoff_drift(repo: Path, pipelines_dir: Path) -> list[str]:
 
 def check(pipelines_dir: Path) -> list[str]:
     drift: list[str] = []
-    pipeline_dirs = sorted(p for p in pipelines_dir.iterdir() if p.is_dir())
+    pipeline_dirs = discovery.pipeline_dirs(pipelines_dir)
     repo = pipelines_dir.parent
     drift.extend(_structure_drift(repo, [d.name for d in pipeline_dirs]))
     try:

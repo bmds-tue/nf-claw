@@ -946,3 +946,11 @@ def test_skill_md_names_the_nextflow_secrets_a_release_reads(tmp_path):
 def test_skill_md_has_no_secrets_section_without_secrets(tmp_path):
     pdir = _seed(tmp_path, "mini")
     assert "## Secrets" not in write_skill.generate("mini", pipelines_dir=pdir)[0].read_text()
+
+
+def test_write_all_skips_hidden_entries_beside_the_pipelines(tmp_path):
+    pdir = _seed(tmp_path, "mini")
+    (pdir / ".nextflow" / "plr").mkdir(parents=True)
+    assert write_skill.main(["--all", "--pipelines-dir", str(pdir)]) == 0
+    assert (pdir / "mini" / "skill.md").is_file() and not (pdir / ".nextflow" / "skill.md").exists()
+

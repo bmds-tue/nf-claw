@@ -6,8 +6,8 @@ import json
 import re
 from pathlib import Path
 
-from runner import (engine_version, fastqrepair_compat, handoff, inputs, nextflow_command, sheetgen,
-                    versions)
+from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs, nextflow_command,
+                    sheetgen, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -859,8 +859,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.all and not args.name:
         parser.error("pass a pipeline name or --all")
     pdir = Path(args.pipelines_dir)
-    names = ([d.name for d in sorted(pdir.iterdir()) if d.is_dir()]
-             if args.all else [args.name])
+    names = ([d.name for d in discovery.pipeline_dirs(pdir)] if args.all else [args.name])
     for n in names:
         skill, ref = generate(n, pipelines_dir=pdir)
         print(f"wrote {skill} and {ref}")
