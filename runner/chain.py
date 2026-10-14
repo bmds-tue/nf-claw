@@ -1194,7 +1194,7 @@ def format_status(state: dict, problems: list[str]) -> str:
     elif state.get("log_state") == "dead":
         outcome = (f"stopped without an outcome — nfclaw (pid {state.get('log_pid')}) is no longer "
                    "running and never recorded how the chain ended (SIGKILL, out of memory, a "
-                   "restart); resume it with --resume")
+                   "full disk, a restart); resume it with --resume")
     lines = [f"chain {state.get('chain_id', '?')}: {outcome}"]
     stages = state.get("stages", [])
     stages = stages if isinstance(stages, list) else []

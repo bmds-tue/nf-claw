@@ -179,7 +179,7 @@ def _status_report(st: runlog.RunState) -> str:
     else:
         lines.append(f"status: stopped without an outcome — {who} (pid {st.pid}) is no longer "
                      "running and never recorded how the run ended: it was killed with SIGKILL, "
-                     "ran out of memory, or the machine restarted")
+                     "ran out of memory, its disk filled up, or the machine restarted")
     times = f"started: {st.started}" + (f" · finished: {st.finished}" if st.finished else "")
     lines += [times, f"log: {st.log}"]
     if st.nextflow_log:
