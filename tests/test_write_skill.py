@@ -938,7 +938,7 @@ def test_skill_md_names_the_nextflow_secrets_a_release_reads(tmp_path):
         "process DOWNLOAD {\n    secret 'NCBI_EMAIL'\n    script:\n    'true'\n}\n")
     text = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text()
     section = text.split("## Secrets\n", 1)[1].split("\n## ", 1)[0]
-    assert "`ENA_WEBIN`, `ENA_WEBIN_PASSWORD` (in `nextflow.config`)" in section
+    assert "`ENA_WEBIN` (in `nextflow.config`); `ENA_WEBIN_PASSWORD` (in `nextflow.config`)" in section
     assert "`NCBI_EMAIL` (in `modules/local/download.nf`)" in section
     assert "nextflow secrets set" in section
 
@@ -954,3 +954,13 @@ def test_write_all_skips_hidden_entries_beside_the_pipelines(tmp_path):
     assert write_skill.main(["--all", "--pipelines-dir", str(pdir)]) == 0
     assert (pdir / "mini" / "skill.md").is_file() and not (pdir / ".nextflow" / "skill.md").exists()
 
+
+def test_secrets_section_stays_short_when_many_modules_read_one_secret(tmp_path):
+    pdir = _seed(tmp_path, "mini")
+    for tool in ("bwamem", "dedup", "haplotyper", "dnascope"):
+        mod = pdir / "mini" / "upstream" / "modules" / "nf-core" / "sentieon" / tool
+        mod.mkdir(parents=True)
+        (mod / "main.nf").write_text("process X {\n    secret 'SENTIEON_LICENSE_BASE64'\n}\n")
+    text = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text()
+    assert text.count("SENTIEON_LICENSE_BASE64") == 1
+    assert "and 2 more files" in text

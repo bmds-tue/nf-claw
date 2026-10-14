@@ -363,18 +363,21 @@ def _secrets_section(st: SubmoduleStatus) -> str:
     files = [root / "nextflow.config", *sorted((root / "conf").glob("**/*.config"))]
     for sub in ("workflows", "subworkflows", "modules"):
         files += sorted((root / sub).glob("**/*.nf"))
-    found: dict[str, list[str]] = {}                      # file → secret names, in reading order
+    found: dict[str, list[str]] = {}                      # secret → files reading it, in reading order
     for path in files:
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        names = list(dict.fromkeys(a or b for a, b in _SECRET_REF.findall(text)))
-        if names:
-            found[path.relative_to(root).as_posix()] = names
+        for name in dict.fromkeys(a or b for a, b in _SECRET_REF.findall(text)):
+            found.setdefault(name, []).append(path.relative_to(root).as_posix())
     if not found:
         return ""
-    where = "; ".join(f"{', '.join(f'`{n}`' for n in names)} (in `{rel}`)" for rel, names in found.items())
+
+    def where(paths: list[str]) -> str:
+        shown = ", ".join(f"`{p}`" for p in paths[:2])
+        return f"in {shown}" + (f" and {len(paths) - 2} more files" if len(paths) > 2 else "")
+    where = "; ".join(f"`{name}` ({where(paths)})" for name, paths in found.items())
     return (f"This release reads Nextflow secrets: {where}. Set each one a run needs with "
             "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its "
             "tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), "
