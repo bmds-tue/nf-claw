@@ -55,13 +55,11 @@ nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a
 ## Nextflow engine
 This release declares `nextflowVersion = '!>=21.04.0'`.
 
-To pin this release's declared minimum engine — useful when a newer Nextflow has incompatible config parsing:
+That minimum predates Nextflow's Java 17 support (21.10.0): on the Java 17+ nf-claw requires it fails to compile the configuration (`Unsupported class file major version 61`), and `nfclaw run` refuses it. Run this release on a later engine — the one nf-claw's acceptance gate checks such releases on:
 ```bash
-nfclaw run bactmap ... --nxf-ver 21.04.0
+nfclaw run bactmap ... --nxf-ver 24.10.5
 ```
 `--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same engine. See [known-issues](../../docs/known-issues.md).
-
-Nextflow 21.04.0 predates `process.resourceLimits` (24.04.0), so `--limit-*` cannot be combined with this pin — nfclaw refuses it rather than run without the ceiling; cap resources with the release's own `--max-cpus`, `--max-memory`, `--max-time` instead.
 
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
