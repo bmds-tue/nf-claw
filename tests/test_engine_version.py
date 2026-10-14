@@ -76,3 +76,26 @@ def test_minimum_version_extracts_the_pin_for_nxf_ver():
 def test_minimum_version_is_silent_on_a_spec_it_cannot_model():
     for spec in (None, "", ">=23.04.0 && <24", "!>=22.10.1, <23"):
         assert ev.minimum_version(spec) is None
+
+
+def test_java_major_reads_modern_and_legacy_version_strings():
+    assert ev.java_major('openjdk version "17.0.20.1" 2026-08-18\nOpenJDK Runtime') == 17
+    assert ev.java_major('java version "1.8.0_402"\nJava(TM) SE Runtime') == 8
+    assert ev.java_major('openjdk version "21" 2023-09-19\n') == 21
+    assert ev.java_major("no version here") is None
+
+
+def test_engines_before_21_10_cannot_run_on_java_17():
+    # Nextflow 21.04.0 cannot compile a config on Java 17 ("Unsupported class file major version
+    # 61"); 21.10.3 can — both verified on OpenJDK 17.0.20.
+    assert not ev.runs_on_java("21.04.0", 17)
+    assert not ev.runs_on_java("20.10.0", 21)
+    assert ev.runs_on_java("21.04.0", 11)
+    assert ev.runs_on_java("21.10.3", 17)
+    assert ev.runs_on_java("24.10.5", 21)
+
+
+def test_the_java_nextflow_runs_on_follows_its_launcher(tmp_path):
+    assert ev.java_command({"NXF_JAVA_HOME": "/a", "JAVA_HOME": "/b"}) == "/a/bin/java"
+    assert ev.java_command({"JAVA_HOME": "/b"}) == "/b/bin/java"
+    assert ev.java_command({}) == "java"

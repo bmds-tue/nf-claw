@@ -476,6 +476,19 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
     writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    # An engine older than Nextflow's Java 17 support cannot compile any pipeline config on Java 17+
+    # (Groovy fails with "Unsupported class file major version"): refuse before launching.
+    pinned = nxf_overlay.get("NXF_VER") or os.environ.get("NXF_VER")
+    if engine_version.predates_java17(pinned):
+        java = engine_version.java_major_for_nextflow({**os.environ, **nxf_overlay})
+        if java is not None and not engine_version.runs_on_java(pinned, java):
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT,
+                f"Nextflow {pinned} cannot run on Java {java}: Java 17 support began in Nextflow "
+                "21.10.0, and an older engine fails to compile the pipeline configuration "
+                "(\"Unsupported class file major version\").",
+                fix=f"Pin a later engine, e.g. --nxf-ver {engine_version.LEGACY_RELEASE_ENGINE}, or "
+                    f"point NXF_JAVA_HOME at a Java 11 installation to run Nextflow {pinned}.")
     # A resource ceiling only exists if the engine enforces it; say so before anything runs.
     if limits is not None and not limits.is_empty():
         engine = engine_version.effective(nxf_overlay.get("NXF_VER"))

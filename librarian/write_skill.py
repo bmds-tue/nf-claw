@@ -322,7 +322,18 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
         return ""
     pin = engine_version.minimum_version(spec)
     pin_line = ""
-    if pin:
+    if pin and engine_version.predates_java17(pin):
+        # The declared minimum cannot run on the Java 17+ nf-claw requires; advising it as the pin
+        # made every run fail before Nextflow read the pipeline.
+        later = engine_version.LEGACY_RELEASE_ENGINE
+        pin_line = (f"\n\nThat minimum predates Nextflow's Java 17 support (21.10.0): on the Java 17+ "
+                    "nf-claw requires it fails to compile the configuration (`Unsupported class "
+                    "file major version 61`), and `nfclaw run` refuses it. Run this "
+                    f"{what} on a later engine — the one nf-claw's acceptance gate checks such "
+                    f"releases on:\n```bash\nnfclaw run {name} ... --nxf-ver {later}\n```\n"
+                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
+                    f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
+    elif pin:
         pin_line = (f"\n\nTo pin this {what}'s declared minimum engine — useful when a newer "
                     "Nextflow has incompatible config parsing:\n```bash\n"
                     f"nfclaw run {name} ... --nxf-ver {pin}\n```\n"

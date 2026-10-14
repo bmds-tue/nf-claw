@@ -118,6 +118,53 @@ def supports_resource_limits(version: str) -> bool:
     return parts + (0,) * (3 - len(parts)) >= RESOURCE_LIMITS_SINCE
 
 
+# Java 17 support arrived in Nextflow 21.10.0. An older engine cannot even compile a pipeline config
+# on Java 17+ ("Unsupported class file major version 61": verified with 21.04.0 on OpenJDK 17.0.20,
+# while 21.10.3 runs), so a release declaring such a minimum is run on a later engine instead —
+# the one the acceptance gate checks those releases on (scripts/nextflow_accept.sh).
+JAVA17_SINCE = (21, 10, 0)
+LEGACY_RELEASE_ENGINE = "24.10.5"
+_JAVA_VERSION = re.compile(r'version\s+"(\d+)(?:\.(\d+))?')
+
+
+def predates_java17(version: str | None) -> bool:
+    """Whether Nextflow `version` is older than its Java 17 support; False when unparseable."""
+    m = re.match(r"\d+(?:\.\d+)*", version or "")
+    if m is None:
+        return False
+    parts = _tuple(m.group())
+    return parts + (0,) * (3 - len(parts)) < JAVA17_SINCE
+
+
+def runs_on_java(version: str, java: int) -> bool:
+    """Whether Nextflow `version` can run on Java major release `java`."""
+    return java < 17 or not predates_java17(version)
+
+
+def java_major(version_output: str) -> int | None:
+    """The major release in `java -version` output: `"17.0.2"` → 17, legacy `"1.8.0_402"` → 8."""
+    m = _JAVA_VERSION.search(version_output or "")
+    if m is None:
+        return None
+    first = int(m.group(1))
+    return int(m.group(2)) if first == 1 and m.group(2) else first
+
+
+def java_command(env: dict[str, str]) -> str:
+    """The Java the Nextflow launcher runs on: NXF_JAVA_HOME, else JAVA_HOME, else `java`."""
+    home = env.get("NXF_JAVA_HOME") or env.get("JAVA_HOME")
+    return f"{home}/bin/java" if home else "java"
+
+
+def java_major_for_nextflow(env: dict[str, str]) -> int | None:
+    """The major Java release Nextflow would run on, or None when it cannot be determined."""
+    try:
+        r = capture([java_command(env), "-version"], timeout=30)
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        return None
+    return java_major(f"{r.stderr or ''}\n{r.stdout or ''}") if r.returncode == 0 else None
+
+
 def check(upstream: Path, *, nxf_ver: str | None = None) -> list[str]:
     """Zero or one advisory about the Nextflow engine vs. the pipeline's requirement.
 

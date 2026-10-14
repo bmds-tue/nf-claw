@@ -910,3 +910,16 @@ def test_demo_section_says_when_the_test_profile_runs_stubs(tmp_path):
     (up / "conf/test.config").write_text("stubRun = true\nparams { input = 'x' }\n")
     demo = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text().split("## Demo\n", 1)[1]
     assert "`stubRun = true`" in demo.split("\n## ", 1)[0]
+
+
+def test_engine_section_steers_away_from_a_minimum_that_cannot_run_on_java_17(tmp_path):
+    # bactmap 1.0.0 declares !>=21.04.0; that engine fails on Java 17 with "Unsupported class file
+    # major version 61", so pinning it as advised made every run fail before reading the pipeline.
+    text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=21.04.0"))
+    assert "--nxf-ver 21.04.0" not in text
+    assert "--nxf-ver 24.10.5" in text and "Java 17" in text
+
+
+def test_engine_section_keeps_a_minimum_that_runs_on_java_17(tmp_path):
+    text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=21.10.3"))
+    assert "--nxf-ver 21.10.3" in text and "Java 17" not in text

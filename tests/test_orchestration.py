@@ -1905,3 +1905,24 @@ def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
     assert not any("stub" in w for w in shown)
     manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
     assert "stub_profiles" not in manifest and not manifest.get("completion_caveats")
+
+
+@pytest.mark.parametrize("java,refused", [(17, True), (21, True), (11, False), (None, False)])
+def test_an_engine_too_old_for_nextflows_java_is_refused_before_launch(tmp_path, monkeypatch, java,
+                                                                       refused):
+    from runner.errors import ErrorCode, NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "java_major_for_nextflow", lambda env: java)
+    def run():
+        return orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+            params_file=None, cli_overrides={}, resume=False, demo=True, check_only=True,
+            write_provenance=False, timeout_seconds=10, nxf_ver="21.04.0")
+    if refused:
+        with pytest.raises(NfclawError, match="21.10.0") as error:
+            run()
+        assert error.value.code == ErrorCode.ENVIRONMENT
+        assert not (tmp_path / "out").exists()
+    else:
+        assert run().checked_only
