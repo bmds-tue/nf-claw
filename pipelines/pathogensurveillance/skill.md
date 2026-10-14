@@ -57,6 +57,9 @@ sample_id,name,description,path,path_2,ncbi_accession,ncbi_query,ncbi_query_max,
 | `--input` | string (file path) |  |  | matches ^\S+\.[ct]sv$ | Path to comma/tab-separated file containing information about samples. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage if running on Cloud infrastructure. |
 
+## Secrets
+This release reads Nextflow secrets: `NCBI_API_KEY` (in `conf/modules.config`, `modules/local/initial_classification/main.nf` and 1 more files). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Analysis parameters** (`analysis_parameters`) — 19 parameters

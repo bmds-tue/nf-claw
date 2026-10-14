@@ -58,6 +58,9 @@ Any of the optional columns above may be appended to the header when your data n
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
+## Secrets
+This release reads Nextflow secrets: `SENTIEON_LICENSE_BASE64` (in `modules/nf-core/sentieon/rsemcalculateexpression/main.nf`, `modules/nf-core/sentieon/staralign/main.nf`). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Alignment options** (`alignment_options`) — 23 parameters
