@@ -6,7 +6,8 @@ import json
 import re
 from pathlib import Path
 
-from runner import engine_version, fastqrepair_compat, handoff, inputs, sheetgen, versions
+from runner import (engine_version, fastqrepair_compat, handoff, inputs, nextflow_command, sheetgen,
+                    versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -635,6 +636,13 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     tree = versions.dev_label(st.commit) if dev else pipeline_version
     tools_md = _tools_section(name, st, tools, ref)
     tools_block = f"## Tools this pipeline runs\n{tools_md}\n" if tools_md else ""
+    # A test profile that runs every task as a stub (`stubRun = true`) computes nothing: say so where
+    # --demo is offered, so a successful demo is not read as analysis results.
+    demo_note = ("This release's `test` profile sets `stubRun = true`: the demo runs every task's stub "
+                 "block, which writes placeholder files instead of running its tool. It checks the "
+                 "workflow's wiring and publication, not its analysis, and its outputs hold no "
+                 "results; `nfclaw status` reports the success with a `stub run:` caveat.\n\n"
+                 if nextflow_command.stub_profiles(st.path, "test") else "")
     nfclaw_cmd, raw_cmd = _run_invocation(name, ps, insch, pipeline_version, tree)
     if dev:
         first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its current head "
@@ -726,6 +734,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{tools_block}"
         "## Demo\n```bash\n"
         f"{demo_line}\n```\n\n"
+        f"{demo_note}"
         "## Full reference\n"
         "Every parameter — name, type, required, hidden, allowed values, constraints, default and "
         "description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. "

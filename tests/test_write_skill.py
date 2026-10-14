@@ -896,3 +896,17 @@ def test_inputs_name_the_choice_or_the_reason_generation_needs(tmp_path):
     _, sarek = _rendered(tmp_path / "sarek", S.SAREK)
     assert "`lane` from Illumina lane numbers" in sarek and "`patient` (matching ^\\S+$)" in sarek
     assert _rendered(tmp_path / "none", S.NO_SHEET)[1] is None
+
+
+def test_demo_section_says_when_the_test_profile_runs_stubs(tmp_path):
+    # proteinfold's skill.md offered `--demo` with no hint that its test profile computes nothing.
+    pdir = _seed(tmp_path, "mini")
+    up = pdir / "mini" / "upstream"
+    (up / "nextflow.config").write_text("profiles {\n    test { includeConfig 'conf/test.config' }\n}\n")
+    (up / "conf").mkdir()
+    (up / "conf/test.config").write_text("params { input = 'x' }\n")
+    demo = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text().split("## Demo\n", 1)[1]
+    assert "stubRun" not in demo.split("\n## ", 1)[0]
+    (up / "conf/test.config").write_text("stubRun = true\nparams { input = 'x' }\n")
+    demo = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text().split("## Demo\n", 1)[1]
+    assert "`stubRun = true`" in demo.split("\n## ", 1)[0]
