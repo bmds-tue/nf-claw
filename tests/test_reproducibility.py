@@ -55,3 +55,38 @@ def test_the_runner_announces_variability_before_launch(tmp_path, monkeypatch):
         write_provenance=False, timeout_seconds=10, on_warning=seen.append)
     assert any("assignTaxonomy" in w for w in res.warnings)
     assert any("assignTaxonomy" in w for w in seen)            # said before launch, not after
+
+
+SOURMASH = {
+    "subworkflows/local/sourmash_create/main.nf":
+        "def ch_sketch_input = ch_library.flatMap { meta, genomes ->\n"
+        "    genomes\n        .sort()\n        .collate(batch_size)\n",
+    "subworkflows/local/preprocessing/main.nf":
+        "ch_prepped_dna_fastas = ch_x\n    .map { _meta, fasta -> [[id: params.dbname], fasta] }\n"
+        "    .groupTuple()\n",
+    "conf/test.config": "params {\n    build_sourmash_dna = true\n    build_sourmash_protein = true\n}\n",
+}
+
+
+def test_in_place_sort_of_shared_grouped_genomes_is_announced_when_sourmash_runs(tmp_path):
+    tree = _tree(tmp_path, SOURMASH)
+    for params, demo in (({"build_sourmash_dna": True}, False),
+                         ({"build_sourmash_protein": True}, False),
+                         ({}, True)):                      # the bundled test profile enables it
+        notes = reproducibility.advisories(tree, params, demo=demo)
+        assert len(notes) == 1
+        assert "ConcurrentModificationException" in notes[0]
+        assert "--build-sourmash-dna false" in notes[0]
+
+
+def test_in_place_sort_advisory_needs_sourmash_enabled(tmp_path):
+    tree = _tree(tmp_path, SOURMASH)
+    assert reproducibility.advisories(tree, {}) == []          # off by default outside --demo
+    assert reproducibility.advisories(
+        tree, {"build_sourmash_dna": False, "build_sourmash_protein": False}, demo=True) == []
+
+
+def test_in_place_sort_advisory_clears_when_grouping_no_longer_shares_lists(tmp_path):
+    fixed = {**SOURMASH, "subworkflows/local/preprocessing/main.nf":
+             "ch_prepped_dna_fastas = ch_x\n    .groupBy()\n"}
+    assert reproducibility.advisories(_tree(tmp_path, fixed), {}, demo=True) == []

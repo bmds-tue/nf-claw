@@ -512,7 +512,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     warnings += plugin_compat.known_plugin_warnings(st.path)
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
-    warnings += reproducibility.advisories(st.path, merged)
+    warnings += reproducibility.advisories(st.path, merged, demo=demo)
     if sheet is not None:
         # What the generated samplesheet holds and where it is, before the run starts (a --check
         # stages it in a temp directory: the result and the printed command name it).
