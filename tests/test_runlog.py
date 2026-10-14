@@ -555,3 +555,39 @@ def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
     state = runlog.read_state(log)
     assert state.state == "success"
     assert [c for c in state.caveats if c.startswith("stub run:")] == [replay_guard.stub_caveat(["test"])]
+
+
+# nf-co2footprint (epitopeprediction, multiplesequencealign, phaseimpute) relays Nextflow's console
+# through its own logger: each record is `<colour>LEVEL - [nf-co2footprint] message<reset>`, written
+# without a line break, so Nextflow's `ERROR ~` report reaches the console as `ERROR - [...]` glued
+# onto the previous record. Shape copied from a real epitopeprediction 3.1.1 failure.
+_RELAYED_FAILURE = (
+    "\x1b[37mINFO - [nf-co2footprint] [d3/d45a2a] Submitted process > EPYTOPE (20)\x1b[0;39m"
+    "\x1b[31mERROR - [nf-co2footprint] Error executing process > 'EPYTOPE (26)'\n"
+    "\n"
+    "Caused by:\n"
+    "  Process `EPYTOPE (26)` terminated with an error exit status (1)\n"
+    "\n"
+    "Command error:\n"
+    "  ValueError: Length mismatch: Expected axis has 1 elements, new values have 3 elements\n"
+    "\n"
+    "Tip: you can try to figure out what's wrong by changing to the process work dir"
+    "\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] Execution cancelled -- Finishing pending tasks before exit"
+    "\x1b[0;39m\x1b[31mERROR - [nf-co2footprint] Pipeline failed. Please refer to troubleshooting docs"
+    "\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] -\x1b[0;35m[nf-core/epitopeprediction]\x1b[0;31m "
+    "Pipeline completed with errors\x1b[0m-\x1b[0;39m")
+
+
+def test_error_excerpt_quotes_a_report_relayed_by_a_plugin_logger():
+    excerpt = runlog.error_excerpt(_RELAYED_FAILURE)
+    assert any(line.endswith("Error executing process > 'EPYTOPE (26)'") for line in excerpt)
+    assert any("ValueError: Length mismatch" in line for line in excerpt)
+    assert not any("Submitted process > EPYTOPE (20)" in line and "ERROR" in line for line in excerpt)
+
+
+def test_completion_caveats_read_a_summary_relayed_by_a_plugin_logger():
+    console = ("\x1b[37mINFO - [nf-co2footprint] [4d/19f1f1] Cached process > GUNZIP (x)\x1b[0;39m"
+               "\x1b[37mINFO - [nf-co2footprint] -\x1b[0;35m[nf-core/epitopeprediction]\x1b[0;32m "
+               "Pipeline completed successfully, but with errored process(es) \x1b[0m-\x1b[0;39m\n")
+    assert runlog.completion_caveats(console) == [
+        "[nf-core/epitopeprediction] Pipeline completed successfully, but with errored process(es)"]

@@ -65,6 +65,12 @@ _ENGINE_HEAD_BYTES = 64 * 1024
 # start) of an earlier report — Nextflow re-renders a report when stdout is not a terminal.
 _CONTEXT_STOP = re.compile(r"N E X T F L O W|^Launching `|^\s*-- Check |^ERROR ~")
 _REPORT_END = re.compile(r"^\s*-- Check ")
+# A plugin logger (nf-co2footprint) relays console records as `<colour>LEVEL - [plugin] message<reset>`
+# with no line break between them, so Nextflow's `ERROR ~` report arrives as `ERROR - [plugin] …`
+# glued onto the record before it. Each relayed record starts a line, as a terminal shows it.
+_RELAYED_RECORD = re.compile(r"(?:\x1b\[[0-9;]*m)+(?=(?:TRACE|DEBUG|INFO|WARN|ERROR) - \[[\w.@-]+\] )")
+_RELAY_PREFIX = re.compile(r"^(?:TRACE|DEBUG|INFO|WARN|ERROR) - \[[\w.@-]+\] ")
+_REPORT_START = re.compile(r"^ERROR (?:~|- \[[\w.@-]+\] )")
 
 
 def now() -> str:
@@ -96,7 +102,10 @@ def _clean(text: str) -> list[str]:
     lines = []
     for raw in text.split("\n"):
         line = raw.rstrip("\r").rsplit("\r", 1)[-1]
-        lines.append(_ANSI.sub("", line).rstrip())
+        records = _RELAYED_RECORD.split(line)
+        if len(records) > 1 and not records[0]:
+            records = records[1:]                        # the line itself starts with a record
+        lines += [_ANSI.sub("", record).rstrip() for record in records]
     return lines
 
 
@@ -116,11 +125,11 @@ def _reports(lines: list[str]) -> list[tuple[int, tuple[str, ...]]]:
     reports = []
     i = 0
     while i < len(lines):
-        if not lines[i].startswith("ERROR ~"):
+        if not _REPORT_START.match(lines[i]):
             i += 1
             continue
         j = i + 1
-        while j < len(lines) and not lines[j].startswith("ERROR ~"):
+        while j < len(lines) and not _REPORT_START.match(lines[j]):
             j += 1
             if _REPORT_END.match(lines[j - 1]):
                 break
@@ -267,7 +276,7 @@ def completion_caveats(console: str, nextflow_log: Path | None = None) -> list[s
     the ignored task failures in its log. These are quoted, never interpreted, so they reach the
     reader with the success instead of staying buried in the console."""
     caveats: list[str] = []
-    lines = _clean(console)
+    lines = [_RELAY_PREFIX.sub("", line) for line in _clean(console)]
     starts = [i for i, line in enumerate(lines)
               if (m := _SUMMARY_LINE.match(line)) and m["message"].startswith(_COMPLETED)]
     if starts:
