@@ -129,6 +129,25 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   docker { runOptions = '--network host -u $(id -u):$(id -g)' }
   ```
   Run with `nfclaw run <name> --config host-net.config …`.
+- **Also when the bridge has DNS:** a bridge configured with IPv6 and an IPv6 DNS server can still leave older runtimes resolving a name to its IPv4 address only. funcscan 4.0.0's `DEEPARG_DOWNLOADDATA` (deepARG 1.0.4, Python 2.7) resolved Zenodo to IPv4, timed out in the TLS handshake and stalled for 35 minutes, while `curl` on the host reached Zenodo over IPv6. Stopped and resumed with the host-network config above, the download completed in 23 minutes and the run succeeded with its cached tasks reused.
+
+### Java tools in containers prefer IPv4 (IPv6-only host)
+- **Symptom:** a Java task that contacts a server fails with `java.net.ConnectException: Network is unreachable`, even with the host-network config — e.g. pathogensurveillance 1.1.0's `BBMAP_SENDSKETCH`, which sends a sketch to JGI's server.
+- **Why:** the JVM tries a name's IPv4 address first unless told otherwise, and a host without IPv4 egress cannot reach it. (nfclaw's `NXF_OPTS=-Djava.net.preferIPv6Addresses=true` advice covers Nextflow's own JVM, not the JVMs inside task containers.)
+- **Fix:** set the preference for that process's container through `--config`:
+  ```groovy
+  process {
+      withName: 'BBMAP_SENDSKETCH' {
+          containerOptions = '-e JAVA_TOOL_OPTIONS=-Djava.net.preferIPv6Addresses=true'
+      }
+  }
+  ```
+  With it, pathogensurveillance's `BBMAP_SENDSKETCH`, which had failed every attempt, completed on resume.
+
+### sra-tools cannot reach NCBI (IPv6-only host)
+- **Symptom:** `SRATOOLS_FASTERQDUMP` or `SRATOOLS_PREFETCH` fails with `Failed to call external services` (exit status 64) after its retries, also with the host-network config, while `curl` on the same host reaches NCBI.
+- **Why:** sra-tools 3.0.8 (ncbi-vdb) connects over IPv4 only. Traced on such a host, `srapath` opened only IPv4 sockets — 244 attempts to NCBI (`130.14.29.113:443`) and its cloud-metadata probe (`169.254.169.254`), each refused with `ENETUNREACH` — and exited 3. No configuration of the container changes this.
+- **Fix:** fetch the runs' FastQ files from ENA over HTTPS — the ENA portal's `filereport?accession=<run>&result=read_run&fields=fastq_ftp,fastq_md5` lists them and their MD5 sums — and give the pipeline local paths instead of accessions. This affects pathogensurveillance's bundled test (its sample `SRR18850314` is an NCBI accession) and any pipeline that falls back to sra-tools (fetchngs' `SRATOOLS_PREFETCH` route).
 
 ### A container creates root-owned files that block publishing
 - **Symptom:** A step writes a file/dir owned by root with restrictive permissions, and Nextflow — running as your user — cannot read or publish it. Examples: `CUSTOM_SRATOOLSNCBISETTINGS` and `macrel` (mode `600`), or STAR in `rnaseq` (`_STARgenome/` / `_STARpass1/` as `drwx------`, failing with `AccessDeniedException`).
@@ -572,6 +591,7 @@ a small C++ tie-breaking check, not a new end-to-end demo replay.
 When a stage specifies `demo: true`, it executes with its bundled test profile dataset:
 - **`createtaxdb`:** The test profile also builds sourmash databases, which taxprofiler does not use and which trigger the 3.1.0 `ConcurrentModificationException` race ([upstream bugs](#upstream-pipeline-bugs-documented-not-patched)). Give the stage `"params": {"build_sourmash_dna": false, "build_sourmash_protein": false}`.
 - **`detaxizer`:** The test profile filters reads with an empty database, removing all reads and leaving empty FastQ files. For downstream chaining, provide active classification parameters: `"params": {"classification_kraken2": false, "classification_bbduk": true, "fasta_bbduk": "<host fasta>"}`.
+- **`rnaseq` → `differentialabundance`:** rnaseq's test data leave 100 genes after differentialabundance's default abundance filter — fewer than DESeq2's default variance-stabilisation subsample (`--deseq2-vst-nsub`, 1000), so `DESEQ2_DIFFERENTIAL` fails with `less than 'nsub' rows`. Give the stage `"deseq2_vst_nsub": 50` along with its own `input` (a design sheet naming rnaseq's samples) and `contrasts`. With that, an rnaseq `demo: true` → differentialabundance chain completed (the failed stage resumed after editing the spec, rnaseq skipped as already succeeded) and `nfclaw chain status` verified the lineage; DESeq2 tested all 100 genes.
 - **`demultiplex`:** Test data consists of human amplicon reads. Downstream stages requiring reference genomes need human references (`fasta`/`gtf`), and paired-end profiles: `"profile": "test_pe,docker"`.
 - **`taxprofiler`:** Test profiling on unrecognized reads fails in unhandled zero-hit modules; enable only resilient profilers (`run_kraken2`, `run_kaiju`) with `"run_profile_standardisation": false`.
 
