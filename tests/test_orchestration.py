@@ -220,6 +220,44 @@ def test_failed_engine_keeps_its_error_and_records_changed_dependencies(tmp_path
     assert "previous execution" in orchestration._input_resume_warning(out, {}, {})
 
 
+@pytest.mark.parametrize("stop", [lambda: orchestration.execution.Terminated(15), KeyboardInterrupt])
+def test_stopped_run_with_unchanged_dependencies_resumes_with_its_cache(tmp_path, monkeypatch, stop):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    def stopped(*args, **kwargs):
+        raise stop()
+    monkeypatch.setattr(orchestration.execution, "run", stopped)
+    out = tmp_path / "out"
+    with pytest.raises((orchestration.execution.Terminated, KeyboardInterrupt)):
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["dependency_stability"]["status"] == "unchanged"
+    # Stopping a run (Ctrl-C, `kill`) must not cost its cache: --resume continues where it stopped.
+    assert orchestration._input_resume_warning(out, {}, {}) is None
+
+
+def test_stopped_run_records_dependencies_changed_before_the_stop(tmp_path, monkeypatch):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    source = root / "pipelines/mini/upstream/main.nf"
+    def stopped(*args, **kwargs):
+        source.write_text("changed before the stop")
+        raise orchestration.execution.Terminated(15)
+    monkeypatch.setattr(orchestration.execution, "run", stopped)
+    out = tmp_path / "out"
+    with pytest.raises(orchestration.execution.Terminated):
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["dependency_stability"]["status"] == "changed"
+    assert "fresh Nextflow cache session" in orchestration._input_resume_warning(out, {}, {})
+
+
 def test_passes_effective_work_dir_and_allow_spaces_to_preflight(tmp_path, monkeypatch):
     from pathlib import Path
     root = _make_pipeline(tmp_path, "mini")

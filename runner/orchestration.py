@@ -724,17 +724,18 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
                 # the run once the cause is fixed, and the checksums record what it did manage to
                 # produce. Write it, then re-raise — a provenance error must never replace the real
-                # failure as the cause.
-                if not isinstance(failure, (KeyboardInterrupt, execution.Terminated)):
-                    try:
-                        stability = dependency_stability.compare(
-                            inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
-                            configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
-                            pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
-                        if stability["status"] == "changed":
-                            run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
-                    except Exception:
-                        pass  # dependency inspection must not replace Nextflow's original failure
+                # failure as the cause. A stopped run (Ctrl-C, `kill`) is compared too: its finished
+                # tasks are the cache `--resume` continues from, usable only if the dependencies held.
+                stopped = isinstance(failure, (KeyboardInterrupt, execution.Terminated))
+                try:
+                    stability = dependency_stability.compare(
+                        inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
+                        configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                        pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                    if stability["status"] == "changed" and not stopped:
+                        run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
+                except Exception:
+                    pass  # dependency inspection must not replace Nextflow's original failure
                 if write_provenance:
                     try:
                         record("failed")
