@@ -403,16 +403,25 @@ def _read_json(path: Path) -> Any:
         return None
 
 
-def _record_attempted_release(entry: dict, stage_dir: Path, launched: float) -> None:
-    """A failed or stopped stage still names the release and commit it executed: nfclaw writes
-    the run manifest when a launched run ends any way. A manifest older than this attempt (from
-    an earlier one, perhaps of a since-redefined stage) is not this attempt's, so it is ignored."""
-    path = stage_dir / "provenance" / "run_manifest.json"
+def _manifest_bytes(stage_dir: Path) -> bytes | None:
     try:
-        current = path.stat().st_mtime >= launched
+        return (stage_dir / "provenance" / "run_manifest.json").read_bytes()
     except OSError:
+        return None
+
+
+def _record_attempted_release(entry: dict, stage_dir: Path, before: bytes | None) -> None:
+    """A failed or stopped stage still names the release and commit it executed: nfclaw writes
+    the run manifest when a launched run ends any way. The manifest found before the attempt (from
+    an earlier one, perhaps of a since-redefined stage) is not this attempt's, so an unchanged one
+    is ignored. Content, not modification time: file timestamps are coarser than the clock."""
+    current = _manifest_bytes(stage_dir)
+    if current is None or current == before:
         return
-    manifest = _read_json(path) if current else None
+    try:
+        manifest = json.loads(current)
+    except ValueError:
+        return
     if isinstance(manifest, dict):
         entry.update(version=manifest.get("version"), commit=manifest.get("commit"))
 
@@ -864,7 +873,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                                                            else "") + "started — log "
                   f"{stage_dir / 'provenance' / 'logs' / runlog.RUN_LOG_NAME}")
         opts = options(spec, stage)
-        launched = time.time()
+        previous_manifest = _manifest_bytes(stage_dir)
         try:
             orchestration.run_pipeline(
                 stage.pipeline, repo_root=repo_root, input_path=input_path, outdir=stage_dir,
@@ -882,7 +891,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 resume = True
                 continue
             entry["status"] = "failed"
-            _record_attempted_release(entry, stage_dir, launched)
+            _record_attempted_release(entry, stage_dir, previous_manifest)
             state["outcome"] = (f"timed out after {budget} s" if "timeout_seconds" in exc.details
                                 else f"failed at stage {stage.dirname}: {_short(exc)}")
             raise
@@ -890,7 +899,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
             entry["attempts"][-1].update(finished=runlog.now(),
                                          outcome=execution.stop_outcome(exc))
             entry["status"] = "stopped"
-            _record_attempted_release(entry, stage_dir, launched)
+            _record_attempted_release(entry, stage_dir, previous_manifest)
             state["outcome"] = f"{execution.stop_outcome(exc)} (stage {stage.dirname})"
             raise
         break

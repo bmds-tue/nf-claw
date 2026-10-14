@@ -468,15 +468,14 @@ def test_a_failed_stage_names_the_release_it_executed(library, fake_runs, tmp_pa
 def test_a_stage_ignores_a_manifest_from_an_earlier_attempt(tmp_path):
     stage = tmp_path / "s"
     (stage / "provenance").mkdir(parents=True)
-    (stage / "provenance/run_manifest.json").write_text(
-        json.dumps({"version": "0.9.0", "commit": "c" * 40}))
+    earlier = json.dumps({"version": "0.9.0", "commit": "c" * 40}).encode()
+    (stage / "provenance/run_manifest.json").write_bytes(earlier)
     entry = {"version": None, "commit": None}
-    later = (stage / "provenance/run_manifest.json").stat().st_mtime + 60
-    chain._record_attempted_release(entry, stage, launched=later)
+    chain._record_attempted_release(entry, stage, earlier)            # unchanged: not this attempt's
     assert entry == {"version": None, "commit": None}
-    chain._record_attempted_release(entry, tmp_path / "never-launched", launched=0)
+    chain._record_attempted_release(entry, tmp_path / "never-launched", None)
     assert entry == {"version": None, "commit": None}
-    chain._record_attempted_release(entry, stage, launched=0)
+    chain._record_attempted_release(entry, stage, None)               # written by this attempt
     assert entry == {"version": "0.9.0", "commit": "c" * 40}
 
 
