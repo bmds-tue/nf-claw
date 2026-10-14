@@ -186,6 +186,10 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### `--resume` kept a removed sample's results
 - **Status: Fixed.** Resuming after a sample was removed from the input selection (a hand-written or generated samplesheet) reused the session, and the removed sample's earlier publications stayed in `--outdir` beside the new results. Any change to the recorded set of local input files (added, removed, replaced or retargeted) now starts a fresh session; the previous run moves to a sibling `<outdir>.previous-<id>` archive first. Adding samples therefore recomputes all tasks instead of reusing the earlier ones.
 
+### `--resume` after Ctrl-C or `kill` recomputed every task
+- **Status: Fixed.** A run stopped with Ctrl-C or `kill <nfclaw pid>` skipped the post-execution dependency comparison and recorded it as `not_checked`; `--resume` read that as failed attribution, archived the run and recomputed every task, although a run that failed (or was killed with SIGKILL) kept its cache. A stopped run now compares its declared local inputs, configurations and pipeline source when it stops, as a failed run does: unchanged dependencies keep the cache for `--resume`, and changed ones still start a fresh session with the previous run archived. The log keeps the stop as the outcome (`terminated by SIGTERM`, `interrupted`).
+- **Validation:** On Nextflow 25.10.4 with Docker, `demo` runs stopped with SIGTERM once their MultiQC task was submitted recorded `unchanged` dependencies and resumed with 7 (bundled remote test data) and 5 (local FastQ directory) cached tasks, no archive and a successful outcome. Regression tests cover both stop signals and a pipeline source edited before the stop, which is recorded as `changed` and makes the resume start fresh.
+
 ### `--resume` fails with "Unable to acquire lock on session …"
 - **Symptom:** After a run was interrupted (killed/timed out), re-running with `--resume` fails to acquire the session lock.
 - **Why:** A hard kill leaves Nextflow's session lock behind; Nextflow refuses to resume because it cannot determine whether the lock is stale or held by a live process.
