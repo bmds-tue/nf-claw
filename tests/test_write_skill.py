@@ -923,3 +923,26 @@ def test_engine_section_steers_away_from_a_minimum_that_cannot_run_on_java_17(tm
 def test_engine_section_keeps_a_minimum_that_runs_on_java_17(tmp_path):
     text = write_skill._engine_section("p", _engine_tree(tmp_path, "!>=21.10.3"))
     assert "--nxf-ver 21.10.3" in text and "Java 17" not in text
+
+
+def test_skill_md_names_the_nextflow_secrets_a_release_reads(tmp_path):
+    # seqsubmit reads ENA Webin credentials from Nextflow secrets in its nextflow.config; nothing in
+    # its skill.md said so, and a run without them failed only after its first tasks had started.
+    pdir = _seed(tmp_path, "mini")
+    up = pdir / "mini" / "upstream"
+    (up / "nextflow.config").write_text(
+        "env {\n    ENA_WEBIN          = secrets.ENA_WEBIN\n"
+        "    ENA_WEBIN_PASSWORD = secrets.ENA_WEBIN_PASSWORD\n}\n")
+    (up / "modules" / "local").mkdir(parents=True)
+    (up / "modules" / "local" / "download.nf").write_text(
+        "process DOWNLOAD {\n    secret 'NCBI_EMAIL'\n    script:\n    'true'\n}\n")
+    text = write_skill.generate("mini", pipelines_dir=pdir)[0].read_text()
+    section = text.split("## Secrets\n", 1)[1].split("\n## ", 1)[0]
+    assert "`ENA_WEBIN`, `ENA_WEBIN_PASSWORD` (in `nextflow.config`)" in section
+    assert "`NCBI_EMAIL` (in `modules/local/download.nf`)" in section
+    assert "nextflow secrets set" in section
+
+
+def test_skill_md_has_no_secrets_section_without_secrets(tmp_path):
+    pdir = _seed(tmp_path, "mini")
+    assert "## Secrets" not in write_skill.generate("mini", pipelines_dir=pdir)[0].read_text()

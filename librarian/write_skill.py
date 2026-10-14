@@ -352,6 +352,35 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
     return f"This {what} declares `nextflowVersion = '{spec}'`.{pin_line}\n"
 
 
+# A Nextflow secret read by the pinned tree: `secrets.NAME` in a config (seqsubmit's ENA Webin login
+# in its `env` scope) or a process's `secret 'NAME'` directive (metapep's NCBI e-mail).
+_SECRET_REF = re.compile(r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
+
+
+def _secrets_section(st: SubmoduleStatus) -> str:
+    """Which Nextflow secrets the pinned tree reads, and where, so a run's credentials are known up front."""
+    root = st.path
+    files = [root / "nextflow.config", *sorted((root / "conf").glob("**/*.config"))]
+    for sub in ("workflows", "subworkflows", "modules"):
+        files += sorted((root / sub).glob("**/*.nf"))
+    found: dict[str, list[str]] = {}                      # file → secret names, in reading order
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        names = list(dict.fromkeys(a or b for a, b in _SECRET_REF.findall(text)))
+        if names:
+            found[path.relative_to(root).as_posix()] = names
+    if not found:
+        return ""
+    where = "; ".join(f"{', '.join(f'`{n}`' for n in names)} (in `{rel}`)" for rel, names in found.items())
+    return (f"This release reads Nextflow secrets: {where}. Set each one a run needs with "
+            "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its "
+            "tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), "
+            "and a task that needs it then fails. Secrets are not written to nfclaw's provenance.\n")
+
+
 def _outputs_section(name: str, st: SubmoduleStatus, ref: str | None = None,
                      what: str = "release", ps: ParamSchema | None = None) -> str:
     mq = ""
@@ -716,6 +745,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         )
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
+    secrets = _secrets_section(st)
+    secrets_block = f"## Secrets\n{secrets}\n" if secrets else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
     # tree, pipelines/<name>/.versions/<label>/skill.md, so their links climb two levels further.
     engine = _engine_section(name, st, what, "../.." if pipeline_version is None else "../../../..",
@@ -737,6 +768,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"## Required parameters\n{_required_params(ps)}\n"
         f"{mandatory_block}"
         f"{reference_block}"
+        f"{secrets_block}"
         f"## Other parameters\n{_param_groups(ps)}\n"
         f"## Resources\n{_resources_section(name, ps, insch, pipeline_version)}\n"
         f"{engine_block}"
