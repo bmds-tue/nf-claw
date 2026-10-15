@@ -315,6 +315,7 @@ class RunLog:
         self.nextflow_log = nextflow_log
         self.label = label                               # what finished: a `run`, or a `chain`
         self.outcome = "failed"                          # until the run says otherwise
+        self.shutdown_grace_seconds: float | None = None
         path.parent.mkdir(parents=True, exist_ok=True)
         self._fh = path.open("ab")
         self._lock = threading.Lock()

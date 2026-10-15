@@ -44,7 +44,7 @@ def test_missing_nextflow_flagged(tmp_path, monkeypatch):
 def _clean_env(monkeypatch):
     # tools present, docker daemon healthy — isolate the space check from unrelated issues
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
-    monkeypatch.setattr(preflight.subprocess, "run",
+    monkeypatch.setattr(preflight, "capture",
                         lambda *a, **k: type("R", (), {"returncode": 0})())
 
 
@@ -234,7 +234,7 @@ def test_every_engine_profile_needs_its_engine(tmp_path, monkeypatch, profile, p
     base = {"git", "nextflow", "java"}
     monkeypatch.setattr(preflight.shutil, "which",
                         lambda x: "/usr/bin/" + x if x in base | present else None)
-    monkeypatch.setattr(preflight.subprocess, "run",
+    monkeypatch.setattr(preflight, "capture",
                         lambda *a, **k: type("R", (), {"returncode": 0})())
     issues = preflight.check_environment(profile=profile, output_dir=tmp_path.parent / "out_eng",
                                          submodule=_st(tmp_path / "up"),

@@ -68,9 +68,9 @@ def test_bump_refuses_an_uninitialised_submodule(monkeypatch, tmp_path):
     (tmp_path / "pipelines" / "p" / "upstream").mkdir(parents=True)
     monkeypatch.setattr(up, "remote_tags", lambda url: ["1.0.0"])
     ran = []
-    real_run = subprocess.run
-    monkeypatch.setattr(up.subprocess, "run",
-                        lambda args, **kw: (ran.append(args), real_run(args, **kw))[1])
+    real_capture = up.capture
+    monkeypatch.setattr(up, "capture",
+                        lambda args, **kw: (ran.append(args), real_capture(args, **kw))[1])
     with pytest.raises(RuntimeError, match="not initialised"):
         up.bump("p", "https://x/p.git", tmp_path)
     assert not any("fetch" in a or "checkout" in a for a in ran)

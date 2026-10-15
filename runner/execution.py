@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from runner import runlog
+from runner import budget, runlog, settings
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -109,7 +109,7 @@ def _join(threads: list[threading.Thread]) -> None:
 
 
 def run(command: list[str], *, cwd: Path, logs_dir: Path,
-        timeout_seconds: int | None, env_extra: dict[str, str] | None = None,
+        timeout_seconds: float | None, env_extra: dict[str, str] | None = None,
         nextflow_log: Path | None = None, notes: list[str] | tuple[str, ...] = (),
         run_log: runlog.RunLog | None = None) -> ExecResult:
     """Run `command` from `cwd`, streaming its output live and recording it under `logs_dir`.
@@ -131,8 +131,10 @@ def run(command: list[str], *, cwd: Path, logs_dir: Path,
             run_log.finish()
 
 
-def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: int | None,
+def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: float | None,
          env_extra: dict[str, str] | None, run_log: runlog.RunLog) -> ExecResult:
+    grace = settings.seconds("NFCLAW_SHUTDOWN_GRACE", _GRACE_SECONDS)
+    run_log.shutdown_grace_seconds = grace
     logs_dir.mkdir(parents=True, exist_ok=True)
     out_p, err_p = logs_dir / "stdout.txt", logs_dir / "stderr.txt"
     # start_new_session puts the child in its own process group, so nfclaw owns its shutdown: the
@@ -146,6 +148,7 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: int 
     # JVM args, …). Inheriting keeps shell-set vars (proxies, JAVA_HOME) working as before.
     env = {**os.environ, **env_extra} if env_extra else None
     with out_p.open("ab") as out_fh, err_p.open("ab") as err_fh:
+        budget.check()
         try:
             # Pipe the child's streams so nfclaw can tee them; without a pipe the output would go
             # straight to files (the terminal stays mute) or straight to the terminal (nothing is
@@ -171,16 +174,22 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: int 
         for t in readers:
             t.start()
         try:
-            code = proc.wait(timeout=timeout_seconds)
+            code = proc.wait(timeout=budget.remaining(timeout_seconds))
+            budget.check()
         except subprocess.TimeoutExpired as exc:
-            _terminate(proc)
+            _terminate(proc, grace=grace)
             _join(readers)
+            elapsed_budget = timeout_seconds
+            try:
+                budget.check()
+            except NfclawError as expired:
+                elapsed_budget = expired.details["timeout_seconds"]
             err = NfclawError(ErrorCode.EXECUTION_FAILED, "Execution timed out.",
                               fix="Increase --timeout or use a smaller dataset; the run log shows "
                                   "how far the run got.",
-                              details={"timeout_seconds": timeout_seconds,
+                              details={"timeout_seconds": elapsed_budget,
                                        **_log_details(run_log)})
-            run_log.fail(f"timed out after {timeout_seconds} s", str(err))
+            run_log.fail(f"timed out after {elapsed_budget:g} s", str(err))
             raise err from exc
         except BaseException as exc:
             # Ctrl-C (KeyboardInterrupt), `kill` (Terminated) or any other interruption of the wait:
@@ -188,8 +197,11 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: int 
             # launched — is stopped, never left running in the background. Then re-raise so the
             # interrupt is not swallowed. The outcome is recorded first: a second signal during the
             # teardown's grace period must not cost the log its last line.
-            run_log.fail(stop_outcome(exc))
-            _terminate(proc)
+            outcome = (f"timed out after {exc.details['timeout_seconds']:g} s"
+                       if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details
+                       else stop_outcome(exc))
+            run_log.fail(outcome)
+            _terminate(proc, grace=grace)
             _join(readers)
             raise
         _join(readers)

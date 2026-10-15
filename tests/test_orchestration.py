@@ -312,7 +312,7 @@ def test_space_in_repo_path_blocks_the_run(tmp_path, monkeypatch):
     root = _make_pipeline(tmp_path / "draft 2", "mini")        # repo path has a space
     # real preflight, but isolate from tool/daemon checks so only the space rule can fire
     monkeypatch.setattr(orchestration.preflight.shutil, "which", lambda x: "/usr/bin/" + x)
-    monkeypatch.setattr(orchestration.preflight.subprocess, "run",
+    monkeypatch.setattr(orchestration.preflight, "capture",
                         lambda *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
     with pytest.raises(NfclawError) as exc:
         orchestration.run_pipeline(
@@ -327,7 +327,7 @@ def test_space_in_repo_path_blocks_the_run(tmp_path, monkeypatch):
 def _healthy_env(monkeypatch):
     # real preflight, but tools present and docker daemon healthy, so only the rule under test fires
     monkeypatch.setattr(orchestration.preflight.shutil, "which", lambda x: "/usr/bin/" + x)
-    monkeypatch.setattr(orchestration.preflight.subprocess, "run",
+    monkeypatch.setattr(orchestration.preflight, "capture",
                         lambda *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
 
 

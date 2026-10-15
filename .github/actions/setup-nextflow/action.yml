@@ -19,6 +19,7 @@ runs:
         set -euo pipefail
         launcher="$RUNNER_TEMP/nextflow"
         curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
+          --connect-timeout 30 --max-time 300 \
           --output "$launcher" \
           "https://raw.githubusercontent.com/nextflow-io/nextflow/${NEXTFLOW_COMMIT}/nextflow"
         echo "${NEXTFLOW_SHA256}  ${launcher}" | sha256sum --check --strict

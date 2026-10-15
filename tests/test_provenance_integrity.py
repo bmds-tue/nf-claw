@@ -501,7 +501,7 @@ def test_replay_stop_during_cleanup_cannot_return_success(tmp_path, monkeypatch)
     from runner import replay_guard
     stop_group = replay_guard._stop_replay_group
 
-    def interrupt_cleanup(proc):
+    def interrupt_cleanup(proc, grace=10):
         signal.raise_signal(signal.SIGTERM)
         stop_group(proc, grace=0.1)
 

@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 from pathlib import Path
 
 from librarian import write_skill
 from librarian.add_pipeline import read_sources, validate_pipeline_name
 from runner import submodule as submod
+from runner.probes import capture
+from runner.settings import seconds
 
 _SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 
@@ -20,8 +21,9 @@ def select_latest(tags: list[str]) -> str | None:
 
 
 def remote_tags(url: str) -> list[str]:
-    r = subprocess.run(["git", "ls-remote", "--tags", "--refs", "--", url],
-                       capture_output=True, text=True, timeout=60, check=True)
+    r = capture(["git", "ls-remote", "--tags", "--refs", "--", url],
+                timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=submod._git_env())
+    r.check_returncode()
     return [line.split("\t")[-1].rsplit("/", 1)[-1] for line in r.stdout.splitlines()]
 
 
@@ -36,14 +38,19 @@ def bump(name: str, url: str, repo_root: Path) -> str | None:
     if not submod.is_git_tree(up):
         raise RuntimeError(f"pipelines/{name}/upstream is not initialised; run "
                            f"`git submodule update --init pipelines/{name}/upstream` first")
-    subprocess.run(["git", "-C", str(up), "fetch", "--tags", "--depth", "1",
-                    "origin", f"refs/tags/{latest}:refs/tags/{latest}"], check=True)
-    subprocess.run(["git", "-C", str(up), "checkout", f"tags/{latest}"], check=True)
+    fetched = capture(["git", "-C", str(up), "fetch", "--tags", "--depth", "1",
+                       "origin", f"refs/tags/{latest}:refs/tags/{latest}"],
+                      timeout=seconds("NFCLAW_GIT_TIMEOUT", 120), env=submod._git_env())
+    fetched.check_returncode()
+    checked_out = capture(["git", "-C", str(up), "checkout", f"tags/{latest}"],
+                          timeout=seconds("NFCLAW_GIT_TIMEOUT", 120), env=submod._git_env())
+    checked_out.check_returncode()
     # Record the gitlink at the tag we just checked out, so the committed pin IS the release
     # and a later `git submodule update` cannot reset the working tree off it. (Matches
     # discover_pipelines.add_one; keeps `git describe --tags` clean for the drift gate.)
-    subprocess.run(["git", "-C", str(repo_root), "add",
-                    f"pipelines/{name}/upstream"], check=True)
+    staged = capture(["git", "-C", str(repo_root), "add", f"pipelines/{name}/upstream"],
+                     timeout=seconds("NFCLAW_GIT_TIMEOUT", 120), env=submod._git_env())
+    staged.check_returncode()
     write_skill.generate(name, pipelines_dir=repo_root / "pipelines")
     return latest
 
@@ -80,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{src.name}: {outcome}")
         except Exception as exc:                          # one failure never blocks others
             print(f"{src.name}: ERROR {exc}")
+            if detail := getattr(exc, "stderr", None):
+                print(detail.strip())
             failures += 1
     return 1 if failures else 0
 

@@ -609,7 +609,7 @@ def test_release_git_calls_never_wait_on_a_credential_prompt(tmp_path, monkeypat
         seen.append((cmd, kw.get("env") or {}))
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
-    monkeypatch.setattr(versions.subprocess, "run", fake_run)
+    monkeypatch.setattr(versions, "capture", fake_run)
     versions.remote_tags("https://example.invalid/x")
     versions._fetch_tag(tmp_path, "1.0.0")
     assert [c[1] for c, _ in seen] == ["ls-remote", "-C"]

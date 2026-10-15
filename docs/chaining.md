@@ -113,8 +113,11 @@ Before launching any pipeline, `nfclaw chain run` validates:
 
 `--check` performs the same preflight and configuration probes, leaving `--outdir`
 untouched. It can fetch pipeline versions and populate engine caches. Each config probe
-is bounded at 300 seconds; `--timeout SECONDS` sets an overall chain deadline, including
-preflight, stages and retries. No overall deadline is set by default.
+is bounded at 300 seconds by default (`NFCLAW_CONFIG_TIMEOUT` can raise it);
+`--timeout SECONDS` sets one shared deadline for preflight, stages, retries and
+completion verification. No overall deadline is set by default. Cleanup and failure
+recording finish safely after cancellation; filesystem checks complete at safe
+boundaries. See [timeouts and long analyses](timeouts.md) for margins and limitations.
 
 ### Concurrency Locking
 `runner/chain.py` locks `<outdir>/chain/.lock` via a non-blocking POSIX flock. If another chain process is active in the same directory, it terminates immediately with `ErrorCode.ENVIRONMENT`.
@@ -123,6 +126,9 @@ preflight, stages and retries. No overall deadline is set by default.
 - The chain-wide execution log is written to `<outdir>/chain/logs/chain.log`.
 - Background monitoring: `tail -n 1 <outdir>/chain/logs/chain.log` displays the terminal outcome line:  
   `==> nfclaw chain finished <timestamp>: <outcome>`
+- `nfclaw chain status <outdir> --quick` lists recorded execution state without
+  hashing outputs and explicitly reports `lineage: not checked`. Normal chain status
+  retains full verification; quick success is not a scientific integrity certificate.
 - Stopping a chain: `kill <pid>` stops the running stage cleanly, flushes the log, and shuts down Nextflow.
 
 ---

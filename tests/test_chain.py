@@ -510,6 +510,7 @@ def test_timeout_is_a_budget_for_the_whole_chain(library, fake_runs, tmp_path):
 
 
 def test_a_spent_budget_stops_before_the_next_stage(library, fake_runs, tmp_path, monkeypatch):
+    from runner import budget
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     clock = 0.0
     run = chain.orchestration.run_pipeline
@@ -521,10 +522,11 @@ def test_a_spent_budget_stops_before_the_next_stage(library, fake_runs, tmp_path
             clock = 999.0
         return result
 
-    monkeypatch.setattr(chain.time, "monotonic", lambda: clock)
+    monkeypatch.setattr(budget.time, "monotonic", lambda: clock)
     monkeypatch.setattr(chain.orchestration, "run_pipeline", timed_run)
-    with pytest.raises(NfclawError, match="--timeout ran out before stage 02-mini"):
+    with pytest.raises(NfclawError, match="--timeout ran out") as error:
         chain.run_chain(_spec(), repo_root=root, outdir=tmp_path / "c", timeout_seconds=600)
+    assert error.value.details["timeout_seconds"] == 600
     assert [c["name"] for c in fake_runs.calls] == ["mini_up"]
     assert _last_log_line(tmp_path / "c").endswith("timed out after 600 s")
 
