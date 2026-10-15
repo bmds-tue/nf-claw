@@ -23,19 +23,19 @@ def test_ensure_initialized_serializes_parallel_init(tmp_path, monkeypatch):
     # Several processes/threads initialising the same submodule at once must not race on
     # .git/config: the lock + re-check means `git submodule update` runs exactly once.
     import threading
-    import types
+    import subprocess
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)                                        # exists but empty → not initialised
     calls = []
 
-    def fake_run(args, **kw):
+    def fake_capture(args, **kw):
         if "submodule" in args:                                  # the init call (not the _git reads)
             calls.append(args)
             for f in submodule.REQUIRED_FILES:
                 (up / f).write_text("x")                         # simulate a successful init
-        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(args, 0, "", "")
 
-    monkeypatch.setattr(submodule.subprocess, "run", fake_run)
+    monkeypatch.setattr(submodule, "capture", fake_capture)
     errors = []
 
     def worker():
@@ -124,14 +124,14 @@ def test_init_failure_is_reported_as_structured_nfclaw_error(tmp_path, monkeypat
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)
 
-    real_run = submodule.subprocess.run
+    real_capture = submodule.capture
 
     def fail_init(args, **kwargs):
         if args[:3] == ["git", "submodule", "update"]:
             raise subprocess.CalledProcessError(1, args, stderr="network unavailable")
-        return real_run(args, **kwargs)
+        return real_capture(args, **kwargs)
 
-    monkeypatch.setattr(submodule.subprocess, "run", fail_init)
+    monkeypatch.setattr(submodule, "capture", fail_init)
     with pytest.raises(NfclawError) as exc:
         submodule.ensure_initialized("mini", tmp_path / "pipelines", tmp_path)
     assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE

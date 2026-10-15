@@ -115,7 +115,8 @@ def _chain(args: argparse.Namespace, parser: argparse.ArgumentParser, root: Path
         return 0
     if args.chain_cmd == "status":
         try:
-            state, problems = chain.status(Path(args.outdir))
+            state, problems = (chain.status(Path(args.outdir), quick=True) if args.quick
+                               else chain.status(Path(args.outdir)))
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
@@ -262,6 +263,8 @@ def _main(argv: list[str] | None = None) -> int:
                         help="stop the whole chain after SECONDS (default: no limit)")
     pc_status = chain_sub.add_parser("status")
     pc_status.add_argument("outdir", help="a chain's --outdir, or the outdir of one of its stages")
+    pc_status.add_argument("--quick", action="store_true",
+                           help="report execution state without hashing data; lineage is not checked")
     pc_edges = chain_sub.add_parser("edges")
     pc_edges.add_argument("name", nargs="?", help="only the handoffs from or to this pipeline")
     # allow_abbrev=False: `run` forwards every unknown flag to the pipeline (via parse_known_args

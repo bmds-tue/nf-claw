@@ -217,8 +217,12 @@ unavailable version probe cannot establish that a requested ceiling will be enfo
 
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
-`--timeout SECONDS` instead limits the Nextflow invocation; for a chain it sets an
-overall deadline including preflight and retries. By default neither has a time limit.
+`--timeout SECONDS` instead sets an opt-in deadline including preparation and
+completion checks; a chain shares it across stages and retries. By default neither
+has a time limit. Cleanup and failure recording may finish beyond the deadline.
+See [timeouts and long analyses](docs/timeouts.md) for configurable setup/shutdown
+margins, whole-controller background execution and cheap chain monitoring with
+`nfclaw chain status OUTDIR --quick` (lineage explicitly not checked).
 `--no-provenance` disables the replay bundle and checksum recording,
 while keeping the parameter file and run logs needed for execution and status inspection.
 

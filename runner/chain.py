@@ -19,14 +19,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import uuid
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (consumption, discovery, engine_version, execution, handoff, inputs,
+from runner import (budget, consumption, discovery, engine_version, execution, handoff, inputs,
                     input_safety, nextflow_command, orchestration, parameters, preflight,
                     provenance, resources, runlog, sheetgen, versions)
 from runner import schema as schema_mod
@@ -34,6 +33,7 @@ from runner import outputs as output_mod
 from runner import exact_json as json
 from runner.errors import ErrorCode, NfclawError
 from runner.probes import capture
+from runner.settings import seconds
 from runner.submodule import SubmoduleStatus
 
 try:
@@ -472,6 +472,7 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
     files the printed commands name (for `--check`); the validation before a real run drops them."""
     commands = []
     for p in planned:
+        budget.check()
         opts = options(spec, p.stage)
         res = orchestration.run_pipeline(
             p.stage.pipeline, repo_root=repo_root, input_path=p.input,
@@ -526,8 +527,9 @@ def _probe_config(spec: ChainSpec, p: Planned, *, timeout_seconds: float | None 
         cmd += ["-c", cfg]
     cmd += ["config", str(p.tree.path),
             "-profile", nextflow_command.compose_profile(opts.profile, demo=p.stage.demo)]
-    probe_timeout = (min(_PROBE_TIMEOUT, timeout_seconds)
-                     if timeout_seconds is not None else _PROBE_TIMEOUT)
+    operation_timeout = seconds("NFCLAW_CONFIG_TIMEOUT", _PROBE_TIMEOUT)
+    probe_timeout = budget.remaining(min(operation_timeout, timeout_seconds)
+                                     if timeout_seconds is not None else operation_timeout)
     with tempfile.TemporaryDirectory(prefix="nfclaw-probe-") as scratch:
         try:
             r = capture(cmd, cwd=scratch, env={**os.environ, **overlay}, timeout=probe_timeout)
@@ -621,8 +623,9 @@ def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
                           details={"issues": problems})
 
 
+@budget.bounded
 def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_only: bool = False,
-              resume: bool = False, timeout_seconds: int | None = None,
+              resume: bool = False, timeout_seconds: float | None = None,
               on_warning: Callable[[str], None] | None = None) -> ChainResult:
     """Run (or `check_only`: validate) a chain into `outdir`.
 
@@ -631,7 +634,6 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
     config parsed by its own engine — so a mistake in the last stage never surfaces after the first
     has run for hours. `resume` continues the chain
     recorded in `outdir` (with `spec`, or the recorded one when it is None)."""
-    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
     record = outdir / RECORD_DIRNAME
     state = _read_json(record / "state.json") if resume else None
     if resume and not isinstance(state, dict):
@@ -648,6 +650,7 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
                           details={"issues": [issue.replace("to continue that run",
                                                             "to continue that chain")]})
     planned = plan(spec, repo_root=repo_root)
+    budget.check()
     if state is not None:
         _check_frozen(state, planned, spec, repo_root)
     done = {s.get("id") for s in (state or {}).get("stages", []) if s.get("status") == "success"}
@@ -657,16 +660,8 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
                       on_warning=on_warning if check_only else None, keep=check_only)
     unparsable = []
     for p in todo:
-        remaining = None if deadline is None else deadline - time.monotonic()
-        if remaining is not None and remaining <= 0:
-            raise NfclawError(
-                ErrorCode.EXECUTION_FAILED, "The chain's --timeout ran out during validation.",
-                details={"timeout_seconds": timeout_seconds})
-        unparsable += _probe_config(spec, p, timeout_seconds=remaining)
-    if deadline is not None and time.monotonic() >= deadline:
-        raise NfclawError(
-            ErrorCode.EXECUTION_FAILED, "The chain's --timeout ran out during validation.",
-            details={"timeout_seconds": timeout_seconds})
+        unparsable += _probe_config(spec, p, timeout_seconds=budget.remaining())
+    budget.check()
     if unparsable:
         raise NfclawError(
             ErrorCode.ENVIRONMENT, "A stage could not start: its Nextflow engine cannot set it up.",
@@ -678,7 +673,7 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
     if check_only:
         return ChainResult(outdir=outdir, outcome="checked", stages=[], commands=commands)
     return _execute(spec, planned, state, repo_root=repo_root, outdir=outdir,
-                    timeout_seconds=timeout_seconds, on_warning=on_warning, deadline=deadline)
+                    timeout_seconds=timeout_seconds, on_warning=on_warning)
 
 
 def _new_entry(p: Planned, outdir: Path, spec: ChainSpec) -> dict:
@@ -690,8 +685,8 @@ def _new_entry(p: Planned, outdir: Path, spec: ChainSpec) -> dict:
 
 
 def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, repo_root: Path,
-             outdir: Path, timeout_seconds: int | None, on_warning,
-             deadline: float | None = None) -> ChainResult:
+             outdir: Path, timeout_seconds: float | None, on_warning) -> ChainResult:
+    budget.check()
     record = outdir / RECORD_DIRNAME
     outdir.mkdir(parents=True, exist_ok=True)
     with _lock(record, outdir):
@@ -740,6 +735,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
         print(f"nfclaw: logging this chain to {log.path}", file=sys.stderr, flush=True)
         try:
             for i, p in enumerate(planned):
+                budget.check()
                 entry = state["stages"][i]
                 if entry["status"] == "success":
                     manifest = _read_json(Path(entry["outdir"]) / "provenance"
@@ -753,18 +749,22 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                     _say(log, f"{p.stage.dirname}: already succeeded — skipped")
                     continue
                 _run_stage(p, planned[i - 1] if i else None, entry, state, spec=spec,
-                           repo_root=repo_root, outdir=outdir, deadline=deadline,
-                           budget=timeout_seconds, log=log, on_warning=on_warning)
+                           repo_root=repo_root, outdir=outdir,
+                           log=log, on_warning=on_warning)
+                budget.check()
                 if issues := _integrity_problems(state, only_succeeded=True):
                     raise NfclawError(
                         ErrorCode.HANDOFF_FAILED, "Completed stage lineage does not verify.",
                         fix="Keep source data unchanged throughout execution; restore verified "
                             "evidence or run the chain into a fresh output directory.",
                         details={"issues": issues})
+            budget.check()
             state["outcome"] = log.outcome = "success"
         except BaseException as exc:
             if state["outcome"] == "running":                 # not set by _run_stage: say why
-                if isinstance(exc, (KeyboardInterrupt, execution.Terminated)):
+                if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details:
+                    state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
+                elif isinstance(exc, (KeyboardInterrupt, execution.Terminated)):
                     state["outcome"] = execution.stop_outcome(exc)
                 else:
                     reason = exc.message if isinstance(exc, NfclawError) else type(exc).__name__
@@ -774,13 +774,22 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
         finally:
             state["updated"] = runlog.now()
             _write_json(record / "state.json", state)
-            log.finish()
+            try:
+                if state["outcome"] == "success":
+                    budget.check()
+            except NfclawError as exc:
+                state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
+                log.fail(state["outcome"], str(exc))
+                _write_json(record / "state.json", state)
+                raise
+            finally:
+                log.finish()
     return ChainResult(outdir=outdir, outcome=state["outcome"], stages=state["stages"],
                        log_path=log.path)
 
 
 def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, spec: ChainSpec,
-               repo_root: Path, outdir: Path, deadline: float | None, budget: int | None,
+               repo_root: Path, outdir: Path,
                log: runlog.RunLog, on_warning) -> None:
     stage, record = p.stage, outdir / RECORD_DIRNAME
     stage_dir = outdir / stage.dirname
@@ -788,6 +797,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
     overrides, input_path = dict(p.params), p.input
     link: dict[str, Any] = {"id": state["chain_id"], "record": str(record), "stage": stage.id,
                             "index": stage.index, "upstream": None}
+    budget.check()
     if prev is not None:
         dest = record / "handoffs" / stage.dirname
         if dest.exists():
@@ -835,14 +845,12 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
     attempt = 0
     while True:
         attempt += 1
-        remaining = None if deadline is None else int(deadline - time.monotonic())
-        if remaining is not None and remaining <= 0:
+        try:
+            budget.check()
+        except NfclawError as exc:
             entry["status"] = "failed"
-            state["outcome"] = f"timed out after {budget} s"
-            raise NfclawError(ErrorCode.EXECUTION_FAILED,
-                              f"The chain's --timeout ran out before stage {stage.dirname}.",
-                              fix="Resume the chain with --resume (and a larger --timeout).",
-                              details={"timeout_seconds": budget})
+            state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
+            raise
         entry["status"] = "running"
         entry["attempts"].append({"started": runlog.now(), "resume": resume})
         _write_json(record / "state.json", state)
@@ -855,10 +863,11 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 stage.pipeline, repo_root=repo_root, input_path=input_path, outdir=stage_dir,
                 profile=opts.profile, params_file=stage.params_file, cli_overrides=overrides,
                 resume=resume, demo=stage.demo, check_only=False, write_provenance=True,
-                timeout_seconds=remaining, pipeline_version=stage.pipeline_version,
+                timeout_seconds=budget.remaining(), pipeline_version=stage.pipeline_version,
                 nxf_ver=opts.nxf_ver, nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces,
                 configs=opts.configs, limits=opts.limits, on_warning=warn, chain_link=link,
                 resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
+            budget.check()
         except NfclawError as exc:
             entry["attempts"][-1].update(finished=runlog.now(), outcome=_short(exc))
             if _retryable(exc) and attempt <= stage.retries:
@@ -867,7 +876,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 resume = True
                 continue
             entry["status"] = "failed"
-            state["outcome"] = (f"timed out after {budget} s" if "timeout_seconds" in exc.details
+            state["outcome"] = (f"timed out after {exc.details['timeout_seconds']} s" if "timeout_seconds" in exc.details
                                 else f"failed at stage {stage.dirname}: {_short(exc)}")
             raise
         except (KeyboardInterrupt, execution.Terminated) as exc:
@@ -1161,12 +1170,13 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
     return problems
 
 
-def status(path: Path) -> tuple[dict, list[str]]:
+def status(path: Path, *, quick: bool = False) -> tuple[dict, list[str]]:
     """The chain recorded at (or for) `path`, and every broken link in it.
 
     A link holds when the downstream ran with exactly the recorded handoff (its manifest names the
     handoff's hash), the snapshot is unchanged and is the input the downstream hashed, and every
-    upstream file the handoff drew on is what the upstream run recorded producing."""
+    upstream file the handoff drew on is what the upstream run recorded producing.
+    ``quick`` reads recorded execution state only and explicitly leaves lineage unchecked."""
     record = _record_for(path.expanduser().resolve())
     state = _read_json(record / "state.json")
     if not isinstance(state, dict):
@@ -1174,12 +1184,13 @@ def status(path: Path) -> tuple[dict, list[str]]:
                           fix="Restore the chain record before checking or resuming it.")
     live = runlog.read_state(record / "logs" / LOG_NAME)
     state["log_state"], state["log_pid"], state["log_host"] = live.state, live.pid, live.host
-    problems = _integrity_problems(state)
+    problems = [] if quick else _integrity_problems(state)
+    state["lineage_verification"] = "not_checked" if quick else "broken" if problems else "verified"
     return state, problems
 
 
 def status_exit_code(state: dict, problems: list[str]) -> int:
-    """As `nfclaw status`: 0 succeeded (and every link verified), 3 still running, 1 otherwise."""
+    """0 succeeded, 3 running, 1 failed; quick polling leaves lineage explicitly unchecked."""
     if problems or state.get("log_state") == "dead":
         return 1
     if state.get("log_state") == "running":
@@ -1210,6 +1221,9 @@ def format_status(state: dict, problems: list[str]) -> str:
         if s.get("handoff") and i and _valid_entry(stages[i - 1]):
             prev = stages[i - 1]
             lines.append(f"      input ← {prev['index']:02d}-{prev['id']}  ({s['handoff']})")
-    lines += ["", "lineage: verified" if not problems else "lineage: BROKEN"]
+    lineage = ("lineage: not checked (quick status)"
+               if state.get("lineage_verification") == "not_checked"
+               else "lineage: BROKEN" if problems else "lineage: verified")
+    lines += ["", lineage]
     lines += [f"  - {p}" for p in problems]
     return "\n".join(lines) + "\n"

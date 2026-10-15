@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (dependency_stability, discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
+from runner import (budget, dependency_stability, discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
                     input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
                     reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
                     submodule, versions)
@@ -201,11 +201,12 @@ def _check_samplesheet_snapshots(expected: dict, current=None) -> None:
                 fix="Keep the samplesheet unchanged during preflight, then retry the run.")
 
 
+@budget.bounded
 def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  outdir: Path, profile: str, params_file: Path | None,
                  cli_overrides: dict, resume: bool, demo: bool,
                  check_only: bool, write_provenance: bool,
-                 timeout_seconds: int | None, pipeline_version: str | None = None,
+                 timeout_seconds: float | None, pipeline_version: str | None = None,
                  nxf_ver: str | None = None,
                  nxf_env: dict[str, str] | None = None,
                  allow_spaces: bool = False,
@@ -251,6 +252,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # Everything downstream consumes `st`/`st.path`, so it all targets the chosen version.
     st = resolved_tree or versions.ensure(name, pipeline_version, pipelines_dir=pipelines_dir,
                                          repo_root=repo_root)
+    budget.check()
     if st.name != name:
         raise ValueError("resolved_tree must belong to the requested pipeline")
     # The code that runs must be the code provenance will name: the pin its docs describe (for the
@@ -298,6 +300,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                           "from.",
                           fix="Pass the data files (a directory, glob or files) as --input, or set "
                               "the values in your own samplesheet.")
+    budget.check()
     resolved_input = (inputs.ResolvedInput(str(outdir / "provenance" / sheet.filename), None, None)
                       if sheet is not None else inputs.resolve(raw_input, st.path))
     sheet_inputs = []
@@ -372,7 +375,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                           "Parameters failed validation (fix before running).",
                           fix="Use parameter names and allowed values from reference.md.",
                           details={"issues": param_errors})
-
+    budget.check()
 
     # Read dependencies before creating or modifying the output directory. The sheet
     # can become unreadable or malformed after its earlier validation; do not launch
@@ -392,6 +395,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 f"Cannot read samplesheet dependencies: {sheet_path}: {exc}",
                 fix="Restore the samplesheet and make it readable before launching.") from exc
     _check_samplesheet_snapshots(sheet_snapshots)
+    budget.check()
 
     resolved = parameters.resolve_path_params(merged, param_schema)
     refs = param_schema.reference_path_params()
@@ -476,6 +480,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
     writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    budget.check()
     # An engine older than Nextflow's Java 17 support cannot compile any pipeline config on Java 17+
     # (Groovy fails with "Unsupported class file major version"): refuse before launching.
     pinned = nxf_overlay.get("NXF_VER") or os.environ.get("NXF_VER")
@@ -516,6 +521,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
     # and enforces this itself at launch; we just surface it earlier with a clear message.
     warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
+    budget.check()
     # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
     # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
     warnings += plugin_compat.check(st.path)
@@ -561,6 +567,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                                          submodule=st, repo_root=repo_root, resume=resume,
                                          work_dir=work_dir, allow_spaces=allow_spaces,
                                          check_only=check_only)
+    budget.check()
     if issues:
         raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
                           details={"issues": issues})
@@ -586,6 +593,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                     ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
                     fix="Make the input data and configuration files readable before launching.") from exc
             _check_samplesheet_snapshots(sheet_snapshots, (input_snapshot, input_inventory))
+            budget.check()
             if unverified_paths:
                 warning = ("Local path parameters absent before launch were not input-snapshotted: "
                            + ", ".join(sorted(unverified_paths))
@@ -630,6 +638,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # "--outdir is not empty" guard against a directory that holds no results at all. The staged
         # files are still written (to a temp directory that outlives the process), so the command
         # `--check` prints stays runnable as printed.
+        budget.check()
         if check_only:
             staging = Path(tempfile.mkdtemp(prefix="nfclaw-check-"))
         else:
@@ -701,6 +710,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         _check_samplesheet_snapshots(sheet_snapshots)
 
         if check_only:
+            budget.check()
             return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
                              outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging,
                              local_dependencies=local_dependencies,
@@ -726,7 +736,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
                              dependency_stability=stability, completion_caveats=caveats,
-                             stub_profiles=stubbed)
+                             stub_profiles=stubbed,
+                             shutdown_grace_seconds=run_log.shutdown_grace_seconds)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -742,7 +753,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         try:
             try:
                 execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
-                              timeout_seconds=timeout_seconds, env_extra=nxf_overlay,
+                              timeout_seconds=budget.remaining(), env_extra=nxf_overlay,
                               run_log=run_log)
             except BaseException as failure:
                 # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
@@ -751,22 +762,25 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 # failure as the cause. A stopped run (Ctrl-C, `kill`) is compared too: its finished
                 # tasks are the cache `--resume` continues from, usable only if the dependencies held.
                 stopped = isinstance(failure, (KeyboardInterrupt, execution.Terminated))
+                if isinstance(failure, NfclawError) and "timeout_seconds" in failure.details:
+                    run_log.fail(f"timed out after {failure.details['timeout_seconds']} s", str(failure))
                 try:
-                    stability = dependency_stability.compare(
-                        inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
-                        configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
-                        pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                    with budget.suspend():
+                        stability = dependency_stability.compare(
+                            inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
+                            configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                            pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
                     if stability["status"] == "changed" and not stopped:
                         run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
                 except Exception:
                     pass  # dependency inspection must not replace Nextflow's original failure
                 if write_provenance:
                     try:
-                        record("failed")
+                        with budget.suspend():
+                            record("failed")
                     except Exception:                     # best effort; must not mask the real failure
                         pass
                 raise
-            run_log.outcome = "success"
             # Exit status 0 is not proof that every sample and task made it into the results: say
             # what the pipeline itself reported missing (skipped samples, ignored task failures).
             caveats = stub_caveats + runlog.completion_caveats(run_log.console_tail("out"),
@@ -776,8 +790,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 warnings.append(message)
                 if on_warning is not None:
                     on_warning(message)
+            recording_started = False
             try:
+                budget.check()
                 report = outputs.collect(outdir)
+                budget.check()
                 stability = dependency_stability.compare(
                     inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
                     configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
@@ -785,7 +802,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 if stability["status"] != "unchanged":
                     if write_provenance:
                         try:
-                            record("failed")
+                            with budget.suspend():
+                                record("failed")
                         except Exception:
                             pass  # recording failure must not replace the attribution failure
                     problems = [f"{issue['kind']} {issue['change']}: "
@@ -798,8 +816,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         details={"issues": problems, "outdir": str(outdir)},
                         fix="Keep inputs, configurations and pipeline source stable, then start a fresh run. "
                             "The existing results and launch snapshots are retained for inspection.")
+                budget.check()
                 if write_provenance:
+                    recording_started = True
                     record("success")
+                budget.check()
+                run_log.outcome = "success"
             except BaseException as exc:
                 # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs, an
                 # interrupt): the log's last line must not claim a success the bundle does not back.
@@ -807,6 +829,19 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         if isinstance(exc, (KeyboardInterrupt, execution.Terminated)) else "failed")
                 outcome = (dependency_stability.FAILED_OUTCOME if stability["status"] == "changed"
                            else f"{what} after Nextflow succeeded ({type(exc).__name__}: {exc})")
+                if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details:
+                    outcome = f"timed out after {exc.details['timeout_seconds']} s"
+                    if write_provenance and not recording_started:
+                        try:
+                            with budget.suspend():
+                                record("failed")
+                        except Exception:
+                            pass  # cancellation must retain its original cause
+                    elif write_provenance:
+                        try:
+                            provenance.mark_timed_out(outdir, exc.details["timeout_seconds"])
+                        except Exception:
+                            pass  # preserve cancellation if the small metadata rewrite fails
                 run_log.fail(outcome,
                              f"nfclaw: {type(exc).__name__}: {exc}")
                 if isinstance(exc, OSError):

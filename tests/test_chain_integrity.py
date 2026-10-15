@@ -183,6 +183,7 @@ def test_resume_refuses_a_changed_extra_config(library, fake_runs, tmp_path):
 
 def test_timeout_budget_includes_validation_before_launch(
         library, fake_runs, tmp_path, monkeypatch):
+    from runner import budget
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     monotonic = 0.0
     check = chain._check
@@ -193,7 +194,7 @@ def test_timeout_budget_includes_validation_before_launch(
         monotonic = 10.0
         return result
 
-    monkeypatch.setattr(chain.time, "monotonic", lambda: monotonic)
+    monkeypatch.setattr(budget.time, "monotonic", lambda: monotonic)
     monkeypatch.setattr(chain, "_check", slow_validation)
     with pytest.raises(NfclawError) as err:
         chain.run_chain(_spec(), repo_root=root, outdir=tmp_path / "chain", timeout_seconds=5)

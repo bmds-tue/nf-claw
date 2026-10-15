@@ -6,7 +6,9 @@ from pathlib import Path
 import subprocess
 
 from runner.schema import ParamSchema
-from runner.submodule import SubmoduleStatus, _own_head
+from runner.probes import capture
+from runner.settings import seconds
+from runner.submodule import SubmoduleStatus, _git_env, _own_head
 
 
 _REGISTRY = Path(__file__).with_name("path_roles.json")
@@ -29,9 +31,10 @@ def output_only_directories(st: SubmoduleStatus, schema: ParamSchema) -> frozens
                           and schema.params[name].fmt == "directory-path")
         if not names or _own_head(st.path) != st.commit:
             return frozenset()
-        status = subprocess.run(
+        status = capture(
             ["git", "status", "--porcelain", "--untracked-files=all", "--ignore-submodules=none"],
-            cwd=st.path, capture_output=True, text=True, check=True, timeout=30)
+            cwd=st.path, timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=_git_env())
+        status.check_returncode()
         return names if not status.stdout.strip() else frozenset()
     except (OSError, ValueError, AttributeError, subprocess.SubprocessError):
         return frozenset()

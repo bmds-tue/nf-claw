@@ -217,6 +217,15 @@ def test_every_action_is_pinned_to_a_full_commit():
                 assert ref.startswith("./") or re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", ref), f"{path.name}: {ref}"
 
 
+def test_nextflow_launcher_download_has_connect_and_total_limits():
+    action = (ROOT / ".github" / "actions" / "setup-nextflow" / "action.yml").read_text()
+    command = action.split("curl ", 1)[1].split("\n        echo ", 1)[0].replace("\\\n", " ")
+    args = shlex.split(command)
+    for option in ("--connect-timeout", "--max-time"):
+        assert option in args
+        assert float(args[args.index(option) + 1]) > 0
+
+
 def test_code_scanning_covers_every_language_in_the_repository():
     text = _text("codeql.yml")
     languages = re.search(r"language: \[([^]]+)\]", text).group(1)

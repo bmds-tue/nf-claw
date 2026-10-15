@@ -5,7 +5,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from runner.submodule import SubmoduleStatus
+from runner.probes import capture
+from runner.settings import seconds
+from runner.submodule import SubmoduleStatus, _git_env
 
 # The software an nf-core template engine profile runs every task with, and the commands that
 # provide it (Apptainer installs a `singularity` alias; Nextflow's conda engine also drives mamba
@@ -36,7 +38,7 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
             issues.append(f"profile uses {engine} but {'/'.join(commands)} not found on PATH")
     if "docker" in tokens and shutil.which("docker"):
         try:
-            ok = subprocess.run(["docker", "info"], capture_output=True, timeout=10).returncode == 0
+            ok = capture(["docker", "info"], timeout=10, text=False).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             ok = False
         if not ok:
@@ -52,9 +54,9 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
         # files or trip the drift gate) — this is what lets the documented `--outdir results`
         # work. Probe a child path so a directory-only rule (`results/`) still matches.
         try:
-            ignored = subprocess.run(
+            ignored = capture(
                 ["git", "-C", str(repo_root), "check-ignore", "-q", str(output_dir / "_probe")],
-                capture_output=True, timeout=10).returncode == 0
+                timeout=seconds("NFCLAW_GIT_TIMEOUT", 10), text=False, env=_git_env()).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             ignored = False
         if not ignored:
