@@ -63,6 +63,7 @@ _FOREIGN = (
 _PLUGIN = (re.compile(r"Plugin started (?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)"),
            re.compile(r"Start plugin '(?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)'"))
 _RUNTIME = re.compile(r"^\s*Runtime: (?P<runtime>.+?)\s*$")
+_SESSION = re.compile(r"nextflow\.Session - Session UUID: (?P<session>[0-9a-fA-F-]{36})")
 _BUILD = re.compile(r"^\s*Version: (?P<version>\S+) build (?P<build>\d+)")
 
 
@@ -288,18 +289,23 @@ def _log_files(log_path: Path) -> list[Path]:
 def log_facts(log_path: Path, session_id: str | None) -> dict:
     """Plugins, runtime and staged remote files from Nextflow's own log of the run.
 
-    Plugins and runtime come from the run's own log. Staged remote files are collected from the
-    rotated logs too, restricted to the run's session: a resumed run reuses files an earlier attempt
-    of the same session staged, and only that attempt's log names their source.
+    Plugins and runtime come from the run's own log. Staged remote files are also collected from
+    the rotated logs of the same session (each log names it: `Session UUID: …`): a resumed run
+    reuses files an earlier attempt staged, and only that attempt's log names their source. The
+    staging layout differs between engines (`stage-<session>/` since Nextflow 23, a shared `stage/`
+    before), so the session is read from the log, not from the staged path.
     """
     facts = {"runtime": None, "build": None, "plugins": [], "staged": {}}
     plugins = set()
-    stage_marker = f"/stage-{session_id}/" if session_id else None
     for index, path in enumerate(_log_files(log_path)):
         current = index == 0
+        session = None
+        staged = []
         try:
             with path.open(encoding="utf-8", errors="replace") as stream:
                 for line in stream:
+                    if session is None and (match := _SESSION.search(line)):
+                        session = match["session"]
                     if current:
                         if facts["runtime"] is None and (match := _RUNTIME.match(line)):
                             facts["runtime"] = match["runtime"]
@@ -312,15 +318,18 @@ def log_facts(log_path: Path, session_id: str | None) -> dict:
                         continue
                     for pattern in _FOREIGN:
                         if match := pattern.search(line):
-                            staged = match["staged"]
-                            if stage_marker and stage_marker not in staged:
-                                continue
-                            if not stage_marker and not current:
-                                continue
-                            # The newest log wins: it describes the attempt that finished.
-                            facts["staged"].setdefault(match["source"], staged)
+                            staged.append((match["source"], match["staged"]))
         except OSError:
             continue
+        # A rotated log counts only when it names this run's session; the run's own log counts
+        # unless it names another one.
+        if session_id and session is not None and session != session_id:
+            continue
+        if not current and (not session_id or session is None):
+            continue
+        for source, copy in staged:
+            # The newest log wins: it describes the attempt that finished.
+            facts["staged"].setdefault(source, copy)
     facts["plugins"] = sorted(plugins)
     return facts
 

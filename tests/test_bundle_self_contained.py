@@ -446,22 +446,38 @@ def test_engine_is_read_from_the_task_wrapper(tmp_path):
 
 
 def test_log_facts_follow_the_session_across_rotated_logs(tmp_path):
+    session_line = f"x [main] DEBUG nextflow.Session - Session UUID: {SESSION}\n"
     log = tmp_path / ".nextflow.log"
     log.write_text(
+        session_line +
         "  Runtime: Groovy 4.0.28 on OpenJDK 17\n"
         "  Version: 25.10.4 build 11173\n"
         "x DEBUG nextflow.plugin.BasePlugin - Plugin started nf-schema@2.5.1\n"
         "x INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-schema@2.5.1'\n"
         f"x DEBUG FilePorter - Local cache found for foreign file https://e.org/a.fq at /w/stage-{SESSION}/1/a.fq\n")
+    # An earlier attempt of the same (resumed) session, staged in the pre-23 shared layout.
     (tmp_path / ".nextflow.log.1").write_text(
-        f"x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: /w/stage-{SESSION}/2/b.fq\n"
-        "x DEBUG FilePorter - Copying foreign file https://e.org/c.fq to work dir: /w/stage-other/3/c.fq\n"
+        session_line +
+        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: /w/stage/2a/b3/b.fq\n"
         "x INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-old@1.0.0'\n")
+    # Another session's log is not this run's.
+    (tmp_path / ".nextflow.log.2").write_text(
+        "x [main] DEBUG nextflow.Session - Session UUID: 00000000-0000-0000-0000-000000000000\n"
+        "x DEBUG FilePorter - Copying foreign file https://e.org/c.fq to work dir: /w/stage/3/c.fq\n")
     facts = env_record.log_facts(log, SESSION)
     assert facts["runtime"] == "Groovy 4.0.28 on OpenJDK 17" and facts["build"] == "25.10.4 build 11173"
     assert facts["plugins"] == ["nf-schema@2.5.1"]
     assert facts["staged"] == {"https://e.org/a.fq": f"/w/stage-{SESSION}/1/a.fq",
-                               "https://e.org/b.fq": f"/w/stage-{SESSION}/2/b.fq"}
+                               "https://e.org/b.fq": "/w/stage/2a/b3/b.fq"}
+
+
+def test_log_facts_of_a_log_that_names_no_session_use_only_the_current_log(tmp_path):
+    (tmp_path / ".nextflow.log").write_text(
+        "x DEBUG FilePorter - Copying foreign file https://e.org/a.fq to work dir: /w/stage/1/a.fq\n")
+    (tmp_path / ".nextflow.log.1").write_text(
+        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: /w/stage/2/b.fq\n")
+    assert env_record.log_facts(tmp_path / ".nextflow.log", SESSION)["staged"] == {
+        "https://e.org/a.fq": "/w/stage/1/a.fq"}
 
 
 def test_remote_directories_are_recorded_by_tree_digest(tmp_path):
