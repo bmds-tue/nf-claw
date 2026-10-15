@@ -444,7 +444,7 @@ def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, b
                             submodule=_st(tmp_path / "up"), input_paths=[])
     guard = prov / "replay_guard.py"
     text = guard.read_text()
-    marker = 'def verify_dependencies(bundle: Path) -> None:\n'
+    marker = 'def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None:\n'
     gate = (f'    if Path({str(completed)!r}).exists():\n'
             f'        Path({str(pidfile)!r}).write_text(str(os.getpid()))\n'
             '        import time\n        time.sleep(30)\n')

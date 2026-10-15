@@ -132,11 +132,40 @@ jobs:
           check = json.loads((temp / "demo-replay/provenance/environment_check.json").read_text())
           if check["status"] != "identical":
               raise SystemExit(f"Replay environment differs from the recording: {check}")
-          restored = temp / "demo-replay/provenance/pipeline/main.nf"
-          if not restored.is_file():
-              raise SystemExit("The replay did not run the bundle's pipeline source archive")
+          used = json.loads((temp / "demo-replay/provenance/pipeline-source.json").read_text())
+          if used["from"] != "checkout":
+              raise SystemExit(f"The intact checkout was not replayed in place: {used}")
           print(f"{len(env['images'])} images pinned by digest for {len(env['processes'])} processes; "
                 f"{len(env['remote_inputs'])} remote inputs; replay environment identical")
+          PY
+      - name: Replay from the bundle's source archive once the checkout is gone
+        run: |
+          mv pipelines/demo/upstream "$RUNNER_TEMP/demo-checkout-moved"
+          "$RUNNER_TEMP/demo/provenance/commands.sh" "$RUNNER_TEMP/demo-archive-replay"
+          mv "$RUNNER_TEMP/demo-checkout-moved" pipelines/demo/upstream
+          python - <<'PY'
+          import gzip
+          import json
+          import os
+          from pathlib import Path
+          temp = Path(os.environ["RUNNER_TEMP"])
+          original, replay = temp / "demo", temp / "demo-archive-replay"
+          used = json.loads((replay / "provenance/pipeline-source.json").read_text())
+          if used["from"] != "archive" or not (replay / "provenance/pipeline/main.nf").is_file():
+              raise SystemExit(f"The replay did not run the bundle's source archive: {used}")
+          check = json.loads((replay / "provenance/environment_check.json").read_text())
+          if check["status"] != "identical":
+              raise SystemExit(f"Archive replay environment differs from the recording: {check}")
+          reads = sorted(p.relative_to(original) for p in (original / "fq").rglob("*.fastq.gz"))
+          for name in reads:
+              with gzip.open(original / name, "rb") as a, gzip.open(replay / name, "rb") as b:
+                  if a.read() != b.read():
+                      raise SystemExit(f"Archive replay changed trimmed reads: {name}")
+          data = [json.loads((root / "multiqc/multiqc_data/multiqc_data.json").read_text())
+                  for root in (original, replay)]
+          if data[0]["report_general_stats_data"] != data[1]["report_general_stats_data"]:
+              raise SystemExit("Archive replay changed MultiQC scientific data")
+          print(f"Archive replay: {len(reads)} trimmed read files and MultiQC statistics unchanged")
           PY
       - name: Retain and recalculate portable FastQC source evidence
         run: |

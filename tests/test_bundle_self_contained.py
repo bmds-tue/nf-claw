@@ -26,6 +26,7 @@ set -eu
 case "$1" in
 run)
   cat "$2/main.nf"
+  if [ -n "${FAKE_MUTATE:-}" ]; then echo "// edited while it ran" >> "$FAKE_MUTATE"; fi
   mkdir -p .nextflow work/ab/cdef
   printf '2026-10-15 10:00:00\t1s\tfake_run\tOK\tabc\t%s\tnextflow run\n' "$FAKE_SESSION" >> .nextflow/history
   printf 'docker run -i --rm %s /bin/bash -c "eval $(nxf_main)"\n' "$FAKE_IMAGE" > work/ab/cdef/.command.run
@@ -166,7 +167,32 @@ def test_replay_runs_the_archived_source_whatever_happens_to_the_checkout(tmp_pa
     assert "original workflow" in result.stdout and "different" not in result.stdout
     restored = tmp_path / "fresh" / "provenance" / "pipeline" / "main.nf"
     assert restored.read_text() == "original workflow\n"
-    assert '"$target"/provenance/pipeline' in (prov / "commands.sh").read_text()
+    source = json.loads((tmp_path / "fresh" / "provenance" / "pipeline-source.json").read_text())
+    assert source["from"] == "archive" and source["path"] == str(restored.parent)
+    assert "bundle's pipeline source archive" in result.stdout
+
+
+def test_replay_runs_the_recorded_checkout_while_it_is_intact(tmp_path, fake_tools):
+    # Paths that embed the pipeline directory (nf-core's `${projectDir}/assets/...` defaults) then
+    # keep the values the original run had.
+    st = _git_pipeline(tmp_path)
+    prov = _launch(tmp_path, st)
+    result = _replay(prov, tmp_path / "fresh")
+    assert result.returncode == 0, result.stderr
+    source = json.loads((tmp_path / "fresh" / "provenance" / "pipeline-source.json").read_text())
+    assert source == {"from": "checkout", "path": str(st.path)}
+    assert not (tmp_path / "fresh" / "provenance" / "pipeline").exists()
+    assert "running the recorded pipeline checkout" in result.stdout
+
+
+def test_a_checkout_edited_while_the_replay_ran_fails_it(tmp_path, fake_tools):
+    st = _git_pipeline(tmp_path)
+    prov = _launch(tmp_path, st)
+    result = _replay(prov, tmp_path / "fresh", FAKE_MUTATE=str(st.path / "main.nf"))
+    assert result.returncode == 1
+    log = (tmp_path / "fresh" / "provenance" / "logs" / "run.log").read_text()
+    assert log.rstrip().endswith("failed after Nextflow succeeded (local dependencies changed)")
+    assert "pipeline source content changed" in log
 
 
 @pytest.mark.parametrize("tamper", ["archive_bytes", "member_bytes"])
@@ -532,7 +558,7 @@ def test_commands_sh_stays_executable_and_extracts_before_launch(tmp_path, fake_
     prov = _launch(tmp_path, st)
     assert (prov / "commands.sh").stat().st_mode & stat.S_IXUSR
     script = (prov / "commands.sh").read_text()
-    assert script.index("--extract-pipeline") < script.index('"$target"/provenance/pipeline')
+    assert script.index("--pipeline-source") < script.index('nextflow run "$pipeline"')
 
 
 def test_missing_task_records_on_either_side_are_not_called_identical():

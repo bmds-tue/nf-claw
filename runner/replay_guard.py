@@ -469,8 +469,68 @@ def _bundled_configs(manifest: dict) -> dict[str, dict]:
     return bundled
 
 
-def verify_dependencies(bundle: Path) -> None:
-    """Require the recorded local input inventory and config bytes before replay starts."""
+def check_pipeline_checkout(bundle: Path, manifest: dict) -> None:
+    """The recorded pipeline checkout still holds exactly the recorded revision and source bytes."""
+    repo = Path(manifest["pipeline_path"])
+    if (expected_head := manifest.get("pipeline_git_head")) is not None \
+            and pipeline_head(repo) != expected_head:
+        raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
+    expected = read_checksums(bundle / "pipeline.sha256")
+    try:
+        current = hash_pipeline(repo)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"pipeline source is unreadable: {repo} ({exc})") from exc
+    if current.keys() != expected.keys():
+        raise ValueError(f"pipeline source inventory changed: {repo}")
+    for name, digest in expected.items():
+        if current[name] != digest:
+            raise ValueError(f"pipeline source content changed: {repo / name}")
+
+
+PIPELINE_SOURCE_RECORD = "pipeline-source.json"
+
+
+def replay_pipeline_source(target: Path) -> dict | None:
+    try:
+        record = json.loads((target / "provenance" / PIPELINE_SOURCE_RECORD).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def choose_pipeline_source(bundle: Path, target: Path) -> str:
+    """The pipeline directory a replay runs, recorded in the replay's provenance.
+
+    The recorded checkout, while it still holds exactly the recorded revision and source bytes: the
+    replay then runs from the same path, so parameters and outputs that embed the pipeline directory
+    (nf-core's `${projectDir}/assets/...` defaults) keep their values. Otherwise the bundle's source
+    archive, extracted and checked file by file into the replay's provenance/pipeline.
+    """
+    manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
+    reason = None
+    try:
+        check_pipeline_checkout(bundle, manifest)
+        source = {"from": "checkout", "path": manifest["pipeline_path"]}
+    except (ValueError, KeyError) as exc:
+        reason = str(exc)
+        destination = target / "provenance" / "pipeline"
+        check_pipeline_archive(bundle, manifest, destination)
+        source = {"from": "archive", "path": str(destination), "reason": reason}
+    record = target / "provenance" / PIPELINE_SOURCE_RECORD
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(json.dumps(source, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if reason is None:
+        print(f"nfclaw replay: running the recorded pipeline checkout {source['path']}", file=sys.stderr)
+    else:
+        print(f"nfclaw replay: running the bundle's pipeline source archive ({reason})", file=sys.stderr)
+    return source["path"]
+
+
+def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None:
+    """Require the recorded local input inventory and config bytes before replay starts.
+
+    With `replay_target` (a finished replay), the pipeline checkout the replay ran is checked too.
+    """
     manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("outcome"), str):
         raise ValueError(f"provenance bundle is incomplete: {bundle}")
@@ -501,18 +561,13 @@ def verify_dependencies(bundle: Path) -> None:
     if manifest.get("pipeline_archive") is not None:
         # The replay runs the archived source, so the original checkout may have moved on.
         check_pipeline_archive(bundle, manifest)
-    elif pipeline_path := manifest.get("pipeline_path"):
-        repo = Path(pipeline_path)
-        if (expected_head := manifest.get("pipeline_git_head")) is not None \
-                and pipeline_head(repo) != expected_head:
-            raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
-        expected = read_checksums(bundle / "pipeline.sha256")
-        current = hash_pipeline(repo)
-        if current.keys() != expected.keys():
-            raise ValueError(f"pipeline source inventory changed: {repo}")
-        for name, digest in expected.items():
-            if current[name] != digest:
-                raise ValueError(f"pipeline source content changed: {repo / name}")
+    elif manifest.get("pipeline_path"):
+        check_pipeline_checkout(bundle, manifest)
+    # After a replay: the source it ran must still be the recorded source.
+    if replay_target is not None:
+        used = replay_pipeline_source(replay_target)
+        if used is not None and used.get("from") == "checkout":
+            check_pipeline_checkout(bundle, manifest)
     for kind in ("inputs", "configs"):
         expected = read_checksums(bundle / f"{kind}.sha256", relative=False)
         sources = json.loads((bundle / f"{kind}.sources.json").read_text(encoding="utf-8"))
@@ -783,18 +838,15 @@ if __name__ == "__main__":
             sys.exit(0 if replay_lock_held(Path(sys.argv[2]), sys.argv[3]) else 1)
         elif sys.argv[1] == "--run":
             sys.exit(run_replay_command(sys.argv[3:], log=Path(sys.argv[2])))
-        elif sys.argv[1] == "--extract-pipeline":
+        elif sys.argv[1] == "--pipeline-source":
             try:
-                bundle = Path(sys.argv[2])
-                check_pipeline_archive(
-                    bundle, json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8")),
-                    Path(sys.argv[3]))
+                print(choose_pipeline_source(Path(sys.argv[2]), Path(sys.argv[3])))
             except (OSError, ValueError) as exc:
                 print(f"nfclaw replay: the recorded pipeline source could not be restored: {exc}",
                       file=sys.stderr)
                 sys.exit(1)
         else:
-            verify_dependencies(Path(sys.argv[1]))
+            verify_dependencies(Path(sys.argv[1]), Path(sys.argv[2]) if len(sys.argv) > 2 else None)
     except (OSError, ValueError, IndexError) as exc:
         print(f"nfclaw replay: dependency check failed: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -1340,7 +1340,7 @@ def test_dev_run_records_the_commit_and_replays_exactly_it(tmp_path, monkeypatch
     assert manifest["pipeline_path"].endswith(f".versions/dev-{dev[:12]}/upstream")
     assert manifest["pipeline_archive"]["files"] == len(orchestration.provenance.read_checksums(
         prov / "pipeline.sha256"))
-    assert '"$target"/provenance/pipeline' in (prov / "commands.sh").read_text()
+    assert "--pipeline-source" in (prov / "commands.sh").read_text()
 
 
 def test_resuming_a_dev_run_after_dev_moved_says_so(tmp_path, monkeypatch, dev_library):

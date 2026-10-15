@@ -355,7 +355,7 @@ if [ -n "$stopped_by" ]; then
 elif [ "$status" -eq 0 ]; then
   verification_log="$target/provenance/logs/.replay-verification"
   set +e
-  python3 "$_script_dir/replay_guard.py" "$original/provenance" >"$verification_log" 2>&1 &
+  python3 "$_script_dir/replay_guard.py" "$original/provenance" "$target" >"$verification_log" 2>&1 &
   supervisor_pid=$!
   if [ -n "$stopped_by" ]; then kill -TERM "$supervisor_pid" 2>/dev/null; fi
   while :; do
@@ -590,9 +590,11 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     #    --nxf-env) *and* whatever the shell already exported (NXF_OFFLINE, NXF_VER, …). Nextflow
     #    reads all of them, so a run that only succeeds with a pinned engine, an IPv6 flag or offline
     #    mode would not reproduce unless the script carries them — the manifest alone is not enough.
-    #  - run the bundle's own copies: the archived pipeline source (extracted into the replay's
-    #    provenance/ directory and checked file by file), the external `--config` files, and a config
-    #    pinning every process to the container image digest it ran.
+    #  - run the recorded pipeline checkout while it holds exactly the recorded source (paths that
+    #    embed the pipeline directory then keep their values), otherwise the bundle's source archive,
+    #    extracted into the replay's provenance/ directory and checked file by file; the bundle's
+    #    copies of external `--config` files; and a config pinning every process to the container
+    #    image digest it ran.
     env_exports = "".join(
         f"export {shlex.quote(key)}={shlex.quote(value)}\n"
         for key, value in sorted(nxf_env.items())
@@ -624,9 +626,9 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
                 if previous in ("-c", "-config") else None
             if (index == 2 and command_args[1] == "run" and "pipeline_archive" in manifest
                     and str(Path(arg).absolute()) == manifest.get("pipeline_path")):
-                rendered.append('"$target"/provenance/pipeline')
-                replay_setup = ('python3 "$_script_dir/replay_guard.py" --extract-pipeline '
-                                '"$_script_dir" "$target/provenance/pipeline" || exit 1\n')
+                rendered.append('"$pipeline"')
+                replay_setup = ('pipeline="$(python3 "$_script_dir/replay_guard.py" --pipeline-source '
+                                '"$_script_dir" "$target")" || exit 1\n')
             elif config is not None and config["replay"]:
                 rendered.append('"$_script_dir"/' + shlex.quote(config["file"]))
             elif arg.startswith(bundle_prefix):
