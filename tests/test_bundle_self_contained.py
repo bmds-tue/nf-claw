@@ -527,3 +527,12 @@ def test_missing_task_records_on_either_side_are_not_called_identical():
         result = env_record.compare(original, replay)
         assert result["status"] == "unverified"
         assert "no task records" in result["unverified"][0]
+
+
+def test_a_remote_input_staged_by_only_one_run_is_a_mismatch():
+    original = {"remote_inputs": {"https://e.org/a": {"sha256": "1" * 64}}}
+    replay = {"remote_inputs": {"https://e.org/a": {"sha256": "1" * 64},
+                                "https://e.org/new_sample.fq": {"sha256": "2" * 64}}}
+    result = env_record.compare(original, replay)
+    assert result["status"] == "differs"
+    assert result["mismatches"] == ["remote inputs staged only in the replay: https://e.org/new_sample.fq"]

@@ -565,12 +565,14 @@ def compare(original: dict, replay: dict) -> dict:
         elif a["sha256"] != b["sha256"]:
             mismatches.append(f"remote input {source} changed: recorded sha256 {a['sha256']}, "
                               f"replay staged {b['sha256']}")
+    # The same parameters stage the same remote files: one staged by only one run means its
+    # inputs differed (a remote samplesheet that changed, another reference URL).
     if before_inputs.keys() - after_inputs.keys():
-        notes.append("remote inputs staged only in the recording: "
-                     + ", ".join(sorted(before_inputs.keys() - after_inputs.keys())))
+        mismatches.append("remote inputs staged only in the recording: "
+                          + ", ".join(sorted(before_inputs.keys() - after_inputs.keys())))
     if after_inputs.keys() - before_inputs.keys():
-        notes.append("remote inputs staged only in the replay: "
-                     + ", ".join(sorted(after_inputs.keys() - before_inputs.keys())))
+        mismatches.append("remote inputs staged only in the replay: "
+                          + ", ".join(sorted(after_inputs.keys() - before_inputs.keys())))
     status = "differs" if mismatches else ("unverified" if unverified else "identical")
     return {"version": VERSION, "status": status, "mismatches": mismatches,
             "unverified": unverified, "notes": notes}
