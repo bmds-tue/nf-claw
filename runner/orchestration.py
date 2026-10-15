@@ -12,6 +12,7 @@ from runner import (dependency_stability, discovery, engine_version, execution, 
                     input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
                     reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
                     submodule, versions)
+from runner import environment_record, institutional
 from runner import schema as schema_mod
 from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.errors import ErrorCode, NfclawError
@@ -353,6 +354,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # re-evaluate `now()` on every launch, so replaying the bundle reproduces the run's outputs
     # rather than writing a second, differently-named set of reports beside them.
     merged = parameters.pin_report_suffix(merged, param_schema)
+    # The same for the institutional configs every nf-core release includes from nf-core/configs'
+    # moving `master` at launch: read one commit, recorded in params.json, so the replay reads it too.
+    merged, institutional_configs, institutional_advisory = institutional.pin(
+        merged, param_schema.params, st.path, {**os.environ, **nxf_overlay},
+        previous=institutional.previous_commit(outdir) if resume else None)
     output_only_dirs = path_roles.output_only_directories(st, param_schema)
     param_errors = parameters.validate_params(
         merged, param_schema, output_only_dirs=output_only_dirs,
@@ -526,6 +532,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
     warnings += reproducibility.advisories(st.path, merged, demo=demo)
+    if institutional_advisory:
+        warnings.append(institutional_advisory)
     # A selected profile that runs every task as a stub (proteinfold's `test`): the run exercises
     # the workflow, not the tools, so its success must not read as analysis results.
     stubbed = nextflow_command.stub_profiles(st.path, composed_profile)
@@ -713,6 +721,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
         caveats: list[str] = []                 # what a successful pipeline said its results lack
+        # The runs Nextflow already knows in this directory (a resumed one has earlier attempts): the
+        # bundle records the execution environment of the session this launch adds after them.
+        history_offset = len(environment_record.history(outdir))
 
         def record(outcome: str) -> None:
             provenance.write(outdir=outdir, pipeline=name, command_str=cmd_str, submodule=st,
@@ -726,7 +737,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
                              dependency_stability=stability, completion_caveats=caveats,
-                             stub_profiles=stubbed)
+                             stub_profiles=stubbed, nextflow_log=run_log.nextflow_log,
+                             history_offset=history_offset,
+                             institutional_configs=institutional_configs)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -800,6 +813,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                             "The existing results and launch snapshots are retained for inspection.")
                 if write_provenance:
                     record("success")
+                    # Gaps in the recorded execution environment (an image without a digest, a
+                    # process a replay cannot pin) do not fail the run, but its replay is weaker.
+                    for issue in provenance.recorded_environment_issues(outdir):
+                        message = f"provenance: {issue}"
+                        warnings.append(message)
+                        if on_warning is not None:
+                            on_warning(message)
             except BaseException as exc:
                 # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs, an
                 # interrupt): the log's last line must not claim a success the bundle does not back.

@@ -86,9 +86,21 @@ workflow { DIGEST(file(params.input)) }
         capture_output=True, text=True, timeout=90)
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert (replay / 'digest.txt').read_text().split()[0] == digest
-    # A working-tree source mutation, with HEAD unchanged, must still stop standalone replay.
+    environment = json.loads((replay / 'provenance' / 'environment_check.json').read_text())
+    assert environment['status'] == 'identical'
+    # A working-tree source mutation cannot reach a replay: it runs the bundle's source archive.
     script = repo / 'main.nf'
-    script.write_text(script.read_text() + '\n// changed tracked source\n')
+    original_source = script.read_text()
+    script.write_text(original_source + '\n// changed tracked source\n')
+    again = tmp_path / 'again'
+    rerun = subprocess.run(['bash', str(bundle / 'commands.sh'), str(again)],
+        capture_output=True, text=True, timeout=90)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+    assert (again / 'digest.txt').read_text().split()[0] == digest
+    assert (again / 'provenance' / 'pipeline' / 'main.nf').read_text() == original_source
+    # An altered archive is refused before Nextflow starts.
+    archive = bundle / provenance.PIPELINE_ARCHIVE
+    archive.write_bytes(archive.read_bytes()[:-1])
     refused = tmp_path / 'refused'
     changed = subprocess.run(['bash', str(bundle / 'commands.sh'), str(refused)],
         capture_output=True, text=True, timeout=30)

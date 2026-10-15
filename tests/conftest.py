@@ -19,6 +19,17 @@ def _isolate_temp_dir(monkeypatch, tmp_path_factory):
 
 
 @pytest.fixture(autouse=True)
+def _no_institutional_config_lookup(monkeypatch):
+    """Tests never resolve nf-core/configs over the network; runs then keep the release default.
+
+    tests/test_institutional.py exercises the pinning with its own resolver.
+    """
+    from runner import institutional
+
+    monkeypatch.setattr(institutional, "_ls_remote", lambda repository, ref: (None, None))
+
+
+@pytest.fixture(autouse=True)
 def _isolate_nextflow_env(monkeypatch):
     """Run every test with a clean NXF_* environment.
 

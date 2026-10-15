@@ -16,9 +16,11 @@ from runner.inputs import is_remote_url
 
 from runner.outputs import result_files
 from runner import outputs
+from runner import environment_record
 from runner.engine_version import version_text
 from runner.probes import capture
-from runner.replay_guard import (MissingInputSource as MissingInputSource,
+from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
+                                 MissingInputSource as MissingInputSource,
                                  checksum_text as checksum_text,
                                  hash_inputs as hash_inputs, hash_pipeline as hash_pipeline,
                                  input_files as input_files,
@@ -178,6 +180,103 @@ def effective_nxf_env(env_extra: dict[str, str] | None = None) -> dict[str, str]
     return env
 
 
+def _profile(command_str: str) -> str | None:
+    try:
+        args = shlex.split(command_str)
+    except ValueError:
+        return None
+    return next((args[i + 1] for i, arg in enumerate(args[:-1]) if arg == "-profile"), None)
+
+
+def _bundle_configs(prov: Path, command_str: str,
+                    config_checksums: dict[str, str] | None) -> dict[str, dict]:
+    """Copy each external `-c` config into `<bundle>/configs/`, keyed by its original path.
+
+    A replay passes the copy, so it no longer depends on the file staying where it was. A copy is
+    taken only when its bytes still match the prelaunch snapshot. A config that includes others
+    (`includeConfig`) resolves relative includes against its own directory, so it is kept for the
+    record but replayed from its original path, where those includes still resolve.
+    """
+    directory = prov / "configs"
+    if directory.is_dir():
+        for stale in directory.iterdir():
+            if stale.is_file() and not stale.is_symlink():
+                stale.unlink()
+    try:
+        args = shlex.split(command_str)
+    except ValueError:
+        return {}
+    if not args or Path(args[0]).name != "nextflow":
+        return {}
+    bundle = prov.absolute()
+    bundled: dict[str, dict] = {}
+    for index, arg in enumerate(args[1:-1], start=1):
+        if arg not in ("-c", "-config"):
+            continue
+        source = Path(args[index + 1]).expanduser().absolute()
+        key = str(source)
+        if source.is_relative_to(bundle) or key in bundled:
+            continue
+        try:
+            data = source.read_bytes()
+        except OSError:
+            continue
+        digest = hashlib.sha256(data).hexdigest()
+        if config_checksums is not None and config_checksums.get(key) != digest:
+            continue
+        directory.mkdir(exist_ok=True)
+        name = f"configs/{len(bundled) + 1:02d}-{source.name}"
+        _atomic_bytes(prov / name, data)
+        text = data.decode("utf-8", errors="replace")
+        bundled[key] = {"file": name, "sha256": digest,
+                        "replay": not re.search(r"\bincludeConfig\b", text)}
+    return bundled
+
+
+def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
+                       history_offset: int | None, profile: str | None,
+                       nextflow_log: Path | None) -> dict:
+    """The execution environment of the run (runner.environment_record); never raises."""
+    from runner import runlog
+
+    try:
+        return environment_record.capture(
+            outdir, log_path=nextflow_log or runlog.nextflow_log_path(outdir, env_extra),
+            env={**os.environ, **env_extra} if env_extra else None,
+            history_offset=history_offset, profile=profile)
+    except Exception as exc:                  # a recording gap must not lose the rest of the bundle
+        return {"version": environment_record.VERSION, "processes": {}, "images": {},
+                "pinned_containers": {}, "remote_inputs": {}, "nextflow_plugins": [],
+                "issues": [f"the execution environment could not be recorded: "
+                           f"{type(exc).__name__}: {exc}"]}
+
+
+def recorded_environment_issues(outdir: Path) -> list[str]:
+    try:
+        environment = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+    except (OSError, ValueError):
+        return []
+    issues = environment.get("issues") if isinstance(environment, dict) else None
+    return [issue for issue in issues if isinstance(issue, str)] if isinstance(issues, list) else []
+
+
+def environment_summary(environment: dict) -> dict:
+    """The manifest's overview of environment.json."""
+    images = environment.get("images") or {}
+    engine = environment.get("container_engine") or {}
+    return {
+        "container_engine": engine.get("name"),
+        "container_engine_version": engine.get("version"),
+        "images": len(images),
+        "images_with_identity": sum(1 for image in images.values() if image.get("kind") != "unresolved"),
+        "pinned_processes": len(environment.get("pinned_containers") or {}),
+        "remote_inputs": len(environment.get("remote_inputs") or {}),
+        "nextflow_plugins": list(environment.get("nextflow_plugins") or []),
+        "nextflow_runtime": environment.get("nextflow_runtime"),
+        "issues": list(environment.get("issues") or []),
+    }
+
+
 def output_checksums(outdir: Path) -> dict[str, str]:
     """The run's result files as {path relative to outdir: sha256}, in sorted order.
 
@@ -261,12 +360,40 @@ elif [ "$status" -eq 0 ]; then
   if [ -n "$stopped_by" ]; then
     outcome="$stopped_by"
     status="$stopped_status"
-  elif [ "$verification_status" -eq 0 ]; then
-    outcome=success
-  else
+  elif [ "$verification_status" -ne 0 ]; then
     outcome="failed after Nextflow succeeded (local dependencies changed)"
     status=1
     echo "nfclaw replay: local dependencies changed during execution; start a fresh run" >&2
+  else
+    # Record the replay's own execution environment and compare it with the recording: the same
+    # image digests, plugins and staged remote bytes, or the replay is not a reproduction.
+    environment_log="$target/provenance/logs/.replay-environment"
+    set +e
+    python3 "$_script_dir/environment_record.py" verify "$_script_dir" "$target" >"$environment_log" 2>&1 &
+    supervisor_pid=$!
+    if [ -n "$stopped_by" ]; then kill -TERM "$supervisor_pid" 2>/dev/null; fi
+    while :; do
+      wait "$supervisor_pid"
+      environment_status=$?
+      kill -0 "$supervisor_pid" 2>/dev/null || break
+    done
+    supervisor_pid=""
+    set -e
+    sed 's/^/| /' "$environment_log" >>"$log"
+    cat "$environment_log" >&2
+    rm -f -- "$environment_log"
+    if [ -n "$stopped_by" ]; then
+      outcome="$stopped_by"
+      status="$stopped_status"
+    elif [ "$environment_status" -eq 0 ]; then
+      outcome=success
+    elif [ "$environment_status" -eq 3 ]; then
+      outcome="failed after Nextflow succeeded (execution environment differs from the recording)"
+      status=1
+    else
+      outcome="failed after Nextflow succeeded (execution environment could not be checked)"
+      status=1
+    fi
   fi
 else
   outcome="failed (exit status $status)"
@@ -292,7 +419,10 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           generated_samplesheet: dict | None = None,
           dependency_stability: dict | None = None,
           completion_caveats: list[str] | None = None,
-          stub_profiles: list[str] | None = None) -> Path:
+          stub_profiles: list[str] | None = None,
+          nextflow_log: Path | None = None,
+          history_offset: int | None = None,
+          institutional_configs: dict | None = None) -> Path:
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -342,12 +472,28 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # Selected profiles that run every task as a stub; a replay (replay_guard) reports it too.
     if stub_profiles:
         manifest["stub_profiles"] = list(stub_profiles)
+    # The nf-core/configs revision the run's institutional config include read (runner.institutional).
+    if institutional_configs:
+        manifest["institutional_configs"] = dict(institutional_configs)
     if pipeline_checksums is not None or submodule.path.is_dir():
         manifest["pipeline_path"] = str(submodule.path.absolute())
         manifest["pipeline_git_head"] = (
             submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
         pipeline_hashes = hash_pipeline(submodule.path) if pipeline_checksums is None else pipeline_checksums
         _atomic_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
+        # The source itself, not only its checksums: a replay runs this archive, so it reproduces the
+        # run after the checkout has moved to another release, been edited or been deleted.
+        archive = prov / PIPELINE_ARCHIVE
+        if submodule.path.is_dir():
+            try:
+                manifest["pipeline_archive"] = {
+                    "file": PIPELINE_ARCHIVE, "files": len(pipeline_hashes),
+                    "sha256": write_pipeline_archive(submodule.path, pipeline_hashes, archive)}
+            except (OSError, ValueError) as exc:
+                archive.unlink(missing_ok=True)
+                manifest["pipeline_archive_error"] = str(exc)
+        else:
+            archive.unlink(missing_ok=True)
     # params.json is itself a scientific dependency. Direct recording callers get its guard too;
     # the runner supplies a prelaunch config snapshot containing it, preserving the bytes used.
     params = prov / "params.json"
@@ -378,6 +524,27 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
         _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     _atomic_bytes(prov / "replay_guard.py", Path(__file__).with_name("replay_guard.py").read_bytes())
+    _atomic_bytes(prov / "environment_record.py",
+                  Path(__file__).with_name("environment_record.py").read_bytes())
+    bundled_configs = _bundle_configs(prov, command_str, config_checksums)
+    if bundled_configs:
+        manifest["bundled_configs"] = bundled_configs
+
+    # What the engine fetched while it ran: container images by digest, plugins, staged remote files.
+    environment = record_environment(
+        outdir, env_extra=env_extra, history_offset=history_offset, profile=_profile(command_str),
+        nextflow_log=nextflow_log)
+    _atomic_text(prov / environment_record.RECORD_NAME,
+                 json.dumps(environment, indent=2, sort_keys=True) + "\n")
+    manifest["environment_record"] = {"file": environment_record.RECORD_NAME,
+                                      "sha256": _sha256(prov / environment_record.RECORD_NAME)}
+    manifest["execution_environment"] = environment_summary(environment)
+    pins = prov / environment_record.PINS_NAME
+    if pin_text := environment_record.pin_config(environment):
+        _atomic_text(pins, pin_text)
+        manifest["container_pins"] = {"file": environment_record.PINS_NAME, "sha256": _sha256(pins)}
+    else:
+        pins.unlink(missing_ok=True)
 
     output_hashes, output_inventory, _ = outputs.snapshot(outdir, _sha256)
     _atomic_text(prov / "outputs.sha256", checksum_text(output_hashes))
@@ -412,7 +579,9 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     #    --nxf-env) *and* whatever the shell already exported (NXF_OFFLINE, NXF_VER, …). Nextflow
     #    reads all of them, so a run that only succeeds with a pinned engine, an IPv6 flag or offline
     #    mode would not reproduce unless the script carries them — the manifest alone is not enough.
-    # `--config` files and the params file are absolute in `command_str`, so they replay as-is.
+    #  - run the bundle's own copies: the archived pipeline source (extracted into the replay's
+    #    provenance/ directory and checked file by file), the external `--config` files, and a config
+    #    pinning every process to the container image digest it ran.
     env_exports = "".join(
         f"export {shlex.quote(key)}={shlex.quote(value)}\n"
         for key, value in sorted(nxf_env.items())
@@ -429,13 +598,34 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
                         f"replay: {names}\n")
     default_target = shlex.quote(f"{outdir}.replay")
     commands = prov / "commands.sh"
-    # Relocate arguments inside this bundle; external dependencies keep their recorded paths.
+    # Relocate arguments inside this bundle; external input data keep their recorded paths.
     replay_command = command_str
+    replay_setup = ""
     command_args = shlex.split(command_str)
-    if command_args and Path(command_args[0]).name == "nextflow" and command_args[-1] == "-resume":
-        replay_command = shlex.join(command_args[:-1])
     bundle_prefix = str(prov.absolute()) + "/"
-    if bundle_prefix in replay_command:
+    if command_args and Path(command_args[0]).name == "nextflow":
+        if command_args[-1] == "-resume":
+            command_args = command_args[:-1]
+        rendered = []
+        for index, arg in enumerate(command_args):
+            previous = command_args[index - 1] if index else ""
+            config = bundled_configs.get(str(Path(arg).expanduser().absolute())) \
+                if previous in ("-c", "-config") else None
+            if (index == 2 and command_args[1] == "run" and "pipeline_archive" in manifest
+                    and str(Path(arg).absolute()) == manifest.get("pipeline_path")):
+                rendered.append('"$target"/provenance/pipeline')
+                replay_setup = ('python3 "$_script_dir/replay_guard.py" --extract-pipeline '
+                                '"$_script_dir" "$target/provenance/pipeline" || exit 1\n')
+            elif config is not None and config["replay"]:
+                rendered.append('"$_script_dir"/' + shlex.quote(config["file"]))
+            elif arg.startswith(bundle_prefix):
+                rendered.append('"$_script_dir"/' + shlex.quote(arg[len(bundle_prefix):]))
+            else:
+                rendered.append(shlex.quote(arg))
+        if "container_pins" in manifest:
+            rendered += ["-c", '"$_script_dir"/' + environment_record.PINS_NAME]
+        replay_command = " ".join(rendered)
+    elif bundle_prefix in replay_command:
         replay_command = " ".join(
             '"$_script_dir"/' + shlex.quote(arg[len(bundle_prefix):])
             if arg.startswith(bundle_prefix) else shlex.quote(arg)
@@ -468,7 +658,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         f"{env_exports}"
         + _REPLAY_TAIL.replace("__ORIGINAL__", shlex.quote(str(outdir)))
                       .replace("__COMMAND_SCRIPT__", shlex.quote(
-                          '_script_dir="$1"\ntarget="$2"\n' + replay_command + ' --outdir "$target"')),
+                          '_script_dir="$1"\ntarget="$2"\n' + replay_setup + replay_command
+                          + ' --outdir "$target"')),
         mode=0o755)
     _atomic_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return prov

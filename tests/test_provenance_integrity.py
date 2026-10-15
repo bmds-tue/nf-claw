@@ -251,10 +251,21 @@ def _git_pipeline(tmp_path):
     return SubmoduleStatus("mini", path, True, True, "1.0.0", commit, ())
 
 
+def _without_source_archive(prov):
+    """A bundle as written before the pipeline source was archived in it."""
+    manifest = json.loads((prov / "run_manifest.json").read_text())
+    manifest.pop("pipeline_archive")
+    (prov / "run_manifest.json").write_text(json.dumps(manifest))
+    (prov / provenance.PIPELINE_ARCHIVE).unlink()
+
+
 @pytest.mark.parametrize("change", ["tracked_bytes", "head", "tracked_inventory"])
 def test_pipeline_changes_cannot_silently_change_replay(tmp_path, change):
+    # A bundle without its own source archive replays the recorded checkout, which must be intact.
+    # (A current bundle runs its archived source instead: tests/test_bundle_self_contained.py.)
     st = _git_pipeline(tmp_path)
     prov = _write(tmp_path / "out", input_paths=[], submodule=st)
+    _without_source_archive(prov)
     if change == "tracked_bytes":
         (st.path / "main.nf").write_text("different scientific algorithm\n")
     elif change == "tracked_inventory":
