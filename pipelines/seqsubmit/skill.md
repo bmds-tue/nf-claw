@@ -35,6 +35,9 @@ This release publishes no samplesheet schema for `--input`, so nfclaw does not p
 | `--centre-name` | string |  |  |  | Name of the submitter's organisation (mandatory for broker accounts). |
 | `--mode` | string |  | `mags`, `bins`, `metagenomic_assemblies`, `reads` |  | Type of the data to be submitted |
 
+## Secrets
+This release reads Nextflow secrets: `ENA_WEBIN` (in `nextflow.config`, `modules/local/registerstudy/main.nf`); `ENA_WEBIN_PASSWORD` (in `nextflow.config`, `modules/local/registerstudy/main.nf`). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Generic options** (`generic_options`) — 15 parameters

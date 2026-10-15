@@ -81,9 +81,9 @@ Every `nfclaw run` records itself at a fixed place — there is no need to redir
 nfclaw status <outdir>
 ```
 
-Prints `status: success`, `running (…)`, the outcome it ended with (`failed (exit status N)`, `timed out after N s`, `interrupted`, `terminated by SIGTERM`, `refused before launch`), or `stopped without an outcome` (nfclaw itself was killed with SIGKILL, ran out of memory, or the machine restarted); then the log, and the recorded error or the run's last output. Exit code: 0 success, 3 running, 1 anything else. It works for replays too.
+Prints `status: success`, `running (…)`, the outcome it ended with (`failed (exit status N)`, `timed out after N s`, `interrupted`, `terminated by SIGTERM`, `refused before launch`), or `stopped without an outcome` (nfclaw itself was killed with SIGKILL, ran out of memory, its disk filled up, or the machine restarted); then the log, and the recorded error or the run's last output. Exit code: 0 success, 3 running, 1 anything else. It works for replays too.
 
-**Success is not completeness.** A pipeline can exit 0 without some of its samples or tasks. When it says so in its completion summary (nf-core's "…, but with errored process(es)", rnaseq's skipped samples and failed strandedness checks) or Nextflow ignored failed tasks, `nfclaw status` reports `status: success — with caveats the pipeline reported about its results` and quotes them; `nfclaw run` prints them as warnings and records them in `provenance/run_manifest.json` (`completion_caveats`), and a chain lists them per stage. Read them before using the results.
+**Success is not completeness.** A pipeline can exit 0 without some of its samples or tasks. When it says so in its completion summary (nf-core's "…, but with errored process(es)", rnaseq's skipped samples and failed strandedness checks), Nextflow ignored failed tasks, or a selected profile runs every task as a stub that writes placeholders instead of running its tool (`stubRun = true`, as proteinfold's `test` profile does — so its `--demo` computes nothing), `nfclaw status` reports `status: success — with caveats the pipeline reported about its results` and quotes them; `nfclaw run` prints them as warnings and records them in `provenance/run_manifest.json` (`completion_caveats`), and a chain lists them per stage. Read them before using the results.
 
 ### Log Files Overview
 

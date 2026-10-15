@@ -70,6 +70,9 @@ Any of the optional columns above may be appended to the header when your data n
 ## Reference genome
 **This release resolves a reference genome remotely by default.** `--genome` defaults to `GATK.GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. The pinned configuration gives that key the FASTA `${params.igenomes_base}/Homo_sapiens/GATK/GRCh38/Sequence/WholeGenomeFasta/Homo_sapiens_assembly38.fasta`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
+## Secrets
+This release reads Nextflow secrets: `SENTIEON_LICENSE_BASE64` (in `modules/nf-core/sentieon/applyvarcal/main.nf`, `modules/nf-core/sentieon/bwamem/main.nf` and 7 more files). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Annotation** (`annotation`) — 33 parameters

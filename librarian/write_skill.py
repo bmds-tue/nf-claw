@@ -6,7 +6,8 @@ import json
 import re
 from pathlib import Path
 
-from runner import engine_version, fastqrepair_compat, handoff, inputs, sheetgen, versions
+from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs, nextflow_command,
+                    sheetgen, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -321,7 +322,18 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
         return ""
     pin = engine_version.minimum_version(spec)
     pin_line = ""
-    if pin:
+    if pin and engine_version.predates_java17(pin):
+        # The declared minimum cannot run on the Java 17+ nf-claw requires; advising it as the pin
+        # made every run fail before Nextflow read the pipeline.
+        later = engine_version.LEGACY_RELEASE_ENGINE
+        pin_line = (f"\n\nThat minimum predates Nextflow's Java 17 support (21.10.0): on the Java 17+ "
+                    "nf-claw requires it fails to compile the configuration (`Unsupported class "
+                    "file major version 61`), and `nfclaw run` refuses it. Run this "
+                    f"{what} on a later engine — the one nf-claw's acceptance gate checks such "
+                    f"releases on:\n```bash\nnfclaw run {name} ... --nxf-ver {later}\n```\n"
+                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
+                    f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
+    elif pin:
         pin_line = (f"\n\nTo pin this {what}'s declared minimum engine — useful when a newer "
                     "Nextflow has incompatible config parsing:\n```bash\n"
                     f"nfclaw run {name} ... --nxf-ver {pin}\n```\n"
@@ -338,6 +350,38 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
                          + (f"; cap resources with the {what}'s own " + ", ".join(own) + " instead."
                             if own else "."))
     return f"This {what} declares `nextflowVersion = '{spec}'`.{pin_line}\n"
+
+
+# A Nextflow secret read by the pinned tree: `secrets.NAME` in a config (seqsubmit's ENA Webin login
+# in its `env` scope) or a process's `secret 'NAME'` directive (metapep's NCBI e-mail).
+_STORE_ENTRY_REF = re.compile(r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
+
+
+def _nextflow_store_section(st: SubmoduleStatus) -> str:
+    """Which Nextflow secrets the pinned tree reads, and where, so a run's credentials are known up front."""
+    root = st.path
+    files = [root / "nextflow.config", *sorted((root / "conf").glob("**/*.config"))]
+    for sub in ("workflows", "subworkflows", "modules"):
+        files += sorted((root / sub).glob("**/*.nf"))
+    found: dict[str, list[str]] = {}                      # secret → files reading it, in reading order
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for name in dict.fromkeys(a or b for a, b in _STORE_ENTRY_REF.findall(text)):
+            found.setdefault(name, []).append(path.relative_to(root).as_posix())
+    if not found:
+        return ""
+
+    def where(paths: list[str]) -> str:
+        shown = ", ".join(f"`{p}`" for p in paths[:2])
+        return f"in {shown}" + (f" and {len(paths) - 2} more files" if len(paths) > 2 else "")
+    where = "; ".join(f"`{name}` ({where(paths)})" for name, paths in found.items())
+    return (f"This release reads Nextflow secrets: {where}. Set each one a run needs with "
+            "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its "
+            "tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), "
+            "and a task that needs it then fails. Secrets are not written to nfclaw's provenance.\n")
 
 
 def _outputs_section(name: str, st: SubmoduleStatus, ref: str | None = None,
@@ -635,6 +679,13 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     tree = versions.dev_label(st.commit) if dev else pipeline_version
     tools_md = _tools_section(name, st, tools, ref)
     tools_block = f"## Tools this pipeline runs\n{tools_md}\n" if tools_md else ""
+    # A test profile that runs every task as a stub (`stubRun = true`) computes nothing: say so where
+    # --demo is offered, so a successful demo is not read as analysis results.
+    demo_note = ("This release's `test` profile sets `stubRun = true`: the demo runs every task's stub "
+                 "block, which writes placeholder files instead of running its tool. It checks the "
+                 "workflow's wiring and publication, not its analysis, and its outputs hold no "
+                 "results; `nfclaw status` reports the success with a `stub run:` caveat.\n\n"
+                 if nextflow_command.stub_profiles(st.path, "test") else "")
     nfclaw_cmd, raw_cmd = _run_invocation(name, ps, insch, pipeline_version, tree)
     if dev:
         first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its current head "
@@ -697,6 +748,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         )
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
+    store_names = _nextflow_store_section(st)
+    store_block = f"## Secrets\n{store_names}\n" if store_names else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
     # tree, pipelines/<name>/.versions/<label>/skill.md, so their links climb two levels further.
     engine = _engine_section(name, st, what, "../.." if pipeline_version is None else "../../../..",
@@ -718,6 +771,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"## Required parameters\n{_required_params(ps)}\n"
         f"{mandatory_block}"
         f"{reference_block}"
+        f"{store_block}"
         f"## Other parameters\n{_param_groups(ps)}\n"
         f"## Resources\n{_resources_section(name, ps, insch, pipeline_version)}\n"
         f"{engine_block}"
@@ -726,6 +780,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{tools_block}"
         "## Demo\n```bash\n"
         f"{demo_line}\n```\n\n"
+        f"{demo_note}"
         "## Full reference\n"
         "Every parameter — name, type, required, hidden, allowed values, constraints, default and "
         "description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. "
@@ -807,8 +862,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.all and not args.name:
         parser.error("pass a pipeline name or --all")
     pdir = Path(args.pipelines_dir)
-    names = ([d.name for d in sorted(pdir.iterdir()) if d.is_dir()]
-             if args.all else [args.name])
+    names = ([d.name for d in discovery.pipeline_dirs(pdir)] if args.all else [args.name])
     for n in names:
         skill, ref = generate(n, pipelines_dir=pdir)
         print(f"wrote {skill} and {ref}")

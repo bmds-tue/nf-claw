@@ -49,6 +49,9 @@ Any of the optional columns above may be appended to the header when your data n
 |---|---|---|---|---|---|
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
+## Secrets
+This release reads Nextflow secrets: `NCBI_EMAIL` (in `modules/local/download_proteins.nf`); `NCBI_KEY` (in `modules/local/download_proteins.nf`). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Generic options** (`generic_options`) — 12 parameters

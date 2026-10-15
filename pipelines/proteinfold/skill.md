@@ -114,6 +114,8 @@ Full list with references: https://github.com/nf-core/proteinfold/blob/2.0.0/CIT
 nfclaw run proteinfold --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This release's `test` profile sets `stubRun = true`: the demo runs every task's stub block, which writes placeholder files instead of running its tool. It checks the workflow's wiring and publication, not its analysis, and its outputs hold no results; `nfclaw status` reports the success with a `stub run:` caveat.
+
 ## Full reference
 Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/proteinfold/blob/2.0.0/docs/usage.md
 

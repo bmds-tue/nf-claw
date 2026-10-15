@@ -27,3 +27,12 @@ def test_find_reads_frontmatter(tmp_path):
 def test_find_missing_raises(tmp_path):
     with pytest.raises(NfclawError):
         discovery.find("nope", tmp_path)
+
+
+def test_hidden_entries_beside_the_pipelines_are_not_pipelines(tmp_path):
+    # A Nextflow launched with pipelines/ as its working directory leaves pipelines/.nextflow/; it
+    # was listed by `nfclaw list` and crashed `make build` (write_skill --all) as a pipeline.
+    _make(tmp_path, "rnaseq", "name: rnaseq\nversion: 3.14.0")
+    (tmp_path / ".nextflow" / "plr").mkdir(parents=True)
+    assert [p.name for p in discovery.discover(tmp_path)] == ["rnaseq"]
+    assert [p.name for p in discovery.pipeline_dirs(tmp_path)] == ["rnaseq"]

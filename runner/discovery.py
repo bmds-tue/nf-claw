@@ -32,11 +32,17 @@ def _parse_frontmatter(md: Path) -> dict:
     return out
 
 
-def discover(pipelines_dir: Path) -> list[Pipeline]:
+def pipeline_dirs(pipelines_dir: Path) -> list[Path]:
+    """The pipeline directories under `pipelines/`, sorted. Hidden entries are not pipelines: a
+    Nextflow launched with `pipelines/` as its working directory leaves `.nextflow/` there."""
     if not pipelines_dir.is_dir():
         return []
+    return sorted(p for p in pipelines_dir.iterdir() if p.is_dir() and not p.name.startswith("."))
+
+
+def discover(pipelines_dir: Path) -> list[Pipeline]:
     pls: list[Pipeline] = []
-    for d in sorted(p for p in pipelines_dir.iterdir() if p.is_dir()):
+    for d in pipeline_dirs(pipelines_dir):
         skill = d / "skill.md"
         pls.append(Pipeline(name=d.name, path=d, upstream=d / "upstream",
                             skill_md=skill, frontmatter=_parse_frontmatter(skill)))

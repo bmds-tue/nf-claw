@@ -13,7 +13,7 @@ from runner import (dependency_stability, discovery, engine_version, execution, 
                     reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
                     submodule, versions)
 from runner import schema as schema_mod
-from runner.replay_guard import _capture_input_inventory, pipeline_head
+from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
 from runner.submodule import SubmoduleStatus
@@ -476,6 +476,19 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
     writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    # An engine older than Nextflow's Java 17 support cannot compile any pipeline config on Java 17+
+    # (Groovy fails with "Unsupported class file major version"): refuse before launching.
+    pinned = nxf_overlay.get("NXF_VER") or os.environ.get("NXF_VER")
+    if engine_version.predates_java17(pinned):
+        java = engine_version.java_major_for_nextflow({**os.environ, **nxf_overlay})
+        if java is not None and not engine_version.runs_on_java(pinned, java):
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT,
+                f"Nextflow {pinned} cannot run on Java {java}: Java 17 support began in Nextflow "
+                "21.10.0, and an older engine fails to compile the pipeline configuration "
+                "(\"Unsupported class file major version\").",
+                fix=f"Pin a later engine, e.g. --nxf-ver {engine_version.LEGACY_RELEASE_ENGINE}, or "
+                    f"point NXF_JAVA_HOME at a Java 11 installation to run Nextflow {pinned}.")
     # A resource ceiling only exists if the engine enforces it; say so before anything runs.
     if limits is not None and not limits.is_empty():
         engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
@@ -512,7 +525,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     warnings += plugin_compat.known_plugin_warnings(st.path)
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
-    warnings += reproducibility.advisories(st.path, merged)
+    warnings += reproducibility.advisories(st.path, merged, demo=demo)
+    # A selected profile that runs every task as a stub (proteinfold's `test`): the run exercises
+    # the workflow, not the tools, so its success must not read as analysis results.
+    stubbed = nextflow_command.stub_profiles(st.path, composed_profile)
+    stub_caveats = [stub_caveat(stubbed)] if stubbed else []
+    if stubbed:
+        warnings.append(
+            f"the selected {', '.join(f'`{n}`' for n in stubbed)} profile sets `stubRun = true`: "
+            "every task runs its stub block, which writes placeholder files instead of running its "
+            "tool, so this run checks the workflow's wiring, not its analysis, and its outputs "
+            "will hold no results.")
     if sheet is not None:
         # What the generated samplesheet holds and where it is, before the run starts (a --check
         # stages it in a temp directory: the result and the printed command name it).
@@ -702,7 +725,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
-                             dependency_stability=stability, completion_caveats=caveats)
+                             dependency_stability=stability, completion_caveats=caveats,
+                             stub_profiles=stubbed)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -714,7 +738,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         logs_dir = outdir / "provenance" / "logs"
         run_log = runlog.RunLog.open(logs_dir, command=cmd, launch_dir=outdir,
                                      nextflow_log=runlog.nextflow_log_path(outdir, nxf_overlay),
-                                     notes=warnings, env=nxf_overlay)
+                                     notes=warnings, env=nxf_overlay, caveats=stub_caveats)
         try:
             try:
                 execution.run(cmd, cwd=outdir, logs_dir=logs_dir,
@@ -724,17 +748,18 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
                 # the run once the cause is fixed, and the checksums record what it did manage to
                 # produce. Write it, then re-raise — a provenance error must never replace the real
-                # failure as the cause.
-                if not isinstance(failure, (KeyboardInterrupt, execution.Terminated)):
-                    try:
-                        stability = dependency_stability.compare(
-                            inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
-                            configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
-                            pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
-                        if stability["status"] == "changed":
-                            run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
-                    except Exception:
-                        pass  # dependency inspection must not replace Nextflow's original failure
+                # failure as the cause. A stopped run (Ctrl-C, `kill`) is compared too: its finished
+                # tasks are the cache `--resume` continues from, usable only if the dependencies held.
+                stopped = isinstance(failure, (KeyboardInterrupt, execution.Terminated))
+                try:
+                    stability = dependency_stability.compare(
+                        inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
+                        configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                        pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                    if stability["status"] == "changed" and not stopped:
+                        run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
+                except Exception:
+                    pass  # dependency inspection must not replace Nextflow's original failure
                 if write_provenance:
                     try:
                         record("failed")
@@ -744,7 +769,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             run_log.outcome = "success"
             # Exit status 0 is not proof that every sample and task made it into the results: say
             # what the pipeline itself reported missing (skipped samples, ignored task failures).
-            caveats = runlog.completion_caveats(run_log.console_tail("out"), run_log.nextflow_log)
+            caveats = stub_caveats + runlog.completion_caveats(run_log.console_tail("out"),
+                                                                run_log.nextflow_log)
             for caveat in caveats:
                 message = f"the pipeline completed but reported: {caveat}"
                 warnings.append(message)

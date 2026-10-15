@@ -220,6 +220,44 @@ def test_failed_engine_keeps_its_error_and_records_changed_dependencies(tmp_path
     assert "previous execution" in orchestration._input_resume_warning(out, {}, {})
 
 
+@pytest.mark.parametrize("stop", [lambda: orchestration.execution.Terminated(15), KeyboardInterrupt])
+def test_stopped_run_with_unchanged_dependencies_resumes_with_its_cache(tmp_path, monkeypatch, stop):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    def stopped(*args, **kwargs):
+        raise stop()
+    monkeypatch.setattr(orchestration.execution, "run", stopped)
+    out = tmp_path / "out"
+    with pytest.raises((orchestration.execution.Terminated, KeyboardInterrupt)):
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["dependency_stability"]["status"] == "unchanged"
+    # Stopping a run (Ctrl-C, `kill`) must not cost its cache: --resume continues where it stopped.
+    assert orchestration._input_resume_warning(out, {}, {}) is None
+
+
+def test_stopped_run_records_dependencies_changed_before_the_stop(tmp_path, monkeypatch):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    source = root / "pipelines/mini/upstream/main.nf"
+    def stopped(*args, **kwargs):
+        source.write_text("changed before the stop")
+        raise orchestration.execution.Terminated(15)
+    monkeypatch.setattr(orchestration.execution, "run", stopped)
+    out = tmp_path / "out"
+    with pytest.raises(orchestration.execution.Terminated):
+        orchestration.run_pipeline("mini", repo_root=root, input_path=None, outdir=out,
+            profile="docker", params_file=None, cli_overrides={}, resume=False, demo=True,
+            check_only=False, write_provenance=True, timeout_seconds=10)
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["dependency_stability"]["status"] == "changed"
+    assert "fresh Nextflow cache session" in orchestration._input_resume_warning(out, {}, {})
+
+
 def test_passes_effective_work_dir_and_allow_spaces_to_preflight(tmp_path, monkeypatch):
     from pathlib import Path
     root = _make_pipeline(tmp_path, "mini")
@@ -1816,3 +1854,75 @@ def test_unidentified_engine_cannot_launch_with_a_requested_resource_ceiling(tmp
             params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
             write_provenance=False, timeout_seconds=10, limits=resources.parse(2, None, None))
     assert not launches and not (tmp_path / "out").exists()
+
+
+def test_a_stub_test_profile_is_announced_and_reported_as_a_caveat(tmp_path, monkeypatch):
+    # proteinfold 2.0.0's test profile sets `stubRun = true`: --demo "succeeded" with every output an
+    # empty placeholder, and nothing said the run had computed nothing.
+    import json
+    from runner import runlog
+    root = _make_pipeline(tmp_path, "mini")
+    up = root / "pipelines/mini/upstream"
+    (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
+    (up / "conf").mkdir()
+    (up / "conf/test.config").write_text("stubRun = true\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    launched = []
+    def run(*args, **kwargs):
+        launched.append(len(shown))
+        kwargs["run_log"].write(b"-[nf-core/mini] Pipeline completed successfully-\n")
+    monkeypatch.setattr(orchestration.execution, "run", run)
+    shown = []
+    out = tmp_path / "out"
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=out, profile="docker", params_file=None,
+        cli_overrides={}, resume=False, demo=True, check_only=False, write_provenance=True,
+        timeout_seconds=10, on_warning=shown.append)
+    assert any("stubRun = true" in w for w in shown[:launched[0]])      # said before launch
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["stub_profiles"] == ["test"]
+    assert any(c.startswith("stub run:") for c in manifest["completion_caveats"])
+    state = runlog.read_state(out / "provenance/logs/run.log")
+    assert state.state == "success"
+    assert any(c.startswith("stub run:") for c in state.caveats)
+
+
+def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
+    import json
+    root = _make_pipeline(tmp_path, "mini")
+    up = root / "pipelines/mini/upstream"
+    (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
+    (up / "conf").mkdir()
+    (up / "conf/test.config").write_text("params { input = 'x' }\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: k["run_log"].write(
+        b"-[nf-core/mini] Pipeline completed successfully-\n"))
+    shown = []
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+        params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
+        write_provenance=True, timeout_seconds=10, on_warning=shown.append)
+    assert not any("stub" in w for w in shown)
+    manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
+    assert "stub_profiles" not in manifest and not manifest.get("completion_caveats")
+
+
+@pytest.mark.parametrize("java,refused", [(17, True), (21, True), (11, False), (None, False)])
+def test_an_engine_too_old_for_nextflows_java_is_refused_before_launch(tmp_path, monkeypatch, java,
+                                                                       refused):
+    from runner.errors import ErrorCode, NfclawError
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "java_major_for_nextflow", lambda env: java)
+    def run():
+        return orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
+            params_file=None, cli_overrides={}, resume=False, demo=True, check_only=True,
+            write_provenance=False, timeout_seconds=10, nxf_ver="21.04.0")
+    if refused:
+        with pytest.raises(NfclawError, match="21.10.0") as error:
+            run()
+        assert error.value.code == ErrorCode.ENVIRONMENT
+        assert not (tmp_path / "out").exists()
+    else:
+        assert run().checked_only
