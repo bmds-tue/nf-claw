@@ -25,9 +25,10 @@ def run_merge(tmp_path, **overrides):
         "if args[0] == 'api' and os.environ.get('FAIL_CHECK') in args:\n"
         "    sys.exit(1)\n"
         "if args[:2] == ['pr', 'merge'] and os.environ.get('FAIL_MERGE'):\n"
-        "    sys.exit(1)\n"
-        "if args[:2] == ['pr', 'view']:\n"
-        "    print(os.environ.get('MERGE_STATE', 'MERGED'))\n"
+        "    calls = [json.loads(line) for line in open(os.environ['COMMANDS'])]\n"
+        "    attempts = sum(call[:2] == ['pr', 'merge'] for call in calls)\n"
+        "    if os.environ['FAIL_MERGE'] != 'transient' or attempts < 2:\n"
+        "        sys.exit(1)\n"
     )
     (fake / "sleep").write_text("#!/bin/sh\nexit 0\n")
     for path in fake.iterdir():
@@ -53,9 +54,9 @@ def test_reports_checks_for_validated_commit_and_deploys_only_after_merge(tmp_pa
     merge = next(call for call in calls if call[:2] == ["pr", "merge"])
     assert merge[merge.index("--match-head-commit") + 1] == SHA
     assert "--admin" not in merge
-    view = next(call for call in calls if call[:2] == ["pr", "view"])
+    assert "--auto" not in merge
     deploy = next(call for call in calls if call[:2] == ["workflow", "run"])
-    assert calls.index(view) < calls.index(deploy)
+    assert calls.index(merge) < calls.index(deploy)
 
 
 @pytest.mark.parametrize("failure", [{"FAIL_CHECK": "name=website"}, {"FAIL_MERGE": "1"}])
@@ -68,9 +69,10 @@ def test_publication_or_merge_failure_prevents_deployment(tmp_path, failure):
         assert not any(call[:2] == ["pr", "merge"] for call in calls)
 
 
-@pytest.mark.parametrize("state", ["OPEN", "CLOSED"])
-def test_pending_or_closed_pr_is_never_deployed(tmp_path, state):
-    result, calls = run_merge(tmp_path, MERGE_STATE=state)
-    assert any(call[:2] == ["pr", "merge"] for call in calls), result.stderr
-    assert result.returncode != 0
-    assert not any(call[:2] == ["workflow", "run"] for call in calls)
+def test_retries_a_short_check_evaluation_delay_without_queuing_a_late_merge(tmp_path):
+    result, calls = run_merge(tmp_path, FAIL_MERGE="transient")
+    assert result.returncode == 0, result.stderr
+    merges = [call for call in calls if call[:2] == ["pr", "merge"]]
+    assert len(merges) == 2
+    assert all("--auto" not in call for call in merges)
+    assert calls[-1][:2] == ["workflow", "run"]

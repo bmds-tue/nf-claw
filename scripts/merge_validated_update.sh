@@ -18,26 +18,16 @@ for check in 'pytest (ubuntu-latest, 3.11)' website nextflow-integration drift; 
     -f "details_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 done
 
-# Auto-merge tolerates a short delay while GitHub evaluates the newly reported checks.
-# Matching the head prevents merging a different commit from the one just validated.
-gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch \
-  --match-head-commit "$PR_HEAD_SHA" --auto
-
-# A GITHUB_TOKEN merge does not trigger the push-driven deploy. Wait for the merge
-# before dispatching it, so a queued merge cannot deploy the previous main revision.
-for _ in {1..30}; do
-  state=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
-  case "$state" in
-    MERGED)
-      gh workflow run deploy-pages.yml --repo "$GITHUB_REPOSITORY" --ref main
-      exit 0
-      ;;
-    CLOSED)
-      echo "::error::Maintenance PR closed without merging"
-      exit 1
-      ;;
-  esac
+# Allow a short delay for GitHub to evaluate the checks, without leaving a queued
+# merge behind if this job stops. Matching the head pins the validated commit.
+for _ in {1..5}; do
+  if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch \
+    --match-head-commit "$PR_HEAD_SHA"; then
+    # GITHUB_TOKEN merges do not trigger the push-driven deploy.
+    gh workflow run deploy-pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+    exit 0
+  fi
   sleep 5
 done
-echo "::error::Maintenance PR is still waiting to merge; deployment was not started"
+echo "::error::Maintenance PR could not be merged; deployment was not started"
 exit 1
