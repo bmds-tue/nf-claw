@@ -78,6 +78,8 @@ def test_write_capable_gates_run_the_website_parsing_tests(tmp_path, name, gate,
     (fake / "pytest").write_text(
         '#!/bin/sh\ncase "$*" in *test_website_parsing*) printf "%s" "$PARSING" ;; esac\n')
     (fake / "python").write_text("#!/bin/sh\nexit 0\n")
+    (fake / "ruff").write_text("#!/bin/sh\nexit 0\n")
+    (fake / "npm").write_text("#!/bin/sh\nexit 0\n")
     for path in fake.iterdir():
         path.chmod(0o755)
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
