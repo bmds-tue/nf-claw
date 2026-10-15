@@ -167,3 +167,14 @@ def test_runs_without_environment_records_are_compared_as_before(tmp_path):
     comparison = verify.compare(original, replay)
     assert comparison.environment is None and comparison.same_environment
     assert "environment         : not recorded by both runs" in verify.report(comparison)
+
+
+def test_co2footprint_reports_named_by_launch_time_are_paired(tmp_path):
+    names = ("report_{}.html", "summary_{}.txt", "trace_{}.txt")
+    original = _run(tmp_path, "original", {
+        f"pipeline_info/co2footprint_{name.format('2026-10-15_17-56-54')}": b"x" for name in names})
+    replay = _run(tmp_path, "replay", {
+        f"pipeline_info/co2footprint_{name.format('2026-10-15_18-13-26')}": b"y" for name in names})
+    comparison = verify.compare(original, replay)
+    assert comparison.missing == [] and comparison.extra == [] and len(comparison.renamed) == 3
+    assert comparison.structurally_equal and not comparison.byte_identical

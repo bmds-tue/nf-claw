@@ -97,8 +97,10 @@ def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, di
 # (written with an inline `new Date()` that no parameter pins) and the execution report, timeline,
 # trace and DAG of releases that predate `trace_report_suffix`. Only these exact names are paired;
 # any other dated file — possibly a scientific result — keeps its exact path in the comparison.
+# nf-core's launch-stamped run metadata, and the reports the nf-co2footprint plugin names the same way.
 _LAUNCH_STAMPED = re.compile(
-    r"^pipeline_info/(params|execution_report|execution_timeline|execution_trace|pipeline_dag)_"
+    r"^pipeline_info/(params|execution_report|execution_timeline|execution_trace|pipeline_dag"
+    r"|co2footprint_report|co2footprint_summary|co2footprint_trace)_"
     r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.(json|html|txt|svg|dot|mmd|pdf|png)$")
 
 
