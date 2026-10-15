@@ -242,8 +242,9 @@ def _main(argv: list[str] | None = None) -> int:
                           help="--outdir of the original run it should reproduce")
     p_verify.add_argument("--strict", action="store_true",
                           help="also fail when any output bytes or recorded link identities "
-                               "differ; inspect timestamped reports separately from analytical "
-                               "results")
+                               "differ, or when the runs' recorded execution environments (container "
+                               "images, plugins, staged remote inputs) do not match; inspect "
+                               "timestamped reports separately from analytical results")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -404,7 +405,9 @@ def _main(argv: list[str] | None = None) -> int:
         print(verify.report(cmp), end="")
         # The default compares file presence. Strict verification additionally checks every byte and
         # recorded link identity; neither comparison by itself establishes analytical accuracy.
-        return 0 if (cmp.byte_identical if args.strict else cmp.structurally_equal) else 1
+        # --strict also requires the same execution environment where both runs recorded one.
+        return 0 if ((cmp.byte_identical and cmp.same_environment) if args.strict
+                     else cmp.structurally_equal) else 1
 
     if args.cmd == "status":
         log = _run_log_path(args.outdir)

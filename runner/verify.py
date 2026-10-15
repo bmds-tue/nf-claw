@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import outputs, provenance
+from runner import environment_record, outputs, provenance
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -24,6 +25,9 @@ class Comparison:
     # "original -> replay" pairs whose paths differ only by an nf-core launch timestamp; each is
     # also listed under identical or changed by its bytes.
     renamed: list[str] = field(default_factory=list)
+    # The two runs' recorded execution environments compared (runner.environment_record), or None
+    # when either run predates the record.
+    environment: dict | None = None
 
     @property
     def structurally_equal(self) -> bool:
@@ -35,6 +39,24 @@ class Comparison:
     def byte_identical(self) -> bool:
         """Every paired file has the same bytes and no file is missing or extra."""
         return self.structurally_equal and not self.changed and not self.changed_links
+
+    @property
+    def same_environment(self) -> bool:
+        """Images, plugins, engine and staged remote inputs agree (or neither run recorded them)."""
+        return self.environment is None or self.environment["status"] == "identical"
+
+
+def _environment(original: Path, replay: Path) -> dict | None:
+    records = []
+    for outdir in (original, replay):
+        try:
+            records.append(json.loads(
+                (outdir / "provenance" / environment_record.RECORD_NAME).read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return None
+    if not all(isinstance(record, dict) for record in records):
+        return None
+    return environment_record.compare(*records)
 
 
 def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, dict] | None]:
@@ -144,6 +166,7 @@ def compare(original: Path, replay: Path) -> Comparison:
         extra_directories=sorted(after_dirs - before_dirs) if original_inventory is not None else [],
         changed_links=sorted(changed_links),
         unverified_structure=original_inventory is None,
+        environment=_environment(original, replay),
     )
 
 
@@ -157,6 +180,9 @@ def report(cmp: Comparison) -> str:
         f"missing directories : {len(cmp.missing_directories)}",
         f"extra directories   : {len(cmp.extra_directories)}",
         f"changed links       : {len(cmp.changed_links)}   (target identities differ)",
+        "environment         : " + (cmp.environment["status"] if cmp.environment else
+                                    "not recorded by both runs")
+        + "   (container images, plugins, staged remote inputs)",
         "",
     ]
     if cmp.unverified_structure:
@@ -182,7 +208,14 @@ def report(cmp: Comparison) -> str:
     else:
         lines.append("The replay did NOT produce the same set of files and directories. Check whether the runs "
                      "completed and used the same inputs and settings.")
-    for label, paths in (("renamed", cmp.renamed), ("missing", cmp.missing), ("extra", cmp.extra),
+    if cmp.environment and cmp.environment["status"] == "differs":
+        lines.append("The runs did NOT execute in the same environment (see environment mismatches): "
+                     "the replay is not a reproduction of the original execution.")
+    environment = cmp.environment or {}
+    for label, paths in (("environment mismatches", environment.get("mismatches") or []),
+                         ("environment unverified", environment.get("unverified") or []),
+                         ("environment notes", environment.get("notes") or []),
+                         ("renamed", cmp.renamed), ("missing", cmp.missing), ("extra", cmp.extra),
                          ("changed", cmp.changed),
                          ("missing directories", cmp.missing_directories),
                          ("extra directories", cmp.extra_directories), ("changed links", cmp.changed_links)):
