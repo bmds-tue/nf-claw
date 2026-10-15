@@ -49,11 +49,12 @@ give the reason for each extra attempt and every setting beyond `--demo`. "Host 
 documented [host-network config](known-issues.md#docker-bridge-network-has-no-dns-ipv6-only-host). Three
 releases needed more than one run each: marsseq (a reference build, then the analysis on those
 references), oncoanalyser (references prepared as upstream's CI prepares them) and rnafusion (the test
-analysis on upstream's hosted references, and STAR-Fusion checked on its tutorial data).
+analysis on upstream's hosted references, split over three runs that together cover every tool).
 
-Two runs were also checked against independent expectations. oncoanalyser's outputs matched every path
+Some runs were also checked against independent expectations. oncoanalyser's outputs matched every path
 and checksum in the release's own nf-test snapshot. STAR-Fusion reproduced the fusions and breakpoints
-that its tutorial documents for the tutorial reads.
+that its tutorial documents for the tutorial reads. rnafusion's three fusion callers called 12 fusions in
+common on the test reads; FusionCatcher called all 14 of Arriba's.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks in the last trace | Attempts | Notes |
 |---|---|---|---|---|---|---|
@@ -128,7 +129,7 @@ that its tutorial documents for the tutorial reads.
 | ribomsqc | v1.0.0 | 25.04.0 | success | 4 completed | 1 | host network |
 | riboseq | 2.0.0 | 25.10.4 | success | 356 completed | 1 | host network |
 | rnadnavar | 1.0.0 | 25.10.4 | success | 120 completed | 1 |  |
-| rnafusion | 4.1.3 | 25.10.4 | success | 15 completed | 16 | host network; the `test` analysis on upstream's hosted GRCh38 references with Arriba, Salmon and fusion-report; STAR-Fusion and FusionInspector checked on the tutorial minigenome against its documented fusions ([upstream](known-issues.md#upstream-pipeline-bugs-documented-not-patched)) |
+| rnafusion | 4.1.3 | 25.10.4 | success | 15, 4 and 24 completed in three runs | 20 | host network; the `test` analysis on upstream's hosted GRCh38 references, in three runs that together ran every tool (Arriba, CTAT-Splicing, fastp, FusionCatcher, FusionInspector, fusion-report, Salmon, STAR-Fusion, StringTie); the three fusion callers agreed on 12 fusions; STAR-Fusion also reproduced its tutorial's documented fusions on the minigenome ([upstream](known-issues.md#upstream-pipeline-bugs-documented-not-patched)) |
 | rnaseq | 3.27.0 | 25.10.4 | success | 234 completed | 3 | stopped with the sweep to repair Docker, then stopped when the shared disk filled; a fresh run completed |
 | rnasplice | 1.0.4 | 23.04.0 | success | 128 completed | 1 | host network |
 | rnastructurome | 1.0.0 | 25.10.4 | success | 52 completed | 1 | host network |
@@ -228,12 +229,13 @@ with the narrowest workaround that ran.
 
 - A bundled test profile shows that a release runs end to end on small data. It does not show that the
   results are scientifically valid for real data. Where a stronger check was possible, it was done: the
-  replay comparisons, the fastqrepair known-answer cell, oncoanalyser's snapshot and the STAR-Fusion tutorial.
+  replay comparisons, the fastqrepair known-answer cell, oncoanalyser's snapshot, the STAR-Fusion tutorial
+  and the agreement of rnafusion's three fusion callers.
 - Every run used Docker on Linux amd64. Singularity, Conda, other executors and arm64 were not part of
   this sweep; known-issues records the arm64 MultiQC export failure.
-- rnafusion's FusionCatcher step did not run: the release ships no small FusionCatcher reference. Its
-  STAR-Fusion and FusionInspector steps ran on the STAR-Fusion tutorial's minigenome, not on GRCh38: their
-  62 GB GRCh38 library did not fit the shared disk next to the other references.
+- rnafusion ran on upstream's hosted GRCh38 references instead of building them, as its `test` profile
+  would. The reference build itself ran only on the STAR-Fusion tutorial's minigenome (upstream's
+  `test_build` profile).
 - seqsubmit was not run to completion: its test queries ENA with a Webin account, which this validation
   did not have. The tasks before that query completed ([details](known-issues.md#pipeline-specific-run-notes)).
 - The host's IPv6-only network shaped several runs: host networking, a local FTP relay, and local copies
