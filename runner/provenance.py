@@ -38,6 +38,10 @@ _SENSITIVE_VALUE_RE = re.compile(
     r"(?i)(?:token|secret|password|credential|api[_-]?key|access[_-]?key|private[_-]?key)\s*[=:]"
 )
 _URI_CREDENTIALS_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^/\s?#]*@")
+# The standalone scripts a bundle carries, read once with the code that writes `commands.sh`: an
+# nfclaw upgraded while a long run goes on must not pair the old script with the new helpers.
+_BUNDLED_SCRIPTS = {name: Path(__file__).with_name(name).read_bytes()
+                    for name in ("replay_guard.py", "environment_record.py")}
 
 
 def _sha256(path: Path) -> str:
@@ -534,9 +538,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         _atomic_text(prov / f"{kind}.sources.json", json.dumps(
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
         _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
-    _atomic_bytes(prov / "replay_guard.py", Path(__file__).with_name("replay_guard.py").read_bytes())
-    _atomic_bytes(prov / "environment_record.py",
-                  Path(__file__).with_name("environment_record.py").read_bytes())
+    for name, script in _BUNDLED_SCRIPTS.items():
+        _atomic_bytes(prov / name, script)
     bundled_configs = _bundle_configs(prov, command_str, config_checksums)
     if bundled_configs:
         manifest["bundled_configs"] = bundled_configs

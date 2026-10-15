@@ -578,3 +578,20 @@ def test_a_remote_input_staged_by_only_one_run_is_a_mismatch():
     result = env_record.compare(original, replay)
     assert result["status"] == "differs"
     assert result["mismatches"] == ["remote inputs staged only in the replay: https://e.org/new_sample.fq"]
+
+
+def test_bundled_scripts_match_the_code_that_wrote_commands_sh(tmp_path, fake_tools, monkeypatch):
+    # nfclaw upgraded on disk while a run is in progress: the bundle keeps the scripts its own
+    # commands.sh calls, not whatever the files on disk hold by the time the run ends.
+    st = _git_pipeline(tmp_path)
+    loaded = dict(provenance._BUNDLED_SCRIPTS)
+    original_read = provenance.Path.read_bytes
+
+    def upgraded(path):
+        if path.name in loaded and path.parent.name == "runner":
+            return b"# a different nfclaw release\n"
+        return original_read(path)
+    monkeypatch.setattr(provenance.Path, "read_bytes", upgraded)
+    prov = _launch(tmp_path, st)
+    for name, script in loaded.items():
+        assert original_read(prov / name) == script
