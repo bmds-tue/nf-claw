@@ -36,7 +36,7 @@ not create an overall analysis deadline.
 | `NFCLAW_SHUTDOWN_GRACE` | 10 | SIGTERM-to-SIGKILL grace for owned process groups |
 | `NFCLAW_CONFIG_TIMEOUT` | 300 | Each chain configuration probe |
 | `NFCLAW_VERSION_TIMEOUT` | 30 | Engine/runtime metadata probes |
-| `NFCLAW_GIT_TIMEOUT` | 30, 60 or 120 by operation | Local Git checks, remote discovery and fetching |
+| `NFCLAW_GIT_TIMEOUT` | 10, 30, 60 or 120 by operation | Local Git checks, remote discovery and fetching |
 | `NFCLAW_INIT_TIMEOUT` | 300 | Pipeline submodule initialization |
 
 For a slow executor, increase shutdown grace according to measured cancellation
