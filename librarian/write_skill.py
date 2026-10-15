@@ -354,10 +354,10 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
 
 # A Nextflow secret read by the pinned tree: `secrets.NAME` in a config (seqsubmit's ENA Webin login
 # in its `env` scope) or a process's `secret 'NAME'` directive (metapep's NCBI e-mail).
-_SECRET_REF = re.compile(r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
+_STORE_ENTRY_REF = re.compile(r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
 
 
-def _secrets_section(st: SubmoduleStatus) -> str:
+def _nextflow_store_section(st: SubmoduleStatus) -> str:
     """Which Nextflow secrets the pinned tree reads, and where, so a run's credentials are known up front."""
     root = st.path
     files = [root / "nextflow.config", *sorted((root / "conf").glob("**/*.config"))]
@@ -369,7 +369,7 @@ def _secrets_section(st: SubmoduleStatus) -> str:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        for name in dict.fromkeys(a or b for a, b in _SECRET_REF.findall(text)):
+        for name in dict.fromkeys(a or b for a, b in _STORE_ENTRY_REF.findall(text)):
             found.setdefault(name, []).append(path.relative_to(root).as_posix())
     if not found:
         return ""
@@ -748,8 +748,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         )
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
-    secrets = _secrets_section(st)
-    secrets_block = f"## Secrets\n{secrets}\n" if secrets else ""
+    store_names = _nextflow_store_section(st)
+    store_block = f"## Secrets\n{store_names}\n" if store_names else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
     # tree, pipelines/<name>/.versions/<label>/skill.md, so their links climb two levels further.
     engine = _engine_section(name, st, what, "../.." if pipeline_version is None else "../../../..",
@@ -771,7 +771,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"## Required parameters\n{_required_params(ps)}\n"
         f"{mandatory_block}"
         f"{reference_block}"
-        f"{secrets_block}"
+        f"{store_block}"
         f"## Other parameters\n{_param_groups(ps)}\n"
         f"## Resources\n{_resources_section(name, ps, insch, pipeline_version)}\n"
         f"{engine_block}"
