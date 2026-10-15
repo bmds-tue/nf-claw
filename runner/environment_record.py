@@ -195,16 +195,16 @@ def normalize_repository(repository: str) -> str:
 
 
 def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | None,
-                           image: str | None = None) -> dict:
+                           at_start: bool = False) -> dict:
     """The local engine's identity of an image it ran: image ID, registry digests, platform.
 
-    `image` inspects a specific local image (the ID a task container ran) instead of whatever the
-    reference names now. A reference by digest identifies its image even after the engine has
-    removed it: the engine verified the pulled content against that digest.
+    `at_start` marks an inspection made as a task container started from the reference (while the
+    image was in use) rather than after the run. A reference by digest identifies its image even
+    after the engine has removed it: the engine verified the pulled content against that digest.
     """
     repository, _, pinned = split_reference(reference)
     repository = normalize_repository(repository)
-    result = _run([engine, "image", "inspect", image or reference], env=env, timeout=60)
+    result = _run([engine, "image", "inspect", reference], env=env, timeout=60)
     failure = None
     if result is None:
         failure = f"`{engine} image inspect` could not be run"
@@ -241,7 +241,7 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
               "platform": "/".join(str(data[key]) for key in ("Os", "Architecture", "Variant")
                                    if isinstance(data.get(key), str) and data[key]),
               "size": data.get("Size") if isinstance(data.get("Size"), int) else None}
-    record["source"] = "image inspected after the run" if image is None else "task container at start"
+    record["source"] = "task container at start" if at_start else "image inspected after the run"
     if pinned and _DIGEST.fullmatch(pinned):
         record["digest"] = pinned                       # a reference by digest names itself
     elif len(own) == 1:

@@ -1,13 +1,17 @@
-"""Observe each task container as it starts, so the run records the image it actually ran.
+"""Observe images as task containers start, so the run records the images it actually ran.
 
 Reading image identities only after a run misses images removed while it ran (an `image prune`
 on a shared host, a disk guard) and takes the identity of a tag re-pulled since. While Nextflow
-runs, nfclaw follows the container engine's start events; each container whose working directory
-lies in the run's work directory is inspected at once, while its image cannot be removed, and the
-image ID it runs is resolved to its registry digest (runner.environment_record).
+runs, nfclaw follows the container engine's start events. The first time a Nextflow task container
+(`nxf-…`) starts from an image reference, the image is inspected at once, while a container uses
+it and it cannot be removed, and resolved to its image ID and registry digest
+(runner.environment_record). A reference seen again after a while is inspected again, so a tag
+re-pulled to other bytes mid-run shows up as two images rather than one.
 
-Best effort by design: a container that exits before it is inspected, or an engine without an
-events stream, leaves that reference to the inspection after the run.
+One inspection per image reference keeps up with any number of containers on a busy host. Other
+programs' references that start meanwhile are inspected too and simply never matched against the
+run's processes. Best effort by design: a reference the engine cannot inspect, or an engine
+without an events stream, is left to the inspection after the run.
 """
 from __future__ import annotations
 
@@ -17,11 +21,14 @@ import queue
 import signal
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 from runner import environment_record
 
 ENGINES = environment_record.REGISTRY_ENGINES
+# How long a reference's identity stands before a later container start inspects it again.
+RECHECK_SECONDS = 600
 
 
 def engine_for(profile: str) -> str | None:
@@ -30,20 +37,35 @@ def engine_for(profile: str) -> str | None:
     return next((name for name in reversed(names) if name in ENGINES), None)
 
 
-class ContainerWatch:
-    """Follow `<engine> events` for container starts in `work_dir`; `stop()` returns what it saw."""
+def _reference(event: dict) -> str | None:
+    actor = event.get("Actor") if isinstance(event.get("Actor"), dict) else {}
+    attributes = actor.get("Attributes") if isinstance(actor.get("Attributes"), dict) else {}
+    for value in (event.get("from"), attributes.get("image"), event.get("Image")):   # docker, podman
+        if isinstance(value, str) and value and not value.startswith("sha256:"):
+            return value
+    return None
 
-    def __init__(self, engine: str, work_dir: Path, env: dict[str, str] | None = None):
+
+def _name(event: dict) -> str:
+    actor = event.get("Actor") if isinstance(event.get("Actor"), dict) else {}
+    attributes = actor.get("Attributes") if isinstance(actor.get("Attributes"), dict) else {}
+    name = attributes.get("name") or event.get("Name") or ""
+    return name if isinstance(name, str) else ""
+
+
+class ContainerWatch:
+    """Follow `<engine> events` for task container starts; `stop()` returns what it saw.
+
+    `work_dir` is kept for the record; the observation is keyed by image reference and the run's
+    own task records (`nextflow log`) select the references that belong to it.
+    """
+
+    def __init__(self, engine: str, work_dir: Path | None = None, env: dict[str, str] | None = None):
         self.engine = engine
+        self.work_dir = work_dir
         self.env = env
-        roots = {str(work_dir.absolute())}
-        try:
-            roots.add(str(work_dir.resolve()))
-        except OSError:
-            pass
-        self.roots = tuple(root.rstrip("/") + "/" for root in roots)
         self.observed: dict[str, dict[str, dict]] = {}
-        self._images: dict[str, dict] = {}
+        self._checked: dict[str, float] = {}
         self._queue: queue.Queue = queue.Queue()
         self._process: subprocess.Popen | None = None
         self._threads: list[threading.Thread] = []
@@ -72,49 +94,32 @@ class ContainerWatch:
                 continue
             if not isinstance(event, dict):
                 continue
-            actor = event.get("Actor") if isinstance(event.get("Actor"), dict) else {}
-            container = event.get("id") or event.get("ID") or actor.get("ID")
-            name = (actor.get("Attributes") or {}).get("name") or event.get("Name") or ""
+            name = _name(event)
+            reference = _reference(event)
             # Nextflow names task containers `nxf-…`; anything else is another program's.
-            if isinstance(container, str) and container and (not name or name.startswith("nxf-")):
-                self._queue.put(container)
+            if reference is None or (name and not name.startswith("nxf-")):
+                continue
+            now = time.monotonic()
+            last = self._checked.get(reference)
+            if last is None or now - last >= RECHECK_SECONDS:
+                self._checked[reference] = now
+                self._queue.put(reference)
         self._queue.put(None)
 
     def _inspect(self) -> None:
-        while (container := self._queue.get()) is not None:
+        while (reference := self._queue.get()) is not None:
             try:
-                self._record(container)
-            except Exception:          # one unreadable container must not end the observation
+                identity = environment_record.resolve_registry_image(
+                    self.engine, reference, self.env, at_start=True)
+            except Exception:          # one unreadable image must not end the observation
                 continue
-
-    def _record(self, container: str) -> None:
-        result = environment_record._run([self.engine, "container", "inspect", container],
-                                         env=self.env, timeout=30)
-        if result is None or result.returncode != 0:
-            return
-        data = json.loads(result.stdout)
-        data = data[0] if isinstance(data, list) and data else data
-        if not isinstance(data, dict):
-            return
-        config = data.get("Config") if isinstance(data.get("Config"), dict) else {}
-        workdir = config.get("WorkingDir") or ""
-        if not any((workdir.rstrip("/") + "/").startswith(root) for root in self.roots):
-            return
-        reference = data.get("ImageName") or config.get("Image")       # podman, docker
-        image_id = data.get("Image")
-        if not isinstance(reference, str) or not reference or not isinstance(image_id, str):
-            return
-        if image_id not in self._images:
-            self._images[image_id] = environment_record.resolve_registry_image(
-                self.engine, reference, self.env, image=image_id)
-        identity = self._images[image_id]
-        if identity.get("kind") != "registry":
-            return
-        with self._lock:
-            self.observed.setdefault(reference, {})[identity.get("id") or image_id] = identity
+            if identity.get("kind") != "registry":
+                continue
+            with self._lock:
+                self.observed.setdefault(reference, {})[identity.get("id") or reference] = identity
 
     def stop(self, timeout: float = 30) -> dict[str, list[dict]]:
-        """End the observation; containers already queued are still inspected while time allows."""
+        """End the observation; references already queued are still inspected while time allows."""
         if self._process is not None and self._process.poll() is None:
             try:
                 os.killpg(self._process.pid, signal.SIGTERM)
