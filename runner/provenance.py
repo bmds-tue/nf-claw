@@ -235,15 +235,25 @@ def _bundle_configs(prov: Path, command_str: str,
 
 def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
                        history_offset: int | None, profile: str | None,
-                       nextflow_log: Path | None) -> dict:
-    """The execution environment of the run (runner.environment_record); never raises."""
+                       nextflow_log: Path | None,
+                       observed: dict[str, list[dict]] | None = None) -> dict:
+    """The execution environment of the run (runner.environment_record); never raises.
+
+    The record of an earlier attempt in this outdir (a resumed run) still names the images its
+    cached tasks ran: it is the fallback for an image the engine no longer has.
+    """
     from runner import runlog
 
+    try:
+        previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+    except (OSError, ValueError):
+        previous = None
     try:
         return environment_record.capture(
             outdir, log_path=nextflow_log or runlog.nextflow_log_path(outdir, env_extra),
             env={**os.environ, **env_extra} if env_extra else None,
-            history_offset=history_offset, profile=profile)
+            history_offset=history_offset, profile=profile, observed=observed,
+            previous=previous if isinstance(previous, dict) else None)
     except Exception as exc:                  # a recording gap must not lose the rest of the bundle
         return {"version": environment_record.VERSION, "processes": {}, "images": {},
                 "pinned_containers": {}, "remote_inputs": {}, "nextflow_plugins": [],
@@ -422,7 +432,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           stub_profiles: list[str] | None = None,
           nextflow_log: Path | None = None,
           history_offset: int | None = None,
-          institutional_configs: dict | None = None) -> Path:
+          institutional_configs: dict | None = None,
+          observed_images: dict[str, list[dict]] | None = None) -> Path:
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -533,7 +544,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # What the engine fetched while it ran: container images by digest, plugins, staged remote files.
     environment = record_environment(
         outdir, env_extra=env_extra, history_offset=history_offset, profile=_profile(command_str),
-        nextflow_log=nextflow_log)
+        nextflow_log=nextflow_log, observed=observed_images)
     _atomic_text(prov / environment_record.RECORD_NAME,
                  json.dumps(environment, indent=2, sort_keys=True) + "\n")
     manifest["environment_record"] = {"file": environment_record.RECORD_NAME,

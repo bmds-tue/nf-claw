@@ -193,26 +193,39 @@ def normalize_repository(repository: str) -> str:
     return "docker.io/" + (repository if separator else "library/" + repository)
 
 
-def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | None) -> dict:
-    """The local engine's identity of an image it ran: image ID, registry digests, platform."""
-    result = _run([engine, "image", "inspect", reference], env=env, timeout=60)
+def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | None,
+                           image: str | None = None) -> dict:
+    """The local engine's identity of an image it ran: image ID, registry digests, platform.
+
+    `image` inspects a specific local image (the ID a task container ran) instead of whatever the
+    reference names now. A reference by digest identifies its image even after the engine has
+    removed it: the engine verified the pulled content against that digest.
+    """
+    repository, _, pinned = split_reference(reference)
+    repository = normalize_repository(repository)
+    result = _run([engine, "image", "inspect", image or reference], env=env, timeout=60)
+    failure = None
     if result is None:
-        return {"kind": "unresolved", "reason": f"`{engine} image inspect` could not be run"}
-    if result.returncode != 0:
-        return {"kind": "unresolved",
-                "reason": f"`{engine} image inspect` failed: {_first_line(result.stderr)}"}
-    try:
-        data = json.loads(result.stdout)
-        data = data[0] if isinstance(data, list) else data
-        if not isinstance(data, dict):
-            raise ValueError
-    except (ValueError, IndexError):
-        return {"kind": "unresolved", "reason": f"`{engine} image inspect` returned no image"}
+        failure = f"`{engine} image inspect` could not be run"
+    elif result.returncode != 0:
+        failure = f"`{engine} image inspect` failed: {_first_line(result.stderr)}"
+    else:
+        try:
+            data = json.loads(result.stdout)
+            data = data[0] if isinstance(data, list) else data
+            if not isinstance(data, dict):
+                raise ValueError
+        except (ValueError, IndexError):
+            failure = f"`{engine} image inspect` returned no image"
+    if failure is not None:
+        if pinned and _DIGEST.fullmatch(pinned):
+            return {"kind": "registry", "repository": repository, "id": None, "digest": pinned,
+                    "repo_digests": [f"{repository}@{pinned}"], "platform": None, "size": None,
+                    "source": "reference digest"}
+        return {"kind": "unresolved", "reason": failure}
     image_id = data.get("Id") if isinstance(data.get("Id"), str) else None
     if image_id and re.fullmatch(r"[0-9a-f]{64}", image_id):
         image_id = "sha256:" + image_id                       # podman omits the algorithm
-    repository, _, pinned = split_reference(reference)
-    repository = normalize_repository(repository)
     repo_digests = []
     for item in data.get("RepoDigests") or []:
         if isinstance(item, str) and "@" in item:
@@ -227,6 +240,7 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
               "platform": "/".join(str(data[key]) for key in ("Os", "Architecture", "Variant")
                                    if isinstance(data.get(key), str) and data[key]),
               "size": data.get("Size") if isinstance(data.get("Size"), int) else None}
+    record["source"] = "image inspected after the run" if image is None else "task container at start"
     if pinned and _DIGEST.fullmatch(pinned):
         record["digest"] = pinned                       # a reference by digest names itself
     elif len(own) == 1:
@@ -346,11 +360,17 @@ def remote_inputs(staged: dict[str, str]) -> dict[str, dict]:
 
 
 def capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = None,
-            history_offset: int | None = None, profile: str | None = None) -> dict:
+            history_offset: int | None = None, profile: str | None = None,
+            observed: dict[str, list[dict]] | None = None,
+            previous: dict | None = None) -> dict:
     """The execution environment of the run Nextflow last recorded in `launch_dir`.
 
     `history_offset` is how many runs the history held before this launch: the run is the newest
     entry after it, and none means Nextflow never registered a session (it stopped before running).
+    `observed` holds, by reference, the identities of the images task containers started with while
+    the run went on (runner.container_watch): the exact image each ran, even if it was removed or its
+    tag re-pulled since. Other references are inspected now, and an image the engine no longer has
+    keeps the identity an earlier attempt of the same run recorded (`previous`, a resumed run).
     Never raises for what it cannot read; that is recorded under `issues` instead.
     """
     record = {"version": VERSION, "run": None, "nextflow_build": None, "nextflow_runtime": None,
@@ -388,9 +408,21 @@ def capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = No
     engine = engine_of(task_records, profile)
     record["container_engine"] = engine_details(engine, env)
     names = sorted({name for entry in processes.values() for name in entry["containers"]})
+    earlier = (previous or {}).get("images") or {}
     for name in names:
-        if engine in REGISTRY_ENGINES and not name.startswith("/"):
-            record["images"][name] = resolve_registry_image(engine, name, env)
+        seen = (observed or {}).get(name) or []
+        distinct = {json.dumps(item, sort_keys=True): item for item in seen}
+        if engine in REGISTRY_ENGINES and len(distinct) == 1:
+            record["images"][name] = next(iter(distinct.values()))
+        elif engine in REGISTRY_ENGINES and distinct:
+            record["images"][name] = {"kind": "multiple", "variants": sorted(
+                distinct.values(), key=lambda item: str(item.get("id"))), "reason": (
+                "task containers started from more than one image under this reference")}
+        elif engine in REGISTRY_ENGINES and not name.startswith("/"):
+            image = resolve_registry_image(engine, name, env)
+            if image["kind"] == "unresolved" and earlier.get(name, {}).get("kind") == "registry":
+                image = {**earlier[name], "source": "recorded by an earlier attempt of this run"}
+            record["images"][name] = image
         elif name.startswith("/") and engine in FILE_ENGINES + (None,):
             record["images"][name] = resolve_file_image(name)
         else:
@@ -399,7 +431,7 @@ def capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = No
                 else "the container engine could not be determined")}
     record["pinned_containers"] = pins(record)
     unresolved = sorted(name for name, image in record["images"].items()
-                        if image.get("kind") == "unresolved")
+                        if image.get("kind") in ("unresolved", "multiple"))
     if unresolved:
         record["issues"].append(f"{len(unresolved)} container image(s) have no recorded identity: "
                                 + ", ".join(unresolved))
@@ -448,7 +480,7 @@ def pin_config(record: dict) -> str | None:
 
 
 def _identity(image: dict | None):
-    if not image or image.get("kind") == "unresolved":
+    if not image or image.get("kind") in ("unresolved", "multiple"):
         return None
     return image
 

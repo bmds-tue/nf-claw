@@ -1335,8 +1335,12 @@ def test_dev_run_records_the_commit_and_replays_exactly_it(tmp_path, monkeypatch
     prov = tmp_path / "out" / "provenance"
     manifest = json.loads((prov / "run_manifest.json").read_text())
     assert manifest["version"] == "dev" and manifest["commit"] == dev
-    # the replay runs the immutable tree of that commit, not whatever `dev` is by then
-    assert f".versions/dev-{dev[:12]}/upstream" in (prov / "commands.sh").read_text()
+    # the replay runs the immutable tree of that commit, not whatever `dev` is by then: the bundle
+    # archives that tree's tracked source and the replay extracts and runs the archive
+    assert manifest["pipeline_path"].endswith(f".versions/dev-{dev[:12]}/upstream")
+    assert manifest["pipeline_archive"]["files"] == len(orchestration.provenance.read_checksums(
+        prov / "pipeline.sha256"))
+    assert '"$target"/provenance/pipeline' in (prov / "commands.sh").read_text()
 
 
 def test_resuming_a_dev_run_after_dev_moved_says_so(tmp_path, monkeypatch, dev_library):
