@@ -472,6 +472,8 @@ def _bundled_configs(manifest: dict) -> dict[str, dict]:
 def check_pipeline_checkout(bundle: Path, manifest: dict) -> None:
     """The recorded pipeline checkout still holds exactly the recorded revision and source bytes."""
     repo = Path(manifest["pipeline_path"])
+    if not repo.is_dir():
+        raise ValueError(f"pipeline checkout is missing: {repo}")
     if (expected_head := manifest.get("pipeline_git_head")) is not None \
             and pipeline_head(repo) != expected_head:
         raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")

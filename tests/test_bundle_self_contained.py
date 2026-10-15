@@ -170,6 +170,8 @@ def test_replay_runs_the_archived_source_whatever_happens_to_the_checkout(tmp_pa
     source = json.loads((tmp_path / "fresh" / "provenance" / "pipeline-source.json").read_text())
     assert source["from"] == "archive" and source["path"] == str(restored.parent)
     assert "bundle's pipeline source archive" in result.stdout
+    if change == "deleted":
+        assert "pipeline checkout is missing" in source["reason"]
 
 
 def test_replay_runs_the_recorded_checkout_while_it_is_intact(tmp_path, fake_tools):
