@@ -17,6 +17,7 @@ permissions:
   contents: write
   pull-requests: write
   actions: write             # to dispatch the deploy after merge
+  checks: write              # report completed in-job validation on the generated PR commit
 
 jobs:
   discover:
@@ -40,7 +41,7 @@ jobs:
         with:
           python-version: "3.11"
       # The YAML extra lets the final gate run the YAML params/samplesheet tests, as tests.yml does.
-      - run: pip install -e ".[dev,yaml]" "pytest>=8,<10"
+      - run: pip install -e ".[dev,yaml]" "pytest>=8,<10" ruff
       - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
         with:
           distribution: temurin
@@ -101,13 +102,18 @@ jobs:
         if: steps.disc.outputs.kept != '0'
         run: |
           set -eo pipefail
-          pytest -q
+          pytest -q --ignore=tests/test_nextflow_integration.py --ignore=tests/test_git_path_identity.py
+          ruff check .
+          pytest -q tests/test_nextflow_integration.py tests/test_git_path_identity.py
           pytest -q -rs tests/test_website_parsing.py | tee "$RUNNER_TEMP/website-parsing.log"
           if grep -q "SKIPPED" "$RUNNER_TEMP/website-parsing.log"; then
             echo "::error::website parsing tests were skipped instead of run"
             exit 1
           fi
           python -m librarian.check_drift
+          npm --prefix website audit --audit-level=low
+          npm --prefix website run typecheck
+          npm --prefix website run build
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: success() && steps.disc.outputs.kept != '0'
         id: cpr
@@ -131,12 +137,12 @@ jobs:
             release) that pass the unit tests, the drift gate and Nextflow acceptance
             (`nextflow -preview`). Pipelines Nextflow rejected were dropped. Auto-merged
             because all checks passed.
-      # All checks passed, so merge automatically. The merge push is made with GITHUB_TOKEN
-      # and does not trigger the push-driven deploy — dispatch it explicitly.
+      # Report the completed core checks on the exact generated commit, merge under
+      # the normal branch rules, then explicitly deploy after the merge completes.
       - name: Auto-merge and redeploy
         if: success() && steps.cpr.outputs.pull-request-number
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr merge --squash --delete-branch "${{ steps.cpr.outputs.pull-request-number }}"
-          gh workflow run deploy-pages.yml --ref main
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+          PR_HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha }}
+        run: bash scripts/merge_validated_update.sh
