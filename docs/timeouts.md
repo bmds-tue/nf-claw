@@ -11,13 +11,20 @@ For a chain, preparation, every stage and every retry share that deadline. A sta
 does not receive a fresh budget. The remaining duration is checked again immediately
 before launch, and an expired budget cannot produce a successful run outcome.
 
-Metadata subprocesses are capped by the smaller of their operation limit and the
+Most runner metadata subprocesses use the smaller of their operation limit and the
 remaining execution budget. File inventories, hashing and filesystem operations
 finish at safe boundaries; these are cooperative checks, not a guarantee that a
 blocked filesystem call returns at a particular instant. Shutdown and failure
 provenance recording may continue beyond the requested deadline to preserve evidence.
 Keep additional time outside nfclaw for this work when a scheduler or CI job has a
 hard cutoff. A failed or incomplete provenance bundle never certifies success.
+
+Completion recording can query Nextflow task history and container engines and
+refetch validation-only remote tables. These recorder probes have their own operation
+limits, capped by the remaining execution budget, rather than the `NFCLAW_*` overrides
+below. Institutional-config branch resolution has a separate 30-second lookup limit;
+the execution budget is checked again after preparation, so that lookup may finish
+after a short requested deadline before the run is refused.
 
 `--limit-time DURATION` is separate: it caps each task's requested runtime, including
 retry growth, through Nextflow's `process.resourceLimits`. Use it only for a deliberate

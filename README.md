@@ -162,9 +162,15 @@ The audit also covers consumed directory inputs and Oncoanalyser's semicolon-del
 # Verify structural equivalence against the original run
 nfclaw verify results.replay --against results           # structural check (file inventory)
 
-# Verify strict byte-identical agreement (fails on modified files)
-nfclaw verify results.replay --against results --strict  # byte-level agreement check
+# Require matching bytes, link identities and the compared environment evidence
+nfclaw verify results.replay --against results --strict
 ```
+
+Default verification reports environment differences but its exit status checks output
+structure. `--strict` also requires matching file bytes, link identities and an
+`identical` environment comparison when both records can be read. If either environment
+record is unavailable, the report says `not recorded by both runs` and strict mode
+checks outputs only; it does not certify the execution environment.
 
 ### 4. Release Selection & Development Code
 
@@ -258,18 +264,26 @@ inside a recorded input directory are refused before any lock or log is written.
 | Artifact | File Path | Function & Role |
 |---|---|---|
 | **Run Log** | `logs/run.log` | Complete launch record (host, PID, Nextflow stdout/stderr) ending with terminal outcome line: `==> nfclaw run finished <time>: <outcome>`. Child output is prefixed with `\| ` so it cannot forge status markers; raw streams are in `logs/stdout.txt` and `logs/stderr.txt`. |
-| **Replay Script** | `commands.sh` | Replays the recorded analysis into a fresh directory (default `<outdir>.replay`) from the bundle's own source archive, config copies and container pins, with dependency guards and a fixed engine version; it does not resume the original attempt. |
+| **Replay Script** | `commands.sh` | Replays the recorded analysis into a fresh directory (default `<outdir>.replay`), preferring the unchanged recorded checkout and otherwise extracting the source archive. Uses recorded config copies and eligible container pins, with dependency guards and a fixed engine version; it does not resume the original attempt. |
 | **Dependency Guard** | `replay_guard.py` | Pre-flight validator executed by `commands.sh` verifying that the archived pipeline source, inputs, samplesheets, configs and environment records match recorded SHA-256 digests. |
 | **Pipeline Source** | `pipeline-source.tar.gz` | Deterministic archive of the tracked source files that ran; a replay runs it (extracted and checked) whenever the recorded checkout no longer holds exactly that source. |
 | **Config Copies** | `configs/` | Copies of external `--config` files, replayed in place of the originals (except a config using `includeConfig`). |
-| **Execution Environment** | `environment.json` / `containers.config` | Each process's container image by registry digest and image ID (or image-file SHA-256), the engine version, Nextflow plugins and Java runtime, and the SHA-256 of every remote file Nextflow staged or the pipeline validated; the config pins each process to its image digest. A replay records and compares its own (`environment_check.json`). |
+| **Execution Environment** | `environment.json` / `containers.config` | Available container identities, Nextflow build, plugins and Java runtime, and remote-input hashes recovered from Nextflow's logs. Staged copies are hashed locally; supported validation-only URLs are read again after the run. The config is written only when Docker/Podman processes can be pinned to eligible registry digests. Inspect unresolved entries and `issues` for recording gaps. |
+| **Environment Replay Helper** | `environment_record.py` | Standalone recorder/comparator used after a replay. Writes the target's `environment.json` and `environment_check.json`; a detected mismatch fails the replay, while `unverified` entries and informational notes do not. |
 | **Run Manifest** | `run_manifest.json` | Pipeline version, commit SHA, command, recording timestamp, outcome, observed engine version and environment settings. |
-| **Parameter File** | `params.json` | Resolved wrapper parameters passed to Nextflow, including the pinned report suffix and the nf-core/configs commit (`custom_config_version`) the run read. Additional defaults or profile values can be recorded separately by the upstream pipeline. |
+| **Parameter File** | `params.json` | Resolved wrapper parameters passed to Nextflow, including the report suffix where supported and the nf-core/configs commit (`custom_config_version`) when automatic pinning applies and resolves. Additional defaults or profile values can be recorded separately by the upstream pipeline. |
 | **Output Namespace** | `outputs.inventory.json` | Recorded result paths, empty directories, entry types and link identities; internal targets are relative to the result root so complete bundle moves preserve their identity. |
 | **Dependency Inventories** | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch directory entries, empty directories, entry types and symlink identities; replay checks these alongside file bytes. |
 | **Checksum Manifests** | `inputs.sha256` / `configs.sha256` / `pipeline.sha256` / `outputs.sha256` | SHA-256 digests of declared local inputs (including samplesheet data paths: path fields, data columns typed only by their pattern, and absolute paths of existing files in other columns), the params file and configs, the tracked pipeline source, and generated result files. Remote inputs and container images are recorded in `environment.json` instead. |
 | **Resource Limits** | `resource_limits.config` | Nextflow `process.resourceLimits` configuration generated when `--limit-*` flags are specified. |
 | **Compatibility Records** | `nf_schema_compat.config` / `fastqrepair_compat.config` | Generated only for affected source trees; record plugin adjustments and task corrections for replay. |
+
+The bundle archives tracked pipeline source and copies eligible external configs; it
+does not embed scientific input data, container images or plugins. Local inputs retain
+their recorded paths. Configs using `includeConfig` still need their original files
+and include targets. Inspect `pipeline_archive`, `bundled_configs`, `container_pins`
+and `execution_environment.issues` in the manifest for the evidence actually captured.
+See [the replay guide](AGENTS.md#replaying-a-run) for relocation and comparison limits.
 
 > [!IMPORTANT]
 > **Run Isolation & Sibling File Locking:** On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) across the execution lifecycle. Overlapping or concurrent runs targeting the same output directory fail fast with `ErrorCode.ENVIRONMENT`, eliminating race conditions and cache corruption.

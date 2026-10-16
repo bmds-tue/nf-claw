@@ -204,8 +204,9 @@ pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
 ## Releases bumped after the sweep
 
-The daily auto-update moves a pin to a new upstream release. Each such release ran its bundled test on the same
-host before the bump merged, in one uninterrupted `nfclaw run <name> --demo` on the engine its new `skill.md` names.
+The release below was validated separately on the same host before its pin was updated,
+in one uninterrupted `nfclaw run <name> --demo` on the engine its new `skill.md` names.
+This execution evidence is additional to the automated updater's preview, test and drift gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
 |---|---|---|---|---|---|
@@ -273,11 +274,13 @@ Since this sweep, a bundle records the run's execution environment in `environme
 - the Nextflow plugins and Java runtime;
 - the SHA-256 of every remote file Nextflow staged.
 
-`containers.config` pins each process to its digest. The bundle holds the pipeline source as an
-archive, and copies of the external configs. A replay records its own environment and compares it
-with the recording (`environment_check.json`). It passes only when the two are identical.
+For these Docker runs, `containers.config` pins eligible processes to their digests. The bundle
+holds the pipeline source as an archive, and copies of the external configs. A replay records its own environment and compares it
+with the recording (`environment_check.json`). Detected mismatches fail standalone replay;
+`unverified` comparisons are reported without failing it. The successful comparisons in the
+table below were recorded as `identical`, rather than merely passing with unverified entries.
 
-92 runs of 91 pipelines were replayed. 90 replays reproduced the recorded execution environment exactly. 2,496 of the 2,496 containerized processes were pinned to the registry digest of the image they ran, no image was left without an identity, and 673 remote inputs were recorded by SHA-256. The replays that did not pass are explained below.
+92 runs of 91 pipelines were replayed. 90 replays reported an `identical` execution-environment comparison. 2,496 of the 2,496 containerized processes were pinned to the registry digest of the image they ran, no image was left without an identity, and 673 remote inputs were recorded by SHA-256. The replays that did not pass are explained below.
 
 | Run | Nextflow | Run outcome | Images | Pinned / containerized processes | Remote inputs | Replay | Environment | `nfclaw verify` |
 |---|---|---|---|---|---|---|---|---|
@@ -417,7 +420,8 @@ The nfclaw feature paths were replayed the same way:
 - both stages of a demultiplex → seqinspector chain, with the lineage verified
 - `--no-provenance`, which writes no bundle
 
-Every replay that completed had an environment identical to its recording.
+Every replay reported as successful in these final results had an `identical` environment
+comparison. This describes the recorded comparison scope in [the architecture guide](architecture.md#27-verification-engine-nfclaw-verify), not complete machine identity or proof of analytical agreement.
 
 On GitHub Actions, the `demo-validation` workflow replays the demo with Docker twice: in place, and
 from the bundle's source archive with the checkout moved away. It also runs the demo with Apptainer,

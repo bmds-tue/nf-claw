@@ -49,7 +49,7 @@ To ensure reproducible execution across releases of varying ages, nf-claw provid
 2. **`--nxf-env KEY=VALUE`**: Passes `NXF_*` variables directly to Nextflow:
    - IPv6-only environments: `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`
    - Air-gapped / offline runs: `--nxf-env NXF_OFFLINE=true`
-3. **Provenance Recording**: Both `--nxf-ver` and `--nxf-env` are recorded in `<outdir>/provenance/run_manifest.json`. Replay restores recorded non-sensitive `NXF_*` variables and pins the observed engine version; redacted secrets must be supplied again. Container images are pinned by the digest each process ran (`containers.config`), and the plugins and Java runtime the engine loaded are recorded in `environment.json` and compared after a replay. Other environment variables are not frozen.
+3. **Provenance Recording**: Both `--nxf-ver` and `--nxf-env` are recorded in `<outdir>/provenance/run_manifest.json`. Replay restores recorded non-sensitive `NXF_*` variables and pins the observed engine version; redacted secrets must be supplied again. Eligible Docker/Podman processes receive digest pins in `containers.config`; Singularity/Apptainer image files are recorded by SHA-256. `environment.json` records the loaded plugins and Java runtime. Plugin changes fail the replay's environment comparison, while Java runtime changes are informational notes. Other environment variables are not frozen; see [replay and verification](architecture.md#26-replay--replay-guard) for comparison limits.
 
 > [!TIP]
 > **Chaining Engine Overrides:** In pipeline chains (`nfclaw chain run`), each stage can declare its own `"nxf_ver"` in `spec.json`, allowing modern and older pipelines to use different compatible engines within one chain.
