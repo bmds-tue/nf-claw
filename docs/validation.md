@@ -1,9 +1,15 @@
 # End-to-End Validation
 
-Every pinned pipeline in this library was run end to end through `nfclaw`. nfclaw's own features were
+Every pipeline pinned at the time of the validation was attempted through `nfclaw`.
+Of 91 bundled tests, 90 reached success, including proteinfold's stub-only test;
+seqsubmit could not complete without ENA credentials. nfclaw's own features were
 tested on the same host: replay, verification, resume, chains, sample-sheet generation, stop handling,
 versions and status reporting. This page records how the runs were done, what passed, and what each
 result does and does not show.
+
+The versions and observations below describe the 2026-10-14 to 2026-10-15 validation,
+not a fresh execution after every repository change. For the current pin and its
+requirements, read `pipelines/<name>/skill.md`.
 
 ---
 
@@ -43,7 +49,8 @@ and newly completed tasks.
 
 ## Pipelines
 
-90 of the 91 pinned pipelines completed end to end. seqsubmit could not: its test queries ENA with a
+90 of the 91 bundled tests reached success; proteinfold executed only stubs, not
+protein prediction. seqsubmit could not complete: its test queries ENA with a
 Webin account. "Attempts" counts every launch, including runs the sweep stopped and resumed. The notes
 give the reason for each extra attempt and every setting beyond `--demo`. "Host network" means the
 documented [host-network config](known-issues.md#docker-bridge-network-has-no-dns-ipv6-only-host). Three
@@ -122,7 +129,7 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | pixelator | 5.0.3 | 25.10.4 | success | 27 completed | 1 | host network |
 | proteinannotator | 1.1.0 | 25.10.4 | success | 40 completed | 1 | host network |
 | proteinfamilies | 2.6.0 | 26.04.0 | success | 89 cached + 1 completed | 2 | host network; `MULTIQC` ran past its 2-minute test limit once, which Nextflow 26.04.0 reports as `process hasn't exited` ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)), then resumed |
-| proteinfold | 2.0.0 | 25.10.2 | success | 5 completed | 1 |  |
+| proteinfold | 2.0.0 | 25.10.2 | success, with caveats | 5 stub tasks completed | 1 | `test` sets `stubRun = true`; placeholder outputs, no protein prediction ([run note](known-issues.md#pipeline-specific-run-notes)) |
 | rangeland | 1.0.0 | 24.04.2 | success | 280 completed | 1 | host network |
 | raredisease | 3.1.2 | 25.10.4 | success | 876 completed | 3 | a Docker image pull failed (`lease does not exist`) while the sweep pruned images, then stopped when the shared disk filled; a fresh run completed |
 | readsimulator | 1.0.1 | 23.04.0 | success | 1 completed | 1 | host network |
@@ -265,6 +272,8 @@ Upstream defects and host limits found along the way are documented in [known-is
 with the narrowest workaround that ran.
 
 ## Test suites and CI
+
+These are results recorded during that validation, not current test counts:
 
 - `pytest`: 2730 passed and 2 skipped on the Linux validation host. On macOS 2564 passed and 168 were skipped:
   167 need the pipeline submodules, which that checkout did not initialize, and one reads Linux's `/proc`.

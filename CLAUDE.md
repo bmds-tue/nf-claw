@@ -27,7 +27,7 @@ tests, install `pip install -e ".[dev,yaml]"` to include pytest and YAML support
    ```bash
    nfclaw run <name> --input samplesheet.csv --outdir results -profile docker
    ```
-   *(Raw fallback: `nextflow run pipelines/<name>/upstream -profile docker ...` — the submodule is already pinned to the release, so no `-r`)*.
+   *(Direct upstream command: `nextflow run pipelines/<name>/upstream -profile docker ...` — the submodule is already pinned to the release, so no `-r`. This bypasses nfclaw's preflight, provenance and runtime corrections; use nfclaw for releases that need those corrections.)*
 4. **Check status (foreground or background):**
    ```bash
    nfclaw status results
@@ -43,6 +43,9 @@ subject to upstream runtime validation. Docker is the default profile; `-profile
 `--profile` accepts comma-separated profiles. `--params-file PATH` loads JSON (or
 YAML with the `yaml` extra), and explicit CLI values override file values. Pipeline
 flags accept hyphens or underscores; raw Nextflow requires their exact schema spelling.
+Output directories must be outside the repository or ignored by Git (`results/` is
+ignored). Supply the references the selected analysis needs, even when its schema
+does not mark them required; each skill's reference section explains the options.
 `--no-provenance` disables the replay bundle and checksum records, while retaining
 the parameter file and run logs required for execution and status inspection.
 
@@ -93,7 +96,7 @@ Prints `status: success`, `running (…)`, the outcome it ended with (`failed (e
   ```
   `--resume` appends, so a failed attempt is never overwritten by the retry; a relaunch nfclaw refuses before starting (invalid parameters, a non-empty `--outdir` without `--resume`) is appended too, except when an unsafe input/output overlap requires leaving the input tree and its log untouched. Otherwise the last line is the latest attempt's. A refused first attempt leaves a fresh `--outdir` untouched: no run log means nfclaw never launched there — run the command in the foreground to see why.
 - **`<outdir>/.nextflow.log`** — Nextflow's own detailed log. Nextflow runs from `--outdir`, so its console hint "Check '.nextflow.log'" means this file, not one in your working directory.
-- **`stdout.txt` / `stderr.txt` beside `run.log`** — Nextflow's two streams kept apart. Nextflow prints its error reports on stdout; stderr holds the launcher's update notice and, on a failure, the details some errors write there (nf-schema's list of invalid values).
+- **`stdout.txt` / `stderr.txt` beside `run.log`** — Nextflow's two streams kept apart. Engines through 26.04 print console error reports on stdout, with launcher notices and some validation details on stderr. From Nextflow 26.10, console logs go to stderr instead ([migration notes](https://docs.seqera.io/nextflow/migrations/26-10#breaking-changes)). nfclaw captures both; inspect both streams when diagnosing a failure.
 
 Start a long run in the background with `nohup nfclaw run ... &` and stop it with `kill <nfclaw pid>` (the `pid:` line of the run log): nfclaw then shuts Nextflow and its tasks down, writes the bundle and closes the log, as on Ctrl-C. On Linux, parent-death signaling stops the direct Nextflow child if nfclaw is killed abruptly; detached tasks and containers still require the executor's cleanup and are not covered by that signal alone.
 
@@ -208,9 +211,14 @@ nfclaw run <name> ... --limit-cpus 4 --limit-memory 15.GB
 ```
 `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
 
-These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one (pin a newer engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those size only selected processes. A constant override also applies to that process's retries, but expressions using `task.attempt` can grow and every other process still needs coverage. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
+These become Nextflow's `process.resourceLimits` — the ceiling nf-core documents — applied to every process and every retry, so one flag covers whatever the pipeline asks for next. `resourceLimits` needs Nextflow 24.04.0 or newer: older engines accept it silently and apply no ceiling, so `nfclaw run` refuses `--limit-*` when the run would use one or its engine version cannot be identified (pin a supported concrete engine with `--nxf-ver`, or use the release's own `--max-*` parameters where it declares them). Do not chase this with `withName:` overrides: those size only selected processes. A constant override also applies to that process's retries, but expressions using `task.attempt` can grow and every other process still needs coverage. The generated config is written to `<outdir>/provenance/resource_limits.config` and replayed by `commands.sh`.
 
 Any other environment (proxies, `JAVA_HOME`, …) is inherited from your shell unchanged. Each run launches Nextflow from its `--outdir`, so its `.nextflow/` history is isolated and `--resume` resumes that run (use a distinct `--outdir` per pipeline).
+
+Task work files default to the shared `<repo>/work/` directory. Set
+`--nxf-env NXF_WORK=/path/to/work` to choose another location; relative values resolve
+against the caller's working directory. Preserve the work files needed for resume
+and any result symlinks that point into them.
 
 If a pipeline's `upstream/` is empty, initialise it first:
 ```bash
