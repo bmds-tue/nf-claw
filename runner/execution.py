@@ -272,12 +272,25 @@ def _failure(code: int, run_log: runlog.RunLog) -> NfclawError:
         message += "\n  The underlying cause, from the Nextflow log:\n" + _quote(causes)
     task_hint = (" The failing task's complete output is in .command.err and .command.log beside "
                  "`failing_task`." if "failing_task" in details else "")
+    # Before Nextflow 26.10.0 the local executor reads the exit status of a task it has just killed
+    # at its time limit without waiting for it to exit; the IllegalThreadStateException aborts the
+    # whole session ("process hasn't exited") instead of letting the task be retried.
+    time_limit_hint = ("`process hasn't exited` means a task ran past its time limit, and Nextflow "
+                       "before 26.10.0 then aborts the whole run instead of retrying that task "
+                       "(nextflow-io/nextflow#7569). Pulling the task's container image counts "
+                       "toward the limit, so --resume often completes it; if it times out again, "
+                       "raise that process's `time` with --config or use Nextflow 26.10.0 or later. "
+                       if any(_TIME_LIMIT_ABORT in line for line in on_stdout + on_stderr + causes)
+                       else "")
     return NfclawError(
         ErrorCode.EXECUTION_FAILED, message,
-        fix=(f"Fix the cause Nextflow reports, then re-run the same command with --resume."
-             f"{task_hint} The whole launch is in `run_log`. Common causes and fixes: "
+        fix=(f"{time_limit_hint}Fix the cause Nextflow reports, then re-run the same command with "
+             f"--resume.{task_hint} The whole launch is in `run_log`. Common causes and fixes: "
              f"{runlog.known_issues_path()}."),
         details=details)
+
+
+_TIME_LIMIT_ABORT = "process hasn't exited"
 
 
 def _quote(lines: list[str]) -> str:

@@ -9,7 +9,7 @@ result does and does not show.
 
 ### Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -51,7 +51,8 @@ releases needed more than one run each: marsseq (a reference build, then the ana
 references), oncoanalyser (references prepared as upstream's CI prepares them) and rnafusion (the test
 analysis on upstream's hosted references, split over three runs that together cover every tool).
 
-Some runs were also checked against independent expectations. oncoanalyser's outputs matched every path
+The 21 releases that passed only on a `--resume` here were also run again from scratch, each in one uninterrupted run; see
+[Fresh single-attempt runs](#fresh-single-attempt-runs). Some runs were also checked against independent expectations. oncoanalyser's outputs matched every path
 and checksum in the release's own nf-test snapshot. STAR-Fusion reproduced the fusions and breakpoints
 that its tutorial documents for the tutorial reads. rnafusion's three fusion callers called 12 fusions in
 common on the test reads; FusionCatcher called all 14 of Arriba's.
@@ -120,7 +121,7 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | phyloplace | 2.3.0 | 26.04.0 | success | 8 completed | 1 | host network |
 | pixelator | 5.0.3 | 25.10.4 | success | 27 completed | 1 | host network |
 | proteinannotator | 1.1.0 | 25.10.4 | success | 40 completed | 1 | host network |
-| proteinfamilies | 2.6.0 | 26.04.0 | success | 89 cached + 1 completed | 2 | host network; `MULTIQC` ended once without an exit code (`process hasn't exited`), then resumed |
+| proteinfamilies | 2.6.0 | 26.04.0 | success | 89 cached + 1 completed | 2 | host network; `MULTIQC` ran past its 2-minute test limit once, which Nextflow 26.04.0 reports as `process hasn't exited` ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)), then resumed |
 | proteinfold | 2.0.0 | 25.10.2 | success | 5 completed | 1 |  |
 | rangeland | 1.0.0 | 24.04.2 | success | 280 completed | 1 | host network |
 | raredisease | 3.1.2 | 25.10.4 | success | 876 completed | 3 | a Docker image pull failed (`lease does not exist`) while the sweep pruned images, then stopped when the shared disk filled; a fresh run completed |
@@ -150,6 +151,48 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | viralmetagenome | 1.2.0 | 25.10.4 | success | 288 completed | 1 | host network |
 | viralrecon | 3.0.0 | 25.04.0 | success | 200 completed | 1 |  |
 
+
+## Fresh single-attempt runs
+
+In the sweep above, 21 releases reached `success` only on a `--resume`. The sweep's disk guard, a shared-disk outage or a
+transient failure had stopped an earlier attempt. Each of the 21 was run again from scratch into a new outdir, with the
+same settings and no `--resume`, so that one uninterrupted run covers the whole test. All of them succeeded.
+"Launches" counts the fresh launches it took. Extra launches were stopped by a full shared disk or by the guard, or
+needed the change in the notes; each started over in a new outdir.
+
+| Pipeline | Tasks in that run | Launches | Notes |
+|---|---|---|---|
+| airrflow | 170 completed | 1 |  |
+| coproid | 47 completed | 1 |  |
+| denovotranscript | 19 completed | 1 |  |
+| drop | 134 completed | 1 |  |
+| drugresponseeval | 34 completed | 1 |  |
+| epitopeprediction | 198 completed + 16 retried | 2 | 16 `EPYTOPE_VARIANT_PREDICTION` attempts hit BioMart's outage page and passed on retry ([run note](known-issues.md#pipeline-specific-run-notes)) |
+| funcscan | 68 completed | 3 | the first launch died when the shared disk filled; the second was stopped by the disk guard |
+| genomeqc | 87 completed | 4 | `--famdb-library` with a local Dfam partition. Of the earlier launches, one was stopped while the shared disk was full, one by the disk guard, and one failed when `www.dfam.org` did not resolve |
+| hadge | 103 completed | 3 | the first launch died when the shared disk filled; the second was stopped by the disk guard |
+| hgtseq | 63 completed | 1 |  |
+| hic | 38 completed | 1 |  |
+| hicar | 94 completed + 1 failed | 1 | success with caveats: `CIRCOS_PREPARE` failed and was ignored by the pipeline, as in the sweep |
+| lsmquant | 14 completed | 1 |  |
+| mag | 187 completed + 1 failed | 1 | success with caveats: MaxBin2 failed and was ignored by the pipeline, as in the sweep |
+| metapep | 27 completed | 1 |  |
+| nascent | 149 completed | 1 |  |
+| oncoanalyser | 42 completed | 2 | the 42 tasks upstream expects with cached references; all 473 paths and 151 checksums of its nf-test snapshot matched; the first launch died when the shared disk filled |
+| pathogensurveillance | 46 completed | 1 |  |
+| proteinfamilies | 90 completed | 4 | container images pulled before the run ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)); earlier launches hit its 2-minute limits during image pulls, or the full disk |
+| sarek | 23 completed | 1 |  |
+| tumourevo | 66 completed | 1 |  |
+
+Two of these needed a setting the first sweep had not:
+
+- epitopeprediction: a retry for `EPYTOPE_VARIANT_PREDICTION`, whose BioMart lookups failed 16 times on Ensembl's
+  HTTP-200 outage page ([run note](known-issues.md#pipeline-specific-run-notes)).
+- genomeqc: its own `--famdb-library` offline option, once `www.dfam.org` stopped resolving on this host
+  ([IPv6 host](known-issues.md#docker-bridge-network-has-no-dns-ipv6-only-host)).
+
+proteinfamilies ran as shipped once its container images were present. Its 2–3 minute test limits include the image
+pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
 ## nfclaw features
 
@@ -205,6 +248,9 @@ problem were repeated:
 - **A failed run's error was misquoted when the nf-co2footprint plugin relayed the console.** The plugin
   relays log records without line breaks, so `nfclaw status` quoted a stray `Tip:` line. It now splits
   those records and quotes Nextflow's error report.
+- **A run that aborted with `process hasn't exited` gave no cause.** That is what Nextflow before 26.10.0 prints when a
+  local task is killed at its time limit (nextflow-io/nextflow#7569). `nfclaw status` now names the time-limit kill and the
+  remedies in its `fix:` line.
 - **"Stopped without an outcome" did not mention a full disk,** although a full disk stopped runs here.
   The message now names it among the causes.
 - **`skill.md` did not say which Nextflow secrets a release reads.** It now lists them, and where they are
@@ -220,7 +266,7 @@ with the narrowest workaround that ran.
 
 ## Test suites and CI
 
-- `pytest`: 2728 passed and 2 skipped on the Linux validation host. On macOS 2562 passed and 168 were skipped:
+- `pytest`: 2730 passed and 2 skipped on the Linux validation host. On macOS 2564 passed and 168 were skipped:
   167 need the pipeline submodules, which that checkout did not initialize, and one reads Linux's `/proc`.
 - Website: `npm audit` found 0 vulnerabilities; type check and build passed.
 - GitHub Actions on the pull request: every check passed.

@@ -59,6 +59,24 @@ def test_failure_quotes_nextflow_error_and_points_at_the_real_logs(tmp_path):
     assert "stderr.txt" not in text
 
 
+def test_failure_explains_a_task_that_ran_past_its_time_limit(tmp_path):
+    # Before Nextflow 26.10.0 a local task killed at its time limit aborts the session with an
+    # IllegalThreadStateException, quoted as "process hasn't exited" (nextflow-io/nextflow#7569).
+    child = ("import sys; print(\"ERROR ~ Error executing process > 'CLIPKIT (x)'\"); print(); "
+             "print('Caused by:'); print(\"  process hasn't exited\"); sys.exit(1)")
+    with pytest.raises(NfclawError) as exc:
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+    assert "time limit" in exc.value.fix and "nextflow-io/nextflow#7569" in exc.value.fix
+    assert "--resume" in exc.value.fix and "26.10.0" in exc.value.fix
+
+
+def test_failure_without_that_message_gives_no_time_limit_hint(tmp_path):
+    child = "import sys; print('ERROR ~ Error executing process > BOOM'); sys.exit(1)"
+    with pytest.raises(NfclawError) as exc:
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+    assert "time limit" not in exc.value.fix
+
+
 def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
     # The console said only "Unable to parse config file"; the cause is in Nextflow's log alone.
     import shutil
