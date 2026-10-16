@@ -588,23 +588,26 @@
   {
     "description": "A fully reproducible and state of the art epitope prediction pipeline.",
     "feeds": [],
-    "input": "samplesheet (sample, alleles, mhc_class, filename)",
+    "input": "samplesheet (sample, alleles, mhc_class, filename, germline_vcf, tumor_sample)",
     "name": "epitopeprediction",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
-    "summary": "nf-core/epitopeprediction is a bioinformatics best-practice analysis pipeline for epitope prediction and annotation. The pipeline performs epitope predictions for a given set of variants, proteins, or peptides directly using state of the art prediction tools. The pipeline can be used to generate putative neo-epitopes with variant input, scan one or more proteins for binding hotspots or darkspots analysis, and perform binding predictions on immunopeptidomics data with peptide input.",
+    "summary": "nf-core/epitopeprediction is a bioinformatics pipeline that predicts which peptides bind to MHC molecules. It accepts three types of input:",
     "tools": [
       "MultiQC",
-      "SnpSift",
-      "Epytope (FRED2)",
+      "BCFtools",
+      "Ensembl VEP",
+      "pVACtools",
       "MHCflurry",
       "MHCnuggets",
       "NetMHC-4.0",
       "NetMHCpan-4.0",
       "NetMHCpan-4.1",
       "NetMHCII-2.3",
-      "NetMHCIIpan-4.0"
+      "NetMHCIIpan-4.0",
+      "MixMHCpred-3.0",
+      "MixMHC2pred-2.0"
     ],
-    "version": "3.1.1"
+    "version": "3.2.0"
   },
   {
     "description": "A pipeline that can be used to recover corrupted FASTQ.gz files, drop or fix uncompliant reads, remove unpaired reads, and settle reads that became disordered",
