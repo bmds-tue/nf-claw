@@ -35,6 +35,8 @@ Nextflow 25.04 and 25.10 default to the legacy parser; the strict parser is opt-
 
 Older pinned releases such as `chipseq` 2.1.0, `atacseq` 2.1.2 and `circdna` 1.1.0 have reproduced parser failures with the default 26.04 parser. Pin an engine that works with that release; a minimum-version declaration alone is not proof of compatibility with every later engine.
 
+Nextflow 26.10 also moves console logs from stdout to stderr ([migration notes](https://docs.seqera.io/nextflow/migrations/26-10#breaking-changes)). nfclaw captures both streams in the run log and preserves them separately in `stdout.txt` and `stderr.txt`; their contents depend on the selected engine.
+
 ### Runtime Engine Controls in `nfclaw`
 To ensure reproducible execution across releases of varying ages, nf-claw provides explicit engine controls:
 
