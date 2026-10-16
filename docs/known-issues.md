@@ -559,6 +559,20 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`ampliseq` 3.0.0** — The bundled `test` profile sets its own `process.resourceLimits` (4 CPUs, 15 GB, 1 h); the release has no `--max_memory`/`--max_cpus` parameters (nfclaw rejects them as unknown), so cap a real run with `--limit-cpus`/`--limit-memory`/`--limit-time`. Its `--demo` completed all 130 tasks without a retry on Nextflow 26.04.3 with Docker (Linux amd64); `QIIME2_EXPORT_RELTAX` peaked at 1.2 GB of RSS. This establishes execution of the bundled test, not taxonomic accuracy. 3.0.0 also removed the legacy `sampleID,forwardReads` samplesheet format (use `sample,fastq_1[,fastq_2]`) and renamed `--FW-primer`/`--RV-primer` to `--primer-fwd`/`--primer-rev`; nfclaw rejects the old names.
   - **Reproducibility:** DADA2 taxonomy ties and QIIME2 rarefaction can change results on fresh runs despite `--seed`. See [verified findings and workarounds](#ampliseq-300-taxonomy-and-rarefaction-reproducibility).
 
+- **`sopa` 1.0.1 `--demo` cannot be replayed faithfully** — Its test samplesheet (`tests/samplesheet.csv`) names `https://github.com/nf-core/sopa/blob/dev/tests/samplesheet.csv` as the sample's `data_path`: a GitHub HTML page, not a raw file. Nextflow stages that page as a task input, and the page's bytes change on every download (213,168 bytes in one run, 213,166 in its replay). A replay of `--demo` therefore fails its environment check with `remote input … changed`, as it should: the replay did consume other bytes. Pass a stable `data_path` (a local file or a `raw.githubusercontent.com` URL at a commit) for a run that replays exactly.
+- **`epitopeprediction` 3.1.1 replays meet the same BioMart replies** — The [BioMart lookups](#pipeline-specific-run-notes) above happen in the replay too, so a replay can fail where its original succeeded. Pass the retry config as `--config` when the run starts: the bundle keeps a copy of it, and the replay retries the same way. A replay with it reproduced the run's environment exactly.
+- **Outputs that differ between a run and its replay by design** — `nfclaw verify` compares outputs by path. Some releases name or include outputs nondeterministically, so a faithful replay (identical images, plugins, source and inputs) still reports files as missing or extra:
+  - `longraredisease` 1.0.0 names its MultiQC report after the output directory (`<outdir basename>-pipeline-report_multiqc_report.html`), so a replay into `<outdir>.replay` names it differently.
+  - `createtaxdb` 3.1.0: `kraken2-build` gives the files it adds to `library/added/` random names.
+  - `hicar` 1.0.0: across runs, its MultiQC report included different samtools sections (`flagstat` once, `stats` and the alignment plots another time), and one `.hic` file under `cooler/MAPS/` was published under different names.
+  - `nanoseq` 3.1.0: NanoPlot names its log by the minute it ran (`NanoPlot_<date>_<time>.log`).
+  - `nanostring` 1.3.3: MultiQC exported four plots in one run and not in its replay.
+  - `mag` 5.5.0: Prokka publishes temporary protein files named by its process ID (`….AMR.tmp.<pid>.faa`).
+  - `rnafusion` 4.1.3: FusionInspector publishes `fi_workdir/pipeliner.<pid>.cmds`.
+  - `rnasplice` 1.0.4: MISO names its batch logs by the time they were written.
+  - A resumed run's outdir keeps the launch-stamped `pipeline_info` reports of its earlier attempts; its replay reproduces the last attempt only.
+  Inspect such differences with a format-aware comparison; they are not reported as environment differences.
+
 ### AmpliSeq 3.0.0: taxonomy and rarefaction reproducibility
 
 Scope: the pinned AmpliSeq commit `992e6df34065067185b5e34665b5861b6827981d`; source inspection and

@@ -9,7 +9,7 @@ result does and does not show.
 
 ### Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -188,6 +188,184 @@ every handoff against the checksums the upstream stage recorded.
 
 The createtaxdb stage's outputs were deleted after its lineage had verified, to free disk for the sweep. From then on, `nfclaw chain status` reported the chain's lineage as `BROKEN`. It named the missing checksum record, the missing Bracken database, and each database file taxprofiler had consumed. This is the behaviour the lineage check is designed to have.
 
+## Provenance bundles
+
+A second sweep on the same host (2026-10-15 to 2026-10-16) checked the bundle of every pipeline by
+replaying it. Each pipeline ran with the settings the pipeline sweep needed. Its
+`provenance/commands.sh` then replayed it into a fresh directory, and `nfclaw verify` compared the
+replay's outputs with the original's.
+
+Since this sweep, a bundle records the run's execution environment in `environment.json`:
+
+- each process's container image, by registry digest and image ID;
+- the Nextflow plugins and Java runtime;
+- the SHA-256 of every remote file Nextflow staged.
+
+`containers.config` pins each process to its digest. The bundle holds the pipeline source as an
+archive, and copies of the external configs. A replay records its own environment and compares it
+with the recording (`environment_check.json`). It passes only when the two are identical.
+
+90 runs of 90 pipelines were replayed. 88 replays reproduced the recorded execution environment exactly. 2,473 of the 2,473 containerized processes were pinned to the registry digest of the image they ran, no image was left without an identity, and 663 remote inputs were recorded by SHA-256. The replays that did not pass are explained below.
+
+| Run | Nextflow | Run outcome | Images | Pinned / containerized processes | Remote inputs | Replay | Environment | `nfclaw verify` |
+|---|---|---|---|---|---|---|---|---|
+| airrflow | 26.04.1 | success | 10 | 38/38 | 23 | success | identical | 175 identical, 355 changed |
+| ampliseq | 26.04.0 | success | 21 | 79/79 | 14 | success | identical | 1289 identical, 321 changed |
+| atacseq | 23.04.0 | success | 26 | 75/75 | 11 | success | identical | 375 identical, 358 changed |
+| bacass | 25.04.0 | success | 8 | 10/10 | 6 | success | identical | 785 identical, 370 changed |
+| bactmap | 24.10.5 | success | 17 | 23/23 | 7 | success | identical | 40 identical, 73 changed |
+| bamtofastq | 25.10.4 | success | 5 | 17/17 | 5 | success | identical | 23 identical, 15 changed |
+| callingcards | 23.04.0 | success | 12 | 19/19 | 5 | success | identical | 273 identical, 180 changed |
+| chipseq | 23.04.0 | success | 26 | 50/50 | 15 | success | identical | 288 identical, 363 changed |
+| circdna | 23.04.0 | success | 15 | 31/31 | 8 | success | identical | 94 identical, 87 changed |
+| coproid | 25.04.0 | success | 15 | 25/25 | 12 | success | identical | 194 identical, 168 changed |
+| createpanelrefs | 26.04.0 | success | 2 | 2/2 | 3 | success | identical | 13 identical, 9 changed |
+| createtaxdb | 25.10.4 | success | 16 | 22/22 | 16 | success | identical | 55 identical, 19 changed, 6 missing, 6 extra |
+| crisprseq | 24.04.2 | success | 15 | 17/17 | 5 | success | identical | 107 identical, 84 changed |
+| cutandrun | 23.04.0 | success, with caveats | 21 | 95/95 | 11 | success | identical | 160 identical, 116 changed |
+| datasync | 25.10.4 | success | 2 | 4/4 | 3 | success | identical | 22 identical, 11 changed |
+| demo | 25.10.4 | success | 4 | 4/4 | 4 | success | identical | 42 identical, 34 changed |
+| demultiplex | 25.10.4 | success | 6 | 7/7 | 1 | success | identical | 95 identical, 81 changed |
+| denovotranscript | 24.04.2 | success | 13 | 15/15 | 5 | success | identical | 115 identical, 2226 changed |
+| detaxizer | 25.04.8 | success | 11 | 14/14 | 7 | success | identical | 36 identical, 35 changed |
+| differentialabundance | 25.10.4 | success | 11 | 17/17 | 6 | success | identical | 66 identical, 14 changed |
+| drop | 25.10.0 | success | 18 | 52/52 | 34 | success | identical | 234 identical, 82 changed |
+| drugresponseeval | 26.04.0 | success | 2 | 16/16 | 3 | success | identical | 196 identical, 13 changed |
+| epitopeprediction (BioMart retry config) | 25.04.0 | success | 8 | 10/10 | 2 | success | identical | 74 identical, 85 changed |
+| fastqrepair | 25.10.4 | success | 4 | 7/7 | 2 | success | identical | 33 identical, 38 changed |
+| fastquorum | 25.10.4 | success | 7 | 12/12 | 3 | success | identical | 30 identical, 17 changed |
+| fetchngs | 25.10.4 | success | 2 | 4/4 | 0 | success | identical | 44 identical, 6 changed |
+| funcprofiler | 25.10.4 | success | 7 | 8/8 | 9 | success | identical | 39 identical, 10 changed |
+| funcscan | 25.10.4 | success | 15 | 37/37 | 4 | success | identical | 84 identical, 30 changed |
+| genomeassembler | 25.10.4 | success | 14 | 30/30 | 6 | success | identical | 232 identical, 89 changed |
+| genomeqc | 25.10.4 | success | 0 | 0/0 | 9 | success | identical | 684 identical, 333 changed |
+| hadge | 25.10.4 | success | 25 | 34/34 | 6 | success | identical | 461 identical, 58 changed |
+| hgtseq | 22.10.1 | success | 13 | 27/27 | 10 | success | identical | 215 identical, 89 changed |
+| hic | 22.10.1 | success | 14 | 26/26 | 3 | success | identical | 58 identical, 54 changed |
+| hicar | 21.10.3 | success, with caveats | 33 | 73/73 | 9 | success | identical | 78 identical, 48 changed, 1 missing, 8 extra |
+| hlatyping | 25.04.2 | success | 7 | 7/7 | 1 | success | identical | 48 identical, 38 changed |
+| isoseq | 25.10.4 | success | 10 | 13/13 | 5 | success | identical | 166 identical, 76 changed, 6 missing, 1 extra |
+| longraredisease | 25.04.0 | success | 22 | 46/46 | 6 | success | identical | 68 identical, 35 changed, 7 missing, 7 extra, 1 missing directories, 1 extra directories |
+| lsmquant | 25.10.4 | success | 5 | 7/7 | 2 | success | identical | 223 identical, 33 changed |
+| mag | 26.04.0 | success, with caveats | 25 | 41/41 | 7 | success | identical | 865 identical, 502 changed, 12 missing, 12 extra |
+| magmap | 26.04.0 | success | 15 | 29/29 | 9 | success | identical | 84 identical, 53 changed |
+| mcmicro | 25.04.0 | success | 6 | 10/10 | 1 | success | identical | 18 identical, 13 changed |
+| metaboigniter | 23.04.0 | success | 3 | 7/7 | 3 | success | identical | 20 identical, 21 changed |
+| metapep | 24.04.2 | success | 9 | 18/18 | 4 | success | identical | 25 identical, 21 changed |
+| metatdenovo | 25.10.4 | success | 24 | 41/41 | 13 | success | identical | 50 identical, 141 changed |
+| methylong | 25.04.0 | success | 15 | 25/25 | 2 | success | identical | 22 identical, 29 changed |
+| methylseq | 25.04.0 | success | 6 | 12/12 | 6 | success | identical | 126 identical, 90 changed |
+| mhcquant | 25.10.4 | success | 6 | 13/13 | 4 | success | identical | 23 identical, 44 changed |
+| molkart | 25.04.0 | success | 6 | 12/12 | 3 | success | identical | 28 identical, 14 changed |
+| multiplesequencealign | 25.04.2 | success | 13 | 35/35 | 5 | success | identical | 43 identical, 23 changed |
+| nanoseq | 22.10.1 | success | 10 | 16/16 | 3 | success | identical | 27 identical, 39 changed, 1 missing, 1 extra |
+| nanostring | 25.10.2 | success | 4 | 5/5 | 5 | success | identical | 32 identical, 24 changed, 4 missing |
+| nascent | 24.04.2 | success | 19 | 37/37 | 8 | success | identical | 227 identical, 120 changed |
+| oncoanalyser | 25.10.4 | success | 28 | 38/38 | 6 | success | identical | 271 identical, 159 changed |
+| pacvar | 25.10.4 | success | 5 | 10/10 | 4 | success | identical | 16 identical, 9 changed |
+| pairgenomealign | 26.04.0 | success | 5 | 12/12 | 3 | success | identical | 37 identical, 19 changed |
+| pangenome | 24.04.2 | success | 7 | 20/20 | 1 | success | identical | 11 identical, 58 changed |
+| pathogensurveillance | 25.04.6 | success | 13 | 17/17 | 0 | success | identical | 758 identical, 146 changed |
+| phaseimpute | 25.04.0 | success | 7 | 18/18 | 11 | success | identical | 14 identical, 54 changed |
+| phyloplace | 26.04.0 | success | 5 | 8/8 | 4 | success | identical | 22 identical, 11 changed |
+| pixelator | 25.10.4 | success | 3 | 12/12 | 7 | success | identical | 20 identical, 98 changed |
+| proteinannotator | 25.10.4 | success | 8 | 18/18 | 3 | success | identical | 65 identical, 33 changed |
+| proteinfamilies | 26.04.0 | success | 12 | 34/34 | 1 | success | identical | 68 identical, 33 changed |
+| proteinfold | 25.10.2 | success, with caveats | 3 | 3/3 | 0 | success | identical | 16 identical, 4 changed |
+| rangeland | 24.04.2 | success | 3 | 12/12 | 6 | success | identical | 1179 identical, 40 changed |
+| raredisease | 25.10.4 | success | 43 | 186/186 | 38 | success | identical | 223 identical, 175 changed, 6 missing, 1 extra |
+| readsimulator | 23.04.0 | success | 1 | 1/1 | 0 | success | identical | 5 identical, 7 changed |
+| reportho | 25.04.0 | success | 12 | 35/35 | 0 | success | identical | 24 identical, 57 changed |
+| ribomsqc | 25.04.0 | success | 3 | 4/4 | 2 | success | identical | 7 identical, 10 changed |
+| riboseq | 25.10.4 | success | 25 | 50/50 | 22 | success | identical | 502 identical, 599 changed |
+| rnadnavar | 25.10.4 | success | 17 | 34/34 | 9 | success | identical | 153 identical, 163 changed |
+| rnafusion | 25.10.4 | success | 16 | 23/23 | 7 | success | identical | 190 identical, 115 changed, 1 missing, 1 extra |
+| rnaseq | 25.10.4 | success | 26 | 65/65 | 19 | success | identical | 715 identical, 341 changed |
+| rnasplice | 23.04.0 | success | 26 | 70/70 | 12 | success | identical | 2787 identical, 1555 changed, 30 missing, 30 extra |
+| rnastructurome | 25.10.4 | success | 15 | 38/38 | 4 | success | identical | 70 identical, 18 changed |
+| rnavar | 25.10.4 | success | 11 | 35/35 | 10 | success | identical | 49 identical, 51 changed |
+| sarek | 25.10.4 | success | 12 | 21/21 | 10 | success | identical | 87 identical, 96 changed |
+| scnanoseq | 25.04.2 | success | 18 | 46/46 | 4 | success | identical | 94 identical, 95 changed |
+| scrnaseq | 25.10.4 | success | 7 | 8/8 | 9 | success | identical | 83 identical, 50 changed |
+| seqinspector | 25.10.4 | success | 11 | 13/13 | 10 | success | identical | 555 identical, 523 changed |
+| seqsubmit | 25.10.4 | failed (exit status 1) | 11 | 12/12 | 6 | failed (exit status 1) | — | 7 identical, 7 changed |
+| smrnaseq | 25.04.2 | success | 16 | 41/41 | 13 | success | identical | 221 identical, 148 changed |
+| sopa | 25.10.4 | success | 2 | 9/9 | 1 | failed after Nextflow succeeded (execution environment differs from the recording) | differs | — |
+| spatialaxe | 25.04.0 | success | 5 | 10/10 | 1 | success | identical | 491 identical, 140 changed |
+| taxprofiler | 25.10.4 | success | 27 | 51/51 | 24 | success | identical | 341 identical, 381 changed |
+| tumourevo | 25.10.4 | success | 11 | 18/18 | 15 | success | identical | 131 identical, 85 changed |
+| variantbenchmarking | 25.04.0 | success | 11 | 27/27 | 7 | success | identical | 48 identical, 32 changed |
+| variantprioritization | 25.10.0 | success | 7 | 11/11 | 7 | success | identical | 476 identical, 32 changed |
+| viralintegration | 23.04.0 | success | 9 | 23/23 | 9 | success | identical | 150 identical, 81 changed |
+| viralmetagenome | 25.10.4 | success | 35 | 86/86 | 15 | success | identical | 396 identical, 179 changed |
+| viralrecon | 25.04.0 | success | 32 | 80/80 | 9 | success | identical | 413 identical, 278 changed |
+
+"Pinned / containerized processes" counts the processes `containers.config` pins to the digest of
+the image they ran. Every replay ran those digests, not the tags. "Remote inputs" counts the remote
+files Nextflow staged, recorded by SHA-256. `nfclaw verify` compares outputs by path. Its "changed"
+files are reports, logs and plots that embed timestamps or paths. Notes on the remaining rows:
+
+- **sopa**: the replay failed its environment check, correctly. The release's test samplesheet names a
+  GitHub HTML page as the sample's data file, and the page's bytes change on every download
+  ([known issue](known-issues.md#pipeline-specific-run-notes)).
+- **seqsubmit**: needs an ENA Webin account. The run failed where its test queries ENA, and its replay
+  failed the same way.
+- **epitopeprediction**: the plain run's replay met a malformed Ensembl BioMart reply, the
+  [upstream run note](known-issues.md#pipeline-specific-run-notes), and failed. With the retry config
+  passed as `--config`, which the bundle copies and the replay passes on, the run and its replay
+  succeeded, and the environments were identical.
+- **Different file sets**: these were the only differences `nfclaw verify` reported. Tools named
+  outputs by the clock or by a process ID:
+  - kraken2-build in createtaxdb
+  - Prokka in mag
+  - FusionInspector in rnafusion
+  - MISO in rnasplice
+  - NanoPlot in nanoseq
+
+  longraredisease names its MultiQC report after the output directory. hicar's MultiQC report and
+  nanostring's plot exports varied between runs. The isoseq and raredisease originals were resumed
+  after an attempt stopped by the shared host, so their outdirs also hold the first attempt's
+  launch-stamped reports ([known issue](known-issues.md#pipeline-specific-run-notes)).
+- **Reruns**: the table shows each pipeline's last run. The shared host's full disk and image
+  removals stopped some first attempts, and pipelines whose bundles came from an nfclaw version with a
+  defect listed below were run again. genomeqc's first replay was reported unverified: the Nextflow
+  cache of that replay returned no task records, although its tasks had run. A fresh run and its
+  replay were identical.
+
+The nfclaw feature paths were replayed the same way:
+
+- a generated samplesheet
+- a YAML params file
+- a failed run, whose replay failed the same way
+- a resumed run
+- an older release (`demo` 1.0.2) and `dev`
+- a bundle moved to another directory
+- both stages of a demultiplex → seqinspector chain, with the lineage verified
+- `--no-provenance`, which writes no bundle
+
+Every replay that completed had an environment identical to its recording.
+
+On GitHub Actions, the `demo-validation` workflow replays the demo with Docker twice: in place, and
+from the bundle's source archive with the checkout moved away. It also runs the demo with Apptainer,
+which records image files by SHA-256.
+
+The sweep found these defects in the new recording. Each is fixed and covered by tests:
+
+- **Engines before Nextflow 23 recorded no remote inputs.** They stage remote files in a shared
+  `work/stage/` directory, not `work/stage-<session>/`. The recorder now selects Nextflow's logs by
+  the session each one names.
+- **Images were missed on a busy host.** The watcher inspected every container started on the host
+  to find the run's own, and short tasks exited before their turn. It now inspects each image
+  reference once, when the first task container starts from it.
+- **An nfclaw upgrade during a long run left a bundle that could not replay.** The bundled scripts
+  were read from disk when the run ended, but `commands.sh` came from the code loaded at the start.
+  The scripts are now read with that code.
+- **Replaying from the source archive changed `${projectDir}` paths.** A replay now runs the
+  recorded checkout while it still holds exactly the recorded source. It extracts the archive only
+  when the checkout has changed or is gone.
+- **An official Docker Hub image named with its registry (`docker.io/ubuntu`) was not pinned.**
+- **`nfclaw verify` did not pair the nf-co2footprint plugin's launch-stamped reports.**
+
 ## Defects found and fixed
 
 These nfclaw changes came out of the validation. Each is covered by tests, and the runs that showed the
@@ -220,8 +398,12 @@ with the narrowest workaround that ran.
 
 ## Test suites and CI
 
-- `pytest`: 2728 passed and 2 skipped on the Linux validation host. On macOS 2562 passed and 168 were skipped:
-  167 need the pipeline submodules, which that checkout did not initialize, and one reads Linux's `/proc`.
+- `pytest`: 2803 passed and 2 skipped on the Linux validation host, with every pipeline submodule, after the
+  provenance-bundle changes. On macOS 2635 passed and 170 were skipped: they need the pipeline submodules,
+  which that checkout did not initialize, or Linux's `/proc`.
+- `demo-validation` on GitHub Actions also checks the recorded execution environment. The Docker job checks
+  digest pins, an in-place replay and a replay from the source archive. The Apptainer job checks image files
+  recorded by SHA-256.
 - Website: `npm audit` found 0 vulnerabilities; type check and build passed.
 - GitHub Actions on the pull request: every check passed.
 
@@ -240,3 +422,9 @@ with the narrowest workaround that ran.
   did not have. The tasks before that query completed ([details](known-issues.md#pipeline-specific-run-notes)).
 - The host's IPv6-only network shaped several runs: host networking, a local FTP relay, and local copies
   of ENA reads. A host with IPv4 connectivity should need none of these.
+- A bundle records the images Nextflow runs and the remote files Nextflow stages. It does not record
+  files a task downloads by itself: genomeqc's Dfam database, epitopeprediction's BioMart replies, or
+  databases fetched inside a task. A replay can therefore meet other bytes there. Conda environments
+  are not recorded either.
+- Singularity and Apptainer image hashing ran only in CI, on the demo pipeline. Podman ran only in
+  tests.
