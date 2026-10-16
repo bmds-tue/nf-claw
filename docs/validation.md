@@ -8,14 +8,15 @@ versions and status reporting. This page records how the runs were done, what pa
 result does and does not show.
 
 The versions and observations below describe the 2026-10-14 to 2026-10-15 validation,
-not a fresh execution after every repository change. For the current pin and its
+not a fresh execution after every repository change. A release bumped after it was validated
+before its bump merged; see [Releases bumped after the sweep](#releases-bumped-after-the-sweep). For the current pin and its
 requirements, read `pipelines/<name>/skill.md`.
 
 ---
 
 ### Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped after the sweep](#releases-bumped-after-the-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -27,7 +28,7 @@ requirements, read `pipelines/<name>/skill.md`.
 | Containers | Docker 29.1.3 (`-profile docker`) |
 | Java | OpenJDK 17.0.20 |
 | Nextflow | each release's documented engine (`--nxf-ver` from its `skill.md`), 21.10.3 to 26.04.1 |
-| Dates | 2026-10-14 to 2026-10-15 |
+| Dates | 2026-10-14 to 2026-10-16 |
 
 ## Method
 
@@ -88,7 +89,7 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | differentialabundance | 2.0.0 | 25.10.4 | success | 25 completed | 1 |  |
 | drop | 1.0.0 | 25.10.0 | success | 33 cached + 101 completed | 2 | stopped by the sweep's disk guard, then resumed |
 | drugresponseeval | 1.3.0 | 26.04.0 | success | 3 cached + 29 completed | 2 | stopped by the sweep's disk guard, then resumed |
-| epitopeprediction | 3.1.1 | 25.04.0 | success | 32 cached + 206 completed | 3 | stopped by the sweep's disk guard, then resumed; then a transient Ensembl BioMart reply failed a task, and `--resume` completed it ([run note](known-issues.md#pipeline-specific-run-notes)) |
+| epitopeprediction | 3.1.1 | 25.04.0 | success | 32 cached + 206 completed | 3 | stopped by the sweep's disk guard, then resumed; then a transient Ensembl BioMart reply failed a task, and `--resume` completed it ([run note](known-issues.md#pipeline-specific-run-notes)); now pinned at 3.2.0, validated [after the sweep](#releases-bumped-after-the-sweep) |
 | fastqrepair | 1.1.1 | 25.10.4 | success | 9 completed | 1 |  |
 | fastquorum | 2.0.0 | 25.10.4 | success | 12 completed | 1 |  |
 | fetchngs | 1.13.0 | 25.10.4 | success | 26 completed | 2 | the test accessions that have ENA FastQ files ([run note](known-issues.md#pipeline-specific-run-notes)) |
@@ -174,7 +175,7 @@ needed the change in the notes; each started over in a new outdir.
 | denovotranscript | 19 completed | 1 |  |
 | drop | 134 completed | 1 |  |
 | drugresponseeval | 34 completed | 1 |  |
-| epitopeprediction | 198 completed + 16 retried | 2 | 16 `EPYTOPE_VARIANT_PREDICTION` attempts hit BioMart's outage page and passed on retry ([run note](known-issues.md#pipeline-specific-run-notes)) |
+| epitopeprediction (3.1.1) | 198 completed + 16 retried | 2 | 16 `EPYTOPE_VARIANT_PREDICTION` attempts hit BioMart's outage page and passed on retry ([run note](known-issues.md#pipeline-specific-run-notes)) |
 | funcscan | 68 completed | 3 | the first launch died when the shared disk filled; the second was stopped by the disk guard |
 | genomeqc | 87 completed | 4 | `--famdb-library` with a local Dfam partition. Of the earlier launches, one was stopped while the shared disk was full, one by the disk guard, and one failed when `www.dfam.org` did not resolve |
 | hadge | 103 completed | 3 | the first launch died when the shared disk filled; the second was stopped by the disk guard |
@@ -200,6 +201,27 @@ Two of these needed a setting the first sweep had not:
 
 proteinfamilies ran as shipped once its container images were present. Its 2–3 minute test limits include the image
 pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
+
+## Releases bumped after the sweep
+
+The daily auto-update moves a pin to a new upstream release. Each such release ran its bundled test on the same
+host before the bump merged, in one uninterrupted `nfclaw run <name> --demo` on the engine its new `skill.md` names.
+
+| Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
+|---|---|---|---|---|---|
+| epitopeprediction | 3.2.0 | 25.10.4 | success | 21 completed | 2026-10-16, default bridge network |
+
+epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
+pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
+([run note](known-issues.md#pipeline-specific-run-notes)). It ran twice, on the bump and again once the
+[provenance bundles](#provenance-bundles) change had merged. Both runs matched the release's own `-profile test`
+nf-test: 21 succeeded tasks, every software version, all 78 stable output paths, all 17 checksummed files, and the
+missense, in-frame deletion and frameshift peptides its assertions require. The second run's bundle pinned all 17
+containerized processes to the digests of their 9 images and recorded 4 remote inputs by SHA-256. Its replay from
+`provenance/commands.sh` succeeded with an identical execution environment. `nfclaw verify` exited 0: 36 files
+identical, 39 changed only in MultiQC and `pipeline_info` reports, 1 launch-time-named file paired, 0 missing and
+0 extra. Every analytical output (`variant_peptides/`, `variant_fasta/`, `mhcnuggets/` and `predictions/`) was
+byte-identical across both runs and the replay.
 
 ## nfclaw features
 
@@ -281,7 +303,7 @@ with the recording (`environment_check.json`). It passes only when the two are i
 | differentialabundance | 25.10.4 | success | 11 | 17/17 | 6 | success | identical | 66 identical, 14 changed |
 | drop | 25.10.0 | success | 18 | 52/52 | 34 | success | identical | 234 identical, 82 changed |
 | drugresponseeval | 26.04.0 | success | 2 | 16/16 | 3 | success | identical | 196 identical, 13 changed |
-| epitopeprediction (BioMart retry config) | 25.04.0 | success | 8 | 10/10 | 2 | success | identical | 74 identical, 85 changed |
+| epitopeprediction 3.1.1 (BioMart retry config) | 25.04.0 | success | 8 | 10/10 | 2 | success | identical | 74 identical, 85 changed |
 | fastqrepair | 25.10.4 | success | 4 | 7/7 | 3 | success | identical | 33 identical, 38 changed |
 | fastquorum | 25.10.4 | success | 7 | 12/12 | 3 | success | identical | 30 identical, 17 changed |
 | fetchngs | 25.10.4 | success | 2 | 4/4 | 0 | success | identical | 44 identical, 6 changed |
@@ -362,7 +384,7 @@ files are reports, logs and plots that embed timestamps or paths. Notes on the r
   ([known issue](known-issues.md#pipeline-specific-run-notes)).
 - **seqsubmit**: needs an ENA Webin account. The run failed where its test queries ENA, and its replay
   failed the same way.
-- **epitopeprediction**: the plain run's replay met a malformed Ensembl BioMart reply, the
+- **epitopeprediction** 3.1.1: the plain run's replay met a malformed Ensembl BioMart reply, the
   [upstream run note](known-issues.md#pipeline-specific-run-notes), and failed. With the retry config
   passed as `--config`, which the bundle copies and the replay passes on, the run and its replay
   succeeded, and the environments were identical.
@@ -490,7 +512,7 @@ For the [provenance bundle sweep](#provenance-bundles):
 - The host's IPv6-only network shaped several runs: host networking, a local FTP relay, and local copies
   of ENA reads. A host with IPv4 connectivity should need none of these.
 - A bundle records the images Nextflow runs and the remote files Nextflow stages. It does not record
-  files a task downloads by itself: genomeqc's Dfam database, epitopeprediction's BioMart replies, or
+  files a task downloads by itself: genomeqc's Dfam database, epitopeprediction 3.1.1's BioMart replies, or
   databases fetched inside a task. A replay can therefore meet other bytes there. Conda environments
   are not recorded either.
 - Singularity and Apptainer image hashing ran only in CI, on the demo pipeline. Podman ran only in
