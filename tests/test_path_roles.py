@@ -168,14 +168,14 @@ def test_unverifiable_destination_roles_restore_input_checks(
             registry.write_text("{invalid JSON")
         monkeypatch.setattr(path_roles, "_REGISTRY", registry)
     elif evidence == "failed_git_status":
-        run = subprocess.run
+        capture = path_roles.capture
 
         def failed_status(args, *args_other, **kwargs):
             if args[:2] == ["git", "status"]:
                 raise subprocess.CalledProcessError(1, args)
-            return run(args, *args_other, **kwargs)
+            return capture(args, *args_other, **kwargs)
 
-        monkeypatch.setattr(path_roles.subprocess, "run", failed_status)
+        monkeypatch.setattr(path_roles, "capture", failed_status)
     elif evidence == "non_git_source":
         source = tmp_path / "source"
         source.mkdir()

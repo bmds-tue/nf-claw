@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import math
 import os
 import platform
 import re
 import shlex
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,8 +17,8 @@ from runner import exact_json as json
 from runner.inputs import is_remote_url
 
 from runner.outputs import result_files
-from runner import outputs
-from runner import environment_record
+from runner import budget, environment_record, outputs
+from runner.errors import ErrorCode, NfclawError
 from runner.engine_version import version_text
 from runner.probes import capture
 from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
@@ -29,6 +31,7 @@ from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
                                  read_checksums as read_checksums)
 from runner.samplesheet import delimiter_for, serialized_rows
 from runner.schema import InputSchema
+from runner.settings import seconds
 from runner.submodule import SubmoduleStatus
 
 
@@ -141,12 +144,29 @@ def _atomic_text(path: Path, content: str, *, mode: int | None = None) -> None:
     _atomic_bytes(path, content.encode("utf-8"), mode=mode)
 
 
+def mark_timed_out(outdir: Path, timeout_seconds: float) -> None:
+    """Downgrade completed success metadata without repeating the scientific inventories."""
+    path = outdir / "provenance" / "run_manifest.json"
+    if not path.is_file():
+        return
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(manifest, dict) and manifest.get("outcome") == "success":
+        manifest.update(outcome="failed", timeout_seconds=timeout_seconds)
+        try:
+            _atomic_text(path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+        except OSError:
+            # If failed metadata cannot be published, absence refuses verification too; an old
+            # success must not survive a full disk during this small final correction.
+            path.unlink(missing_ok=True)
+            raise
+
+
 def _nextflow_version(env_extra: dict[str, str] | None = None) -> str:
     # Probe with the same env overlay the run used, so a pinned NXF_VER reports the version that
     # actually ran, not the launcher default.
     env = {**os.environ, **env_extra} if env_extra else None
     try:
-        r = capture(["nextflow", "-version"], timeout=30, env=env)
+        r = capture(["nextflow", "-version"], timeout=seconds("NFCLAW_VERSION_TIMEOUT", 30), env=env)
         return version_text(r) or ""
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return ""
@@ -252,12 +272,18 @@ def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
         previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
     except (OSError, ValueError):
         previous = None
+    # An opt-in --timeout bounds this recording too; the bundle notes what it did not reach.
+    try:
+        left = budget.remaining()
+    except NfclawError:
+        left = 0.0
     try:
         return environment_record.capture(
             outdir, log_path=nextflow_log or runlog.nextflow_log_path(outdir, env_extra),
             env={**os.environ, **env_extra} if env_extra else None,
             history_offset=history_offset, profile=profile, observed=observed,
-            previous=previous if isinstance(previous, dict) else None)
+            previous=previous if isinstance(previous, dict) else None,
+            deadline=None if left is None else time.monotonic() + left)
     except Exception as exc:                  # a recording gap must not lose the rest of the bundle
         return {"version": environment_record.VERSION, "processes": {}, "images": {},
                 "pinned_containers": {}, "remote_inputs": {}, "nextflow_plugins": [],
@@ -341,7 +367,7 @@ trap 'stop "terminated by SIGTERM" 143' TERM
 trap 'stop "terminated by SIGHUP" 129' HUP
 trap 'stop "interrupted" 130' INT
 set +e
-python3 "$_script_dir/replay_guard.py" --run "$log" bash -c __COMMAND_SCRIPT__ nfclaw-replay "$_script_dir" "$target" >"$console" 2>&1 &
+python3 "$_script_dir/replay_guard.py" --run "$log" --shutdown-grace __SHUTDOWN_GRACE__ bash -c __COMMAND_SCRIPT__ nfclaw-replay "$_script_dir" "$target" >"$console" 2>&1 &
 supervisor_pid=$!
 if [ -n "$stopped_by" ]; then kill -TERM "$supervisor_pid" 2>/dev/null; fi
 while :; do
@@ -434,10 +460,19 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           dependency_stability: dict | None = None,
           completion_caveats: list[str] | None = None,
           stub_profiles: list[str] | None = None,
+          shutdown_grace_seconds: float | None = None,
           nextflow_log: Path | None = None,
           history_offset: int | None = None,
           institutional_configs: dict | None = None,
           observed_images: dict[str, list[dict]] | None = None) -> Path:
+    try:
+        grace = (seconds("NFCLAW_SHUTDOWN_GRACE", 10)
+                 if shutdown_grace_seconds is None else float(shutdown_grace_seconds))
+    except (ValueError, TypeError, OverflowError):
+        grace = math.nan
+    if not math.isfinite(grace) or grace <= 0:
+        raise NfclawError(ErrorCode.PARAMS_INVALID,
+                          "shutdown_grace_seconds must be finite and strictly positive.")
     prov = outdir / "provenance"
     prov.mkdir(parents=True, exist_ok=True)
     manifest_path = prov / "run_manifest.json"
@@ -447,15 +482,26 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
 
     nxf_env = effective_nxf_env(env_extra)
     recorded_env, redacted_env = safe_env(nxf_env)
+    deadline_failure = None
+    try:
+        observed_version = (_nextflow_version(env_extra) if nextflow_version is None
+                            else nextflow_version)
+    except NfclawError as exc:
+        if "timeout_seconds" not in exc.details:
+            raise
+        # A bounded metadata probe can be where cancellation arrives. Retain the rest of the
+        # evidence and publish a failed bundle before propagating that deadline.
+        observed_version, deadline_failure = "", exc
     manifest = {
         "pipeline": pipeline,
         "version": submodule.version,
         "commit": submodule.commit,
         "command": command_str,
         "outcome": outcome,
+        "shutdown_grace_seconds": grace,
         "outdir": str(outdir.absolute()),
         "ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "nextflow": _nextflow_version(env_extra) if nextflow_version is None else nextflow_version,
+        "nextflow": observed_version,
         "nextflow_env": recorded_env,
         "redacted_nextflow_env": redacted_env,
         "os": platform.platform(),
@@ -673,9 +719,30 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "cd -- \"$target\"\n"
         f"{env_exports}"
         + _REPLAY_TAIL.replace("__ORIGINAL__", shlex.quote(str(outdir)))
+                      .replace("__SHUTDOWN_GRACE__", str(grace))
                       .replace("__COMMAND_SCRIPT__", shlex.quote(
                           '_script_dir="$1"\ntarget="$2"\n' + replay_setup + replay_command
                           + ' --outdir "$target"')),
         mode=0o755)
+    if outcome == "success":
+        try:
+            budget.check()
+        except NfclawError as exc:
+            deadline_failure = exc
+    if deadline_failure is not None:
+        manifest.update(outcome="failed", timeout_seconds=deadline_failure.details["timeout_seconds"])
     _atomic_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    if outcome == "success" and deadline_failure is None:
+        try:
+            budget.check()
+        except NfclawError as exc:
+            # Atomic publication itself may cross the deadline. Only rewrite its small metadata;
+            # the completed checksums and result inventory must not be discarded or rehashed.
+            try:
+                mark_timed_out(outdir, exc.details["timeout_seconds"])
+            except OSError:
+                pass  # the invalid success metadata was removed; preserve the deadline cause
+            raise
+    if deadline_failure is not None:
+        raise deadline_failure
     return prov

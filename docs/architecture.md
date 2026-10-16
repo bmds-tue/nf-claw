@@ -70,7 +70,7 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
 
 ### 2.2 Run Execution & Sibling Directory Locking
-- **Launch Isolation:** Nextflow is executed with its working directory pointed inside `--outdir`, isolating `.nextflow/` state, session databases, and caches to that run.
+- **Launch Isolation:** Nextflow is launched from `--outdir`, isolating its `.nextflow/` history and session databases. Task work files default to the shared `<repo>/work/` directory; `NXF_WORK` selects another location and is resolved against the caller's working directory before launch.
 - **Sibling File Locking:** On POSIX systems, `runner/locking.py` acquires an exclusive, non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) before creating or modifying `--outdir`. Overlapping or concurrent runs into the same directory fail fast with `ErrorCode.ENVIRONMENT`, preventing corrupted session states or interleaved logs.
 - **Check Safety:** `--check` stages parameters in temporary directories and never writes into
   `--outdir`. Resolving a requested pipeline version may fetch tags or populate its version cache.
@@ -79,6 +79,8 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - `runner/execution.py` traps `SIGTERM`, `SIGHUP`, and `SIGINT` (Ctrl-C).
 - On receiving a stop signal, nfclaw signals Nextflow's process group, captures its final output,
   and attempts to record the termination outcome and provenance before exiting.
+- Shutdown grace defaults to 10 seconds and is configurable with `NFCLAW_SHUTDOWN_GRACE`.
+  Runs have no overall deadline unless `--timeout SECONDS` is supplied; see [timeouts](timeouts.md).
 - On Linux, `PR_SET_PDEATHSIG` signals the direct Nextflow child if nfclaw dies abruptly. It does
   not by itself guarantee cleanup of detached processes, remote tasks, or containers.
 
@@ -129,6 +131,12 @@ snapshots. Unchanged inputs retain caching; changed data or an unavailable inven
 archives the complete prior run in `<outdir>.previous-<id>` and starts a fresh cache
 session. Prior logs are copied forward. This also applies with `--no-provenance`.
 
+Before success, declared local inputs, configurations and tracked source are checked
+against their launch snapshots. Changed or unreadable dependencies fail the run and
+are reported in the manifest's `dependency_stability` record. These checkpoint checks
+also run with `--no-provenance`; transient changes restored between checkpoints and
+remote or indirectly configured dependencies remain outside their scope.
+
 Archive operations prepare replacements before moving the run, retain ordinary relative links,
 rebase links through outdir aliases and external publications, and roll back recoverable failures
 and cancellation. A verified result inventory is rebased with its publication links, preserving
@@ -165,6 +173,7 @@ the archive's file checksums and logical namespace.
   outputs, and handoff files/references against upstream and downstream checksum inventories.
   This checks the recorded links; it does not independently revalidate every original input,
   configuration or algorithm, or authenticate a bundle against deliberate rewriting.
+  `--quick` reports execution state without hashing data and explicitly leaves lineage unchecked.
 
 ---
 
@@ -172,7 +181,7 @@ the archive's file checksums and logical namespace.
 
 Chaining rules live in `handoffs/<upstream>/<downstream>.json`. They describe how to transform an upstream stage's outputs into a downstream stage's parameter inputs:
 - **Declarative Mappings:** Source types include `samplesheet`, `build`, `file`, and `upstream_param`.
-- **Transformations:** Row- and column-level adaptations including `rename`, `set`, `add_empty`, `drop_rows_not_allowed`, and `require_values`.
+- **Transformations:** Row- and column-level adaptations including `rename`, `set`, `add_empty`, `drop_rows_not_allowed`, `allowed_values`, and `require_values`.
 - **Metagenomic Safety:** Rules for assembly pipelines (e.g. `mag`) explicitly isolate individual samples (`group: {sample}`) to avoid unintended multi-sample co-assembly pooling.
 - **Drift Gate Static Validation:** The drift gate statically validates every handoff rule against the pinned schemas of both participating pipelines.
 

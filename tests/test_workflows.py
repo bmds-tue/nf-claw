@@ -78,6 +78,8 @@ def test_write_capable_gates_run_the_website_parsing_tests(tmp_path, name, gate,
     (fake / "pytest").write_text(
         '#!/bin/sh\ncase "$*" in *test_website_parsing*) printf "%s" "$PARSING" ;; esac\n')
     (fake / "python").write_text("#!/bin/sh\nexit 0\n")
+    (fake / "ruff").write_text("#!/bin/sh\nexit 0\n")
+    (fake / "npm").write_text("#!/bin/sh\nexit 0\n")
     for path in fake.iterdir():
         path.chmod(0o755)
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
@@ -213,6 +215,15 @@ def test_every_action_is_pinned_to_a_full_commit():
             if m := re.match(r"^\s*-?\s*uses:\s*(\S+)", line):
                 ref = m.group(1)
                 assert ref.startswith("./") or re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", ref), f"{path.name}: {ref}"
+
+
+def test_nextflow_launcher_download_has_connect_and_total_limits():
+    action = (ROOT / ".github" / "actions" / "setup-nextflow" / "action.yml").read_text()
+    command = action.split("curl ", 1)[1].split("\n        echo ", 1)[0].replace("\\\n", " ")
+    args = shlex.split(command)
+    for option in ("--connect-timeout", "--max-time"):
+        assert option in args
+        assert float(args[args.index(option) + 1]) > 0
 
 
 def test_code_scanning_covers_every_language_in_the_repository():

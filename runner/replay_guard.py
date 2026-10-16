@@ -9,6 +9,7 @@ import glob
 import errno
 import hashlib
 import json
+import math
 import os
 import re
 import select
@@ -674,13 +675,15 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> None:
         proc.wait(timeout=2)
 
 
-def run_replay_command(command: list[str], *, log: Path) -> int:
+def run_replay_command(command: list[str], *, log: Path, grace: float = 10) -> int:
     """Run a replay in its own process group while the outer shell holds its lock.
 
     The shell signals this controller. Recording the signal before polling avoids
     exceptions between process creation and ownership registration. Descendants
     are stopped even when the leader exits first or handles SIGTERM with exit zero.
     """
+    if not math.isfinite(grace) or grace <= 0:
+        raise ValueError("shutdown grace must be a finite positive number of seconds")
     requested_stop = None
 
     def request_stop(signum, _frame):
@@ -747,7 +750,7 @@ def run_replay_command(command: list[str], *, log: Path) -> int:
     finally:
         try:
             if proc is not None:
-                _stop_replay_group(proc)
+                _stop_replay_group(proc, grace=grace)
         finally:
             reader_done.set()
             if reader is not None:
@@ -839,6 +842,9 @@ if __name__ == "__main__":
         elif sys.argv[1] == "--check-lock":
             sys.exit(0 if replay_lock_held(Path(sys.argv[2]), sys.argv[3]) else 1)
         elif sys.argv[1] == "--run":
+            if sys.argv[3:4] == ["--shutdown-grace"]:
+                sys.exit(run_replay_command(sys.argv[5:], log=Path(sys.argv[2]),
+                                            grace=float(sys.argv[4])))
             sys.exit(run_replay_command(sys.argv[3:], log=Path(sys.argv[2])))
         elif sys.argv[1] == "--pipeline-source":
             try:

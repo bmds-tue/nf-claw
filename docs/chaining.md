@@ -48,7 +48,8 @@ The chain spec is authored in JSON (or YAML with `pip install -e ".[yaml]"`). Re
 ```
 
 ### Chain-Level Options
-These settings apply globally to all stages unless overridden by an individual stage:
+These settings apply globally to all stages. Individual stages can override the
+execution options below; `allow_spaces` is a chain-only setting:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -66,12 +67,12 @@ Options set on a stage override or merge with chain-level options:
 |---|---|---|---|
 | `pipeline` | string | Yes | Name of a tracked pipeline in the library. |
 | `id` | string | No | Unique stage identifier (default: pipeline name; must match `^[a-z0-9][a-z0-9_-]*$`). |
-| `input` | string/array | No | Explicit `--input` for the stage (typically stage 1); overrides a handoff's input if provided. A directory, glob or list of data files makes nfclaw generate the stage's samplesheet, as `nfclaw run` does. |
+| `input` | string/array/boolean | No | Explicit `--input` for the stage (typically stage 1); overrides a handoff's input if provided. A directory, glob or list of data files makes nfclaw generate the stage's samplesheet, as `nfclaw run` does. Use `false` only for an analysis mode that supports running without input. |
 | `sheet_set` | object | No | Columns of that generated samplesheet no file name determines (`--sheet-set`), e.g. `{"strandedness": "auto", "patient": "{sample}"}`. Only for a stage whose `input` names data files. On `--resume`, a succeeded stage whose data now holds files it never analysed is refused — a resume would otherwise skip them without a word; data removed after it succeeded is not needed again. |
 | `params` | object | No | Pipeline-specific parameters (e.g. `{"genome": "GRCh38", "aligner": "star_salmon"}`). Look up allowed flags in the pipeline's `reference.md`. |
 | `params_file` | string | No | Path to an external parameter JSON or YAML file. |
 | `pipeline_version` | string | No | Pinned release tag (e.g. `3.14.0`) or unreleased `dev`. |
-| `demo` | boolean | No | Appends the pipeline's bundled `test` profile. |
+| `demo` | boolean | No | Adds the pipeline's bundled `test` profile before the selected profiles. |
 | `retries` | integer | No | Maximum automatic retries (using Nextflow `-resume`) upon task or pipeline failure (default: `0`). Never retries on schema errors. |
 | `handoff` | object/string | No | Custom inline handoff rule object or path to a custom rule JSON file, replacing the library registry rule. |
 | `nxf_ver` | string | No | Overrides engine version for this specific stage (essential when chaining an older pipeline release with a modern one). |
@@ -111,10 +112,17 @@ Before launching any pipeline, `nfclaw chain run` validates:
 3. Every stage's explicit parameters pass preflight validation (parameters supplied by upstream handoffs and complex schema rules are deferred).
 4. `nextflow config` resolves and parses configuration files under the exact Nextflow engine specified for each stage. A configuration syntax error in stage 3 fails immediately at minute 0, rather than crashing after stage 1 has executed for hours.
 
+The configuration probe checks parsing and resolution, not the complete runtime
+parameter contract or task execution. Handoff-derived values are validated when
+they become available to the consuming stage.
+
 `--check` performs the same preflight and configuration probes, leaving `--outdir`
 untouched. It can fetch pipeline versions and populate engine caches. Each config probe
-is bounded at 300 seconds; `--timeout SECONDS` sets an overall chain deadline, including
-preflight, stages and retries. No overall deadline is set by default.
+is bounded at 300 seconds by default (`NFCLAW_CONFIG_TIMEOUT` can raise it);
+`--timeout SECONDS` sets one shared deadline for preflight, stages, retries and
+completion verification. No overall deadline is set by default. Cleanup and failure
+recording finish safely after cancellation; filesystem checks complete at safe
+boundaries. See [timeouts and long analyses](timeouts.md) for margins and limitations.
 
 ### Concurrency Locking
 `runner/chain.py` locks `<outdir>/chain/.lock` via a non-blocking POSIX flock. If another chain process is active in the same directory, it terminates immediately with `ErrorCode.ENVIRONMENT`.
@@ -123,6 +131,9 @@ preflight, stages and retries. No overall deadline is set by default.
 - The chain-wide execution log is written to `<outdir>/chain/logs/chain.log`.
 - Background monitoring: `tail -n 1 <outdir>/chain/logs/chain.log` displays the terminal outcome line:  
   `==> nfclaw chain finished <timestamp>: <outcome>`
+- `nfclaw chain status <outdir> --quick` lists recorded execution state without
+  hashing outputs and explicitly reports `lineage: not checked`. Normal chain status
+  retains full verification; quick success is not a scientific integrity certificate.
 - Stopping a chain: `kill <pid>` stops the running stage cleanly, flushes the log, and shuts down Nextflow.
 
 ---
@@ -141,7 +152,10 @@ Example: `handoffs/fetchngs/rnaseq.json`:
   "params": {
     "input": {
       "samplesheet": "samplesheet/samplesheet.csv",
-      "provides": ["sample", "fastq_1", "fastq_2", "strandedness"]
+      "provides": ["sample", "fastq_1", "fastq_2", "strandedness", "instrument_platform"],
+      "allowed_values": {
+        "instrument_platform": ["ILLUMINA", "BGISEQ", "DNBSEQ", "ELEMENT", "ULTIMA", "ION_TORRENT", "LS454", "VELA_DIAGNOSTICS", "GENAPSYS", "GENEMIND", "TAPESTRI"]
+      }
     }
   }
 }

@@ -611,3 +611,17 @@ def test_an_official_docker_hub_image_named_with_its_registry_gets_its_digest(mo
     record = {"container_engine": {"name": "docker"}, "images": {"docker.io/ubuntu:20.04": image},
               "processes": {"P:CAT": {"containers": ["docker.io/ubuntu:20.04"], "without_container": 0}}}
     assert env_record.pins(record) == {"P:CAT": f"docker.io/library/ubuntu@{DIGEST_A}"}
+
+
+def test_a_spent_deadline_leaves_the_gap_recorded_instead_of_probing(tmp_path, fake_tools):
+    import time
+
+    out = tmp_path / "out"
+    out.mkdir()
+    st = _git_pipeline(tmp_path)
+    subprocess.run(["nextflow", "run", str(st.path)], cwd=out, check=True, capture_output=True)
+    record = env_record.capture(out, log_path=out / ".nextflow.log", profile="docker",
+                                deadline=time.monotonic() - 1)
+    assert record["run"]["name"] == "fake_run" and record["processes"] == {}
+    assert any("deadline ended the recording" in issue for issue in record["issues"])
+    assert env_record._deadline is None                 # never leaks into a later capture

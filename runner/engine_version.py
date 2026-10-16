@@ -4,6 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 from runner.probes import capture
+from runner.settings import seconds
 
 # nf-core pins the engine in the manifest, e.g. `nextflowVersion = '!>=25.04.3'`.
 # We surface a NON-blocking advisory when the installed engine is clearly too old;
@@ -65,7 +66,7 @@ def minimum_version(spec: str | None) -> str | None:
 
 def _installed_raw() -> str | None:
     try:
-        r = capture(["nextflow", "-version"], timeout=30)
+        r = capture(["nextflow", "-version"], timeout=seconds("NFCLAW_VERSION_TIMEOUT", 30))
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return None
     return version_text(r)
@@ -159,7 +160,7 @@ def java_command(env: dict[str, str]) -> str:
 def java_major_for_nextflow(env: dict[str, str]) -> int | None:
     """The major Java release Nextflow would run on, or None when it cannot be determined."""
     try:
-        r = capture([java_command(env), "-version"], timeout=30)
+        r = capture([java_command(env), "-version"], timeout=seconds("NFCLAW_VERSION_TIMEOUT", 30))
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return None
     return java_major(f"{r.stderr or ''}\n{r.stdout or ''}") if r.returncode == 0 else None

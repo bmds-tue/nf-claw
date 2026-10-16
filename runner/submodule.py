@@ -7,10 +7,14 @@ import re
 import subprocess
 import tempfile
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from runner import budget
 from runner.errors import ErrorCode, NfclawError
+from runner.probes import capture
+from runner.settings import seconds
 
 try:
     import fcntl                                  # POSIX file locks (macOS/Linux)
@@ -55,11 +59,17 @@ def _init_lock(repo_root: Path):
     working tree, and it is opened without following symlinks or truncating anything. Thread-only
     where flock is unavailable (Windows)."""
     key = hashlib.sha256(str(repo_root.resolve()).encode()).hexdigest()[:16]
-    if fcntl is None:
-        with _thread_lock(key):
+    lock = _thread_lock(key)
+    if budget.remaining() is None:
+        lock.acquire()
+    else:
+        while not lock.acquire(timeout=budget.remaining(0.1)):
+            budget.check()
+    try:
+        budget.check()
+        if fcntl is None:
             yield
-        return
-    with _thread_lock(key):
+            return
         lock_path = _lock_path(repo_root)
         try:
             fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o666)
@@ -70,13 +80,25 @@ def _init_lock(repo_root: Path):
                 fix="If no other nfclaw process is running, remove it (it must be a regular file "
                     "you can write), then retry.") from exc
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            if budget.remaining() is None:
+                fcntl.flock(fd, fcntl.LOCK_EX)
+            else:
+                while True:
+                    budget.check()
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except BlockingIOError:
+                        time.sleep(budget.remaining(0.1))
             try:
+                budget.check()
                 yield
             finally:
                 fcntl.flock(fd, fcntl.LOCK_UN)
         finally:
             os.close(fd)
+    finally:
+        lock.release()
 
 
 @dataclass(frozen=True)
@@ -93,10 +115,16 @@ class SubmoduleStatus:
     notes: tuple[str, ...] = ()
 
 
+def _git_env() -> dict[str, str]:
+    """Git setup must fail rather than wait for an interactive credential prompt."""
+    return {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+
 def _git(path: Path, *args: str) -> str:
     try:
-        out = subprocess.run(["git", *args], cwd=str(path), capture_output=True,
-                             timeout=_GIT_TIMEOUT, check=True)
+        out = capture(["git", *args], cwd=str(path), text=False,
+                      timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=_git_env())
+        out.check_returncode()
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return ""
     return os.fsdecode(out.stdout).rstrip("\n")
@@ -183,9 +211,11 @@ def modified_files(path: Path) -> list[str]:
     if _own_head(path) is None:
         return []
     try:
-        out = subprocess.run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=no",
-                              "--ignore-submodules=all"], cwd=str(path), capture_output=True,
-                             text=True, timeout=_GIT_TIMEOUT, check=True).stdout
+        result = capture(["git", "status", "--porcelain=v1", "-z", "--untracked-files=no",
+                          "--ignore-submodules=all"], cwd=str(path),
+                         timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=_git_env())
+        result.check_returncode()
+        out = result.stdout
     except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
         raise NfclawError(
             ErrorCode.SUBMODULE_INCOMPLETE,
@@ -239,11 +269,12 @@ def ensure_initialized(name: str, pipelines_dir: Path, repo_root: Path) -> Submo
             st = resolve(name, pipelines_dir)               # re-check: another run may have just done it
             if not st.complete:
                 try:
-                    subprocess.run(
+                    result = capture(
                         ["git", "submodule", "update", "--init", "--depth", "1", rel],
-                        cwd=str(repo_root), check=True, capture_output=True, text=True,
-                        timeout=_INIT_TIMEOUT,
+                        cwd=str(repo_root), timeout=seconds("NFCLAW_INIT_TIMEOUT", _INIT_TIMEOUT),
+                        env=_git_env(),
                     )
+                    result.check_returncode()
                 except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
                     detail = getattr(exc, "stderr", "") or str(exc)
                     raise NfclawError(

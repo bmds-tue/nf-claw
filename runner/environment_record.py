@@ -26,6 +26,7 @@ import re
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 VERSION = 1
@@ -71,9 +72,18 @@ class CaptureError(Exception):
     """Nextflow's records of the run could not be read."""
 
 
+# A monotonic time after which no further probe starts (the run's own deadline, when it has one).
+_deadline: float | None = None
+
+
 def _run(command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None,
          timeout: float = 120) -> subprocess.CompletedProcess | None:
     """Run a bounded probe; stop its whole process group on timeout or interruption."""
+    if _deadline is not None:
+        left = _deadline - time.monotonic()
+        if left <= 0:
+            return None
+        timeout = min(timeout, left)
     try:
         proc = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
@@ -372,7 +382,25 @@ def remote_inputs(staged: dict[str, str]) -> dict[str, dict]:
 def capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = None,
             history_offset: int | None = None, profile: str | None = None,
             observed: dict[str, list[dict]] | None = None,
-            previous: dict | None = None) -> dict:
+            previous: dict | None = None, deadline: float | None = None) -> dict:
+    """See `_capture`; `deadline` (monotonic) bounds every probe, and a probe it cuts short leaves
+    the gap recorded under `issues` rather than an identity."""
+    global _deadline
+    _deadline = deadline
+    try:
+        record = _capture(launch_dir, log_path=log_path, env=env, history_offset=history_offset,
+                          profile=profile, observed=observed, previous=previous)
+    finally:
+        _deadline = None
+    if deadline is not None and time.monotonic() >= deadline:
+        record["issues"].append("the run's deadline ended the recording of its execution environment")
+    return record
+
+
+def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = None,
+             history_offset: int | None = None, profile: str | None = None,
+             observed: dict[str, list[dict]] | None = None,
+             previous: dict | None = None) -> dict:
     """The execution environment of the run Nextflow last recorded in `launch_dir`.
 
     `history_offset` is how many runs the history held before this launch: the run is the newest
