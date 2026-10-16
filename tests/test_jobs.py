@@ -104,6 +104,19 @@ def test_cancel_relays_sigterm_to_the_command_and_records_a_cancelled_job(tmp_pa
     assert "shutting down cleanly" in jobs.output_tail(job, 5)
 
 
+def test_a_job_cancelled_before_its_supervisor_started_never_runs(tmp_path):
+    # cancel() can land between the record being written and the supervisor existing.
+    d = jobs.create_dir("demo")
+    (d / jobs.CANCEL_FILE).write_text("now\n")
+    marker = tmp_path / "ran"
+    job = jobs.launch(d, kind="run", argv=["run", "demo"], cwd=str(tmp_path), outdir="/o",
+                      command=_py(f"open({str(marker)!r}, 'w').close()"))
+    assert _finished(job.id)
+    job = jobs.load(job.id)
+    assert jobs.state(job) == "cancelled" and not marker.exists()
+    assert job.error == "cancelled before it started"
+
+
 def test_cancel_of_a_finished_job_signals_nothing(tmp_path):
     job = _launch(tmp_path, _py("pass"))
     assert _finished(job.id)

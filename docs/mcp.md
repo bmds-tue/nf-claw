@@ -100,7 +100,8 @@ can take days; nothing needs to stay connected:
   that could have been reused.
 
 `get_job` reports `running` (with `phase`: `preparing` while nfclaw validates, stages inputs or
-probes configs; `launched` once Nextflow runs; `finishing` while it writes provenance), then
+probes configs; `launched` once it has started Nextflow, until its run log records the outcome —
+provenance included; `finishing` for the moment between that record and the job's exit), then
 `succeeded`, `failed`, `cancelled`, or `lost` (the supervisor was killed outright or the host
 restarted; the status report then says whether nfclaw itself still runs). Once a run has reached its
 run log, the result includes `nfclaw status`'s report — the outcome, the error with Nextflow's own

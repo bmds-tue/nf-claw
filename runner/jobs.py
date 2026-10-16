@@ -307,6 +307,10 @@ def supervise(job_dir: Path) -> int:
         signal.signal(sig, relay)
     record_path = job_dir / SUPERVISOR_FILE
     record: dict = {"supervisor_pid": os.getpid(), "started_at": _now()}
+    if (job_dir / CANCEL_FILE).exists():              # stopped before there was anything to stop
+        record.update(exit_code=143, finished_at=_now(), error="cancelled before it started")
+        _write_json(record_path, record)
+        return 0
     try:
         spec = _read_json(job_dir / JOB_FILE)
         proc = subprocess.Popen(spec["command"], cwd=spec["cwd"], stdin=subprocess.DEVNULL)
