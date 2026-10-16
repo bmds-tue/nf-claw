@@ -1,0 +1,178 @@
+# nf-claw over MCP
+
+`nfclaw mcp` serves the nf-claw library and runner to any [Model Context Protocol](https://modelcontextprotocol.io)
+client — Claude Code, Codex, Hermes, MCP Inspector, the official SDKs — on stdin/stdout. It is part
+of the `nfclaw` command and adds no dependency: the server is standard-library Python.
+
+Every tool runs a documented `nfclaw` command, so the CLI stays the single implementation. Runs and
+chains execute as **detached jobs** that keep going when the client disconnects, and are followed by
+job id. The agent docs (`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are served unchanged.
+
+---
+
+### Navigation
+
+[Setup](#setup) • [Tools](#tools) • [Jobs](#jobs-long-analyses-and-chains) • [Resources and prompt](#resources-and-prompt) • [Environment](#environment) • [Protocol](#protocol)
+
+---
+
+## Setup
+
+Install nf-claw as the [README](../README.md#quickstart) describes (`pip install -e .` in a virtualenv,
+on a space-free path), then register the server with your client. Use the `nfclaw` from that
+virtualenv, by absolute path if the client does not start from your shell.
+
+**Claude Code**
+```bash
+claude mcp add nfclaw -- /abs/path/to/.venv/bin/nfclaw mcp
+```
+
+**Codex** (`~/.codex/config.toml`)
+```toml
+[mcp_servers.nfclaw]
+command = "/abs/path/to/.venv/bin/nfclaw"
+args = ["mcp"]
+tool_timeout_sec = 120          # a tool waits at most this long; jobs are unaffected
+env_vars = ["PATH", "HOME", "JAVA_HOME"]
+```
+
+**Hermes** (`~/.hermes/config.yaml`)
+```yaml
+mcp_servers:
+  nfclaw:
+    command: /abs/path/to/.venv/bin/nfclaw
+    args: [mcp]
+    timeout: 180                # per tool call; jobs are unaffected
+```
+
+**Any other client** (the common `mcpServers` JSON)
+```json
+{"mcpServers": {"nfclaw": {"command": "/abs/path/to/.venv/bin/nfclaw", "args": ["mcp"]}}}
+```
+
+Without an install, use the checkout's interpreter: `command: python3`, `args: ["-m", "runner", "mcp"]`,
+`cwd: /abs/path/to/nf-claw`. To try the server by hand:
+`npx @modelcontextprotocol/inspector nfclaw mcp`.
+
+---
+
+## Tools
+
+| Tool | Runs | What it is for |
+|---|---|---|
+| `list_pipelines` | reads `catalog.json` | Find a pipeline by assay, data type, method or tool; shows its input and what it can feed. |
+| `show_pipeline` | `nfclaw show` | The pipeline's `skill.md` (default) or `reference.md`; `grep` returns only matching lines; `version` reads another release's docs. |
+| `list_versions` | `nfclaw versions` | Published releases, the pinned one marked, plus `dev`. |
+| `chain_edges` | `nfclaw chain edges` | Which pipeline can follow which in a chain. |
+| `run_pipeline` | `nfclaw run` | Start a run as a job. Every CLI flag is an argument; pipeline parameters go in `params`; `check: true` validates and prints the command. |
+| `run_chain` | `nfclaw chain run` | Start a chain as a job, from the chain spec as JSON ([format](chaining.md)). |
+| `get_job` | `nfclaw status` | A job's state, nfclaw's status report and its latest output; `wait_seconds` returns as soon as it ends. |
+| `list_jobs` | — | Jobs started through MCP, newest first. |
+| `cancel_job` | `kill <nfclaw pid>` | Stop a job cleanly: Nextflow and its tasks shut down, the outcome and provenance are recorded. |
+| `run_status` | `nfclaw status` / `nfclaw chain status` | Any run or chain directory, including ones started from a shell; `chain: true` verifies lineage. |
+| `verify_replay` | `nfclaw verify` | Compare a replay with the run it reproduces. |
+
+The server's own instructions give agents the workflow: find → read the skill → `check` → run →
+follow → results. Tool failures (an invalid argument, a refused launch) come back as results with
+`isError` and nfclaw's own message — `[code] message`, the issues, and `fix:` — so the model can correct
+the call. A parameter is refused if it is one of `nfclaw run`'s own options (`outdir`, `resume`, …:
+those are arguments of the tool) or is not a scalar (use `params_file` for structured values).
+
+Use absolute paths. A relative path means what it would on the command line in the directory the
+client started the server from.
+
+---
+
+## Jobs: long analyses and chains
+
+`run_pipeline` and `run_chain` start `nfclaw run …` / `nfclaw chain run …` as a job and return its id,
+after waiting up to `wait_seconds` (default 20) so that a refused launch — invalid parameters, a
+non-empty `--outdir`, a failed preflight check — is reported in the same call. The analysis itself
+can take days; nothing needs to stay connected:
+
+- A job runs in its own session under a small supervisor (`python -m runner.jobs`), which runs the
+  CLI unmodified. The MCP client closing, or the server restarting, does not stop it.
+- Its record is on disk, in `$NFCLAW_STATE_DIR/jobs/<id>/` (default `~/.local/state/nfclaw/jobs/`):
+  `job.json` (the command line and directory), `output.log` (everything nfclaw and Nextflow
+  printed), `supervisor.json` (pids and exit code). Any later server — another session, another
+  client — reads it back.
+- The supervisor holds a lock on the job for as long as it lives, so "running" never rests on a pid
+  that could have been reused.
+
+`get_job` reports `running` (with `phase`: `preparing` while nfclaw validates, stages inputs or
+probes configs; `launched` once it has started Nextflow, until its run log records the outcome —
+provenance included; `finishing` for the moment between that record and the job's exit), then
+`succeeded`, `failed`, `cancelled`, or `lost` (the supervisor was killed outright or the host
+restarted; the status report then says whether nfclaw itself still runs). Once a run has reached its
+run log, the result includes `nfclaw status`'s report — the outcome, the error with Nextflow's own
+message, completion caveats, and the log paths.
+
+Long-poll with `get_job(job_id, wait_seconds=N)`, keeping `N` below your client's tool timeout; the
+job is not affected when a call returns or is cancelled. Clients that send a progress token receive
+progress notifications while a call waits.
+
+`cancel_job` sends the job SIGTERM, which nfclaw turns into a clean stop exactly as for
+`kill <nfclaw pid>` from a shell. The run can then continue with `resume: true`. A second job into an
+`outdir` that a running job holds is refused with that job's id (nfclaw's own `--outdir` lock is the
+authority either way), so retrying a submission cannot start a run twice.
+
+**Chains.** `run_chain` takes the chain spec ([format](chaining.md)) as a JSON object, writes it into
+the job's directory, and runs `nfclaw chain run`: each stage starts only after the previous one
+succeeded, from inputs prepared out of that stage's checksummed outputs. Validate first with
+`check: true`; continue a failed chain with `resume: true`; verify its lineage with
+`run_status(outdir, chain: true)`.
+
+---
+
+## Resources and prompt
+
+| URI | Content |
+|---|---|
+| `nfclaw://guide` | `AGENTS.md` |
+| `nfclaw://catalog` | `catalog.md` |
+| `nfclaw://docs/{name}` | `docs/{name}.md` (chaining, timeouts, known-issues, mcp, …) |
+| `nfclaw://pipelines/{pipeline}/skill` | the pipeline's `skill.md` (listed for every pipeline) |
+| `nfclaw://pipelines/{pipeline}/reference` | the pipeline's `reference.md` |
+
+The prompt `use_pipeline` (arguments `pipeline`, optional `goal`) returns a pipeline's `skill.md` with
+the steps to validate, launch and follow it; Claude Code offers it as a slash command.
+
+---
+
+## Environment
+
+Jobs inherit the server's environment, and clients start servers with a reduced one: Codex and
+Hermes pass only a few variables by default, and an app launched from a desktop may not have your
+shell's `PATH`. If `nfclaw` reports `nextflow not found on PATH` or a missing `JAVA_HOME`, pass them
+in the client's server configuration (`env` / `env_vars`). Per-run Nextflow settings are tool
+arguments: `nxf_env` (e.g. `{"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"}` on an IPv6-only
+host), `nxf_ver`, `config`, `limit_*`.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NFCLAW_STATE_DIR` | `$XDG_STATE_HOME/nfclaw`, else `~/.local/state/nfclaw` | Where job records are kept. |
+| `NFCLAW_MCP_COMMAND_TIMEOUT` | 300 | Seconds a foreground command (`show`, `versions`, `status`, `verify`, …) may take. |
+
+Jobs need a POSIX system (Linux or macOS), as Nextflow does.
+
+---
+
+## Protocol
+
+The server speaks MCP over stdio (newline-delimited JSON-RPC 2.0) and is dual-era:
+
+- **2026-07-28** clients send their version in each request's `_meta`; there is no handshake.
+  `server/discover` returns the supported versions, capabilities and instructions; every result
+  carries `resultType`, and cacheable ones `ttlMs`/`cacheScope`. An unsupported version is refused
+  with error `-32022` listing the supported ones.
+- **2025-11-25, 2025-06-18, 2025-03-26 and 2024-11-05** clients open with `initialize` and are served
+  under the version it negotiates; fields a version does not know (tool annotations, titles,
+  `structuredContent`) are left out for it.
+
+Requests are answered concurrently, so a waiting `get_job` never blocks another call;
+`notifications/cancelled` ends a waiting call without a response. The server's stdout carries only
+protocol messages: its own stray output, and that of any process it starts, goes to stderr. Closing
+stdin ends the server, never a job.
+
+Interoperability is tested against the official Python SDK in both eras (`tests/test_mcp_interop.py`,
+run when `mcp` is installed).
