@@ -255,7 +255,7 @@ Since this sweep, a bundle records the run's execution environment in `environme
 archive, and copies of the external configs. A replay records its own environment and compares it
 with the recording (`environment_check.json`). It passes only when the two are identical.
 
-90 runs of 90 pipelines were replayed. 88 replays reproduced the recorded execution environment exactly. 2,473 of the 2,473 containerized processes were pinned to the registry digest of the image they ran, no image was left without an identity, and 663 remote inputs were recorded by SHA-256. The replays that did not pass are explained below.
+92 runs of 91 pipelines were replayed. 90 replays reproduced the recorded execution environment exactly. 2,496 of the 2,496 containerized processes were pinned to the registry digest of the image they ran, no image was left without an identity, and 673 remote inputs were recorded by SHA-256. The replays that did not pass are explained below.
 
 | Run | Nextflow | Run outcome | Images | Pinned / containerized processes | Remote inputs | Replay | Environment | `nfclaw verify` |
 |---|---|---|---|---|---|---|---|---|
@@ -264,7 +264,7 @@ with the recording (`environment_check.json`). It passes only when the two are i
 | atacseq | 23.04.0 | success | 26 | 75/75 | 11 | success | identical | 375 identical, 358 changed |
 | bacass | 25.04.0 | success | 8 | 10/10 | 6 | success | identical | 785 identical, 370 changed |
 | bactmap | 24.10.5 | success | 17 | 23/23 | 7 | success | identical | 40 identical, 73 changed |
-| bamtofastq | 25.10.4 | success | 5 | 17/17 | 5 | success | identical | 23 identical, 15 changed |
+| bamtofastq | 25.10.4 | success | 5 | 17/17 | 6 | success | identical | 23 identical, 15 changed |
 | callingcards | 23.04.0 | success | 12 | 19/19 | 5 | success | identical | 273 identical, 180 changed |
 | chipseq | 23.04.0 | success | 26 | 50/50 | 15 | success | identical | 288 identical, 363 changed |
 | circdna | 23.04.0 | success | 15 | 31/31 | 8 | success | identical | 94 identical, 87 changed |
@@ -273,8 +273,8 @@ with the recording (`environment_check.json`). It passes only when the two are i
 | createtaxdb | 25.10.4 | success | 16 | 22/22 | 16 | success | identical | 55 identical, 19 changed, 6 missing, 6 extra |
 | crisprseq | 24.04.2 | success | 15 | 17/17 | 5 | success | identical | 107 identical, 84 changed |
 | cutandrun | 23.04.0 | success, with caveats | 21 | 95/95 | 11 | success | identical | 160 identical, 116 changed |
-| datasync | 25.10.4 | success | 2 | 4/4 | 3 | success | identical | 22 identical, 11 changed |
-| demo | 25.10.4 | success | 4 | 4/4 | 4 | success | identical | 42 identical, 34 changed |
+| datasync | 25.10.4 | success | 2 | 4/4 | 4 | success | identical | 22 identical, 11 changed |
+| demo | 25.10.4 | success | 4 | 4/4 | 5 | success | identical | 42 identical, 34 changed |
 | demultiplex | 25.10.4 | success | 6 | 7/7 | 1 | success | identical | 95 identical, 81 changed |
 | denovotranscript | 24.04.2 | success | 13 | 15/15 | 5 | success | identical | 115 identical, 2226 changed |
 | detaxizer | 25.04.8 | success | 11 | 14/14 | 7 | success | identical | 36 identical, 35 changed |
@@ -282,7 +282,7 @@ with the recording (`environment_check.json`). It passes only when the two are i
 | drop | 25.10.0 | success | 18 | 52/52 | 34 | success | identical | 234 identical, 82 changed |
 | drugresponseeval | 26.04.0 | success | 2 | 16/16 | 3 | success | identical | 196 identical, 13 changed |
 | epitopeprediction (BioMart retry config) | 25.04.0 | success | 8 | 10/10 | 2 | success | identical | 74 identical, 85 changed |
-| fastqrepair | 25.10.4 | success | 4 | 7/7 | 2 | success | identical | 33 identical, 38 changed |
+| fastqrepair | 25.10.4 | success | 4 | 7/7 | 3 | success | identical | 33 identical, 38 changed |
 | fastquorum | 25.10.4 | success | 7 | 12/12 | 3 | success | identical | 30 identical, 17 changed |
 | fetchngs | 25.10.4 | success | 2 | 4/4 | 0 | success | identical | 44 identical, 6 changed |
 | funcprofiler | 25.10.4 | success | 7 | 8/8 | 9 | success | identical | 39 identical, 10 changed |
@@ -299,6 +299,8 @@ with the recording (`environment_check.json`). It passes only when the two are i
 | lsmquant | 25.10.4 | success | 5 | 7/7 | 2 | success | identical | 223 identical, 33 changed |
 | mag | 26.04.0 | success, with caveats | 25 | 41/41 | 7 | success | identical | 865 identical, 502 changed, 12 missing, 12 extra |
 | magmap | 26.04.0 | success | 15 | 29/29 | 9 | success | identical | 84 identical, 53 changed |
+| marsseq | 23.04.0 | success | 9 | 14/14 | 6 | success | identical | 75 identical, 67 changed |
+| marsseq (reference build) | 23.04.0 | success | 7 | 9/9 | 0 | success | identical | 26 identical, 4 changed |
 | mcmicro | 25.04.0 | success | 6 | 10/10 | 1 | success | identical | 18 identical, 13 changed |
 | metaboigniter | 23.04.0 | success | 3 | 7/7 | 3 | success | identical | 20 identical, 21 changed |
 | metapep | 24.04.2 | success | 9 | 18/18 | 4 | success | identical | 25 identical, 21 changed |
@@ -415,6 +417,11 @@ The sweep found these defects in the new recording. Each is fixed and covered by
   when the checkout has changed or is gone.
 - **An official Docker Hub image named with its registry (`docker.io/ubuntu`) was not pinned.**
 - **`nfclaw verify` did not pair the nf-co2footprint plugin's launch-stamped reports.**
+- **A samplesheet the pipeline read from a URL itself was not recorded.** nf-schema reads such a file
+  without Nextflow staging it. The bundle now reads each file that nf-schema validated again, right
+  after the run, and records its SHA-256. This was added at the end of the sweep and checked on demo,
+  bamtofastq, datasync and fastqrepair, whose rows show the final runs. Their test samplesheets sit on
+  moving test-datasets branches.
 
 ## Defects found and fixed
 
