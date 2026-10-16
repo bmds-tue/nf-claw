@@ -47,9 +47,10 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
    - Runs `scripts/nextflow_accept.sh` (`nextflow -preview`) to verify pipeline compilation, profile resolution, and parameter validation.
    - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the nightly preview workflow green, but cannot authorize an automated release merge.
    - Executes the complete pytest suite.
-   - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped. The merged PR triggers no `tests.yml` run, so this is the only check before the site is redeployed.
+   - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped.
+   - Runs Ruff, the website dependency audit, TypeScript checks and the static site build. Bot-created PRs do not trigger the ordinary `tests.yml` workflow, so these gates run in the maintenance job before merging.
    - Runs the drift gate (`python3 -m librarian.check_drift`).
-5. **Automated Merging:** Only when all validation checks pass with exit code 0 is the PR automatically squash-merged into `main`. The maintenance job explicitly dispatches `deploy-pages.yml`: a push made with `GITHUB_TOKEN` does not trigger the ordinary push workflow.
+5. **Automated Merging:** After all validation gates pass, `scripts/merge_validated_update.sh` publishes the completed core check results on the generated PR's exact head commit and attempts a squash merge under the normal branch rules. A blocked merge fails the job without leaving a queued merge. After a successful merge, the job explicitly dispatches `deploy-pages.yml`: a push made with `GITHUB_TOKEN` does not trigger the ordinary push workflow.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
 
 ---
@@ -58,7 +59,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
 
 The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard newly created nf-core pipelines:
 
-1. **DSL2 Filtering:** Inspects the nf-core pipeline registry, onboarding only **DSL2** pipelines (legacy DSL1 workflows are permanently ignored).
+1. **DSL2 Filtering:** Inspects the nf-core pipeline registry, excluding archived or disabled entries and entries explicitly marked `is_DSL2: false`. A missing marker alone does not exclude a candidate; the Nextflow acceptance gate must still pass before onboarding. Legacy DSL1 workflows are unsupported.
 2. **Name Sanitization & Security:**
    - Every candidate pipeline name is strictly validated: alphanumeric characters, dots, hyphens, and underscores, bounded by alphanumeric characters:
      ```regex
@@ -72,10 +73,11 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
    - Partial addition failures return a nonzero status after attempting the remaining candidates, so incomplete discovery cannot reach the batch auto-merge gate.
 4. **Strict Acceptance Gate:** Evaluates each candidate via `scripts/nextflow_accept.sh`.
    - Nextflow must compile, resolve configurations, and validate schema with **strict exit code 0**.
-   - A recognized remote-input staging failure is labelled `staging-unverified`; other failures
-     and timeouts are `rejected`. Both verdicts fail the gate.
-   - Rejected pipelines are pruned before committing.
-5. **Batch Auto-Merge:** Validated additions that pass the tests (including the website parsing tests, which must not be skipped) and the drift gate are committed and merged.
+   - A recognized remote-input staging failure is labelled `staging-unverified`, a timeout
+     `timeout`, and another failure `rejected`. None authorizes an automated merge.
+   - `rejected` and `staging-unverified` additions are pruned before committing. A timeout,
+     incomplete result or unrecognized verdict fails the batch instead of merging it.
+5. **Batch Auto-Merge:** Validated additions must pass the tests (including non-skipped website parsing), Ruff, the drift gate, website dependency audit, type check and build. The same merge script reports completed core checks on the exact PR head and merges under normal branch rules, then dispatches the Pages deployment.
 
 ---
 

@@ -1,8 +1,8 @@
 # nf-claw website
 
 A **living digital interface** for the nf-claw repository — futuristic, dark, and
-fully data-driven. Nothing about pipelines, versions, skills, parameters or docs is
-hardcoded: every value on the site is read from the repository at build time.
+fully data-driven. Pipeline metadata, versions, skills, parameters and documentation
+are read from the repository at build time.
 
 ## Stack
 

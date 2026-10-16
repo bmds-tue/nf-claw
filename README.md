@@ -14,7 +14,7 @@
 
 A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree.
 
-**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and live automation status), rebuilt continuously from the repository.
+**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and automation status captured at build time), rebuilt from the repository on deployment.
 
 ---
 
@@ -57,6 +57,7 @@ The repository is structured into four functional zones:
 |---|---|---|
 | **Architecture** | [`docs/architecture.md`](docs/architecture.md) | Architectural zones, schema preflight, sibling file locks, and provenance structure. |
 | **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, Nextflow 25 vs 26 parser transition, and `--nxf-ver` controls. |
+| **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup/shutdown margins, background runs, and quick chain status. |
 | **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
@@ -89,15 +90,22 @@ nfclaw list
 # Read the pinned release's inputs and required parameters before preparing data
 nfclaw show rnaseq
 
-# Execute a pipeline run
-nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker
+# Execute a pipeline run with your matched genome and annotation
+nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
+  --fasta /data/reference.fa --gtf /data/genes.gtf --igenomes-ignore true
 
 # Check execution status (success / running / failed / stopped without outcome)
 nfclaw status results
 ```
 
+Replace the example reference paths with your own matched FASTA and GTF files.
+Later rnaseq examples focus on individual options; include these reference arguments
+or another reference selection supported by the chosen release. Schema-required
+parameters alone do not describe every reference the analysis needs.
+
 Data paths inside samplesheets must be absolute. Use a fresh `--outdir` for each
-analysis; a non-empty directory requires `--resume`. Docker is the default profile;
+analysis; a non-empty directory requires `--resume`. Output directories must be outside
+the repository or ignored by Git (`results/` is ignored). Docker is the default profile;
 `-profile` / `--profile` accepts comma-separated profiles, and `--demo` adds the bundled
 `test` profile, whose data and references can require network access.
 
@@ -109,7 +117,8 @@ analysis; a non-empty directory requires `--resume`. Docker is the default profi
 ```bash
 # Inspect the exact Nextflow command that would run without executing it
 # Validates parameters, schemas, and paths without creating or modifying --outdir
-nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker --check
+nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
+  --fasta /data/reference.fa --gtf /data/genes.gtf --igenomes-ignore true --check
 ```
 
 `--check` validates explicit values and environment requirements; conditional and
@@ -332,6 +341,12 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 - **`demo-validation.yml`** (PR & manual): Executes the pinned demo on native Linux amd64, replays it into a fresh directory, and independently validates FastQC metrics, scientific replay, and static plot exports.
 - **`fastqrepair-validation.yml`** (PR & manual): Executes fastqrepair 1.1.1 with nfclaw's recorded runtime corrections on native Linux amd64 and checks gzip recovery and paired-read conservation against independent controls.
 - **`pipeline-execution.yml`** (PR & manual): Executes a selected pinned pipeline's bundled test on native Linux amd64 under bounded resources and its declared engine, checks the run status and the recorded engine identity, and retains the outputs and task scripts as evidence. It does not replay or verify the run; `demo-validation.yml` and `fastqrepair-validation.yml` do.
+- **`codeql.yml`** (Push, PR, weekly & manual): Scans Python, JavaScript/TypeScript and GitHub Actions code.
+
+Push and PR triggers can be filtered by changed paths; each workflow file defines its
+exact scope. Maintenance merges made with `GITHUB_TOKEN` do not trigger ordinary push
+or PR workflows: those jobs run their validation gates before merging and explicitly
+dispatch the Pages deployment.
 
 Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).
 
@@ -355,7 +370,7 @@ Further details on drift prevention and update automation: [`docs/updating.md`](
 
 **The pipelines themselves are the work of the [nf-core](https://nf-co.re) community** — the heart of this library. Pipeline source trees remain **unmodified** as pinned git submodules; each maintains its own authors, license, and citations. Recorded runtime corrections are documented separately from those upstream sources.
 
-**nf-claw** was created by **Danilo Monge** (Eberhard Karls Universität Tübingen) and adapts architectural concepts and repository structures from [ClawBio](https://clawbio.ai) — created by **Manuel Corpas** (MIT; copyright retained in [`LICENSE`](LICENSE), provenance in [`NOTICE`](NOTICE)).
+**nf-claw** was created by **Danilo Monge** (Eberhard Karls Universität Tübingen) and adapts architectural concepts and repository structures from [ClawBio](https://clawbio.ai) — created by **Manuel Corpas** (MIT license; copyright retained in [`LICENSE`](LICENSE), provenance in [`NOTICE`](NOTICE)).
 
 When utilizing nf-claw in scientific research, cite via [`CITATION.cff`](CITATION.cff), alongside its foundational technologies:
 - **Nextflow:** Di Tommaso P, *et al.* Nextflow enables reproducible computational workflows. *Nat Biotechnol* **35**, 316–319 (2017). [doi:10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820)

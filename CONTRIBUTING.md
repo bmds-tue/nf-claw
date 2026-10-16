@@ -260,7 +260,10 @@ Example: `handoffs/fetchngs/rnaseq.json`:
   "params": {
     "input": {
       "samplesheet": "samplesheet/samplesheet.csv",
-      "provides": ["sample", "fastq_1", "fastq_2", "strandedness"]
+      "provides": ["sample", "fastq_1", "fastq_2", "strandedness", "instrument_platform"],
+      "allowed_values": {
+        "instrument_platform": ["ILLUMINA", "BGISEQ", "DNBSEQ", "ELEMENT", "ULTIMA", "ION_TORRENT", "LS454", "VELA_DIAGNOSTICS", "GENAPSYS", "GENEMIND", "TAPESTRI"]
+      }
     }
   }
 }
@@ -281,6 +284,7 @@ When mapping via `"samplesheet"`, transformations apply in strict sequential ord
 - `"set"`: `{"column": "literal or {template}"}` — sets fixed values or templates per row.
 - `"add_empty"`: `["column"]` — inserts missing columns with empty values.
 - `"drop_rows_not_allowed"`: `["column"]` — filters out rows containing invalid enum values.
+- `"allowed_values"`: `{"column": ["value", "…"]}` — refuses the handoff when a row contains a value outside the explicit list; rows are never silently dropped by this guard.
 - `"require_values"`: `["column"]` — asserts that specified columns must not be empty.
 
 ### 4. Verify and Test Handoffs

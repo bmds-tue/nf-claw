@@ -66,7 +66,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 - **Symptom:** `java.net.SocketException: Network is unreachable` while Nextflow downloads `https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config`.
 - **Why:** The host has no default IPv4 route; the JVM prefers IPv4 by default and never attempts IPv6.
 - **Fix:** `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`. To skip remote config fetches entirely (offline): `--nxf-env NXF_OFFLINE=true`.
-- **Dual Requirement on IPv6 Hosts:** On an IPv6-only host you usually need BOTH this *and* the Docker host-network config (next section) together: the JVM flag fixes Nextflow's own GitHub download, while host-network fixes DNS *inside* containers — neither alone is sufficient:
+- **Dual Requirement on IPv6 Hosts:** On an IPv6-only host you usually need BOTH this *and* the [Docker host-network config](#docker-bridge-network-has-no-dns-ipv6-only-host) together: the JVM flag fixes Nextflow's own GitHub download, while host-network fixes DNS *inside* containers — neither alone is sufficient:
   ```bash
   nfclaw run <name> --nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true \
                     --config host-net.config …
@@ -74,7 +74,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 
 ### No network at run time — a tool downloads a database
 - **Symptom:** A step (e.g. BUSCO) hangs then fails trying to fetch a database it requires.
-- **Fix:** Disable that step via parameters. Booleans work from the CLI, e.g. `--skip-busco true` (or put `{"skip_busco": true}` in a JSON file and pass it as `--params-file params.json`).
+- **Fix:** Supply the step's database locally through the pinned release's declared parameters, or deliberately skip that analysis if the release supports it. Where `reference.md` declares `skip_busco`, use `--skip-busco true` (or `{"skip_busco": true}` via `--params-file params.json`). Skipping a step changes the analysis; `NXF_OFFLINE` does not prevent tools inside containers from attempting downloads.
 
 ### A process requests more memory than the host has — aborts before any work
 - **Symptom:** A run aborts at scheduling time because a single step requests more RAM than the machine has, e.g. `Process requirement exceeds available memory -- req: 80 GB; avail: 62.8 GB`. Seen with `detaxizer` 1.3.0 run with `--classification_bbduk`: its `BBMAP_BBDUK` step carries nf-core's `process_high` label, which `conf/base.config` sizes at `80.GB * task.attempt` — more than a typical workstation or small VM has.
@@ -105,7 +105,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   - chipseq's **and** marsseq's `def check_max(obj, type)` in `nextflow.config` (marsseq 1.0.3 declares only `!>=23.04.0`, so unpinned it parses under NF 26 and fails at launch with a `nextflow.cli.Launcher` error — `--nxf-ver 25.10.2` fixes it; note its `test` profile also sets `genome = 'mm10'`, which expects prebuilt local references; its configuration maps that key to GRCm39/M27, not AWS iGenomes).
   - scrnaseq 4.1.0's `Invalid include source: conf/test_multiome.config` (the `test_multiome` profile `includeConfig`s a file not committed at the tag — NF 26 validates it at parse time even though the profile is unused, while the legacy parser skips it and the `--demo` run completes).
   - cutandrun 3.2.2's `Cannot invoke method optional() on null object`, from deprecated output syntax `emit: html optional true` in `modules/local/for_patch/trimgalore/main.nf` (sibling modules already use current `emit: …, optional: true`).
-- **Exception — some releases need a _newer_ engine:** `funcscan` 4.0.0 and `lsmquant` 1.0.3 declare `nextflowVersion = '!>=25.10.4'`, so `--nxf-ver 25.10.2` is rejected at the version gate (the symptom can read as a parameter/validation failure); use `--nxf-ver 25.10.4`. (`bactmap` 1.0.0 hits the parser issue *and* further bugs and can't run in demo here — see the upstream table).
+- **Exception — some releases need a _newer_ engine:** `funcscan` 4.0.0 and `lsmquant` 1.0.3 declare `nextflowVersion = '!>=25.10.4'`, so `--nxf-ver 25.10.2` is rejected at the version gate (the symptom can read as a parameter/validation failure); use `--nxf-ver 25.10.4`. (`bactmap` 1.0.0 also needs the test-data and module-option workarounds in the upstream table; with those, its test completed on 24.10.5).
 - **In a chain (`nfclaw chain run`):** Pin the engine on that stage only — `"nxf_ver": "25.10.4"` in its spec entry — since other stages may need a newer one (fetchngs 1.13.0 requires `>=25.10.4`, mag 5.5.0 `>=26.04.0`). The chain parses every stage's config with its own engine (`nextflow config`) before the first stage launches, so this fails up front, not after the stages before it have run. Seen in chains on Nextflow 26.04.3: `atacseq` 2.1.2 (`def check_max`) and `viralrecon` 3.0.0 (`Invalid include source: conf/test_full_sispa.config`, a profile file missing at the pinned commit) — both parse with `"nxf_ver": "25.10.4"`.
 
 ### An engine older than 21.10.0 fails on Java 17: `Unsupported class file major version 61`
@@ -138,7 +138,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 
 ### Java tools in containers prefer IPv4 (IPv6-only host)
 - **Symptom:** a Java task that contacts a server fails with `java.net.ConnectException: Network is unreachable`, even with the host-network config — e.g. pathogensurveillance 1.1.0's `BBMAP_SENDSKETCH`, which sends a sketch to JGI's server.
-- **Why:** the JVM tries a name's IPv4 address first unless told otherwise, and a host without IPv4 egress cannot reach it. (nfclaw's `NXF_OPTS=-Djava.net.preferIPv6Addresses=true` advice covers Nextflow's own JVM, not the JVMs inside task containers.)
+- **Why:** the JVM tries a name's IPv4 address first unless told otherwise, and a host without IPv4 egress cannot reach it. (nfclaw's `NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true` advice covers Nextflow's own JVM, not the JVMs inside task containers.)
 - **Fix:** set the preference for that process's container through `--config`:
   ```groovy
   process {
@@ -184,7 +184,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 
 ### A successful run is missing samples
 - **Symptom:** A run (or chain stage) ends `success`, but a sample has no results — e.g. no column in rnaseq's merged count tables.
-- **Why:** Pipelines filter samples and tolerate task failures without failing the run. rnaseq skips a sample below its `--min_trimmed_reads` or `--min_mapped_reads` threshold (observed: a public paired-end run whose deposited read 2 was a 4 bp index read lost every pair in trimming), and nf-core's template ends "Pipeline completed successfully, but with errored process(es)" when failed tasks were ignored. Nextflow and nfclaw judge a run by its exit status alone.
+- **Why:** Pipelines filter samples and tolerate task failures without failing the run. rnaseq skips a sample below its `--min_trimmed_reads` or `--min_mapped_reads` threshold (observed: a public paired-end run whose deposited read 2 was a 4 bp index read lost every pair in trimming), and nf-core's template ends "Pipeline completed successfully, but with errored process(es)" when failed tasks were ignored. Exit zero does not establish that every requested sample or task completed; nfclaw's additional dependency and provenance checks do not establish that completeness either.
 - **Behavior:** nfclaw quotes the pipeline's own completion caveats and Nextflow's count of ignored task failures: as warnings after the run, in `nfclaw status` (`status: success — with caveats the pipeline reported about its results`), in `run_manifest.json` (`completion_caveats`) and per stage in the chain log and `nfclaw chain status`. The outcome stays `success`; nfclaw reports what the pipeline said and does not reinterpret it. A pipeline that drops samples without saying so is not detected: compare the samples you supplied with those in the results.
 
 ### Intermittent `No signature of method: java.util.LinkedHashMap.subMap() is applicable …`
@@ -252,8 +252,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   It refuses a target that already holds files, launches Nextflow from the target directory, and passes `--outdir "$target"`.
 
   Stop it with `kill <replay pid>`. New bundles run the command in its own process
-  group, allow ten seconds for shutdown, then kill surviving group members before
-  closing the log and releasing the writer lock. A stopped replay returns a
+  group, allow the shutdown grace recorded at launch (10 seconds by default), then
+  kill surviving group members before closing the log and releasing the writer lock.
+  Set `NFCLAW_SHUTDOWN_GRACE` before the original run to record another margin;
+  [timeouts](timeouts.md) explains how new and historical replay scripts use it.
+  A stopped replay returns a
   nonzero exit status even if the command handles the signal with exit zero.
   Tasks or containers detached from that group still require executor cleanup.
 
