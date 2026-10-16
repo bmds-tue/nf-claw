@@ -460,7 +460,9 @@ These are results recorded during that validation, not current test counts:
 
 For the [provenance bundle sweep](#provenance-bundles):
 
-- `pytest` __PYTEST__
+- `pytest`: 2898 passed and 2 skipped on the Linux validation host, with every pipeline submodule. On macOS
+  2730 passed and 170 were skipped: they need the pipeline submodules, which that checkout did not
+  initialize, or Linux's `/proc`.
 - The `demo-validation` workflow on GitHub Actions also checks the recorded execution environment. Its Docker
   job checks the digest pins, an in-place replay and a replay from the source archive. Its Apptainer job checks
   that image files are recorded by SHA-256.

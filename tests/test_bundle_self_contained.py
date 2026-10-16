@@ -625,3 +625,58 @@ def test_a_spent_deadline_leaves_the_gap_recorded_instead_of_probing(tmp_path, f
     assert record["run"]["name"] == "fake_run" and record["processes"] == {}
     assert any("deadline ended the recording" in issue for issue in record["issues"])
     assert env_record._deadline is None                 # never leaks into a later capture
+
+
+@pytest.fixture
+def served(tmp_path):
+    """A local HTTP server for files under tmp_path/www; yields its base URL."""
+    import functools
+    import http.server
+    import threading
+
+    root = tmp_path / "www"
+    root.mkdir()
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))
+    handler.log_message = lambda *a, **k: None
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield root, f"http://127.0.0.1:{server.server_address[1]}"
+    server.shutdown()
+
+
+def test_a_samplesheet_the_pipeline_validated_itself_is_recorded(tmp_path, fake_tools, served):
+    root, base = served
+    (root / "samplesheet.csv").write_text("sample,fastq_1\nA,https://example.org/reads.fq\n")
+    out = tmp_path / "out"
+    out.mkdir()
+    st = _git_pipeline(tmp_path)
+    subprocess.run(["nextflow", "run", str(st.path)], cwd=out, check=True, capture_output=True)
+    with (out / ".nextflow.log").open("a") as log:
+        log.write(f"x DEBUG n.v.v.evaluators.SchemaEvaluator - Validation of file "
+                  f"'{base}/samplesheet.csv' passed!\n")
+    record = env_record.capture(out, log_path=out / ".nextflow.log", profile="docker")
+    entry = record["remote_inputs"][f"{base}/samplesheet.csv"]
+    assert entry["sha256"] == hashlib.sha256((root / "samplesheet.csv").read_bytes()).hexdigest()
+    assert "not staged" in entry["read_by"]
+    assert "https://example.org/reads.fq" in record["remote_inputs"]          # the staged file too
+
+
+def test_a_validated_file_that_cannot_be_read_again_is_unresolved(served, monkeypatch):
+    root, base = served
+    assert "unresolved" in env_record.fetch_digest(f"{base}/missing.csv")
+    (root / "big.csv").write_bytes(b"x" * 2048)
+    monkeypatch.setattr(env_record, "FETCH_LIMIT", 1024)
+    assert "larger than" in env_record.fetch_digest(f"{base}/big.csv")["unresolved"]
+
+
+def test_log_facts_list_the_files_validation_read():
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as directory:
+        log = Path(directory) / ".nextflow.log"
+        log.write_text("x Validation of file 'https://e.org/sheet.csv' passed!\n"
+                       "x Validation of file 'https://e.org/sheet.csv' passed!\n"
+                       "x Validation of file '/local/sheet.csv' passed!\n")
+        assert env_record.log_facts(log, None)["validated"] == ["https://e.org/sheet.csv"]

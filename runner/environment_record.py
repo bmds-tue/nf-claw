@@ -27,6 +27,8 @@ import signal
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 VERSION = 1
@@ -61,6 +63,10 @@ _FOREIGN = (
     re.compile(r"Copying foreign file (?P<source>\S+) to work dir: (?P<staged>\S+)\s*$"),
     re.compile(r"Local cache found for foreign file (?P<source>\S+) at (?P<staged>\S+)\s*$"),
 )
+# A file nf-schema read and validated itself (a samplesheet given as a URL): Nextflow never stages it.
+_VALIDATED = re.compile(r"Validation of file '(?P<url>(?:https?|ftp)://[^']+)' passed")
+# Files read that way are tables; a larger one is left unhashed rather than downloaded again.
+FETCH_LIMIT = 100 * 1024 * 1024
 _PLUGIN = (re.compile(r"Plugin started (?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)"),
            re.compile(r"Start plugin '(?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)'"))
 _RUNTIME = re.compile(r"^\s*Runtime: (?P<runtime>.+?)\s*$")
@@ -306,7 +312,7 @@ def log_facts(log_path: Path, session_id: str | None) -> dict:
     staging layout differs between engines (`stage-<session>/` since Nextflow 23, a shared `stage/`
     before), so the session is read from the log, not from the staged path.
     """
-    facts = {"runtime": None, "build": None, "plugins": [], "staged": {}}
+    facts = {"runtime": None, "build": None, "plugins": [], "staged": {}, "validated": []}
     plugins = set()
     for index, path in enumerate(_log_files(log_path)):
         current = index == 0
@@ -325,6 +331,8 @@ def log_facts(log_path: Path, session_id: str | None) -> dict:
                         for pattern in _PLUGIN:
                             for match in pattern.finditer(line):
                                 plugins.add(match["id"])
+                        if (match := _VALIDATED.search(line)) and match["url"] not in facts["validated"]:
+                            facts["validated"].append(match["url"])
                     if "foreign file" not in line:
                         continue
                     for pattern in _FOREIGN:
@@ -379,6 +387,29 @@ def remote_inputs(staged: dict[str, str]) -> dict[str, dict]:
     return recorded
 
 
+def fetch_digest(url: str) -> dict:
+    """The SHA-256 of a remote file the pipeline read without staging it, downloaded again now."""
+    timeout = 60.0
+    if _deadline is not None:
+        timeout = min(timeout, _deadline - time.monotonic())
+        if timeout <= 0:
+            return {"unresolved": "the run's deadline ended the recording first"}
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "nfclaw-provenance"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                size += len(chunk)
+                if size > FETCH_LIMIT:
+                    return {"unresolved": f"larger than {FETCH_LIMIT // (1024 * 1024)} MiB; not hashed"}
+                digest.update(chunk)
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        return {"unresolved": f"could not be read again: {exc}"}
+    return {"sha256": digest.hexdigest(), "size": size,
+            "read_by": "parameter validation (not staged); bytes read again after the run"}
+
+
 def capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = None,
             history_offset: int | None = None, profile: str | None = None,
             observed: dict[str, list[dict]] | None = None,
@@ -427,6 +458,9 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
         return record
     record["run"] = {"name": run["name"], "session_id": run["session_id"]}
     record["remote_inputs"] = remote_inputs(facts["staged"])
+    for url in facts["validated"]:
+        if url not in record["remote_inputs"]:
+            record["remote_inputs"][url] = fetch_digest(url)
     try:
         task_records = tasks(launch_dir, run["name"], env)
     except CaptureError as exc:
