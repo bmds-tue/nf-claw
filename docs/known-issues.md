@@ -273,7 +273,7 @@ nfclaw verify results.replay --against results
 ```
 It hashes the replay's live files and compares them with the original recorded checksums
 **by path**, reporting `identical` / `changed` / `missing` / `extra` / `renamed`. Missing or extra
-files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
+files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. When both environment records are readable, strict mode also requires an `identical` comparison; default verification reports environment differences without changing its structural exit criterion. `unverified` therefore permits standalone replay but fails strict verification when compared records are available. A missing or unreadable record is reported as `not recorded by both runs`, leaving the environment outside verification. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
@@ -281,7 +281,8 @@ code generates other filenames directly from the clock. For example, demo 1.2.0'
 Every faithful replay therefore has a differently named file, so comparing exact paths
 failed every replay of the modern template (demo 1.2.0, ampliseq 3.0.0) and the failure
 no longer distinguished a broken replay. `nfclaw verify` pairs these run-metadata names
-(and the execution report/timeline/trace/DAG of releases without `trace_report_suffix`)
+(the execution report/timeline/trace/DAG of releases without `trace_report_suffix`,
+and the nf-co2footprint plugin's launch-stamped report/summary/trace files)
 one to one, lists each pair under `renamed` as `original -> replay`, and compares its
 bytes like any other file. The pairing is explicit, never silent; any other dated path —
 possibly a scientific result — keeps its exact identity. A resumed run can retain reports
@@ -312,17 +313,17 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 ### Replay dependency guard failures (`provenance/replay_guard.py`)
 - **Symptom:** Running `<outdir>/provenance/commands.sh` aborts with `nfclaw replay: dependency check failed: ...` before Nextflow is launched.
 - **Why:** `commands.sh` executes `replay_guard.py` to ensure local input files (including paths referenced in samplesheets), configs (the bundle's copies of external `-c` files where it holds them), the archived pipeline source (`pipeline-source.tar.gz`; a bundle without one checks the checkout's commit and tracked bytes) and the recorded `environment.json` / `containers.config` match their recorded SHA-256 digests. New bundles also check directory namespaces, empty directories, entry types and symlink identities against `inputs.inventory.json` and `configs.inventory.json`. A checksum-only prelaunch snapshot cannot certify the original directory namespace and is refused.
-- **Fix:** Restore the original input files or external configs to match the recorded checksums in `<outdir>/provenance/inputs.sha256` and `configs.sha256`. If intentional changes were made, launch a new run into a new `--outdir` instead of replaying.
+- **Fix:** Restore the dependency or bundle artifact named in the diagnostic from an intact original. Replayable config copies are checked inside `provenance/configs/`; editing or deleting their external originals does not invalidate those copies. Configs using `includeConfig` still need the original paths. New source archives allow a changed or missing checkout to fall back to extracted source; older bundles still require their recorded checkout. If input changes are intentional, launch a new run into a new `--outdir` instead of replaying.
 
 ### A replay fails after Nextflow succeeded: `execution environment differs from the recording`
 - **Symptom:** A replay's run log ends with `failed after Nextflow succeeded (execution environment differs from the recording)`, and the console lists `mismatch:` lines.
 - **Why:** After a replay's Nextflow succeeds, `commands.sh` records the replay's own execution environment (`<target>/provenance/environment.json`) and compares it with the original bundle's (`<target>/provenance/environment_check.json`). A process that ran another image digest (an image without a recorded digest cannot be pinned, so its tag may have moved), another set of Nextflow plugins, another container engine, or a remote input whose staged bytes changed (test data on a moving branch, an updated database URL) makes the replay a different execution, whatever its outputs.
-- **Fix:** Read the `mismatch:` lines. A changed remote input or image means the original run cannot be reproduced from its recorded sources any more; keep a local copy of such data and pass it as a local input in future runs. `unverified:` lines (an image without a digest, a Singularity image converted on another host) and `note:` lines (another Java runtime, a process that ran in only one of the runs) do not fail the replay.
+- **Fix:** Read the `mismatch:` lines and recover the recorded data or image identity where possible; a mismatch does not establish that recovery is impossible. Keep local copies of remote data needed for future reproduction. `unverified:` lines (an image without a comparable identity, a Singularity image converted on another host) and `note:` lines (another Java runtime, a process that ran in only one of the runs) do not fail standalone replay. Inspect those gaps explicitly; a successful replay need not have an `identical` environment comparison.
 
 ### A process cannot be pinned to an image digest
 - **Symptom:** `nfclaw run` ends with `provenance: N process(es) are not pinned to an image digest for replay: …` or `provenance: N container image(s) have no recorded identity: …`.
-- **Why:** nfclaw reads each image's identity from the container engine after the run (`docker image inspect`, `podman image inspect`, or the SHA-256 of a Singularity/Apptainer image file). An image built or loaded locally has no registry digest, a process that ran several images (or some tasks without one) has no single pin, Wave's per-request `wave.seqera.io` references are ephemeral, and an executor that runs tasks on other machines leaves no image in the local engine.
-- **Fix:** None is needed for the run itself. Such processes replay by their recorded tag; the replay's environment check still compares what it can. Push locally built images to a registry and reference them by digest for fully pinned replays.
+- **Why:** For named Docker/Podman profiles, nfclaw observes task-container start events and inspects image identities while the run is active. Observation is best effort, reinspecting a reused reference after 600 seconds; missing observations fall back to post-run inspection or an earlier attempt's record when available. Locally built images can lack registry digests, a process running several images or containerless tasks has no single pin, and ephemeral Wave references are excluded. Remote executors may leave no image in the local engine. Singularity/Apptainer files are hashed after execution and do not receive registry pins.
+- **Fix:** Inspect `environment.json` (`images`, `pinned_containers`, `issues`) and the manifest's `container_pins` entry. `containers.config` is absent when no process qualifies. Unpinned processes retain their original container configuration, which may use tags or local image files; the replay compares the evidence it can obtain. Push locally built images to a registry and reference them by digest when registry pins are needed.
 
 ### Replay refuses an unobserved engine or malformed environment names
 - **Why:** New bundles pin replays to the engine version observed in the executed
