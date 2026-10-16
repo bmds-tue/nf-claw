@@ -132,3 +132,49 @@ def test_cli_pairs_launch_stamped_run_metadata_explicitly(tmp_path, capsys, stri
     assert ("pipeline_info/params_2026-10-08_10-00-00.json -> "
             "pipeline_info/params_2026-10-09_10-00-00.json") in output
     assert "renamed   : 1" in output
+
+
+def _environment(outdir, digest, plugins=("nf-schema@2.5.1",)):
+    import json
+    record = {"processes": {"P:A": {"containers": ["quay.io/a:1"]}},
+              "images": {"quay.io/a:1": {"kind": "registry", "repository": "quay.io/a",
+                                         "digest": "sha256:" + digest * 64}},
+              "nextflow_plugins": list(plugins), "container_engine": {"name": "docker"}}
+    (outdir / "provenance" / "environment.json").write_text(json.dumps(record))
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_cli_reports_whether_both_runs_executed_in_the_same_environment(tmp_path, capsys, strict):
+    from runner import cli
+    original = _run(tmp_path, "original", {"result.txt": b"same"})
+    replay = _run(tmp_path, "replay", {"result.txt": b"same"})
+    _environment(original, "a")
+    _environment(replay, "a")
+    args = ["verify", str(replay), "--against", str(original)] + (["--strict"] if strict else [])
+    assert cli.main(args) == 0
+    assert "environment         : identical" in capsys.readouterr().out
+    _environment(replay, "b")
+    # The output files agree, so the default (structural) check still passes; --strict does not.
+    assert cli.main(args) == (1 if strict else 0)
+    output = capsys.readouterr().out
+    assert "environment         : differs" in output and "environment mismatches:" in output
+    assert "P:A: ran quay.io/a:1, another image than the recorded quay.io/a:1" in output
+
+
+def test_runs_without_environment_records_are_compared_as_before(tmp_path):
+    original = _run(tmp_path, "original", {"result.txt": b"same"})
+    replay = _run(tmp_path, "replay", {"result.txt": b"same"})
+    comparison = verify.compare(original, replay)
+    assert comparison.environment is None and comparison.same_environment
+    assert "environment         : not recorded by both runs" in verify.report(comparison)
+
+
+def test_co2footprint_reports_named_by_launch_time_are_paired(tmp_path):
+    names = ("report_{}.html", "summary_{}.txt", "trace_{}.txt")
+    original = _run(tmp_path, "original", {
+        f"pipeline_info/co2footprint_{name.format('2026-10-15_17-56-54')}": b"x" for name in names})
+    replay = _run(tmp_path, "replay", {
+        f"pipeline_info/co2footprint_{name.format('2026-10-15_18-13-26')}": b"y" for name in names})
+    comparison = verify.compare(original, replay)
+    assert comparison.missing == [] and comparison.extra == [] and len(comparison.renamed) == 3
+    assert comparison.structurally_equal and not comparison.byte_identical

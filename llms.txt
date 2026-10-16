@@ -12,7 +12,7 @@ Key conventions for AI agents navigating this repository:
 - Check status: Monitor foreground or background runs with `nfclaw status <outdir>`. Runs are logged to `<outdir>/provenance/logs/run.log` and protected by a non-blocking writer lock beside the output directory (`.<outdir name>.nfclaw.lock`).
 - Sample identity safety: Scientific metadata identifiers (`meta.id`, sample/patient IDs, genome/database names) must start with a letter, digit or underscore and contain only letters, digits, combining marks, dots, underscores or hyphens (Unicode letters and digits count). nfclaw refuses other identifiers rather than renaming samples. Local paths in samplesheets must always be absolute.
 - Multi-stage chaining: Orchestrate sequential pipelines via declarative JSON specs with `nfclaw chain run <spec.json> --outdir <dir>`.
-- Replay & verification: Reproduce runs into fresh targets using `<outdir>/provenance/commands.sh` and verify results with `nfclaw verify <target> --against <original>`.
+- Replay & verification: Reproduce runs into fresh targets using `<outdir>/provenance/commands.sh` (the bundle carries the pipeline source, config copies and the container image digests each process ran, and the replay compares its own execution environment with the recording) and verify results with `nfclaw verify <target> --against <original>`.
 - Operational manual: Read `AGENTS.md` before executing or chaining pipelines.
 
 ## Agent Guidance
@@ -28,7 +28,7 @@ Key conventions for AI agents navigating this repository:
 - [Engine Compatibility & Runtime Controls (docs/compatibility.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/compatibility.md): Nextflow DSL2 compatibility, Nextflow engine version pinning (`--nxf-ver`), JVM tuning (`--nxf-env`), and host resource limit controls (`--limit-*`).
 - [Timeouts, Long Analyses & Monitoring (docs/timeouts.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/timeouts.md): Optional shared execution deadlines, configurable setup/shutdown margins, whole-controller background execution, and quick chain status without lineage verification.
 - [Known Issues & Operational Troubleshooting (docs/known-issues.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/known-issues.md): Triage guide for benign upstream Nextflow warnings (e.g. nf-schema config scopes), host environment issues (IPv6, disk, permissions), and pipeline-specific workarounds.
-- [End-to-End Validation (docs/validation.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/validation.md): How every pinned pipeline and nfclaw's replay, resume, chain and stop handling were run end to end, what passed, the settings each run needed, and the limits of that evidence.
+- [End-to-End Validation (docs/validation.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/validation.md): How every pinned pipeline and nfclaw's replay, resume, chain and stop handling were run end to end, how every pipeline's provenance bundle was replayed with its recorded container digests and execution environment, what passed, the settings each run needed, and the limits of that evidence.
 - [Upstream Tracking & Maintenance Automation (docs/updating.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/updating.md): Submodule version tracking, automated release bumping, schema drift auditing (`librarian.check_drift`), and zero-drift policy.
 
 ## Pipeline Catalogs & Library

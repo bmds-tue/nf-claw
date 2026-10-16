@@ -347,8 +347,193 @@ def hash_pipeline(repo: Path) -> dict[str, str]:
     return {path.relative_to(repo).as_posix(): _sha256(path) for path in sorted(set(paths))}
 
 
-def verify_dependencies(bundle: Path) -> None:
-    """Require the recorded local input inventory and config bytes before replay starts."""
+PIPELINE_ARCHIVE = "pipeline-source.tar.gz"
+# Bundle files written after the run whose bytes the manifest records: the execution environment
+# (container identities, plugins, remote inputs) and the container pins a replay passes with `-c`.
+RECORDED_FILES = {"environment_record": "environment.json", "container_pins": "containers.config"}
+
+
+def write_pipeline_archive(repo: Path, checksums: dict[str, str], destination: Path) -> str:
+    """Archive exactly the pipeline source bytes recorded in `checksums`; return the archive digest.
+
+    Every member is a regular file with a fixed owner, time and mode, in sorted order, inside a
+    gzip stream without a timestamp: the same source always yields the same archive bytes. A file
+    whose bytes no longer match its prelaunch checksum is refused, so the archive never holds code
+    other than the code that ran. Tracked symlinks are stored as the content they resolved to.
+    """
+    import gzip
+    import io
+    import tarfile
+    import tempfile
+
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.",
+                                         delete=False) as raw:
+            temporary = Path(raw.name)
+            with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0, compresslevel=6) as gz:
+                with tarfile.open(fileobj=gz, mode="w", format=tarfile.PAX_FORMAT) as tar:
+                    for name in sorted(checksums):
+                        path = repo / name
+                        data = path.read_bytes()
+                        if hashlib.sha256(data).hexdigest() != checksums[name]:
+                            raise ValueError(f"pipeline source changed since launch: {path}")
+                        info = tarfile.TarInfo(name)
+                        info.size = len(data)
+                        info.mode = 0o755 if path.stat().st_mode & 0o111 else 0o644
+                        info.mtime = 0
+                        info.uid = info.gid = 0
+                        info.uname = info.gname = ""
+                        tar.addfile(info, io.BytesIO(data))
+        digest = _sha256(temporary)
+        temporary.replace(destination)
+        temporary = None
+        return digest
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _recorded_file(bundle: Path, manifest: dict, key: str, name: str) -> Path | None:
+    """A bundle file the manifest records by digest, verified; None when none is recorded."""
+    record = manifest.get(key)
+    if record is None:
+        return None
+    if (not isinstance(record, dict) or record.get("file") != name
+            or not isinstance(record.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", record["sha256"])):
+        raise ValueError(f"invalid {key} record in the run manifest")
+    path = bundle / name
+    if not path.is_file() or path.is_symlink():
+        raise ValueError(f"provenance bundle is incomplete: {name} is missing")
+    if _sha256(path) != record["sha256"]:
+        raise ValueError(f"recorded bundle file changed: {name}")
+    return path
+
+
+def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | None = None) -> None:
+    """Verify every archived source file against pipeline.sha256; optionally extract it.
+
+    The archive must hold exactly the recorded files, each with its recorded digest. Extraction
+    creates `destination` (which must not exist) and writes only those relative paths into it.
+    """
+    import tarfile
+
+    archive = _recorded_file(bundle, manifest, "pipeline_archive", PIPELINE_ARCHIVE)
+    if archive is None:
+        raise ValueError("the bundle holds no pipeline source archive")
+    expected = read_checksums(bundle / "pipeline.sha256")
+    if destination is not None:
+        destination.mkdir(parents=True)
+    seen = set()
+    with tarfile.open(archive, mode="r:gz") as tar:
+        for member in tar:
+            name = member.name
+            if not member.isreg() or name not in expected or name in seen:
+                raise ValueError(f"unexpected entry in the pipeline source archive: {name!r}")
+            stream = tar.extractfile(member)
+            digest = hashlib.sha256()
+            target = None
+            output = None
+            if destination is not None:
+                target = destination / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                output = open(target, "xb")
+            try:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+                    if output is not None:
+                        output.write(chunk)
+            finally:
+                if output is not None:
+                    output.close()
+            if target is not None:
+                os.chmod(target, 0o755 if member.mode & 0o111 else 0o644)
+            if digest.hexdigest() != expected[name]:
+                raise ValueError(f"archived pipeline source differs from its checksum: {name}")
+            seen.add(name)
+    if missing := sorted(expected.keys() - seen):
+        raise ValueError(f"the pipeline source archive is incomplete; missing: {missing[:5]}")
+
+
+def _bundled_configs(manifest: dict) -> dict[str, dict]:
+    """External `-c` configs copied into the bundle, by their original absolute path."""
+    bundled = manifest.get("bundled_configs", {})
+    if not isinstance(bundled, dict):
+        raise ValueError("invalid bundled configs in the run manifest")
+    for original, entry in bundled.items():
+        file = entry.get("file") if isinstance(entry, dict) else None
+        if (not isinstance(original, str) or not original.startswith("/")
+                or not isinstance(file, str) or not re.fullmatch(r"configs/[^/\x00]+", file)
+                or file in ("configs/.", "configs/..") or type(entry.get("replay")) is not bool):
+            raise ValueError(f"invalid bundled config record for {original!r}")
+    return bundled
+
+
+def check_pipeline_checkout(bundle: Path, manifest: dict) -> None:
+    """The recorded pipeline checkout still holds exactly the recorded revision and source bytes."""
+    repo = Path(manifest["pipeline_path"])
+    if not repo.is_dir():
+        raise ValueError(f"pipeline checkout is missing: {repo}")
+    if (expected_head := manifest.get("pipeline_git_head")) is not None \
+            and pipeline_head(repo) != expected_head:
+        raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
+    expected = read_checksums(bundle / "pipeline.sha256")
+    try:
+        current = hash_pipeline(repo)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"pipeline source is unreadable: {repo} ({exc})") from exc
+    if current.keys() != expected.keys():
+        raise ValueError(f"pipeline source inventory changed: {repo}")
+    for name, digest in expected.items():
+        if current[name] != digest:
+            raise ValueError(f"pipeline source content changed: {repo / name}")
+
+
+PIPELINE_SOURCE_RECORD = "pipeline-source.json"
+
+
+def replay_pipeline_source(target: Path) -> dict | None:
+    try:
+        record = json.loads((target / "provenance" / PIPELINE_SOURCE_RECORD).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def choose_pipeline_source(bundle: Path, target: Path) -> str:
+    """The pipeline directory a replay runs, recorded in the replay's provenance.
+
+    The recorded checkout, while it still holds exactly the recorded revision and source bytes: the
+    replay then runs from the same path, so parameters and outputs that embed the pipeline directory
+    (nf-core's `${projectDir}/assets/...` defaults) keep their values. Otherwise the bundle's source
+    archive, extracted and checked file by file into the replay's provenance/pipeline.
+    """
+    manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
+    reason = None
+    try:
+        check_pipeline_checkout(bundle, manifest)
+        source = {"from": "checkout", "path": manifest["pipeline_path"]}
+    except (ValueError, KeyError) as exc:
+        reason = str(exc)
+        destination = target / "provenance" / "pipeline"
+        check_pipeline_archive(bundle, manifest, destination)
+        source = {"from": "archive", "path": str(destination), "reason": reason}
+    record = target / "provenance" / PIPELINE_SOURCE_RECORD
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(json.dumps(source, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if reason is None:
+        print(f"nfclaw replay: running the recorded pipeline checkout {source['path']}", file=sys.stderr)
+    else:
+        print(f"nfclaw replay: running the bundle's pipeline source archive ({reason})", file=sys.stderr)
+    return source["path"]
+
+
+def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None:
+    """Require the recorded local input inventory and config bytes before replay starts.
+
+    With `replay_target` (a finished replay), the pipeline checkout the replay ran is checked too.
+    """
     manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("outcome"), str):
         raise ValueError(f"provenance bundle is incomplete: {bundle}")
@@ -374,18 +559,18 @@ def verify_dependencies(bundle: Path) -> None:
     if manifest.get("unreplayable_environment_names"):
         raise ValueError("recorded environment names are not valid shell identifiers; "
                          "restore a valid environment and start a fresh run")
-    if pipeline_path := manifest.get("pipeline_path"):
-        repo = Path(pipeline_path)
-        if (expected_head := manifest.get("pipeline_git_head")) is not None \
-                and pipeline_head(repo) != expected_head:
-            raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
-        expected = read_checksums(bundle / "pipeline.sha256")
-        current = hash_pipeline(repo)
-        if current.keys() != expected.keys():
-            raise ValueError(f"pipeline source inventory changed: {repo}")
-        for name, digest in expected.items():
-            if current[name] != digest:
-                raise ValueError(f"pipeline source content changed: {repo / name}")
+    for key, name in RECORDED_FILES.items():
+        _recorded_file(bundle, manifest, key, name)
+    if manifest.get("pipeline_archive") is not None:
+        # The replay runs the archived source, so the original checkout may have moved on.
+        check_pipeline_archive(bundle, manifest)
+    elif manifest.get("pipeline_path"):
+        check_pipeline_checkout(bundle, manifest)
+    # After a replay: the source it ran must still be the recorded source.
+    if replay_target is not None:
+        used = replay_pipeline_source(replay_target)
+        if used is not None and used.get("from") == "checkout":
+            check_pipeline_checkout(bundle, manifest)
     for kind in ("inputs", "configs"):
         expected = read_checksums(bundle / f"{kind}.sha256", relative=False)
         sources = json.loads((bundle / f"{kind}.sources.json").read_text(encoding="utf-8"))
@@ -398,10 +583,21 @@ def verify_dependencies(bundle: Path) -> None:
             original_real = manifest.get("provenance_real_path")
             if not isinstance(original_real, str) or not Path(original_real).is_absolute():
                 raise ValueError("the recorded provenance directory identity is missing or invalid")
+        # External configs replayed from their bundle copies: the copy stands in for the original,
+        # which a replay no longer reads (it may have been moved or edited since the run).
+        replayed = ({source for source, entry in _bundled_configs(manifest).items() if entry["replay"]}
+                    if kind == "configs" else set())
         current_files = {}
         current_inventory = {}
         for source in sources:
             path = Path(source)
+            if source in replayed:
+                copy = bundle / _bundled_configs(manifest)[source]["file"]
+                if not copy.is_file() or copy.is_symlink():
+                    raise ValueError(f"provenance bundle is incomplete: {copy.name} is missing")
+                current_files[source] = copy
+                current_inventory[source] = {"type": "file"}
+                continue
             relocated = path
             if recorded_bundle is not None and path.is_relative_to(recorded_bundle):
                 relocated = bundle / path.relative_to(recorded_bundle)
@@ -442,6 +638,10 @@ def verify_dependencies(bundle: Path) -> None:
         inventory = read_input_inventory(bundle / f"{kind}.inventory.json")
         if {name for name, entry in inventory.items() if entry["type"] == "file"} != expected.keys():
             raise ValueError(f"{kind} inventory disagrees with its recorded file checksums")
+        # A bundle copy is a regular file holding the recorded bytes; the original's link identity
+        # belongs to a path the replay does not read.
+        inventory = {name: ({"type": entry["type"]} if name in replayed else entry)
+                     for name, entry in inventory.items()}
         if inventory != current_inventory:
             missing = sorted(inventory.keys() - current_inventory.keys())
             extra = sorted(current_inventory.keys() - inventory.keys())
@@ -646,8 +846,15 @@ if __name__ == "__main__":
                 sys.exit(run_replay_command(sys.argv[5:], log=Path(sys.argv[2]),
                                             grace=float(sys.argv[4])))
             sys.exit(run_replay_command(sys.argv[3:], log=Path(sys.argv[2])))
+        elif sys.argv[1] == "--pipeline-source":
+            try:
+                print(choose_pipeline_source(Path(sys.argv[2]), Path(sys.argv[3])))
+            except (OSError, ValueError) as exc:
+                print(f"nfclaw replay: the recorded pipeline source could not be restored: {exc}",
+                      file=sys.stderr)
+                sys.exit(1)
         else:
-            verify_dependencies(Path(sys.argv[1]))
+            verify_dependencies(Path(sys.argv[1]), Path(sys.argv[2]) if len(sys.argv) > 2 else None)
     except (OSError, ValueError, IndexError) as exc:
         print(f"nfclaw replay: dependency check failed: {exc}", file=sys.stderr)
         sys.exit(1)

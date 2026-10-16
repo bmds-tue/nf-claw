@@ -104,6 +104,69 @@ jobs:
           print("Scientific data match; both runs produced all 36 valid plot exports.")
           print(f"Timestamped parameter reports differ by filename: {missing} -> {extra}")
           PY
+      - name: Check the recorded execution environment and its replay
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          temp = Path(os.environ["RUNNER_TEMP"])
+          bundle = temp / "demo/provenance"
+          env = json.loads((bundle / "environment.json").read_text())
+          if (env["container_engine"] or {}).get("name") != "docker":
+              raise SystemExit(f"Container engine not recorded: {env['container_engine']}")
+          if len(env["processes"]) < 4 or env["issues"]:
+              raise SystemExit(f"Incomplete execution environment: {env['processes']} {env['issues']}")
+          for name, image in env["images"].items():
+              if image["kind"] != "registry" or not re.fullmatch(r"sha256:[0-9a-f]{64}", image.get("digest") or ""):
+                  raise SystemExit(f"Image without a registry digest: {name}: {image}")
+          if set(env["pinned_containers"]) != set(env["processes"]):
+              raise SystemExit("Not every process is pinned to its image digest")
+          if not env["remote_inputs"] or any("sha256" not in item for item in env["remote_inputs"].values()):
+              raise SystemExit(f"Staged remote inputs not recorded: {env['remote_inputs']}")
+          replay = json.loads((temp / "demo-replay/provenance/environment.json").read_text())
+          refs = {c for entry in replay["processes"].values() for c in entry["containers"]}
+          if not refs or not all("@sha256:" in ref for ref in refs):
+              raise SystemExit(f"The replay did not run the pinned digests: {refs}")
+          check = json.loads((temp / "demo-replay/provenance/environment_check.json").read_text())
+          if check["status"] != "identical":
+              raise SystemExit(f"Replay environment differs from the recording: {check}")
+          used = json.loads((temp / "demo-replay/provenance/pipeline-source.json").read_text())
+          if used["from"] != "checkout":
+              raise SystemExit(f"The intact checkout was not replayed in place: {used}")
+          print(f"{len(env['images'])} images pinned by digest for {len(env['processes'])} processes; "
+                f"{len(env['remote_inputs'])} remote inputs; replay environment identical")
+          PY
+      - name: Replay from the bundle's source archive once the checkout is gone
+        run: |
+          mv pipelines/demo/upstream "$RUNNER_TEMP/demo-checkout-moved"
+          "$RUNNER_TEMP/demo/provenance/commands.sh" "$RUNNER_TEMP/demo-archive-replay"
+          mv "$RUNNER_TEMP/demo-checkout-moved" pipelines/demo/upstream
+          python - <<'PY'
+          import gzip
+          import json
+          import os
+          from pathlib import Path
+          temp = Path(os.environ["RUNNER_TEMP"])
+          original, replay = temp / "demo", temp / "demo-archive-replay"
+          used = json.loads((replay / "provenance/pipeline-source.json").read_text())
+          if used["from"] != "archive" or not (replay / "provenance/pipeline/main.nf").is_file():
+              raise SystemExit(f"The replay did not run the bundle's source archive: {used}")
+          check = json.loads((replay / "provenance/environment_check.json").read_text())
+          if check["status"] != "identical":
+              raise SystemExit(f"Archive replay environment differs from the recording: {check}")
+          reads = sorted(p.relative_to(original) for p in (original / "fq").rglob("*.fastq.gz"))
+          for name in reads:
+              with gzip.open(original / name, "rb") as a, gzip.open(replay / name, "rb") as b:
+                  if a.read() != b.read():
+                      raise SystemExit(f"Archive replay changed trimmed reads: {name}")
+          data = [json.loads((root / "multiqc/multiqc_data/multiqc_data.json").read_text())
+                  for root in (original, replay)]
+          if data[0]["report_general_stats_data"] != data[1]["report_general_stats_data"]:
+              raise SystemExit("Archive replay changed MultiQC scientific data")
+          print(f"Archive replay: {len(reads)} trimmed read files and MultiQC statistics unchanged")
+          PY
       - name: Retain and recalculate portable FastQC source evidence
         run: |
           python - <<'PY'
@@ -140,5 +203,78 @@ jobs:
             ${{ runner.temp }}/demo-replay-metrics.json
             work/**/.command.*
             ${{ runner.temp }}/demo-fastqc-work
+          include-hidden-files: true
+          retention-days: 14
+
+  apptainer-demo:
+    # Image identities for an engine that runs local image files: each image is recorded by the
+    # SHA-256 of its cached file (no registry digest to pin), and the replay must use the same bytes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NXF_ANSI_LOG: "false"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: ./.github/actions/setup-nextflow
+      - run: git submodule update --init --depth 1 pipelines/demo/upstream
+      - name: Install Apptainer
+        run: |
+          sudo add-apt-repository -y ppa:apptainer/ppa
+          sudo apt-get update -q
+          sudo apt-get install -y -q apptainer
+          # Ubuntu 24.04 restricts unprivileged user namespaces, which Apptainer uses.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          apptainer --version
+      - name: Execute the pinned demo with Apptainer, replay it and verify
+        run: |
+          nfclaw run demo --demo -profile apptainer --outdir "$RUNNER_TEMP/demo" --nxf-ver 25.10.4 \
+            --nxf-env "NXF_APPTAINER_CACHEDIR=$RUNNER_TEMP/apptainer" \
+            --limit-cpus 2 --limit-memory 2.GB --limit-time 20.min --timeout 1800
+          "$RUNNER_TEMP/demo/provenance/commands.sh" "$RUNNER_TEMP/demo-replay"
+          nfclaw verify "$RUNNER_TEMP/demo-replay" --against "$RUNNER_TEMP/demo"
+      - name: Check the recorded image files and the replay's comparison
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          temp = Path(os.environ["RUNNER_TEMP"])
+          env = json.loads((temp / "demo/provenance/environment.json").read_text())
+          if (env["container_engine"] or {}).get("name") != "apptainer":
+              raise SystemExit(f"Container engine not recorded: {env['container_engine']}")
+          if len(env["processes"]) < 4 or not env["images"]:
+              raise SystemExit(f"Incomplete execution environment: {env}")
+          for name, image in env["images"].items():
+              if image["kind"] != "file":
+                  raise SystemExit(f"Image file not recorded by content: {name}: {image}")
+              digest = hashlib.sha256(Path(image["path"]).read_bytes()).hexdigest()
+              if digest != image["sha256"]:
+                  raise SystemExit(f"Recorded image digest does not match the file: {name}")
+          if (temp / "demo/provenance/containers.config").exists() or env["pinned_containers"]:
+              raise SystemExit("Image files cannot be pinned by a registry digest")
+          check = json.loads((temp / "demo-replay/provenance/environment_check.json").read_text())
+          if check["status"] != "identical":
+              raise SystemExit(f"Replay environment differs from the recording: {check}")
+          print(f"{len(env['images'])} Apptainer image files recorded by SHA-256; replay environment identical")
+          PY
+      - name: Retain Apptainer execution evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apptainer-demo-evidence
+          path: |
+            ${{ runner.temp }}/demo/provenance
+            ${{ runner.temp }}/demo-replay/provenance
           include-hidden-files: true
           retention-days: 14
