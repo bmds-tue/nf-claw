@@ -266,7 +266,7 @@ with the narrowest workaround that ran.
 
 ## Test suites and CI
 
-- `pytest`: 2728 passed and 2 skipped on the Linux validation host. On macOS 2562 passed and 168 were skipped:
+- `pytest`: 2730 passed and 2 skipped on the Linux validation host. On macOS 2564 passed and 168 were skipped:
   167 need the pipeline submodules, which that checkout did not initialize, and one reads Linux's `/proc`.
 - Website: `npm audit` found 0 vulnerabilities; type check and build passed.
 - GitHub Actions on the pull request: every check passed.
