@@ -221,8 +221,9 @@ def main(argv: list[str] | None = None) -> int:
         return _EXIT_BROKEN_PIPE
 
 
-def _main(argv: list[str] | None = None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
+def build_parser() -> argparse.ArgumentParser:
+    """The `nfclaw` command line. One definition, shared by the CLI and the MCP server — which reads
+    `run`'s own option names from it, so a pipeline parameter can never shadow one."""
     parser = argparse.ArgumentParser(prog="nfclaw")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
@@ -322,6 +323,26 @@ def _main(argv: list[str] | None = None) -> int:
     # and Nextflow already bounds each task with its own `time` directive.
     p_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
                        help="stop the whole run after SECONDS (default: no limit)")
+    # A Model Context Protocol server on stdin/stdout for agents (runner.mcp_server). Each of its tools
+    # runs one of the commands above, so this CLI stays the single implementation.
+    sub.add_parser("mcp", help="serve nfclaw to MCP clients over stdio (see docs/mcp.md)")
+    return parser
+
+
+def run_option_names() -> frozenset[str]:
+    """Every option `nfclaw run` keeps for itself, spelled as a parameter key (`--nxf-env` -> `nxf_env`).
+    A pipeline parameter with one of these names cannot be passed as `--name=value`: argparse would
+    take it as nfclaw's own option."""
+    commands = next(a for a in build_parser()._actions
+                    if isinstance(a, argparse._SubParsersAction))
+    return frozenset(opt[2:].replace("-", "_")
+                     for action in commands.choices["run"]._actions
+                     for opt in action.option_strings if opt.startswith("--"))
+
+
+def _main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    parser = build_parser()
 
     # argparse reads a value attached to a short option, so Nextflow's own `-config x.config` (or a
     # stray `-cpus 4`) would silently become `-c onfig` and leave the real path behind as a
@@ -349,6 +370,10 @@ def _main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     pdir = root / "pipelines"
+
+    if args.cmd == "mcp":
+        from runner import mcp_server                       # lazy: only the server needs it
+        return mcp_server.serve(root)
 
     if args.cmd == "list":
         for p in discovery.discover(pdir):

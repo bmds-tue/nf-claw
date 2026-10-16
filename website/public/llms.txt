@@ -13,6 +13,7 @@ Key conventions for AI agents navigating this repository:
 - Sample identity safety: Scientific metadata identifiers (`meta.id`, sample/patient IDs, genome/database names) must start with a letter, digit or underscore and contain only letters, digits, combining marks, dots, underscores or hyphens (Unicode letters and digits count). nfclaw refuses other identifiers rather than renaming samples. Local paths in samplesheets must always be absolute.
 - Multi-stage chaining: Orchestrate sequential pipelines via declarative JSON specs with `nfclaw chain run <spec.json> --outdir <dir>`.
 - Replay & verification: Reproduce runs into fresh targets using `<outdir>/provenance/commands.sh` (new bundles archive tracked source, copy replayable configs and pin eligible container processes; the replay compares its recorded environment and fails detected mismatches, while unverified entries remain reported gaps) and verify results with `nfclaw verify <target> --against <original>`.
+- MCP: `nfclaw mcp` serves the library and runner to MCP clients (Claude Code, Codex, Hermes) on stdio; runs and chains become detached jobs followed by job id (`docs/mcp.md`).
 - Operational manual: Read `AGENTS.md` before executing or chaining pipelines.
 
 ## Agent Guidance
@@ -29,6 +30,7 @@ Key conventions for AI agents navigating this repository:
 - [Timeouts, Long Analyses & Monitoring (docs/timeouts.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/timeouts.md): Optional shared execution deadlines, configurable setup/shutdown margins, whole-controller background execution, and quick chain status without lineage verification.
 - [Known Issues & Operational Troubleshooting (docs/known-issues.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/known-issues.md): Triage guide for benign upstream Nextflow warnings (e.g. nf-schema config scopes), host environment issues (IPv6, disk, permissions), and pipeline-specific workarounds.
 - [End-to-End Validation (docs/validation.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/validation.md): How every pinned pipeline and nfclaw's replay, resume, chain and stop handling were run end to end, how every pipeline's provenance bundle was replayed with its recorded container digests and execution environment, what passed, the settings each run needed, and the limits of that evidence.
+- [MCP Server (docs/mcp.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/mcp.md): `nfclaw mcp` for Claude Code, Codex, Hermes and other MCP clients: per-client setup, the tools (each one an nfclaw command), detached restart-safe jobs for long runs and chains, served skills and docs, and the dual-era (2026-07-28 and handshake) protocol support.
 - [Upstream Tracking & Maintenance Automation (docs/updating.md)](https://github.com/bmds-tue/nf-claw/blob/main/docs/updating.md): Submodule version tracking, automated release bumping, schema drift auditing (`librarian.check_drift`), and zero-drift policy.
 
 ## Pipeline Catalogs & Library

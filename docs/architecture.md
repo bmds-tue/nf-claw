@@ -31,7 +31,7 @@ The repository is structured into four distinct, decoupled functional zones:
 | Architectural Zone | Primary Responsibility | Key Files & Directories |
 |---|---|---|
 | **`pipelines/`** | Pinned upstream code, agent skills, and parameter reference manuals. | `pipelines/<name>/upstream/`, `skill.md`, `reference.md` |
-| **`runner/`** | The `nfclaw` CLI runtime: preflight validation, process isolation, locking, and provenance. | `runner/cli.py`, `runner/schema.py`, `runner/execution.py`, `runner/chain.py` |
+| **`runner/`** | The `nfclaw` CLI runtime: preflight validation, process isolation, locking, and provenance; `nfclaw mcp` serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)). | `runner/cli.py`, `runner/schema.py`, `runner/execution.py`, `runner/chain.py`, `runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py` |
 | **`handoffs/`** | Declarative mapping specifications connecting sequential pipeline stages. | `handoffs/<upstream>/<downstream>.json` |
 | **`librarian/`** | Maintenance generators, submodule release trackers, and schema drift checkers. | `librarian/check_drift.py`, `write_skill.py`, `update_pipelines.py` |
 

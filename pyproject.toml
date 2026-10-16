@@ -10,7 +10,8 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+# `mcp` is the official MCP SDK, used only to test `nfclaw mcp` against a real client.
+dev = ["pytest>=8", "mcp>=1.9,<3"]
 yaml = ["pyyaml>=6"]
 
 [project.scripts]

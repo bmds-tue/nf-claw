@@ -62,6 +62,7 @@ The repository is structured into four functional zones:
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
 | **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
+| **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Hermes and other MCP clients: tools, detached jobs, chains. |
 | **Agent Guidance** | [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) | Authoritative reference for autonomous coding assistants and LLM agents. |
 | **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map and navigation index for external AI agents (llms.txt standard). |
 
@@ -240,6 +241,18 @@ margins, whole-controller background execution and cheap chain monitoring with
 `nfclaw chain status OUTDIR --quick` (lineage explicitly not checked).
 `--no-provenance` disables the replay bundle and checksum recording,
 while keeping the parameter file and run logs needed for execution and status inspection.
+
+### 8. AI Agents over MCP
+
+```bash
+# Serve nf-claw to an MCP client on stdio (Claude Code shown; Codex, Hermes: docs/mcp.md)
+claude mcp add nfclaw -- "$PWD/.venv/bin/nfclaw" mcp
+```
+
+`nfclaw mcp` exposes the library and the runner as MCP tools (find a pipeline, read its
+`skill.md`/`reference.md`, run, chain, follow, stop, verify), with no extra dependency. Every
+tool runs the matching `nfclaw` command. Runs and chains become detached jobs that keep going
+when the client disconnects and are followed by job id. See [`docs/mcp.md`](docs/mcp.md).
 
 ---
 
