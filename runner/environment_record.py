@@ -188,8 +188,9 @@ def normalize_repository(repository: str) -> str:
     """A repository name as a registry would spell it in full (Docker Hub's implicit host too)."""
     first, separator, rest = repository.partition("/")
     if separator and ("." in first or ":" in first or first == "localhost"):
-        if first in ("index.docker.io", "registry-1.docker.io"):
-            return "docker.io/" + rest
+        if first in ("docker.io", "index.docker.io", "registry-1.docker.io"):
+            # Docker Hub's official images live under `library/`, however the name spells them.
+            return "docker.io/" + (rest if "/" in rest else "library/" + rest)
         return repository
     return "docker.io/" + (repository if separator else "library/" + repository)
 

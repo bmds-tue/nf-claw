@@ -402,6 +402,9 @@ def test_split_reference(reference, expected):
     ("ubuntu", "docker.io/library/ubuntu"),
     ("immcantation/airrflow", "docker.io/immcantation/airrflow"),
     ("index.docker.io/nfcore/sarek", "docker.io/nfcore/sarek"),
+    ("docker.io/ubuntu", "docker.io/library/ubuntu"),
+    ("docker.io/library/ubuntu", "docker.io/library/ubuntu"),
+    ("registry-1.docker.io/ubuntu", "docker.io/library/ubuntu"),
     ("quay.io/biocontainers/fastqc", "quay.io/biocontainers/fastqc"),
     ("localhost/tool", "localhost/tool"),
 ])
@@ -597,3 +600,14 @@ def test_bundled_scripts_match_the_code_that_wrote_commands_sh(tmp_path, fake_to
     prov = _launch(tmp_path, st)
     for name, script in loaded.items():
         assert original_read(prov / name) == script
+
+
+def test_an_official_docker_hub_image_named_with_its_registry_gets_its_digest(monkeypatch):
+    inspect = [{"Id": DIGEST_A, "RepoDigests": [f"docker.io/library/ubuntu@{DIGEST_A}"]}]
+    monkeypatch.setattr(env_record, "_run", lambda *a, **k: subprocess.CompletedProcess(
+        a[0], 0, json.dumps(inspect), ""))
+    image = env_record.resolve_registry_image("docker", "docker.io/ubuntu:20.04", None)
+    assert image["repository"] == "docker.io/library/ubuntu" and image["digest"] == DIGEST_A
+    record = {"container_engine": {"name": "docker"}, "images": {"docker.io/ubuntu:20.04": image},
+              "processes": {"P:CAT": {"containers": ["docker.io/ubuntu:20.04"], "without_container": 0}}}
+    assert env_record.pins(record) == {"P:CAT": f"docker.io/library/ubuntu@{DIGEST_A}"}
