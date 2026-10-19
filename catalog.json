@@ -145,6 +145,24 @@
     "version": "2.6.1"
   },
   {
+    "description": "Systems-based bacterial functional modeling pipeline",
+    "feeds": [],
+    "input": "samplesheet (sample, fasta, medium_gapseq, medium_gapseq_csv, medium_carveme, medium_carveme_tsv)",
+    "name": "bacmodel",
+    "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled)",
+    "summary": "nf-core/bacmodel is a bioinformatics pipeline for comprehensive functional annotation and metabolic modeling of bacterial genomes. The pipeline takes bacterial genome assemblies (FASTA format) and performs the following steps:",
+    "tools": [
+      "Prokka",
+      "Bakta",
+      "MacSyFinder",
+      "TRAITAR",
+      "CarveMe",
+      "gapseq",
+      "MEMOTE"
+    ],
+    "version": "1.0.0"
+  },
+  {
     "description": "A mapping-based pipeline for creating a phylogeny from bacterial whole genome sequences",
     "feeds": [],
     "input": "--input (no samplesheet schema)",
@@ -1512,6 +1530,22 @@
       "fastp"
     ],
     "version": "5.0.3"
+  },
+  {
+    "description": "This pipeline takes PMO format and provides key metrics on supplied markers applicable to drug resistance",
+    "feeds": [],
+    "input": "--input (no samplesheet schema)",
+    "name": "plasmodiumdrugres",
+    "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled)",
+    "summary": "nf-core/plasmodiumdrugres is a bioinformatics pipeline for analyzing drug resistance markers from microhaplotype data. It translates variants into amino acid changes at drug resistance loci and estimates allele frequencies and prevalences at both single-locus and multi-locus levels. Microhaplotype data can be supplied in the form of an allele table or a PMO file.",
+    "tools": [
+      "PGEcore",
+      "IDM",
+      "MultiLociBiallelicModel",
+      "FreqEstimationModel",
+      "Dcifer"
+    ],
+    "version": "1.0.0"
   },
   {
     "description": "Generation of sequence-level annotations for amino acid sequences",

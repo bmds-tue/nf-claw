@@ -271,3 +271,9 @@
 [submodule "pipelines/tumourevo/upstream"]
 	path = pipelines/tumourevo/upstream
 	url = https://github.com/nf-core/tumourevo.git
+[submodule "pipelines/bacmodel/upstream"]
+	path = pipelines/bacmodel/upstream
+	url = https://github.com/nf-core/bacmodel.git
+[submodule "pipelines/plasmodiumdrugres/upstream"]
+	path = pipelines/plasmodiumdrugres/upstream
+	url = https://github.com/nf-core/plasmodiumdrugres.git
