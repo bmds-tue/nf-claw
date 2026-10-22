@@ -377,8 +377,8 @@ Push and PR triggers can be filtered by changed paths; each workflow file define
 exact scope. Maintenance merges made with `GITHUB_TOKEN` do not trigger ordinary push
 or PR workflows: those jobs run their validation gates before merging and explicitly
 dispatch the Pages deployment. Where the organization does not let GitHub Actions open
-pull requests, both jobs push their validated branch and report it for a maintainer to
-propose instead ([details](docs/updating.md#2-automated-daily-updates-auto-updateyml)).
+pull requests, both jobs report their checks on the validated commit and fast-forward `main`
+to it instead ([details](docs/updating.md#2-automated-daily-updates-auto-updateyml)).
 
 Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).
 
