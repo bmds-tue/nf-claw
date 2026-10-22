@@ -51,6 +51,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
    - Runs Ruff, the website dependency audit, TypeScript checks and the static site build. Bot-created PRs do not trigger the ordinary `tests.yml` workflow, so these gates run in the maintenance job before merging.
    - Runs the drift gate (`python3 -m librarian.check_drift`).
 5. **Automated Merging:** After all validation gates pass, `scripts/merge_validated_update.sh` publishes the completed core check results on the generated PR's exact head commit and attempts a squash merge under the normal branch rules. A blocked merge fails the job without leaving a queued merge. After a successful merge, the job explicitly dispatches `deploy-pages.yml`: a push made with `GITHUB_TOKEN` does not trigger the ordinary push workflow.
+   - **When Actions may not open pull requests:** an organization can forbid GitHub Actions from creating pull requests (Settings → Actions → General). `create-pull-request` pushes the validated branch before that refusal, so `scripts/propose_validated_update.sh` confirms the pushed branch is this run's commit, directly on the validated `main`, and retries the pull request once. If it opens, the job merges it as above. If the policy refuses again, the job succeeds with a warning and a job-summary link: a maintainer opens the pull request from `auto-update-pipelines`, and its CI runs as for any pull request. Any other failure fails the job.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
 
 ---
@@ -73,11 +74,13 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
    - Partial addition failures return a nonzero status after attempting the remaining candidates, so incomplete discovery cannot reach the batch auto-merge gate.
 4. **Strict Acceptance Gate:** Evaluates each candidate via `scripts/nextflow_accept.sh`.
    - Nextflow must compile, resolve configurations, and validate schema with **strict exit code 0**.
-   - A recognized remote-input staging failure is labelled `staging-unverified`, a timeout
-     `timeout`, and another failure `rejected`. None authorizes an automated merge.
-   - `rejected` and `staging-unverified` additions are pruned before committing. A timeout,
-     incomplete result or unrecognized verdict fails the batch instead of merging it.
-5. **Batch Auto-Merge:** Validated additions must pass the tests (including non-skipped website parsing), Ruff, the drift gate, website dependency audit, type check and build. The same merge script reports completed core checks on the exact PR head and merges under normal branch rules, then dispatches the Pages deployment.
+   - A recognized remote-input staging failure is labelled `staging-unverified`; any other
+     failure, including a preview that exceeds its time limit, is labelled `rejected`. Neither
+     authorizes an automated merge.
+   - `rejected` and `staging-unverified` additions are pruned before committing, and are
+     considered again by the next run. An incomplete result or unrecognized verdict fails the
+     batch instead of merging it.
+5. **Batch Auto-Merge:** Validated additions must pass the tests (including non-skipped website parsing), Ruff, the drift gate, website dependency audit, type check and build. The same merge script reports completed core checks on the exact PR head and merges under normal branch rules, then dispatches the Pages deployment. Where the organization does not let Actions open pull requests, the branch `auto-discover-pipelines` is reported for a maintainer to propose, as for daily updates.
 
 ---
 
