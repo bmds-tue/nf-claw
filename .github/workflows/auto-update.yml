@@ -3,6 +3,12 @@ on:
   schedule:
     - cron: "0 6 * * *"      # daily 06:00 UTC
   workflow_dispatch:
+# Both maintenance bots publish to main: one at a time, so the second validates what the first
+# published instead of a main that no longer exists.
+concurrency:
+  group: nfclaw-maintenance
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -14,12 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # main as it is when the job starts (a queued run's event commit can be stale).
+          ref: main
           submodules: recursive
           fetch-depth: 0
           # This job runs upstream pipeline code (Nextflow parses each bumped release's Groovy
           # config). Keep the write token out of .git/config; create-pull-request authenticates
           # on its own.
           persist-credentials: false
+      - name: Record the validated base
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       # Ensure submodule tags are present so `git describe --tags` resolves the pinned
       # version deterministically (otherwise the in-job drift gate can fail spuriously).
       - name: Fetch submodule tags
@@ -117,6 +128,7 @@ jobs:
         id: propose
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ steps.base.outputs.sha }}
           BRANCH: auto-update-pipelines
           TITLE: "chore: auto-update pipelines to latest releases"
           BODY: >-
