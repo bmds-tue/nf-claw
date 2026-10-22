@@ -9,6 +9,27 @@ from runner import provenance, replay_guard, verify
 from runner.submodule import SubmoduleStatus
 
 
+def _version(path):
+    run = subprocess.run([path, "--version"], capture_output=True, text=True)
+    return run.stdout + run.stderr
+
+
+def _sha256sum():
+    """A sha256sum that reads GNU's escaped lines, which the manifests follow: GNU's own when present,
+    otherwise the system one (macOS's reads them too). Ubuntu 25.10+ installs uutils as `sha256sum`
+    (0.10 rejects even its own escaped carriage-return line) and keeps GNU's as `gnusha256sum`;
+    Homebrew's GNU coreutils provides `gsha256sum`."""
+    for tool in ("sha256sum", "gnusha256sum", "gsha256sum"):
+        path = shutil.which(tool)
+        if path and "GNU coreutils" in _version(path):
+            return path
+    path = shutil.which("sha256sum")
+    return path if path and "uutils" not in _version(path) else None
+
+
+SHA256SUM = _sha256sum()
+
+
 def record(out, source):
     (out / "provenance").mkdir(parents=True)
     (out / "result.txt").write_bytes(b"fixed result")
@@ -143,12 +164,12 @@ def test_generated_manifest_is_verified_by_an_independent_checksum_tool(tmp_path
     assert checked.returncode == 0, checked.stdout + checked.stderr
 
 
-@pytest.mark.skipif(shutil.which("sha256sum") is None, reason="requires GNU sha256sum")
+@pytest.mark.skipif(SHA256SUM is None, reason="requires a sha256sum that reads GNU escapes")
 def test_carriage_return_escaping_is_verified_by_gnu_checksum_tool(tmp_path):
     source = tmp_path / "carriage\rreturn"
     source.write_bytes(b"independent scientific data")
     hashes, _ = provenance.snapshot_inputs([source])
     manifest = tmp_path / "inputs.sha256"
     manifest.write_text(provenance.checksum_text(hashes))
-    checked = subprocess.run(["sha256sum", "-c", str(manifest)], capture_output=True, text=True)
+    checked = subprocess.run([SHA256SUM, "-c", str(manifest)], capture_output=True, text=True)
     assert checked.returncode == 0, checked.stdout + checked.stderr
