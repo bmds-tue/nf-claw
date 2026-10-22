@@ -1603,6 +1603,20 @@
     "version": "2.0.0"
   },
   {
+    "description": "Generate reproducible Quarto reports together with an audit trail of inputs, checksums, software versions, runtime environments, and provenance metadata.",
+    "feeds": [],
+    "input": "samplesheet (id, path)",
+    "name": "provenancereport",
+    "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
+    "summary": "nf-core/provenancereport is a reporting pipeline that validates a samplesheet and renders reproducible Quarto reports. The samplesheet has two columns, id and path, where each row points to one input file. The pipeline stages all listed files into a single Quarto render and publishes the rendered report plus any generated artifacts.",
+    "tools": [
+      "Quarto",
+      "nf-prov",
+      "MultiQC"
+    ],
+    "version": "1.0.0"
+  },
+  {
     "description": "Long-term vegetation trend analysis pipeline for rangeland systems using satellite imagery.",
     "feeds": [],
     "input": "--input (no samplesheet schema)",

@@ -277,3 +277,6 @@
 [submodule "pipelines/plasmodiumdrugres/upstream"]
 	path = pipelines/plasmodiumdrugres/upstream
 	url = https://github.com/nf-core/plasmodiumdrugres.git
+[submodule "pipelines/provenancereport/upstream"]
+	path = pipelines/provenancereport/upstream
+	url = https://github.com/nf-core/provenancereport.git
