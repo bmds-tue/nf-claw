@@ -1,14 +1,14 @@
 ---
 name: rnasplice
 pipeline: nf-core/rnasplice
-version: 1.0.4
-commit: 1d0494ae3402d1a46e0adadad24f81a0ff855c77
+version: 2.0.0
+commit: aceb47ab77cf0edfb290a44035328ed5b7eb0be8
 description: Alternative splicing analysis using RNA-seq.
 summary: nf-core/rnasplice is a bioinformatics pipeline for alternative splicing analysis of RNA sequencing data obtained from organisms with a reference genome and annotation.
 has_samplesheet: true
 input: samplesheet (sample, fastq_1, fastq_2, strandedness, condition)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["BEDTools", "FastQC", "featureCounts", "gffread", "HTSeq", "MISO", "MultiQC", "rMats", "RSEM", "Salmon", "SAMtools", "STAR", "SUPPA2", "Trim Galore!", "UCSC tools", "R", "DEXSeq", "DRIMSeq", "edgeR", "StageR", "tximport"]
+tools: ["BEDTools", "FastQC", "featureCounts", "gffread", "HTSeq", "LeafCutter", "MISO", "MultiQC", "RegTools", "rMats", "RSEM", "Salmon", "SAMtools", "STAR", "SUPPA2", "Trim Galore!", "UCSC tools", "R", "DEXSeq", "DRIMSeq", "IsoformSwitchAnalyzeR", "edgeR", "StageR", "tximport"]
 ---
 # rnasplice
 
@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string | no |  |  |
+| `sample` | string | yes |  | matches ^(?!\.\.\d+)(?!\.$)[a-zA-Z.]([a-zA-Z0-9._]*)?$ |
+| `fastq_1` | string (file path) | yes |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
+| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
 | `strandedness` | string | yes | `forward`, `reverse`, `unstranded` |  |
 | `condition` | string | yes |  | matches ^\S+$ |
 
@@ -53,19 +53,20 @@ Any of the optional columns above may be appended to the header when your data n
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome
-No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
+No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Alignment options** (`alignment_options`) — 9 parameters
 - **DEXSeq DEU options** (`dexseq_deu_options`) — 7 parameters
-- **DEXSeq DTU options** (`dexseq_dtu_options`) — 8 parameters
+- **DEXSeq DTU options** (`dexseq_dtu_options`) — 9 parameters
 - **edgeR DEU options** (`edger_deu_options`) — 3 parameters
 - **Generic options** (`generic_options`) — 15 parameters
 - **Input/output options** (`input_output_options`) — 7 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
-- **Max job request options** (`max_job_request_options`) — 3 parameters
-- **Miso** (`miso`) — 6 parameters
+- **IsoformSwitchAnalyzeR options** (`isoformswitchanalyzer`) — 3 parameters
+- **Leafcutter options** (`leafcutter_options`) — 1 parameter
+- **MISO options** (`miso`) — 6 parameters
 - **QC options** (`qc_options`) — 2 parameters
 - **Read trimming options** (`read_trimming_options`) — 9 parameters
 - **Reference genome options** (`reference_genome_options`) — 13 parameters
@@ -83,27 +84,25 @@ nfclaw run rnasplice --input samplesheet.csv --outdir results --contrasts <contr
 nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` config — the mechanism nf-core prescribes for exactly this ([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes. The generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.
 
 ## Nextflow engine
-This release declares `nextflowVersion = '!>=23.04.0'`.
+This release declares `nextflowVersion = '!>=26.04.0'`.
 
 To pin this release's declared minimum engine — useful when a newer Nextflow has incompatible config parsing:
 ```bash
-nfclaw run rnasplice ... --nxf-ver 23.04.0
+nfclaw run rnasplice ... --nxf-ver 26.04.0
 ```
 `--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same engine. See [known-issues](../../docs/known-issues.md).
-
-Nextflow 23.04.0 predates `process.resourceLimits` (24.04.0), so `--limit-*` cannot be combined with this pin — nfclaw refuses it rather than run without the ceiling; cap resources with the release's own `--max-cpus`, `--max-memory`, `--max-time` instead.
 
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnasplice/blob/1.0.4/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnasplice/blob/2.0.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: BEDTools, FastQC, featureCounts, gffread, HTSeq, MISO, MultiQC, rMats, RSEM, Salmon, SAMtools, STAR, SUPPA2, Trim Galore!, UCSC tools, R, DEXSeq, DRIMSeq, edgeR, StageR, tximport.
+The tools/methods this pipeline runs, per the authors' own list: BEDTools, FastQC, featureCounts, gffread, HTSeq, LeafCutter, MISO, MultiQC, RegTools, rMats, RSEM, Salmon, SAMtools, STAR, SUPPA2, Trim Galore!, UCSC tools, R, DEXSeq, DRIMSeq, IsoformSwitchAnalyzeR, edgeR, StageR, tximport.
 
-Full list with references: https://github.com/nf-core/rnasplice/blob/1.0.4/CITATIONS.md
+Full list with references: https://github.com/nf-core/rnasplice/blob/2.0.0/CITATIONS.md
 
 ## Demo
 ```bash
@@ -111,6 +110,6 @@ nfclaw run rnasplice --demo --outdir results   # adds the upstream test profile 
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/rnasplice/blob/1.0.4/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/rnasplice/blob/2.0.0/docs/usage.md
 
-<!-- Generated from nf-core/rnasplice@1d0494ae3402d1a46e0adadad24f81a0ff855c77. Do not edit by hand. -->
+<!-- Generated from nf-core/rnasplice@aceb47ab77cf0edfb290a44035328ed5b7eb0be8. Do not edit by hand. -->
