@@ -216,6 +216,7 @@ This execution evidence is additional to the automated updater's preview, test a
 | rnasplice | 2.0.0 | 26.04.0 | success | 139 completed | 2026-10-22, bump from 1.0.4, host network |
 | bacmodel | 1.0.0 | 25.10.4 | success | 2 completed | 2026-10-22, added, host network |
 | plasmodiumdrugres | 1.0.0 | 25.10.4 | success | 6 completed | 2026-10-22, added, host network |
+| provenancereport | 1.0.0 | 25.10.4 | success | 5 completed | 2026-10-22, added, host network |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -229,11 +230,11 @@ identical, 39 changed only in MultiQC and `pipeline_info` reports, 1 launch-time
 0 extra. Every analytical output (`variant_peptides/`, `variant_fasta/`, `mhcnuggets/` and `predictions/`) was
 byte-identical across both runs and the replay.
 
-The four releases of 2026-10-22 were checked the same way: each run against its release's own `-profile test`
+The five releases of 2026-10-22 were checked the same way: each run against its release's own `-profile test`
 nf-test snapshot (`tests/default.nf.test.snap`), then a replay from `provenance/commands.sh` and `nfclaw verify`.
 Every run reported every software version its snapshot records, produced every stable output path it lists,
-and matched all of its checksummed files: 15 for magmap, 111 for rnasplice, 1 for bacmodel and 9 for
-plasmodiumdrugres. Every containerized process was pinned to its image digest, and every replay succeeded with an
+and matched all of its checksummed files: 15 for magmap, 111 for rnasplice, 1 for bacmodel, 9 for
+plasmodiumdrugres and the 7 of provenancereport's 8 that its `tests/.nftignore` does not exclude. Every containerized process was pinned to its image digest, and every replay succeeded with an
 identical execution environment and again matched all of those checksums.
 
 | Run | Images | Pinned / containerized processes | Remote inputs | `nfclaw verify` |
@@ -242,10 +243,15 @@ identical execution environment and again matched all of those checksums.
 | rnasplice 2.0.0 | 28 | 62/62 | 12 | 2700 identical, 1539 changed, 20 missing, 20 extra |
 | bacmodel 1.0.0 | 2 | 2/2 | 2 | 15 identical, 5 changed |
 | plasmodiumdrugres 1.0.0 | 3 | 6/6 | 4 | 11 identical, 4 changed |
+| provenancereport 1.0.0 | 3 | 5/5 | 2 | 18 identical, 17 changed |
 
 - **magmap:** 48 of the changed files are MultiQC and `pipeline_info` reports, 2 are gzip files whose
   decompressed content is identical, and 3 are BBMap logs that differ only in their timings.
 - **bacmodel and plasmodiumdrugres:** only reports changed, apart from bacmodel's Prokka log.
+- **provenancereport:** besides reports, the files that changed are the ones its own `tests/.nftignore` marks as
+  unstable: the published resolved `nextflow.config`, `artifacts.csv`, `notebook.csv`, `reports.csv` and
+  `ro-crate-metadata.json`, which record the output path and launch time. The eighth snapshot checksum is that
+  `nextflow.config`; it also differs under upstream's nf-test, whose two tests passed on the same host.
 - **rnasplice:** as with 1.0.4, MISO names its logs by the clock (the 20 missing and 20 extra files, so `nfclaw verify`
   exits 1) and samples by MCMC, so 1,223 of the changed files are MISO's data. Salmon's multi-threaded
   quantification also differs slightly between runs (948 of 5,895 transcripts of ERR188383, by at most 4.4 of
