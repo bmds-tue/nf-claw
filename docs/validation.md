@@ -8,15 +8,16 @@ versions and status reporting. This page records how the runs were done, what pa
 result does and does not show.
 
 The versions and observations below describe the 2026-10-14 to 2026-10-15 validation,
-not a fresh execution after every repository change. A release bumped after it was validated
-before its bump merged; see [Releases bumped after the sweep](#releases-bumped-after-the-sweep). For the current pin and its
-requirements, read `pipelines/<name>/skill.md`.
+not a fresh execution after every repository change. Releases bumped and pipelines added since then
+that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep);
+the automated updater itself gates a release on its preview, tests and drift checks, not on an execution.
+For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ---
 
 ### Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped after the sweep](#releases-bumped-after-the-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -89,7 +90,7 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | differentialabundance | 2.0.0 | 25.10.4 | success | 25 completed | 1 |  |
 | drop | 1.0.0 | 25.10.0 | success | 33 cached + 101 completed | 2 | stopped by the sweep's disk guard, then resumed |
 | drugresponseeval | 1.3.0 | 26.04.0 | success | 3 cached + 29 completed | 2 | stopped by the sweep's disk guard, then resumed |
-| epitopeprediction | 3.1.1 | 25.04.0 | success | 32 cached + 206 completed | 3 | stopped by the sweep's disk guard, then resumed; then a transient Ensembl BioMart reply failed a task, and `--resume` completed it ([run note](known-issues.md#pipeline-specific-run-notes)); now pinned at 3.2.0, validated [after the sweep](#releases-bumped-after-the-sweep) |
+| epitopeprediction | 3.1.1 | 25.04.0 | success | 32 cached + 206 completed | 3 | stopped by the sweep's disk guard, then resumed; then a transient Ensembl BioMart reply failed a task, and `--resume` completed it ([run note](known-issues.md#pipeline-specific-run-notes)); now pinned at 3.2.0, validated [after the sweep](#releases-bumped-or-added-after-the-sweep) |
 | fastqrepair | 1.1.1 | 25.10.4 | success | 9 completed | 1 |  |
 | fastquorum | 2.0.0 | 25.10.4 | success | 12 completed | 1 |  |
 | fetchngs | 1.13.0 | 25.10.4 | success | 26 completed | 2 | the test accessions that have ENA FastQ files ([run note](known-issues.md#pipeline-specific-run-notes)) |
@@ -202,15 +203,19 @@ Two of these needed a setting the first sweep had not:
 proteinfamilies ran as shipped once its container images were present. Its 2–3 minute test limits include the image
 pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
-## Releases bumped after the sweep
+## Releases bumped or added after the sweep
 
-The release below was validated separately on the same host before its pin was updated,
-in one uninterrupted `nfclaw run <name> --demo` on the engine its new `skill.md` names.
+Each release below was validated separately on the same host before its pin was updated or its pipeline
+was added, in one uninterrupted `nfclaw run <name> --demo` on the engine its `skill.md` names.
 This execution evidence is additional to the automated updater's preview, test and drift gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
 |---|---|---|---|---|---|
 | epitopeprediction | 3.2.0 | 25.10.4 | success | 21 completed | 2026-10-16, default bridge network |
+| magmap | 1.3.1 | 26.04.0 | success | 59 completed | 2026-10-22, bump from 1.3.0, host network |
+| rnasplice | 2.0.0 | 26.04.0 | success | 139 completed | 2026-10-22, bump from 1.0.4, host network |
+| bacmodel | 1.0.0 | 25.10.4 | success | 2 completed | 2026-10-22, added, host network |
+| plasmodiumdrugres | 1.0.0 | 25.10.4 | success | 6 completed | 2026-10-22, added, host network |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -223,6 +228,32 @@ containerized processes to the digests of their 9 images and recorded 4 remote i
 identical, 39 changed only in MultiQC and `pipeline_info` reports, 1 launch-time-named file paired, 0 missing and
 0 extra. Every analytical output (`variant_peptides/`, `variant_fasta/`, `mhcnuggets/` and `predictions/`) was
 byte-identical across both runs and the replay.
+
+The four releases of 2026-10-22 were checked the same way: each run against its release's own `-profile test`
+nf-test snapshot (`tests/default.nf.test.snap`), then a replay from `provenance/commands.sh` and `nfclaw verify`.
+Every run reported every software version its snapshot records, produced every stable output path it lists,
+and matched all of its checksummed files: 15 for magmap, 111 for rnasplice, 1 for bacmodel and 9 for
+plasmodiumdrugres. Every containerized process was pinned to its image digest, and every replay succeeded with an
+identical execution environment and again matched all of those checksums.
+
+| Run | Images | Pinned / containerized processes | Remote inputs | `nfclaw verify` |
+|---|---|---|---|---|
+| magmap 1.3.1 | 16 | 29/29 | 11 | 84 identical, 53 changed |
+| rnasplice 2.0.0 | 28 | 62/62 | 12 | 2700 identical, 1539 changed, 20 missing, 20 extra |
+| bacmodel 1.0.0 | 2 | 2/2 | 2 | 15 identical, 5 changed |
+| plasmodiumdrugres 1.0.0 | 3 | 6/6 | 4 | 11 identical, 4 changed |
+
+- **magmap:** 48 of the changed files are MultiQC and `pipeline_info` reports, 2 are gzip files whose
+  decompressed content is identical, and 3 are BBMap logs that differ only in their timings.
+- **bacmodel and plasmodiumdrugres:** only reports changed, apart from bacmodel's Prokka log.
+- **rnasplice:** as with 1.0.4, MISO names its logs by the clock (the 20 missing and 20 extra files, so `nfclaw verify`
+  exits 1) and samples by MCMC, so 1,223 of the changed files are MISO's data. Salmon's multi-threaded
+  quantification also differs slightly between runs (948 of 5,895 transcripts of ERR188383, by at most 4.4 of
+  46,570 reads), in both its `salmon` and `star_salmon` routes, and so do the SUPPA, tximport, DEXSeq DTU and
+  IsoformSwitchAnalyzeR results computed from it. The other changed files are reports, PDFs, FastQC archives and
+  logs that embed dates or timings. The snapshot's 111 checksummed files, its stable outputs, were identical in
+  both runs. 2.0.0's new LeafCutter and RegTools steps belong to upstream's separate `leafcutter` test, not to
+  `-profile test`, and were not run.
 
 ## nfclaw features
 
