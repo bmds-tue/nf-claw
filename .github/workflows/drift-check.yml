@@ -1,9 +1,8 @@
 name: drift-check
 on:
   pull_request:
-  # Also check the default branch on a schedule. The bots merge their own PRs with GITHUB_TOKEN,
-  # and a push made with that token does not trigger workflows — so nothing re-checks main after an
-  # auto-merge, and a bot PR that lands incomplete leaves main drifted with every check still green.
+  # Also check the default branch on a schedule, independently of the maintenance jobs' drift
+  # gates. Their GITHUB_TOKEN pushes do not trigger ordinary push workflows.
   schedule:
     - cron: "0 7 * * *"      # daily 07:00 UTC, after the 06:00 auto-update
   workflow_dispatch:

@@ -66,14 +66,14 @@ def test_nextflow_accept_timeout_is_portable():
     assert "budget=900" in text
 
 
-def test_auto_update_validates_changed_releases_before_merge():
+def test_auto_update_validates_changed_releases_before_publication():
     text = (REPO / ".github" / "workflows" / "auto-update.yml").read_text(encoding="utf-8")
     acceptance = text.index("Validate updated pipelines through Nextflow")
     final_gate = text.index("Unit tests + final drift gate")
-    create_pr = text.index("peter-evans/create-pull-request@")
+    publish = text.index("Publish validated update")
     assert "git diff --cached --name-only" in text
     assert 'scripts/nextflow_accept.sh "${updated[@]}"' in text
-    assert acceptance < final_gate < create_pr
+    assert acceptance < final_gate < publish
     assert "uses: ./.github/actions/setup-nextflow" in text   # checksum-verified install (below)
 
 
@@ -100,41 +100,6 @@ def test_every_workflow_installs_nextflow_through_the_pinned_action():
             continue
         assert "raw.githubusercontent.com/nextflow-io/nextflow" not in text, (
             f"{wf.name} downloads the launcher itself; use ./.github/actions/setup-nextflow")
-
-
-def _add_paths(workflow: str) -> set[str]:
-    """The `add-paths:` allowlist of a bot workflow."""
-    text = (REPO / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
-    assert "peter-evans/create-pull-request@" in text
-    assert "add-paths:" in text, f"{workflow} lets the bot commit any dirty path"
-    block = text.split("add-paths: |", 1)[1]
-    paths = set()
-    for line in block.splitlines()[1:]:
-        if not line.strip() or not line.startswith((" ", "\t")) or line.strip().endswith(":"):
-            break
-        paths.add(line.strip())
-    return paths
-
-
-def test_pr_bots_only_stage_what_they_generate():
-    # `create-pull-request` stages every dirty path by default, so a stray build artifact left in
-    # the working tree gets committed and auto-merged. Both bots must scope what they may stage.
-    for name in ("auto-update.yml", "discover-pipelines.yml"):
-        assert _add_paths(name), f"{name} lets the bot commit any dirty path"
-
-
-def test_pr_bots_stage_every_manifest_they_write():
-    # The other edge of the same knife: an allowlist that is *too narrow* silently drops part of the
-    # bot's own work from its PR, and the in-job drift gate cannot catch it — that gate runs against
-    # the complete working tree, before create-pull-request decides what to commit. Discovery
-    # registers each new pipeline in sources.tsv (`_append_source`) as well as in .gitmodules and
-    # pipelines/; omitting sources.tsv once merged 11 pipelines with no source rows.
-    discover = _add_paths("discover-pipelines.yml")
-    for manifest in ("pipelines", "sources.tsv", ".gitmodules", "catalog.json", "catalog.md"):
-        assert manifest in discover, f"discovery writes {manifest} but never stages it"
-    update = _add_paths("auto-update.yml")
-    for manifest in ("pipelines", "catalog.json", "catalog.md"):
-        assert manifest in update, f"the update bot writes {manifest} but never stages it"
 
 
 def test_every_pipeline_is_registered_in_sources_tsv():

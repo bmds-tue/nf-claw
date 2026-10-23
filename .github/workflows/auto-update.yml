@@ -14,9 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-      actions: write          # to dispatch the deploy after merge
-      checks: write           # report completed in-job validation on the generated PR commit
+      actions: write          # explicitly start push workflows after publication
+      checks: write           # report completed in-job validation on the generated commit
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -25,8 +24,8 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           # This job runs upstream pipeline code (Nextflow parses each bumped release's Groovy
-          # config). Keep the write token out of .git/config; create-pull-request authenticates
-          # on its own.
+          # config). Keep the write token out of .git/config; only the publication step
+          # authenticates its push.
           persist-credentials: false
       - name: Record the validated base
         id: base
@@ -86,8 +85,7 @@ jobs:
       - name: Install website dependencies
         working-directory: website
         run: npm ci --ignore-scripts --no-audit --no-fund
-      # PRs opened with GITHUB_TOKEN do not trigger the ordinary test/drift workflows, so the
-      # complete local gates must pass here before this write-capable job opens or merges a PR.
+      # The complete local gates must pass before this write-capable job can publish a commit.
       - name: Unit tests + final drift gate
         run: |
           set -eo pipefail
@@ -103,44 +101,9 @@ jobs:
           npm --prefix website audit --audit-level=low
           npm --prefix website run typecheck
           npm --prefix website run build
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        id: cpr
-        # An organization can forbid GitHub Actions from opening pull requests. The action pushes
-        # the validated branch first; the next step tells that refusal from a real failure.
-        continue-on-error: true
-        with:
-          # Least privilege: stage only what this job regenerates. Without it the action commits
-          # every dirty path (`git add -A`), so any stray file a step leaves in the working tree
-          # lands in an auto-merged commit.
-          add-paths: |
-            pipelines
-            catalog.json
-            catalog.md
-            .gitmodules
-          branch: auto-update-pipelines
-          title: "chore: auto-update pipelines to latest releases"
-          commit-message: "chore: bump pipelines + regenerate context"
-          body: >-
-            Automated: bumped submodules to latest release tags, regenerated
-            skill.md/reference.md/catalog, and passed unit, drift, and Nextflow acceptance checks.
-      - name: Propose the validated branch
-        if: steps.cpr.outcome == 'failure'
-        id: propose
+      - name: Publish validated update
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_SHA: ${{ steps.base.outputs.sha }}
-          BRANCH: auto-update-pipelines
-          TITLE: "chore: auto-update pipelines to latest releases"
-          BODY: >-
-            Automated: bumped submodules to latest release tags, regenerated
-            skill.md/reference.md/catalog, and passed unit, drift, and Nextflow acceptance checks.
-        run: bash scripts/propose_validated_update.sh
-      # Report the completed core checks on the exact generated commit, merge under
-      # the normal branch rules, then explicitly deploy after the merge completes.
-      - name: Auto-merge and redeploy
-        if: steps.cpr.outputs.pull-request-number || steps.propose.outputs.number
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number || steps.propose.outputs.number }}
-          PR_HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha || steps.propose.outputs.head_sha }}
-        run: bash scripts/merge_validated_update.sh
+          UPDATE_KIND: update
+        run: bash scripts/publish_validated_update.sh
