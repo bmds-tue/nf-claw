@@ -51,7 +51,8 @@ def result_entries(outdir: Path, only: Path | None = None) -> Iterator[tuple[Pat
                 elif entry.is_file(follow_symlinks=True):
                     yield path, "file"
                 else:
-                    raise OSError(errno.EINVAL, "result is missing or not a regular file", str(path))
+                    raise OSError(errno.EINVAL,
+                                  "result is missing or not a regular file", str(path))
 
     if only is None:
         yield from walk(outdir, frozenset())
@@ -73,7 +74,8 @@ def result_files(outdir: Path) -> Iterator[Path]:
             yield path
 
 
-def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *, only: Path | None = None
+def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *,
+             only: Path | None = None
              ) -> tuple[dict[str, str], dict[str, dict], dict[str, dict[str, str]]]:
     """One traversal records the namespace and optionally hashes each resolved data target once.
 
@@ -172,7 +174,8 @@ def read_inventory(path: Path, checksums: dict[str, str]) -> dict[str, dict]:
 def namespace_difference(expected: dict, current: dict) -> str:
     missing = sorted(expected.keys() - current.keys())
     extra = sorted(current.keys() - expected.keys())
-    changed = sorted(name for name in expected.keys() & current.keys() if expected[name] != current[name])
+    changed = sorted(name for name in expected.keys() & current.keys()
+                     if expected[name] != current[name])
     return f"missing: {missing}; extra: {extra}; type or link changed: {changed}"
 
 
@@ -183,7 +186,8 @@ def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
     if not isinstance(manifest, dict):
         raise ValueError("invalid run manifest")
     if "output_inventory_version" in manifest and (
-            type(manifest["output_inventory_version"]) is not int or manifest["output_inventory_version"] != 1):
+            type(manifest["output_inventory_version"]) is not int
+            or manifest["output_inventory_version"] != 1):
         raise ValueError("unsupported output inventory version")
     if not path.exists() and "output_inventory_version" not in manifest:
         return None

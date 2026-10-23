@@ -72,16 +72,19 @@ def fake_runs(monkeypatch, finished_run):
         manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
                                         "dependency_inventory_version": 1,
                                         "chain": kw.get("chain_link")}))
-        path_params = schema.load_param_schema(kw["repo_root"] / "pipelines" / name / "upstream").reference_path_params()
+        upstream = kw["repo_root"] / "pipelines" / name / "upstream"
+        path_params = schema.load_param_schema(upstream).reference_path_params()
         given = kw["input_path"] if isinstance(kw["input_path"], list) else [kw["input_path"]]
         candidates = given + [value for key, value in kw["cli_overrides"].items()
-                                                 if key in path_params and isinstance(value, str)]
-        sources = [inputs.absolute_local_path(value) for value in candidates if value and Path(value).exists()]
+                              if key in path_params and isinstance(value, str)]
+        sources = [inputs.absolute_local_path(value) for value in candidates
+                   if value and Path(value).exists()]
         for key, value in {"input": kw["input_path"], **kw["cli_overrides"]}.items():
-            reference = inputs.samplesheet_schema(kw["repo_root"] / "pipelines" / name / "upstream", key)
+            reference = inputs.samplesheet_schema(upstream, key)
             if isinstance(value, (str, Path)) and value and reference and Path(value).is_file():
-                sheet_schema = schema.load_input_schema(kw["repo_root"] / "pipelines" / name / "upstream", reference)
-                sources.extend(path for path in provenance.samplesheet_input_paths(Path(value), sheet_schema)
+                sheet_schema = schema.load_input_schema(upstream, reference)
+                sources.extend(path for path
+                               in provenance.samplesheet_input_paths(Path(value), sheet_schema)
                                if path.exists())
         hashes, inventory = provenance.snapshot_inputs(sources)
         (kw["outdir"] / "provenance/inputs.sha256").write_text("".join(
@@ -549,7 +552,7 @@ def test_one_chain_per_outdir(library, fake_runs, tmp_path):
     (out / "chain" / "state.json").write_text(
         json.dumps({"chain_id": "x", "stages": [], "outcome": "failed"}))
     fd = os.open(out / "chain" / ".lock", os.O_RDWR | os.O_CREAT)
-    fcntl.flock(fd, fcntl.LOCK_EX)                 # flock: a second open file conflicts, same process too
+    fcntl.flock(fd, fcntl.LOCK_EX)  # flock: a second open file conflicts, same process too
     try:
         with pytest.raises(NfclawError, match="another nfclaw chain is running"):
             chain.run_chain(_spec(), repo_root=root, outdir=out, resume=True)
@@ -714,11 +717,12 @@ def test_status_exit_codes_follow_nfclaw_status(library, fake_runs, tmp_path):
     assert chain.status_exit_code({**state, "log_state": "running"}, []) == 3
 
 
-# --- a stage whose samplesheet nfclaw generates from data files ------------------------------------
+# --- a stage whose samplesheet nfclaw generates from data files -----------------------------------
 
 def test_spec_sheet_set_and_input_lists_are_validated():
-    spec = chain.parse_spec({"stages": [{"pipeline": "rnaseq", "input": ["/d/a.fq.gz", "/d/b.fq.gz"],
-                                         "sheet_set": {"strandedness": "auto", "status": 1}}]})
+    spec = chain.parse_spec(
+        {"stages": [{"pipeline": "rnaseq", "input": ["/d/a.fq.gz", "/d/b.fq.gz"],
+                     "sheet_set": {"strandedness": "auto", "status": 1}}]})
     assert spec.stages[0].input == ["/d/a.fq.gz", "/d/b.fq.gz"]
     assert spec.stages[0].sheet_set == {"strandedness": "auto", "status": "1"}
     for bad, msg in (({"input": []}, "'input' list"), ({"input": ["/a", 3]}, "'input' list"),
@@ -749,7 +753,8 @@ def test_fingerprints_without_sheet_set_are_those_of_earlier_chains(library):
     other = chain.parse_spec({"stages": [{"pipeline": "mini_up", "input": "/data/ids.csv"},
                                          {"pipeline": "mini", "params": {"aligner": "hisat2"},
                                           "sheet_set": {"sample": "{sample}"}}]})
-    assert chain.fingerprint(chain.plan(other, repo_root=root)[1], other) != chain.fingerprint(p, spec)
+    other_stage = chain.plan(other, repo_root=root)[1]
+    assert chain.fingerprint(other_stage, other) != chain.fingerprint(p, spec)
 
 
 def test_a_first_stage_takes_data_files_and_sheet_columns(library, fake_runs, tmp_path):

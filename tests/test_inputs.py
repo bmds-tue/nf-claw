@@ -43,7 +43,8 @@ SAREK = {"type": "string", "format": "file-path", "exists": True,
 MHCQUANT = {"type": "string", "pattern": r"^(PXD\d{6,}|\S+\.sdrf\.tsv|\S+\.tsv)$",
             "if": {"pattern": r"\.tsv$", "not": {"pattern": r"\.sdrf\.tsv$"}},
             "then": {"format": "file-path", "exists": True, "schema": "assets/schema_input.json"}}
-# rangeland: a directory or tarball of imagery; the release still ships the template schema_input.json.
+# rangeland: a directory or tarball of imagery; the release still ships the
+# template schema_input.json.
 RANGELAND = {"type": "string", "format": "path", "exists": True}
 # atacseq and other older releases: a samplesheet with no `schema` key on the parameter.
 LEGACY = {"type": "string", "format": "file-path", "mimetype": "text/csv"}
@@ -183,7 +184,8 @@ def test_line_breaks_in_source_or_resolved_parent_cannot_enter_staging(tmp_path,
         link = tmp_path / "safe.fastq"
         link.symlink_to(source)
         source = link
-    assert any("line break" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+    assert any("line break" in issue
+               for issue in inputs.local_name_issues(str(source), "file-path"))
 
 
 def test_parent_traversal_route_matches_the_normalized_parameter_but_not_raw_table_field(tmp_path):
@@ -192,7 +194,8 @@ def test_parent_traversal_route_matches_the_normalized_parameter_but_not_raw_tab
     (tmp_path / "real/reads.fastq").write_bytes(b"actual data")
     (tmp_path / "reads.fastq").write_bytes(b"wrong decoy")
     source = tmp_path / "route/../reads.fastq"
-    assert any("different data" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+    assert any("different data" in issue
+               for issue in inputs.local_name_issues(str(source), "file-path"))
     assert inputs.local_name_issues(str(source), "file-path", resolve_parent=True) == []
     assert inputs.absolute_local_path(source).read_bytes() == b"actual data"
 
@@ -205,7 +208,8 @@ def test_missing_filesystem_route_cannot_select_an_existing_lexical_decoy(tmp_pa
         (tmp_path / "route").symlink_to("real/nested", target_is_directory=True)
     source = tmp_path / "route/../reads.fastq"
     assert not source.exists()
-    assert any("different data" in issue for issue in inputs.local_name_issues(str(source), "file-path"))
+    assert any("different data" in issue
+               for issue in inputs.local_name_issues(str(source), "file-path"))
 
 
 @pytest.mark.parametrize("fmt", ["file-path", "file-path-pattern"])
@@ -213,7 +217,8 @@ def test_parent_glob_matches_receive_staging_route_checks(tmp_path, fmt):
     parent = tmp_path / "data\nnext"
     parent.mkdir()
     (parent / "reads.fastq").write_bytes(b"fixed data")
-    assert any("line break" in issue for issue in inputs.local_name_issues(str(tmp_path / "data*/reads.fastq"), fmt))
+    assert any("line break" in issue
+               for issue in inputs.local_name_issues(str(tmp_path / "data*/reads.fastq"), fmt))
 
 
 def test_wildcard_parent_traversal_is_refused_before_parameter_resolution(tmp_path):

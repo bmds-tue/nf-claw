@@ -79,8 +79,8 @@ def library(tmp_path):
 @pytest.fixture
 def finished_run():
     """Lay out a completed nfclaw run — result files, provenance/params.json, outputs.sha256 and a
-    success manifest — what a real stage leaves behind. `{outdir}` in a file's text becomes the run's
-    absolute outdir (fetchngs writes absolute FastQ paths into its samplesheet)."""
+    success manifest — what a real stage leaves behind. `{outdir}` in a file's text becomes the
+    run's absolute outdir (fetchngs writes absolute FastQ paths into its samplesheet)."""
     def make(outdir: Path, files: dict, params: dict | None = None) -> Path:
         for rel, text in files.items():
             p = outdir / rel

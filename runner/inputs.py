@@ -1,8 +1,8 @@
 """What a pipeline's `--input` value is: a samplesheet, another local path, or a plain value.
 
 nf-core pipelines do not all take a samplesheet. Releases in this library also take a directory or
-tarball (rangeland), an SDRF file or a PRIDE accession (mhcquant), and `--input false` to run without
-one (sarek). The pipeline's own `nextflow_schema.json` says which, so nfclaw reads it from
+tarball (rangeland), an SDRF file or a PRIDE accession (mhcquant), and `--input false` to run
+without one (sarek). The pipeline's own `nextflow_schema.json` says which, so nfclaw reads it from
 there instead of assuming: a value is only resolved to a local path, and only pre-checked as a
 samplesheet, when the schema (or the file system) says that is what it is.
 
@@ -56,7 +56,7 @@ def absolute_local_path(value: str | Path) -> Path:
 class ResolvedInput:
     value: Any                           # the params-file value; False = leave `input` unset
     local_path: Path | None              # the local file/directory the value names, if any
-    samplesheet_schema: str | None       # schema file (relative to the pipeline) to pre-check it with
+    samplesheet_schema: str | None  # schema file (relative to the pipeline) to pre-check it with
     must_exist: bool = False             # the schema declares `exists: true` for this value
 
 
@@ -97,7 +97,7 @@ def _legacy_samplesheet(repo: Path, param: dict) -> str | None:
     if any(_schema_ref(b) for b in [param, *_branches(param)]):
         return None                                      # the release says which schema applies
     if param.get("format") != "file-path":
-        return None                                      # e.g. a directory or tarball, never a sheet
+        return None  # e.g. a directory or tarball, never a sheet
     return DEFAULT_SAMPLESHEET_SCHEMA if (repo / DEFAULT_SAMPLESHEET_SCHEMA).is_file() else None
 
 
@@ -145,8 +145,8 @@ def local_route_issues(value: str | Path, *, resolve_parent: bool = False) -> li
                     "absolute parent directory so normalization cannot change the selected files"]
     staged = absolute_local_path(path) if resolve_parent else Path(os.path.normpath(path))
     if any("\n" in str(p) or "\r" in str(p) for p in (staged, staged.resolve())):
-        return ["unsafe local input filename or parent path has a line break that Nextflow puts into its staging shell "
-                "command; use a safely named parent path"]
+        return ["unsafe local input filename or parent path has a line break that Nextflow puts "
+                "into its staging shell command; use a safely named parent path"]
     if not resolve_parent and ".." in path.parts and (
             path.resolve() != staged.resolve() or path.exists() != staged.exists()):
         return ["local input path crosses a directory symlink with '..'; Nextflow's lexical "
@@ -222,7 +222,8 @@ def local_name_issues(value: str, fmt: str, *, resolve_parent: bool = False,
         inspected = absolute_local_path(path) if resolve_parent else path
         check_name(path.name, is_pattern=pattern)
         check_name(path.resolve().name, is_pattern=pattern)
-        if inspect_contents and (pattern or inspected.is_dir() or glob.has_magic(str(inspected)) or "{" in str(inspected)):
+        if inspect_contents and (pattern or inspected.is_dir() or glob.has_magic(str(inspected))
+                                 or "{" in str(inspected)):
             try:
                 inspect_input_paths([inspected], check_path)
             except MissingInputSource:
@@ -248,7 +249,8 @@ def shell_path_issues(value: str) -> list[str]:
     if any(not all(char.isalnum() or char in allowed or unicodedata.category(char).startswith("M")
                    for char in path) for path in candidates):
         return [f"unsafe local input path {value!r}; the pinned task uses the complete path "
-                "as an unquoted argument, so all parent folders and symlink targets must be safely named"]
+                "as an unquoted argument, so all parent folders and symlink targets must "
+                "be safely named"]
     return []
 
 

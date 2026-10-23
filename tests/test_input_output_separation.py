@@ -11,7 +11,8 @@ from runner.errors import NfclawError
 
 @pytest.mark.parametrize("name", ["NXF_HOME", "NXF_DIST", "NXF_TEMP", "CAPSULE_CACHE_DIR"])
 @pytest.mark.parametrize("inherited", [False, True])
-def test_engine_cache_writes_are_separated_before_version_probes(tmp_path, monkeypatch, name, inherited):
+def test_engine_cache_writes_are_separated_before_version_probes(tmp_path, monkeypatch,
+                                                                 name, inherited):
     root = tree(tmp_path)
     data = tmp_path / "data"
     data.mkdir()
@@ -22,8 +23,10 @@ def test_engine_cache_writes_are_separated_before_version_probes(tmp_path, monke
         monkeypatch.setenv(name, str(cache))
         overlay = {}
     monkeypatch.setattr(orchestration.engine_version, "_installed_raw",
-                        lambda: pytest.fail("engine version probe ran before cache boundary validation"))
-    monkeypatch.setattr(orchestration.execution, "run", lambda *_, **__: pytest.fail("engine launched"))
+                        lambda: pytest.fail("engine version probe ran before "
+                                            "cache boundary validation"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *_, **__: pytest.fail("engine launched"))
     before = (data.stat().st_mtime_ns, orchestration.provenance.snapshot_inputs([data]))
     with pytest.raises(NfclawError, match="overlaps local dependency") as error:
         run(root, data, tmp_path / "results", nxf_env=overlay, nxf_ver=None,
@@ -54,7 +57,8 @@ def test_relative_engine_cache_is_checked_from_the_execution_directory(tmp_path,
     data = tmp_path / "data"
     data.mkdir()
     out = tmp_path / "results"
-    monkeypatch.setattr(orchestration.execution, "run", lambda *_, **__: pytest.fail("engine launched"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *_, **__: pytest.fail("engine launched"))
     with pytest.raises(NfclawError, match="overlaps local dependency"):
         run(root, data, out, nxf_env={"NXF_HOME": os.path.relpath(data / "cache", out)})
     assert not (data / "cache").exists() and not out.exists()
@@ -105,7 +109,8 @@ def run(root, data, out, **kwargs):
 
 @pytest.mark.parametrize("check_only", [False, True])
 @pytest.mark.parametrize("alias", [False, True])
-def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, monkeypatch, check_only, alias):
+def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, monkeypatch,
+                                                                   check_only, alias):
     root = tree(tmp_path)
     data = tmp_path / "data"
     data.mkdir()
@@ -119,11 +124,13 @@ def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, mon
     monkeypatch.setattr(orchestration.path_roles, "output_only_directories",
                         lambda *args: frozenset({"future_cache"}))
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("engine launched"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *args, **kwargs: pytest.fail("engine launched"))
     before = data.stat().st_mtime_ns
     out = tmp_path / "out"
     with pytest.raises(NfclawError, match="overlaps local dependency") as error:
-        run(root, data, out, check_only=check_only, cli_overrides={"future_cache": str(destination)})
+        run(root, data, out, check_only=check_only,
+            cli_overrides={"future_cache": str(destination)})
     assert error.value.details["unsafe_write_boundary"]
     assert source.read_bytes() == b"fixed scientific input"
     assert data.stat().st_mtime_ns == before
@@ -133,7 +140,8 @@ def test_audited_output_only_destinations_cannot_write_into_inputs(tmp_path, mon
 
 @pytest.mark.parametrize("check_only", [False, True])
 @pytest.mark.parametrize("write_provenance", [False, True])
-@pytest.mark.parametrize("source", ["input", "params_file", "auxiliary", "samplesheet", "nested_alias"])
+@pytest.mark.parametrize("source",
+                         ["input", "params_file", "auxiliary", "samplesheet", "nested_alias"])
 def test_overlapping_outputs_are_refused_without_changing_the_data(
         tmp_path, monkeypatch, check_only, write_provenance, source):
     root = tree(tmp_path, table=source == "samplesheet")
@@ -159,7 +167,8 @@ def test_overlapping_outputs_are_refused_without_changing_the_data(
         supplied.mkdir()
         (supplied / "reference").symlink_to(data, target_is_directory=True)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **_: [])
-    monkeypatch.setattr(orchestration.execution, "run", lambda *_, **__: pytest.fail("engine launched"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *_, **__: pytest.fail("engine launched"))
     before = (data.stat().st_mtime_ns, sorted(p.name for p in data.iterdir()))
     with pytest.raises(NfclawError, match="overlaps local dependency") as error:
         run(root, supplied, data / "analysis", **options)
@@ -205,7 +214,8 @@ def test_globbed_directory_aliases_are_inspected(tmp_path):
     data.mkdir()
     (tmp_path / "selected").symlink_to(data, target_is_directory=True)
     with pytest.raises(NfclawError, match="overlaps local dependency"):
-        input_safety.check_write_boundaries([tmp_path / "select*"], [("outputs", data / "out", True)])
+        input_safety.check_write_boundaries([tmp_path / "select*"],
+                                            [("outputs", data / "out", True)])
 
 
 def test_input_files_inside_a_publication_tree_are_refused(tmp_path):
@@ -219,7 +229,8 @@ def test_input_files_inside_a_publication_tree_are_refused(tmp_path):
 
 
 @pytest.mark.parametrize("alias", ["final", "parent"])
-def test_a_logical_input_slot_inside_outputs_is_protected_when_its_target_is_external(tmp_path, alias):
+def test_a_logical_input_slot_inside_outputs_is_protected_when_its_target_is_external(
+        tmp_path, alias):
     data = tmp_path / "data"
     data.mkdir()
     source = data / "reads.fastq"
@@ -389,7 +400,8 @@ def test_cached_task_results_and_absent_optional_destinations_remain_usable(tmp_
     out = tmp_path / "out"
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **_: [])
     checked = run(root, reference, out, check_only=True,
-                  cli_overrides={"future_cache": str(out / "future")}, nxf_env={"NXF_WORK": str(work)})
+                  cli_overrides={"future_cache": str(out / "future")},
+                  nxf_env={"NXF_WORK": str(work)})
     assert checked.checked_only and not out.exists()
     assert reference in checked.local_dependencies
     assert (reference / "index.bin").read_bytes() == b"fixed scientific input"
@@ -407,7 +419,8 @@ def test_chain_checks_its_record_directory_before_writing_it(tmp_path, monkeypat
         {"pipeline": "fixture", "input": str(source)}]})
     monkeypatch.setattr(chain.preflight, "outdir_issue", lambda *_, **__: None)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **_: [])
-    monkeypatch.setattr(chain, "_probe_config", lambda *_, **__: pytest.fail("engine probe before refusal"))
+    monkeypatch.setattr(chain, "_probe_config",
+                        lambda *_, **__: pytest.fail("engine probe before refusal"))
     before = source.stat().st_mtime_ns
     with pytest.raises(NfclawError, match="chain --outdir"):
         chain.run_chain(spec, repo_root=root, outdir=out, check_only=check_only)
@@ -422,7 +435,8 @@ def test_refused_attempt_cannot_append_markers_to_an_active_writer(tmp_path):
     log.parent.mkdir(parents=True)
     log.write_text("active writer's original bytes\n")
     with locking.output_writer(tmp_path / "out"):
-        runlog.record_unlaunched(log, command="nfclaw run fixture", outcome="refused", error="bad flag")
+        runlog.record_unlaunched(log, command="nfclaw run fixture", outcome="refused",
+                                 error="bad flag")
     assert log.read_text() == "active writer's original bytes\n"
 
 

@@ -1,12 +1,12 @@
 """Pipeline chains: several pipelines run in sequence, each one's outputs handed to the next.
 
 A chain is an ordered list of stages. Every stage is an ordinary `nfclaw run` — the same checks, run
-log and provenance bundle — in its own directory `<outdir>/NN-<stage>/`, started only after the stage
-before it succeeded. Between two stages a handoff rule (runner.handoff) turns the finished upstream
-run into the downstream's parameters. The chain's own record lives in `<outdir>/chain/`: the spec,
-each stage's state, the handoff snapshots and a log whose last line states the outcome — so a chain
-can be resumed, extended, audited and reconstructed from disk. Deliberately linear: no DAG, no
-scheduler, no daemon.
+log and provenance bundle — in its own directory `<outdir>/NN-<stage>/`, started only after the
+stage before it succeeded. Between two stages a handoff rule (runner.handoff) turns the finished
+upstream run into the downstream's parameters. The chain's own record lives in `<outdir>/chain/`:
+the spec, each stage's state, the handoff snapshots and a log whose last line states the outcome —
+so a chain can be resumed, extended, audited and reconstructed from disk. Deliberately linear: no
+DAG, no scheduler, no daemon.
 """
 from __future__ import annotations
 
@@ -120,7 +120,8 @@ def options(spec: ChainSpec, stage: Stage) -> RunOptions:
     o = stage.options
     return RunOptions(profile=o.get("profile", spec.profile),
                       nxf_ver=o.get("nxf_ver", spec.nxf_ver),
-                      nxf_env=provenance.effective_nxf_env({**spec.nxf_env, **o.get("nxf_env", {})}),
+                      nxf_env=provenance.effective_nxf_env(
+                          {**spec.nxf_env, **o.get("nxf_env", {})}),
                       configs=o.get("configs", spec.configs),
                       limits=o.get("limits", spec.limits))
 
@@ -355,8 +356,8 @@ def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
 
 
 def normalized(spec: ChainSpec, planned: list[Planned]) -> dict:
-    """The spec as `chain/chain.json` records it: absolute paths, so it means the same thing from any
-    directory — it is what `--resume` without a spec, and a replay of the chain, re-read."""
+    """The spec as `chain/chain.json` records it: absolute paths, so it means the same thing from
+    any directory — it is what `--resume` without a spec, and a replay of the chain, re-read."""
     lim = spec.limits
     return {
         "profile": spec.profile, "nxf_ver": spec.nxf_ver, "nxf_env": dict(spec.nxf_env),
@@ -436,8 +437,8 @@ def _lock(record: Path, outdir: Path) -> Iterator[None]:
 
 
 def _retryable(exc: NfclawError) -> bool:
-    """Only a pipeline that ran and failed is worth relaunching: a bad parameter, an invalid sheet or
-    a missing tool fails the same way every time, and a timeout means the budget is spent."""
+    """Only a pipeline that ran and failed is worth relaunching: a bad parameter, an invalid sheet
+    or a missing tool fails the same way every time, and a timeout means the budget is spent."""
     return exc.code is ErrorCode.EXECUTION_FAILED and "timeout_seconds" not in exc.details
 
 
@@ -461,7 +462,8 @@ def _deferred(p: Planned) -> frozenset[str]:
     if p.rule is None:
         return frozenset()
     return frozenset(t for t in p.rule.params
-                     if not (t == "input" and p.input not in (None, "")) and t not in p.stage.params)
+                     if not (t == "input" and p.input not in (None, ""))
+                     and t not in p.stage.params)
 
 
 def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: Path,
@@ -486,7 +488,8 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
         try:
             input_safety.check_write_boundaries(res.local_dependencies,
                 [("chain --outdir", outdir, True),
-                 ("Nextflow work directory", orchestration.work_directory(res.env, repo_root), False),
+                 ("Nextflow work directory",
+                  orchestration.work_directory(res.env, repo_root), False),
                  *input_safety.engine_write_paths(res.outdir, res.env)])
         except BaseException:
             if res.staging is not None:
@@ -502,7 +505,8 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
     return commands
 
 
-def _probe_config(spec: ChainSpec, p: Planned, *, timeout_seconds: float | None = None) -> list[str]:
+def _probe_config(spec: ChainSpec, p: Planned, *,
+                  timeout_seconds: float | None = None) -> list[str]:
     """Whether the stage's Nextflow configuration parses with the engine it will run under.
 
     `nextflow config` resolves the pipeline's config and profiles without running anything (a few
@@ -609,9 +613,9 @@ def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
             problems.append(f"stage '{old.get('id')}' already succeeded as stage {i + 1}; a "
                             "resumed chain keeps its succeeded stages, in order")
         elif fingerprint(planned[i], spec) != old.get("fingerprint"):
-            problems.append(f"stage '{old.get('id')}' already succeeded with a different definition "
-                            "(its code, run options, input, params or handoff changed — including "
-                            "what the handoff to the next stage sets on it)")
+            problems.append(f"stage '{old.get('id')}' already succeeded with a different "
+                            "definition (its code, run options, input, params or handoff changed "
+                            "— including what the handoff to the next stage sets on it)")
         elif repo_root is not None and (change := _data_change(planned[i], old, spec, repo_root)):
             problems.append(f"stage '{old.get('id')}' already succeeded, but {change}")
     if problems:
@@ -666,8 +670,9 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
             ErrorCode.ENVIRONMENT, "A stage could not start: its Nextflow engine cannot set it up.",
             fix=("Nothing was launched. Resolve the reported engine, configuration, network or "
                  "probe timeout issue and retry. Give each stage an engine that runs here and "
-                 "parses its release — its \"nxf_ver\" in the spec entry (see 'Nextflow too new for an older "
-                 f"release' in {runlog.known_issues_path()}) — and run the chain again."),
+                 "parses its release — its \"nxf_ver\" in the spec entry (see 'Nextflow too new "
+                 f"for an older release' in {runlog.known_issues_path()}) — and run "
+                 "the chain again."),
             details={"issues": unparsable})
     if check_only:
         return ChainResult(outdir=outdir, outcome="checked", stages=[], commands=commands)
@@ -724,7 +729,8 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
         _write_json(record / "state.json", state)
         log = runlog.RunLog(record / "logs" / LOG_NAME, label="chain")
         # The same header as a run's, so `runlog.read_state` — `nfclaw status` — tells a chain still
-        # running from one whose nfclaw was killed outright (the only way it ends without a last line).
+        # running from one whose nfclaw was killed outright (the only way it ends without a
+        # last line).
         log.note(f"==> nfclaw chain started {runlog.now()}")
         log.note(f"    launch dir: {outdir}")
         for line in runlog.host_header():
@@ -871,7 +877,8 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 resume = True
                 continue
             entry["status"] = "failed"
-            state["outcome"] = (f"timed out after {exc.details['timeout_seconds']} s" if "timeout_seconds" in exc.details
+            state["outcome"] = (f"timed out after {exc.details['timeout_seconds']} s"
+                                if "timeout_seconds" in exc.details
                                 else f"failed at stage {stage.dirname}: {_short(exc)}")
             raise
         except (KeyboardInterrupt, execution.Terminated) as exc:
@@ -886,7 +893,8 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
     entry.update(status="success", version=manifest.get("version"), commit=manifest.get("commit"))
     _write_json(record / "state.json", state)
     caveats = _caveats(manifest)
-    _say(log, f"{stage.dirname}: success ({stage.pipeline} {manifest.get('version') or ''})".rstrip()
+    _say(log,
+         f"{stage.dirname}: success ({stage.pipeline} {manifest.get('version') or ''})".rstrip()
          + (" — with caveats the pipeline reported about its results" if caveats else ""))
     for caveat in caveats:
         _say(log, f"{stage.dirname}: caveat: {caveat}")
@@ -965,7 +973,8 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
         if entry["index"] != i:
             problems.append(f"{entry['id']}: its recorded index does not match its chain position")
         if state.get("outcome") == "success" and entry["status"] != "success":
-            problems.append(f"{entry['id']}: the chain reports success but this stage has not succeeded")
+            problems.append(f"{entry['id']}: the chain reports success but this stage "
+                            "has not succeeded")
         if entry["status"] != "success":
             continue
         sid, down = entry["id"], Path(entry["outdir"])
@@ -987,7 +996,8 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
             historical_nodes = output_mod.recorded_inventory(down, outputs)
             live, current_nodes, _ = output_mod.snapshot(down, _sha)
             if historical_nodes is not None and historical_nodes != current_nodes:
-                problems.append(f"{sid}: its published output namespace changed since the recorded run; "
+                problems.append(f"{sid}: its published output namespace changed since "
+                                "the recorded run; "
                                 + output_mod.namespace_difference(historical_nodes, current_nodes))
         except (OSError, ValueError) as exc:
             problems.append(f"{sid}: cannot verify its output checksums: {exc}")
@@ -1058,20 +1068,23 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
             if not isinstance(item, dict) or not isinstance(item.get("derived_from"), dict):
                 problems.append(f"{sid}: --{name} has a malformed handoff source record")
                 continue
-            if any(key in item for key in ("consumed_sources", "consumed_dependencies", "consumed_inventory")):
+            if any(key in item
+                   for key in ("consumed_sources", "consumed_dependencies", "consumed_inventory")):
                 try:
                     sources = item.get("consumed_sources")
                     if (not isinstance(sources, list) or not sources
                             or any(not isinstance(value, str) or not Path(value).is_absolute()
                                    for value in sources)):
                         raise ValueError("malformed local consumed sources")
-                    evidence = handoff.consumption_evidence([Path(value) for value in sources], up_dir)
+                    evidence = handoff.consumption_evidence(
+                        [Path(value) for value in sources], up_dir)
                     if any(item.get(key) != value for key, value in evidence.items()):
                         raise ValueError("local data changed since its handoff boundary")
                     scalar = item.get("consumed_scalar", False)
                     if type(scalar) is not bool:
                         raise ValueError("malformed scalar consumption mode")
-                    if succeeded and not consumption.agrees(evidence, down_in, down_nodes, scalar=scalar):
+                    if succeeded and not consumption.agrees(evidence, down_in, down_nodes,
+                                                            scalar=scalar):
                         raise ValueError("local handoff data is not the input this stage hashed")
                 except (OSError, ValueError, RuntimeError, csv.Error) as exc:
                     problems.append(f"{sid}: --{name}: cannot verify consumed data: {exc}")
@@ -1081,8 +1094,10 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                     if paths:
                         evidence = handoff.consumption_evidence(paths, up_dir)
                         if not consumption.agrees(evidence, down_in, down_nodes,
-                                                  scalar=item.get("kind") in ("file", "upstream_param")):
-                            raise ValueError("legacy handoff data is not the input this stage hashed")
+                                                  scalar=item.get("kind")
+                                                  in ("file", "upstream_param")):
+                            raise ValueError("legacy handoff data is not the input "
+                                             "this stage hashed")
                 except (OSError, ValueError, RuntimeError, csv.Error) as exc:
                     problems.append(f"{sid}: --{name}: cannot verify consumed data: {exc}")
             if "sha256" in item:
@@ -1111,16 +1126,22 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                 try:
                     if not isinstance(reference, str) or not Path(reference).is_absolute():
                         raise ValueError("directory reference is not an absolute path")
-                    evidence = handoff.directory_reference_evidence(Path(reference), up_dir, boundary=item)
+                    evidence = handoff.directory_reference_evidence(Path(reference),
+                                                                    up_dir, boundary=item)
                     if any(item.get(key) != value for key, value in evidence.items()):
-                        raise ValueError("directory handoff has no matching complete namespace record")
+                        raise ValueError("directory handoff has no matching "
+                                         "complete namespace record")
                     if succeeded:
-                        root = _consumed_reference_root(down, recorded_params, Path(reference), name)
-                        normalized = handoff.normalize_reference_inventory(evidence["directory_inventory"],
-                                                                           Path(reference), destination=root)
+                        root = _consumed_reference_root(down, recorded_params,
+                                                        Path(reference), name)
+                        normalized = handoff.normalize_reference_inventory(
+                            evidence["directory_inventory"],
+                            Path(reference),
+                            destination=root)
                         consumed = {path: entry for path, entry in down_nodes.items()
                                     if Path(path).is_relative_to(root)}
-                        source_files = (evidence["bundle_dependencies"] if "bundle_dependencies" in evidence
+                        source_files = (evidence["bundle_dependencies"]
+                                        if "bundle_dependencies" in evidence
                                         else evidence.get("input_dependencies") or
                                         {str(up_dir / path): digest for path, digest in
                                          evidence.get("output_dependencies", {}).items()})
@@ -1132,7 +1153,8 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                             problems.append(f"{sid}: --{name}: reference directory {reference} is "
                                             "not the input inventory this stage hashed")
                 except (OSError, ValueError, RuntimeError) as exc:
-                    problems.append(f"{sid}: --{name}: cannot verify reference directory {reference}: {exc}")
+                    problems.append(f"{sid}: --{name}: cannot verify reference "
+                                    f"directory {reference}: {exc}")
             if dependencies and "directory_reference" not in item:
                 try:
                     up_in = _digests(up_dir / "provenance/inputs.sha256", relative=False)
@@ -1142,27 +1164,32 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                             raise ValueError("external reference is not an absolute path")
                         path = Path(value)
                         if up_nodes is None:
-                            if ("input_inventory" in item or up_in.get(value) != digest or _sha(path) != digest):
-                                problems.append(f"{sid}: --{name}: legacy external reference {value} changed "
-                                                "or has no matching upstream checksum")
+                            if ("input_inventory" in item or up_in.get(value) != digest
+                                or _sha(path) != digest):
+                                problems.append(f"{sid}: --{name}: legacy external reference "
+                                                f"{value} changed or has no "
+                                                "matching upstream checksum")
                             if succeeded and down_in.get(value) != digest:
-                                problems.append(f"{sid}: --{name}: legacy external reference {value} is not "
-                                                "the input this stage hashed")
+                                problems.append(f"{sid}: --{name}: legacy external reference "
+                                                f"{value} is not the input this stage hashed")
                             continue
                         actual, nodes = provenance.snapshot_inputs([path])
                         expected_nodes = {value: up_nodes[value]} if value in up_nodes else {}
                         if (up_in.get(value) != digest or actual != {value: digest}
-                                or nodes != expected_nodes or item.get("input_inventory") != expected_nodes):
+                                or nodes != expected_nodes
+                            or item.get("input_inventory") != expected_nodes):
                             problems.append(f"{sid}: --{name}: external reference {value} changed "
                                             "or has no matching complete upstream input record")
                             continue
                         if succeeded:
                             root = _consumed_reference_root(down, recorded_params, path, name)
                             canonical = str(root)
-                            normalized = handoff.normalize_reference_inventory(expected_nodes, path, destination=root)
-                            if down_in.get(canonical) != digest or down_nodes.get(canonical) != normalized[canonical]:
-                                problems.append(f"{sid}: --{name}: external reference {value} is not "
-                                                "the input this stage hashed")
+                            normalized = handoff.normalize_reference_inventory(expected_nodes, path,
+                                                                               destination=root)
+                            if (down_in.get(canonical) != digest
+                                    or down_nodes.get(canonical) != normalized[canonical]):
+                                problems.append(f"{sid}: --{name}: external reference {value} is "
+                                                "not the input this stage hashed")
                 except (OSError, ValueError, RuntimeError) as exc:
                     problems.append(f"{sid}: --{name}: cannot verify external reference: {exc}")
     return problems

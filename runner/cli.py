@@ -91,7 +91,8 @@ def _stop_words(exc: BaseException) -> str:
 
 
 def _stopped(exc: BaseException, log: Path) -> int:
-    """Say that a stop signal (or Ctrl-C) ended the run, and return the shell's exit status for it."""
+    """Say that a stop signal (or Ctrl-C) ended the run, and return the shell's exit status
+    for it."""
     print(f"nfclaw: {_stop_words(exc)}; any Nextflow run it had started was shut down."
           + (f" Log: {log}" if log.is_file() else ""), file=sys.stderr)
     return 128 + exc.signum if isinstance(exc, execution.Terminated) else 130
@@ -156,9 +157,9 @@ def _status_report(st: runlog.RunState) -> str:
     lines: list[str] = []
     if st.state == "missing":
         return (f"status: no run log — {st.log} does not exist.\n"
-                "nfclaw has not launched a run into this --outdir. A run it refuses before launching "
-                "(invalid parameters or samplesheet, a failed preflight check) leaves a fresh "
-                "--outdir untouched: run the same command in the foreground to see why.\n")
+                "nfclaw has not launched a run into this --outdir. A run it refuses before "
+                "launching (invalid parameters or samplesheet, a failed preflight check) leaves a "
+                "fresh --outdir untouched: run the same command in the foreground to see why.\n")
     if st.state == "success":
         lines.append("status: success" + (" — with caveats the pipeline reported about its results"
                                           if st.caveats else ""))
@@ -201,9 +202,10 @@ def _status_report(st: runlog.RunState) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     """Run one nfclaw command. Output piped into a reader that stops early (`nfclaw versions X |
-    head -1`, `nfclaw list | grep -m1 rna`) ends the command quietly, as it would a Unix tool, rather
-    than with a BrokenPipeError traceback. SIGPIPE itself stays ignored (Python's default): a run
-    whose terminal goes away must keep tearing down Nextflow and writing its provenance, not die."""
+    head -1`, `nfclaw list | grep -m1 rna`) ends the command quietly, as it would a Unix tool,
+    rather than with a BrokenPipeError traceback. SIGPIPE itself stays ignored (Python's default): a
+    run whose terminal goes away must keep tearing down Nextflow and writing its provenance,
+    not die."""
     try:
         code = _main(argv)
         sys.stdout.flush()                    # surface a closed pipe here, not at interpreter exit
@@ -239,9 +241,9 @@ def build_parser() -> argparse.ArgumentParser:
                           help="--outdir of the original run it should reproduce")
     p_verify.add_argument("--strict", action="store_true",
                           help="also fail when any output bytes or recorded link identities "
-                               "differ, or when the runs' recorded execution environments (container "
-                               "images, plugins, staged remote inputs) do not match; inspect "
-                               "timestamped reports separately from analytical results")
+                               "differ, or when the runs' recorded execution environments "
+                               "(container images, plugins, staged remote inputs) do not match; "
+                               "inspect timestamped reports separately from analytical results")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -261,7 +263,8 @@ def build_parser() -> argparse.ArgumentParser:
     pc_status = chain_sub.add_parser("status")
     pc_status.add_argument("outdir", help="a chain's --outdir, or the outdir of one of its stages")
     pc_status.add_argument("--quick", action="store_true",
-                           help="report execution state without hashing data; lineage is not checked")
+                           help="report execution state without hashing data; lineage "
+                                "is not checked")
     pc_edges = chain_sub.add_parser("edges")
     pc_edges.add_argument("name", nargs="?", help="only the handoffs from or to this pipeline")
     # allow_abbrev=False: `run` forwards every unknown flag to the pipeline (via parse_known_args
@@ -294,8 +297,9 @@ def build_parser() -> argparse.ArgumentParser:
                        help="set an NXF_* env var for this run (repeatable), e.g. "
                             "NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true")
     # The nf-core-documented way to run on a machine smaller than the pipeline's default requests
-    # (`process_high` is 12 CPUs / 72.GB in the stock nf-core base.config): a `process.resourceLimits`
-    # ceiling. nfclaw generates the config and passes it with `-c`, so no hand-written file is needed.
+    # (`process_high` is 12 CPUs / 72.GB in the stock nf-core base.config): a
+    # `process.resourceLimits` ceiling. nfclaw generates the config and passes it with `-c`, so no
+    # hand-written file is needed.
     p_run.add_argument("--limit-cpus", dest="limit_cpus", type=_positive_int, metavar="N",
                        help="cap every process request at N CPUs "
                             "(Nextflow process.resourceLimits)")
@@ -314,20 +318,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--demo", action="store_true")
     p_run.add_argument("--resume", action="store_true")
     p_run.add_argument("--no-provenance", action="store_true")
-    # No wall-clock limit by default: a real nf-core run (a sarek WGS, a large rnaseq) can take days,
-    # and Nextflow already bounds each task with its own `time` directive.
+    # No wall-clock limit by default: a real nf-core run (a sarek WGS, a large rnaseq) can take
+    # days, and Nextflow already bounds each task with its own `time` directive.
     p_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
                        help="stop the whole run after SECONDS (default: no limit)")
-    # A Model Context Protocol server on stdin/stdout for agents (runner.mcp_server). Each of its tools
-    # runs one of the commands above, so this CLI stays the single implementation.
+    # A Model Context Protocol server on stdin/stdout for agents (runner.mcp_server). Each of its
+    # tools runs one of the commands above, so this CLI stays the single implementation.
     sub.add_parser("mcp", help="serve nfclaw to MCP clients over stdio (see docs/mcp.md)")
     return parser
 
 
 def run_option_names() -> frozenset[str]:
-    """Every option `nfclaw run` keeps for itself, spelled as a parameter key (`--nxf-env` -> `nxf_env`).
-    A pipeline parameter with one of these names cannot be passed as `--name=value`: argparse would
-    take it as nfclaw's own option."""
+    """Every option `nfclaw run` keeps for itself, spelled as a parameter key (`--nxf-env` ->
+    `nxf_env`). A pipeline parameter with one of these names cannot be passed as `--name=value`:
+    argparse would take it as nfclaw's own option."""
     commands = next(a for a in build_parser()._actions
                     if isinstance(a, argparse._SubParsersAction))
     return frozenset(opt[2:].replace("-", "_")
@@ -355,8 +359,8 @@ def _main(argv: list[str] | None = None) -> int:
                          "--param value.")), file=sys.stderr)
                 return 1
     args, extras = parser.parse_known_args(argv)
-    # Only `run` forwards unrecognised flags (to the pipeline). Anywhere else an unknown flag is a typo
-    # that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
+    # Only `run` forwards unrecognised flags (to the pipeline). Anywhere else an unknown flag is a
+    # typo that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
     try:
@@ -384,7 +388,7 @@ def _main(argv: list[str] | None = None) -> int:
                                      pipelines_dir=pdir, repo_root=root)
                 for note in st.notes:                          # e.g. `dev` is unreleased code
                     print(f"warning: {note}", file=sys.stderr)
-                if versions.is_cached(st):                     # a non-pinned version → generate on demand
+                if versions.is_cached(st):  # a non-pinned version → generate on demand
                     skill_path, ref_path = versions.generate_docs(st, dest_dir=st.path.parent)
                     print(skill_path.read_text(encoding="utf-8"))
                     print(f"reference.md for this version cached at {ref_path}", file=sys.stderr)
@@ -516,7 +520,7 @@ def _main(argv: list[str] | None = None) -> int:
         if res.generated_samplesheet is not None:
             print(f"samplesheet: {res.generated_samplesheet} (generated from --input)")
         rep = res.outputs_report
-        if rep is not None:                                   # real run — surface where results landed
+        if rep is not None:  # real run — surface where results landed
             print(f"outputs: {len(rep.files)} files in {res.outdir}")
             if rep.multiqc_report is not None:
                 print(f"multiqc: {rep.multiqc_report}")

@@ -67,9 +67,11 @@ def test_git_revision_change_is_detected_even_when_tracked_bytes_match(tmp_path)
         return subprocess.check_output(["git", "-C", str(repo), *args]).strip().decode()
     git("init", "-q")
     git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "add", "main.nf")
-    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "original")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit",
+        "-qm", "original")
     options["git_head"] = git("rev-parse", "HEAD")
-    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "changed revision")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit",
+        "--allow-empty", "-qm", "changed revision")
     result = dependency_stability.compare(**options)
     assert result["status"] == "changed"
     assert [issue["change"] for issue in result["issues"]] == ["revision"]
@@ -85,7 +87,8 @@ def test_tainted_run_cannot_be_replayed_after_restoring_dependencies(tmp_path):
 
 
 def test_tainted_log_forces_fresh_resume_even_without_local_inputs_or_provenance(tmp_path):
-    log = runlog.RunLog.open(tmp_path / "provenance/logs", command=["nextflow"], launch_dir=tmp_path)
+    log = runlog.RunLog.open(tmp_path / "provenance/logs", command=["nextflow"],
+                             launch_dir=tmp_path)
     log.fail(dependency_stability.FAILED_OUTCOME, "local source changed")
     log.finish()
     assert "previous execution" in orchestration._input_resume_warning(tmp_path, {}, {})

@@ -147,7 +147,8 @@ def test_file_only_prelaunch_checksums_cannot_invent_the_original_directory_layo
     assert "not captured" in result.stderr
 
 
-def test_prelaunch_directory_shape_survives_changes_during_execution(library, tmp_path, monkeypatch):
+def test_prelaunch_directory_shape_survives_changes_during_execution(library,
+                                                                     tmp_path, monkeypatch):
     root = library("mini")
     tree = root / "pipelines/mini/upstream"
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
@@ -226,7 +227,8 @@ def test_relocated_bundle_configs_preserve_identity_across_parent_aliases(tmp_pa
     assert "REPLAY_RAN" in result.stdout
 
 
-@pytest.mark.parametrize("damage", ["missing", "malformed", "old_version", "boolean_version", "unverified"])
+@pytest.mark.parametrize("damage",
+                         ["missing", "malformed", "old_version", "boolean_version", "unverified"])
 def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tmp_path, damage):
     source = tmp_path / "data"
     source.mkdir()
@@ -261,7 +263,8 @@ def test_resume_checks_complete_file_membership_to_avoid_stale_publications(tmp_
     standalone.rename(tmp_path / "new-table.tsv")
     _, inventory = provenance.snapshot_inputs([source, tmp_path / "new-table.tsv"])
     digests = orchestration._input_file_digests(inventory, None)
-    assert "inventory changed" in orchestration._input_resume_warning(tmp_path / "out", inventory, digests)
+    assert "inventory changed" in orchestration._input_resume_warning(tmp_path / "out",
+                                                                      inventory, digests)
     (source / "new_reads.txt").write_text("reads\n")
     _, inventory = provenance.snapshot_inputs([source])
     digests = orchestration._input_file_digests(inventory, None)
@@ -296,7 +299,8 @@ def test_resume_detects_changed_bytes_beneath_an_input_directory(tmp_path):
         orchestration._input_resume_warning(tmp_path / "out", inventory, digests)
 
 
-def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_aliases(tmp_path, monkeypatch):
+def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_aliases(
+        tmp_path, monkeypatch):
     source = tmp_path / "data"
     source.mkdir()
     reads = source / "reads.txt"
@@ -318,7 +322,8 @@ def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_ali
     assert len(inventory) == 3
 
 
-def test_resume_without_provenance_still_recomputes_changed_directories(library, tmp_path, monkeypatch):
+def test_resume_without_provenance_still_recomputes_changed_directories(library,
+                                                                        tmp_path, monkeypatch):
     root = library("mini")
     tree = root / "pipelines/mini/upstream"
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {

@@ -10,7 +10,8 @@ from runner import chain, engine_version, provenance
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])
-def test_failed_version_probe_cannot_supply_version_evidence_or_diagnostic_secrets(monkeypatch, probe):
+def test_failed_version_probe_cannot_supply_version_evidence_or_diagnostic_secrets(
+        monkeypatch, probe):
     module = provenance if probe is provenance._nextflow_version else engine_version
     monkeypatch.setattr(module, "capture", lambda *a, **k: subprocess.CompletedProcess(
                             ["nextflow", "-version"], 1, "nextflow version 25.10.4 build 11033\n",
@@ -39,7 +40,8 @@ def test_missing_or_conflicting_version_lines_are_unknown(monkeypatch, output):
 def _alive(pid):
     result = subprocess.run(["ps", "-p", str(pid), "-o", "stat="],
                             capture_output=True, text=True, timeout=2)
-    return result.returncode == 0 and bool(result.stdout.strip()) and not result.stdout.strip().startswith("Z")
+    state = result.stdout.strip()
+    return result.returncode == 0 and bool(state) and not state.startswith("Z")
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])

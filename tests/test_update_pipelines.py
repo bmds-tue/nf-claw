@@ -28,7 +28,7 @@ def test_relative_sources_resolved_against_repo_root(monkeypatch, tmp_path):
     monkeypatch.chdir(elsewhere)                              # run from outside the repo
     rc = up.main(["--sources", "sources.tsv", "--repo-root", str(repo)])
     assert rc == 0
-    assert seen == ["a"]                                      # found the repo's sources.tsv, not CWD's
+    assert seen == ["a"]  # found the repo's sources.tsv, not CWD's
 
 
 def test_one_failure_does_not_block_others(monkeypatch, tmp_path, capsys):
@@ -63,8 +63,8 @@ def test_report_distinguishes_a_bump_from_an_unchanged_pin(monkeypatch, tmp_path
 
 
 def test_bump_refuses_an_uninitialised_submodule(monkeypatch, tmp_path):
-    # Run in an uninitialised submodule's directory, `git -C <it> fetch/checkout` acts on the nf-claw
-    # repository itself; bump must stop before touching git there.
+    # Run in an uninitialised submodule's directory, `git -C <it> fetch/checkout` acts on the
+    # nf-claw repository itself; bump must stop before touching git there.
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     (tmp_path / "pipelines" / "p" / "upstream").mkdir(parents=True)
     monkeypatch.setattr(up, "remote_tags", lambda url: ["1.0.0"])

@@ -1,5 +1,5 @@
-"""`nfclaw mcp` against the official MCP Python SDK — the client library Hermes and many other agents
-use — over real stdio, in both protocol eras. Skipped when the SDK is not installed
+"""`nfclaw mcp` against the official MCP Python SDK — the client library Hermes and many other
+agents use — over real stdio, in both protocol eras. Skipped when the SDK is not installed
 (`pip install mcp`); the protocol itself is covered without it by test_mcp_server.py."""
 from __future__ import annotations
 

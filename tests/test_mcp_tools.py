@@ -1,5 +1,5 @@
-"""nfclaw's MCP tools (runner.mcp_tools): arguments become the CLI command a person would type, docs are
-served as they are, and runs become detached jobs followed through `nfclaw status`.
+"""nfclaw's MCP tools (runner.mcp_tools): arguments become the CLI command a person would type, docs
+are served as they are, and runs become detached jobs followed through `nfclaw status`.
 
 Job tests swap the CLI for a small stand-in script (FAKE_NFCLAW) so a "run" can be made to refuse,
 succeed or hang on demand; one test runs the real CLI to prove the job path reaches it unmodified.
@@ -19,8 +19,9 @@ from runner.mcp_server import Context, RpcError
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Stands in for `python -m runner`: `run` refuses (--mode=refuse), succeeds after writing its run log
-# (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads that log.
+# Stands in for `python -m runner`: `run` refuses (--mode=refuse), succeeds after writing its run
+# log (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads
+# that log.
 FAKE_NFCLAW = textwrap.dedent("""
     import signal, sys, time
     from pathlib import Path

@@ -155,13 +155,14 @@ def test_a_file_named_by_its_launch_time_is_paired_not_missing(tmp_path):
     # The nf-core template names pipeline_info/params_<launch time>.json by the clock, so every
     # faithful replay "lost" the original's file and "gained" its own. They are one logical
     # result: report the pair explicitly and compare its bytes like any other file.
-    orig = _bundle(tmp_path, "orig", {"data.txt": "same",
-                                      "pipeline_info/params_2026-10-12_04-22-27.json": '{"outdir": "a"}'})
-    replay = _bundle(tmp_path, "replay", {"data.txt": "same",
-                                          "pipeline_info/params_2026-10-12_04-23-14.json": '{"outdir": "b"}'})
+    orig = _bundle(tmp_path, "orig", {
+        "data.txt": "same", "pipeline_info/params_2026-10-12_04-22-27.json": '{"outdir": "a"}'})
+    replay = _bundle(tmp_path, "replay", {
+        "data.txt": "same", "pipeline_info/params_2026-10-12_04-23-14.json": '{"outdir": "b"}'})
     cmp = verify.compare(orig, replay)
     assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
-    pair = "pipeline_info/params_2026-10-12_04-22-27.json -> pipeline_info/params_2026-10-12_04-23-14.json"
+    pair = ("pipeline_info/params_2026-10-12_04-22-27.json -> "
+            "pipeline_info/params_2026-10-12_04-23-14.json")
     assert cmp.renamed == [pair]
     assert cmp.changed == [pair] and not cmp.byte_identical       # outdir differs inside
     text = verify.report(cmp)
@@ -187,7 +188,8 @@ def test_identical_launch_stamped_files_count_as_identical(tmp_path):
     # A dated file that is not nf-core run metadata may be a result: its exact path counts.
     ({"pipeline_info/sample_2026-10-08_10-00-00.json": "{}"},
      {"pipeline_info/sample_2026-10-09_10-00-00.json": "{}"}),
-    ({"results/calls_2026-10-08_10-00-00.vcf": "x"}, {"results/calls_2026-10-09_10-00-00.vcf": "x"}),
+    ({"results/calls_2026-10-08_10-00-00.vcf": "x"},
+     {"results/calls_2026-10-09_10-00-00.vcf": "x"}),
     # Digits that are not an nf-core launch time are sample identities, never paired.
     ({"sample_1.txt": "x"}, {"sample_2.txt": "x"}),
 ])

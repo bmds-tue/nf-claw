@@ -24,7 +24,8 @@ def _declared_property_names(node) -> set[str]:
     parameter names. Used to tell an *upstream removal* (a legacy flag that no longer exists in the
     schema at all) apart from a *parser regression* (a param the schema still declares but that
     `load_param_schema` dropped). nf-claw wraps pipelines unmodified, so a param upstream deleted is
-    correctly absent and must not fail this test; a param the schema still declares must not be lost.
+    correctly absent and must not fail this test; a param the schema still declares must not
+    be lost.
     """
     names: set[str] = set()
     if isinstance(node, dict):
@@ -55,4 +56,5 @@ def test_schema_covers_legacy_sarek_allowlist():
     # dropping a param the pinned schema STILL declares — that intersection must be empty.
     parser_dropped = (legacy - known) & declared
     assert parser_dropped == set(), \
-        f"schema declares these legacy sarek flags but the parser dropped them: {sorted(parser_dropped)}"
+        ("schema declares these legacy sarek flags but the parser dropped "
+         f"them: {sorted(parser_dropped)}")

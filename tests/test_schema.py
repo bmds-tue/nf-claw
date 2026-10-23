@@ -113,8 +113,8 @@ def test_config_param_defaults_without_a_config(tmp_path):
 
 def test_input_schema_captures_what_samplesheet_generation_needs(tmp_path):
     # Generating a samplesheet from data files needs more of the schema than validating one: the
-    # patterns a column accepts inside anyOf/oneOf branches (atacseq declares fastq_2's FastQ pattern
-    # only there), defaults, required column alternatives and nf-schema's uniqueEntries.
+    # patterns a column accepts inside anyOf/oneOf branches (atacseq declares fastq_2's FastQ
+    # pattern only there), defaults, required column alternatives and nf-schema's uniqueEntries.
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(json.dumps({
         "uniqueEntries": ["sample"],

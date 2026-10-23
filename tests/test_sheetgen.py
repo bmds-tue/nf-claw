@@ -27,7 +27,8 @@ def fq(path: Path, *ids: str, gz: bool | None = None) -> Path:
     return path
 
 
-def pair(directory: Path, r1: str, r2: str, read: str = "M1:1:FC:1:1101:100:200") -> tuple[Path, Path]:
+def pair(directory: Path, r1: str, r2: str,
+         read: str = "M1:1:FC:1:1101:100:200") -> tuple[Path, Path]:
     """Mates: the same read name, as Illumina writes it (the read number follows a space)."""
     return (fq(directory / r1, f"{read} 1:N:0:ACGT"), fq(directory / r2, f"{read} 2:N:0:ACGT"))
 
@@ -127,7 +128,8 @@ def test_detect_directory_glob_file_and_list(tmp_path, monkeypatch):
     a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     monkeypatch.chdir(tmp_path)
     assert sheetgen.detect("data", up).values == (str(data),)
-    assert sheetgen.detect("data/*_R{1,2}.fastq.gz", up).values == (str(data / "*_R{1,2}.fastq.gz"),)
+    assert sheetgen.detect("data/*_R{1,2}.fastq.gz", up).values == (
+        str(data / "*_R{1,2}.fastq.gz"),)
     assert sheetgen.detect(str(a1), up).values == (str(a1),)
     source = sheetgen.detect(["data/A_R1.fastq.gz", str(a2)], up)
     assert source.values == (str(a1), str(a2)) and source.sheet == "assets/schema_input.json"
@@ -852,7 +854,8 @@ def test_paths_a_template_or_constant_writes_are_inputs(tmp_path):
 
 def test_a_glob_does_not_reach_into_the_work_tree(tmp_path):
     pair(tmp_path / "proj" / "reads", "A_R1.fastq.gz", "A_R2.fastq.gz")
-    pair(tmp_path / "proj" / "work" / "ab" / "cdef", "A_trimmed_R1.fastq.gz", "A_trimmed_R2.fastq.gz")
+    pair(tmp_path / "proj" / "work" / "ab" / "cdef", "A_trimmed_R1.fastq.gz",
+         "A_trimmed_R2.fastq.gz")
     up = S.make_pipeline(tmp_path, S.RNASEQ)
     source = sheetgen.detect(str(tmp_path / "proj" / "**" / "*.fastq.gz"), up)
     with pytest.raises(NfclawError, match="work directory"):

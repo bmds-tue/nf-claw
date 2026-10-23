@@ -70,18 +70,22 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema, *,
             # would be invalid, whatever type the schema declares.
             errors.append(f"parameter '{flag}' must be a finite number, got {value!r}")
         elif value is None or value is False or value == "":
-            # null is dropped by every nf-schema release; false/"" are dropped by 2.5–2.6 but rejected
-            # by 2.7 (verified). A verdict that depends on the plugin version is not unambiguous, so
-            # it is left to nf-schema at runtime rather than risk rejecting a valid run.
+            # null is dropped by every nf-schema release; false/"" are dropped by 2.5–2.6 but
+            # rejected by 2.7 (verified). A verdict that depends on the plugin version is not
+            # unambiguous, so it is left to nf-schema at runtime rather than risk rejecting a
+            # valid run.
             continue
         else:
             param = schema.params[key]
-            if key != "outdir" and param.fmt in PATH_FORMATS and isinstance(value, str) and value.strip():
+            if (key != "outdir" and param.fmt in PATH_FORMATS and isinstance(value, str)
+                    and value.strip()):
                 errors.extend(f"parameter '{flag}': {issue}"
                               for issue in local_name_issues(
-                                  value, param.fmt, resolve_parent=True, inspect_contents=key not in output_only_dirs))
+                                  value, param.fmt, resolve_parent=True,
+                                  inspect_contents=key not in output_only_dirs))
                 if key in shell_paths:
-                    errors.extend(f"parameter '{flag}': {issue}" for issue in shell_path_issues(value))
+                    errors.extend(f"parameter '{flag}': {issue}"
+                                  for issue in shell_path_issues(value))
             if param.enum is not None and not _in_enum(value, param):
                 errors.append(f"parameter '{flag}={value}' is not allowed; "
                               f"must be one of: {', '.join(param.enum)}")
@@ -96,7 +100,8 @@ def _json_equal(left: Any, right: Any) -> bool:
     while pending:
         a, b = pending.pop()
         if isinstance(a, json.NUMBER_TYPES) and not isinstance(a, bool):
-            if not isinstance(b, json.NUMBER_TYPES) or isinstance(b, bool) or json.decimal(a) != json.decimal(b):
+            if (not isinstance(b, json.NUMBER_TYPES) or isinstance(b, bool)
+                    or json.decimal(a) != json.decimal(b)):
                 return False
         elif type(a) is not type(b):
             return False
@@ -267,12 +272,12 @@ def pin_report_suffix(merged: dict[str, Any], schema: ParamSchema,
                       *, now: datetime | None = None) -> dict[str, Any]:
     """Pin `trace_report_suffix` so the run's report filenames are fixed, not "whenever this ran".
 
-    The nf-core template defaults this parameter to `new java.util.Date().format('yyyy-MM-dd_HH-mm-ss')`
-    — a *fresh timestamp evaluated on every launch* — and interpolates it into the names of the
-    execution report, timeline, trace and DAG under `pipeline_info/`. Left alone, replaying a run
-    through `provenance/commands.sh` writes a second set of reports under new names instead of
-    reproducing the original run's outputs, so the bundle is not a strict reproduction and
-    `outputs.sha256` can never be checked against it.
+    The nf-core template defaults this parameter to `new
+    java.util.Date().format('yyyy-MM-dd_HH-mm-ss')` — a *fresh timestamp evaluated on every launch*
+    — and interpolates it into the names of the execution report, timeline, trace and DAG under
+    `pipeline_info/`. Left alone, replaying a run through `provenance/commands.sh` writes a second
+    set of reports under new names instead of reproducing the original run's outputs, so the bundle
+    is not a strict reproduction and `outputs.sha256` can never be checked against it.
 
     Recording the value the run actually used turns that timestamp from an implicit, unrepeatable
     default into a recorded input: it lands in `provenance/params.json`, which `commands.sh` passes
@@ -336,7 +341,8 @@ def load_params_file(path: Path, *, label: str = "--params-file") -> dict:
                         try:
                             if key in keys:
                                 raise yaml.constructor.ConstructorError(
-                                    None, None, f"duplicate parameter key {key!r}", key_node.start_mark)
+                                    None, None, f"duplicate parameter key {key!r}",
+                                    key_node.start_mark)
                             keys.add(key)
                         except TypeError:
                             pass  # SafeLoader reports unhashable keys with a source location.
@@ -373,8 +379,9 @@ def load_params_file(path: Path, *, label: str = "--params-file") -> dict:
     try:
         _reject_cycles(data)
     except ValueError as exc:
-        raise NfclawError(ErrorCode.PARAMS_INVALID, f"{label}: {exc}: {path}",
-                          fix="Replace recursive aliases with finite JSON-compatible values.") from exc
+        raise NfclawError(
+            ErrorCode.PARAMS_INVALID, f"{label}: {exc}: {path}",
+            fix="Replace recursive aliases with finite JSON-compatible values.") from exc
     return data
 
 
@@ -426,10 +433,11 @@ def _finite(value: Any) -> bool:
 
 
 def write_params_file(params: dict[str, Any], dest: Path) -> Path:
-    # allow_nan=False: Python would otherwise write the non-standard `NaN`/`Infinity` literals, which
-    # Nextflow cannot parse. Validation reports such values first; this is the backstop.
+    # allow_nan=False: Python would otherwise write the non-standard `NaN`/`Infinity` literals,
+    # which Nextflow cannot parse. Validation reports such values first; this is the backstop.
     try:
-        text = json.dumps(params, indent=2, sort_keys=True, allow_nan=False, nextflow_compatible=True)
+        text = json.dumps(params, indent=2, sort_keys=True, allow_nan=False,
+                          nextflow_compatible=True)
     except ValueError as exc:
         raise NfclawError(ErrorCode.PARAMS_INVALID,
                           f"Parameters cannot be written as JSON: {exc}",

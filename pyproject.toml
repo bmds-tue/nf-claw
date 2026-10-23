@@ -30,9 +30,10 @@ addopts = "-q"
 
 [tool.ruff]
 extend-exclude = ["pipelines", "website"]
+line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "B", "UP"]
+select = ["E4", "E501", "E7", "E9", "F", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 # These run under whatever python3 is at hand, not nfclaw's own interpreter: the replay scripts are

@@ -1,4 +1,5 @@
-"""Task containers are observed as they start, so their images are recorded even if removed later."""
+"""Task containers are observed as they start, so their images are recorded even if
+removed later."""
 import json
 import os
 import time
@@ -21,7 +22,7 @@ case "$1 $2" in
   ;;
 *) exit 1 ;;
 esac
-"""
+"""  # noqa: E501
 REFERENCE = "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
 
 
@@ -53,7 +54,8 @@ def test_each_task_image_is_inspected_once_as_its_first_container_starts(tmp_pat
     ])
     watch = container_watch.ContainerWatch("docker", tmp_path / "work", dict(os.environ)).start()
     deadline = time.monotonic() + 10
-    while (not calls.exists() or len(calls.read_text().split()) < 2) and time.monotonic() < deadline:
+    while ((not calls.exists() or len(calls.read_text().split()) < 2)
+           and time.monotonic() < deadline):
         time.sleep(0.05)
     observed = watch.stop()
     assert sorted(calls.read_text().split()) == sorted(["quay.io/removed:1", REFERENCE])
@@ -69,7 +71,8 @@ def test_a_reference_seen_again_later_is_inspected_again(tmp_path, monkeypatch):
     monkeypatch.setattr(container_watch, "RECHECK_SECONDS", 0)
     watch = container_watch.ContainerWatch("docker", None, dict(os.environ)).start()
     deadline = time.monotonic() + 10
-    while (not calls.exists() or len(calls.read_text().split()) < 2) and time.monotonic() < deadline:
+    while ((not calls.exists() or len(calls.read_text().split()) < 2)
+           and time.monotonic() < deadline):
         time.sleep(0.05)
     watch.stop()
     assert calls.read_text().split() == [REFERENCE, REFERENCE]
@@ -90,12 +93,15 @@ def test_engine_is_taken_from_the_profile():
 def _capture_with(tmp_path, monkeypatch, *, observed=None, previous=None, inspect=None):
     out = tmp_path / "out"
     (out / ".nextflow").mkdir(parents=True)
-    (out / ".nextflow" / "history").write_text("2026-10-15 10:00:00\t1s\trun_a\tOK\tabc\tsess\tcmd\n")
+    (out / ".nextflow" / "history").write_text("2026-10-15 "
+                                               "10:00:00\t1s\trun_a\tOK\tabc\tsess\tcmd\n")
     monkeypatch.setattr(env_record, "tasks", lambda *a, **k: [
-        {"process": "P:FASTQC", "container": "quay.io/tool:1", "status": "COMPLETED", "workdir": None}])
+        {"process": "P:FASTQC", "container": "quay.io/tool:1", "status": "COMPLETED",
+         "workdir": None}])
     monkeypatch.setattr(env_record, "engine_details", lambda engine, env: {"name": engine})
     monkeypatch.setattr(env_record, "resolve_registry_image", inspect or (
-        lambda engine, reference, env, at_start=False: {"kind": "unresolved", "reason": "No such image"}))
+        lambda engine, reference, env, at_start=False: {"kind": "unresolved",
+                                                        "reason": "No such image"}))
     return env_record.capture(out, log_path=out / ".nextflow.log", profile="docker",
                               observed=observed, previous=previous)
 
@@ -119,7 +125,8 @@ def test_an_earlier_attempt_names_an_image_removed_since(tmp_path, monkeypatch):
     earlier = {"kind": "registry", "repository": "quay.io/tool", "id": IMAGE_ID, "digest": DIGEST}
     record = _capture_with(tmp_path, monkeypatch, previous={"images": {"quay.io/tool:1": earlier}})
     assert record["images"]["quay.io/tool:1"]["digest"] == DIGEST
-    assert record["images"]["quay.io/tool:1"]["source"] == "recorded by an earlier attempt of this run"
+    assert (record["images"]["quay.io/tool:1"]["source"]
+            == "recorded by an earlier attempt of this run")
 
 
 def test_a_digest_reference_identifies_an_image_the_engine_removed(monkeypatch):

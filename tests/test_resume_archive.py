@@ -54,7 +54,8 @@ def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, aliase
     assert "REPLAY_RAN" in replay.stdout
 
 
-@pytest.mark.parametrize("dependency", ["inside_input", "ancestor_input", "inside_config", "inside_pipeline"])
+@pytest.mark.parametrize("dependency",
+                         ["inside_input", "ancestor_input", "inside_config", "inside_pipeline"])
 def test_archiving_cannot_move_or_modify_dependencies_of_the_new_launch(tmp_path, dependency):
     out = tmp_path / "analysis"
     out.mkdir()
@@ -137,7 +138,8 @@ def test_archive_keeps_publications_addressed_through_old_directory_names(tmp_pa
 
 
 @pytest.mark.parametrize("error", [OSError, KeyboardInterrupt])
-def test_failed_archive_replacement_restores_the_complete_original_tree(tmp_path, monkeypatch, error):
+def test_failed_archive_replacement_restores_the_complete_original_tree(tmp_path,
+                                                                        monkeypatch, error):
     out = tmp_path / "analysis"
     out.mkdir()
     data = out / "reads.txt"

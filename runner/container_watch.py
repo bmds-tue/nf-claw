@@ -40,7 +40,7 @@ def engine_for(profile: str) -> str | None:
 def _reference(event: dict) -> str | None:
     actor = event.get("Actor") if isinstance(event.get("Actor"), dict) else {}
     attributes = actor.get("Attributes") if isinstance(actor.get("Attributes"), dict) else {}
-    for value in (event.get("from"), attributes.get("image"), event.get("Image")):   # docker, podman
+    for value in (event.get("from"), attributes.get("image"), event.get("Image")):  # docker, podman
         if isinstance(value, str) and value and not value.startswith("sha256:"):
             return value
     return None
@@ -60,7 +60,8 @@ class ContainerWatch:
     own task records (`nextflow log`) select the references that belong to it.
     """
 
-    def __init__(self, engine: str, work_dir: Path | None = None, env: dict[str, str] | None = None):
+    def __init__(self, engine: str, work_dir: Path | None = None,
+                 env: dict[str, str] | None = None):
         self.engine = engine
         self.work_dir = work_dir
         self.env = env

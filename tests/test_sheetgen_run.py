@@ -55,7 +55,8 @@ def test_check_generates_stages_and_names_the_sheet(tmp_path, run):
     assert sheet.name == "samplesheet.csv" and res.generated_samplesheet == sheet
     assert sheet.read_text() == f"sample,fastq_1,fastq_2,strandedness\nA,{a1},{a2},auto\n"
     params = json.loads(Path(_arg(res.command, "-params-file")).read_text())
-    assert params["input"] == str(sheet) and sheet.parent == Path(_arg(res.command, "-params-file")).parent
+    assert params["input"] == str(sheet)
+    assert sheet.parent == Path(_arg(res.command, "-params-file")).parent
     assert not (tmp_path / "results").exists()
     assert [w for w in said if w.startswith("Generated the pipe samplesheet")]
 

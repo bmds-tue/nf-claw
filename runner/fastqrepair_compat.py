@@ -2,9 +2,9 @@
 
 The pinned repository stays unchanged. Generated task recipes use this standalone
 splitter, wipe placeholder chunks, gather reports exactly, repair a missing shell
-continuation, preserve declared mate order, and preserve distinct publications. The complete helper source is
-embedded into the recorded config, so replay does not depend on the installed
-nfclaw version or the original helper path.
+continuation, preserve declared mate order, and preserve distinct publications. The complete helper
+source is embedded into the recorded config, so replay does not depend on the installed nfclaw
+version or the original helper path.
 
 Splitting is invisible to fastqwiper: a chunk starts only at a line where
 fastqwiper, wiping the unsplit file, would start a record afresh whatever its
@@ -55,7 +55,8 @@ def recipe_digest() -> str:
 
 def _command() -> str:
     encoded = base64.b64encode(_source()).decode("ascii")
-    bootstrap = f"import base64; _NFCLAW_COMPAT_SOURCE=base64.b64decode('{encoded}'); exec(_NFCLAW_COMPAT_SOURCE)"
+    bootstrap = (f"import base64; _NFCLAW_COMPAT_SOURCE=base64.b64decode('{encoded}'); "
+                 "exec(_NFCLAW_COMPAT_SOURCE)")
     return shlex.join(["python3", "-c", bootstrap])
 
 
@@ -64,7 +65,8 @@ def _open_source(path: Path):
 
 
 def _lines(handle, breaks):
-    """The source's lines, split as fastqwiper splits a chunk (`handle` yields b"\\n"-ended lines)."""
+    """The source's lines, split as fastqwiper splits a chunk (`handle` yields
+    b"\\n"-ended lines)."""
     for raw in handle:
         start = 0
         for match in breaks.finditer(raw):
@@ -157,7 +159,8 @@ def _zero_report() -> str:
 
 
 def wipe(argv: list[str]) -> None:
-    """fastqwiper for one chunk; a zero-byte placeholder chunk yields an empty output and zero report."""
+    """fastqwiper for one chunk; a zero-byte placeholder chunk yields an empty output and
+    zero report."""
     parser = argparse.ArgumentParser(prog="wipe", add_help=False, allow_abbrev=False)
     parser.add_argument("-i", "--fastq_in", required=True)
     parser.add_argument("-o", "--fastq_out", required=True)
@@ -182,7 +185,8 @@ def _parse_report(path: Path) -> dict[str, int]:
         for field in _FIELDS:
             if line.startswith(field + ":"):
                 rest = r" \((?:\d+(?:\.\d+)?%|not applicable)\)" if field in _PERCENT else ""
-                fixed = r" of which (\d+) fixed" if field == "Bad headers or misplaced lines" else ""
+                fixed = (r" of which (\d+) fixed" if field == "Bad headers or misplaced lines"
+                         else "")
                 match = re.fullmatch(re.escape(field) + r": (\d+)" + rest + fixed, line)
                 if field in counts or not match:
                     raise ValueError(f"{path}: unrecognized fastqwiper report line: {line!r}")
@@ -193,12 +197,14 @@ def _parse_report(path: Path) -> dict[str, int]:
     if len(counts) != len(_FIELDS) + 1:
         raise ValueError(f"{path}: incomplete fastqwiper report")
     if undefined and any(counts.values()):
-        raise ValueError(f"{path}: undefined rates are only valid for a zero-count placeholder report")
+        raise ValueError(f"{path}: undefined rates are only valid for a "
+                         "zero-count placeholder report")
     return counts
 
 
 def gather_reports(reports: list[Path], final: Path) -> None:
-    """Sum fastqwiper reports exactly; the pinned reportgather keeps one digit of each fixed count."""
+    """Sum fastqwiper reports exactly; the pinned reportgather keeps one digit of each
+    fixed count."""
     totals = {key: 0 for key in (*_FIELDS, "fixed")}
     for report in reports:
         for key, value in _parse_report(report).items():
@@ -211,7 +217,8 @@ def gather_reports(reports: list[Path], final: Path) -> None:
 
     final.write_text("FASTQWIPER REPORT:\n\n" + "".join(
         f"{field}: {totals[field]}" + (share(field) if field in _PERCENT else "")
-        + (f" of which {totals['fixed']} fixed" if field == "Bad headers or misplaced lines" else "")
+        + (f" of which {totals['fixed']} fixed"
+           if field == "Bad headers or misplaced lines" else "")
         + "\n" for field in _FIELDS), encoding="utf-8")
 
 
@@ -223,7 +230,8 @@ _TASKS = {
                 "nfclaw_record_scatter"),
     "wiper": ("wipertools \\\n    fastqwiper \\\n", None, "wipe", None),
     "reportgather": ("wipertools \\\n    reportgather \\\n",
-                     "wipertools reportgather: $(wipertools reportgather --version)", "reportgather",
+                     "wipertools reportgather: $(wipertools reportgather --version)",
+                     "reportgather",
                      "nfclaw_record_reportgather"),
 }
 
@@ -233,7 +241,8 @@ def paired_input_roles(path: Path | None) -> dict[str, list[str]]:
     if path is None:
         return {}
     with path.open(newline="", encoding="utf-8-sig") as stream:
-        return paired_row_roles(csv.DictReader(stream, delimiter="\t" if path.suffix.lower() == ".tsv" else ","))
+        return paired_row_roles(
+            csv.DictReader(stream, delimiter="\t" if path.suffix.lower() == ".tsv" else ","))
 
 
 def paired_row_roles(rows) -> dict[str, list[str]]:
@@ -242,7 +251,8 @@ def paired_row_roles(rows) -> dict[str, list[str]]:
         first, second = (row.get("fastq_1") or "").strip(), (row.get("fastq_2") or "").strip()
         sample = row["sample"].strip()
         if sample in seen:
-            raise ValueError(f"sample {sample} occurs more than once; its stream identity would collapse")
+            raise ValueError(f"sample {sample} occurs more than once; its stream "
+                             "identity would collapse")
         seen.add(sample)
         if not second:
             continue
@@ -251,11 +261,13 @@ def paired_row_roles(rows) -> dict[str, list[str]]:
         if names[0] == names[1]:
             raise ValueError(f"paired sample {sample} has the same staged filename for both mates")
         if names[0].endswith(".gz") != names[1].endswith(".gz"):
-            raise ValueError(f"paired sample {sample} mixes gzip and plain streams; use matching formats")
+            raise ValueError(f"paired sample {sample} mixes gzip and plain streams; "
+                             "use matching formats")
         orders[sample] = ([sample + "_recovered_1", sample + "_recovered_2"]
                           if names[0].endswith(".gz") else [Path(name).stem for name in names])
         if len(set(orders[sample])) != 2:
-            raise ValueError(f"paired sample {sample} has the same decoupled identity for both mates")
+            raise ValueError(f"paired sample {sample} has the same decoupled identity "
+                             "for both mates")
     return orders
 
 
@@ -281,7 +293,8 @@ def _ordered_inputs(source: str, orders: dict[str, list[str]]) -> str:
                         labels.add(int(header[0][-1]))
                     if len(header) > 1 and header[1].startswith(("1:", "2:")):
                         labels.add(int(header[1][0]))
-                    sequence, plus, quality = stream.readline(), stream.readline(), stream.readline()
+                    sequence, plus, quality = (stream.readline(), stream.readline(),
+                                               stream.readline())
                     if (len(labels) != 1 or not header or not header[0].startswith("@")
                             or not plus.startswith(b"+") or not sequence or not quality
                             or len(sequence.rstrip(b"\r\n")) != len(quality.rstrip(b"\r\n"))):
@@ -293,7 +306,8 @@ def _ordered_inputs(source: str, orders: dict[str, list[str]]) -> str:
             return role
         roles = [mate(name) for name in inputs]
         if sorted(role or 0 for role in roles) != [1, 2]:
-            raise ValueError("mate order cannot be verified from this profile; supply an explicit local samplesheet")
+            raise ValueError("mate order cannot be verified from this profile; supply an "
+                             "explicit local samplesheet")
         ordered = [inputs[roles.index(index)] for index in (1, 2)]
     return re.sub(r"(?<!\S)in(?:2)?=([^\s]+)",
                   lambda match: ("in2=" if match[0].startswith("in2=") else "in=")
@@ -345,11 +359,13 @@ def write_config(target: Path, *, input_path: Path | None = None) -> Path:
                        "            def pair = roles[meta.id]\n"
                        "            def selection = pair == null ? [:] : [(meta.id): pair]\n"
                        "            return " + json.dumps(command + " patch repair .command.sh")
-                       + ' + " --mate-orders " + groovy.json.JsonOutput.toJson(selection).bytes.encodeBase64().toString()\n'
+                       + ' + " --mate-orders " + groovy.json.JsonOutput.toJson(selection)'
+                       '.bytes.encodeBase64().toString()\n'
                        "        }")
     wiper_hook = json.dumps(command + " patch wiper .command.sh")
     reportgather_hook = json.dumps(command + " patch reportgather .command.sh")
-    salt = (hashlib.sha256(_source() + encoded.encode()).hexdigest()[:16] if orders else recipe_digest()[:16])
+    salt = (hashlib.sha256(_source() + encoded.encode()).hexdigest()[:16] if orders
+            else recipe_digest()[:16])
     config = """// nfclaw runtime correction for fastqrepair 1.1.1; pinned source is unchanged.
 def nfclawMateRoles = new java.util.LinkedHashMap(MATE_ORDERS)
 process {
@@ -405,7 +421,7 @@ process {
             overwrite: true, saveAs: { filename -> filename == 'versions.yml' ? null : filename }]
     }
 }
-"""
+"""  # noqa: E501 -- Groovy configuration, written out byte for byte
     replacements = {"RECIPE": salt, "SCATTER_HOOK": scatter_hook, "REPAIR_HOOK": repair_hook,
                     "WIPER_HOOK": wiper_hook, "MATE_ORDERS": order_expression,
                     "REPORTGATHER_HOOK": reportgather_hook}
@@ -434,7 +450,8 @@ def main() -> None:
     split.add_argument("-n", "--num_splits", type=int, required=True)
     split.add_argument("-p", "--prefix", required=True)
     split.add_argument("-s", "--suffix", default="", nargs="?", const="")
-    split.add_argument("-e", "--ext", choices=("fastq", "fq", "fastq.gz", "fq.gz"), default="fastq.gz")
+    split.add_argument("-e", "--ext", choices=("fastq", "fq", "fastq.gz", "fq.gz"),
+                       default="fastq.gz")
     split.add_argument("-o", "--out_folder", type=Path, default=Path("chunks"))
     split.add_argument("-O", "--os", choices=("unix", "cross_platform"), default="unix")
     gather = sub.add_parser("reportgather")

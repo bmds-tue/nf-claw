@@ -50,8 +50,9 @@ def test_show_prints_skill(tmp_path, monkeypatch, capsys):
 
 
 def test_run_hands_the_raw_input_to_the_pipeline_schema(tmp_path, captured):
-    # What `--input` is — a samplesheet, a directory, an accession, `false` — depends on the pipeline's
-    # schema, so the CLI must not pre-judge it as a local path (PXD009752 became <cwd>/PXD009752).
+    # What `--input` is — a samplesheet, a directory, an accession, `false` — depends on the
+    # pipeline's schema, so the CLI must not pre-judge it as a local path (PXD009752
+    # became <cwd>/PXD009752).
     for raw in ("PXD009752", "false", "rel/ss.csv", "https://example.test/ss.csv"):
         assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", raw]) == 0
         assert captured["input_path"] == raw
@@ -203,7 +204,8 @@ def test_run_threads_nxf_ver_and_env(tmp_path, captured):
 
 def test_run_prints_the_command_with_the_nxf_env_it_runs_under(tmp_path, monkeypatch, capsys):
     # `--check` promises the exact command that would run; under `--nxf-ver 25.10.4` that command
-    # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell defaults to.
+    # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell
+    # defaults to.
     monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: orchestration.RunResult(
         "nextflow run /t -profile binac2", Path("/o"), True, None,
         env={"NXF_VER": "25.10.4", "NXF_JVM_ARGS": "-Da=b -Dc=d"}))
@@ -274,7 +276,8 @@ def test_run_rejects_malformed_nxf_env(tmp_path, monkeypatch, capsys):
 
 def test_nxf_env_rejects_invalid_environment_name(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
-    rc = cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--nxf-env", "NXF_BAD-NAME=value"])
+    rc = cli.main(
+        ["run", "x", "--outdir", str(tmp_path / "out"), "--nxf-env", "NXF_BAD-NAME=value"])
     assert rc == 1
     assert "invalid environment variable name" in capsys.readouterr().err
 
@@ -308,7 +311,7 @@ def test_versions_lists_dev_after_every_release(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(versions, "dev_head", lambda name, **k: ("f754e0a247b0" + "0" * 28, True))
     assert cli.main(["versions", "sarek"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[0].startswith("2.0.0\tlatest")              # the first line is still the newest release
+    assert lines[0].startswith("2.0.0\tlatest")  # the first line is still the newest release
     assert lines[-1].startswith("dev\t") and "unreleased" in lines[-1]
     assert "f754e0a247b0" in lines[-1] and "last fetched" not in lines[-1]
 
@@ -406,8 +409,8 @@ def test_run_says_warnings_before_launch_and_only_once(tmp_path, monkeypatch, ca
 
 
 def test_output_into_a_closed_pipe_ends_quietly():
-    # `nfclaw versions X | head -1` (or `list | grep -m1`) closes the pipe early; the next write used
-    # to end the command with a BrokenPipeError traceback on stderr.
+    # `nfclaw versions X | head -1` (or `list | grep -m1`) closes the pipe early; the next write
+    # used to end the command with a BrokenPipeError traceback on stderr.
     script = (
         "import sys\n"
         "from runner import cli\n"
@@ -578,7 +581,8 @@ def test_status_of_a_successful_run(tmp_path, monkeypatch, capsys):
 
 def test_status_of_a_failed_run_prints_the_recorded_error(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
-    body = "ERROR ~ x\n==> nfclaw error:\n[execution_failed] Nextflow execution failed (exit status 1).\n"
+    body = ("ERROR ~ x\n==> nfclaw error:\n[execution_failed] Nextflow execution failed "
+            "(exit status 1).\n")
     _write_run_log(tmp_path / "out", _finished_block("failed (exit status 1)", body))
     assert cli.main(["status", str(tmp_path / "out")]) == 1
     out = capsys.readouterr().out

@@ -51,10 +51,11 @@ def _lock_inactive_sessions(original: Path, locks: ExitStack) -> None:
         try:
             fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"Cannot preserve the previous run: a Nextflow session is active "
-                              f"or locked in {original}.",
-                              fix="Stop the existing engine and its tasks before resuming.") from None
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT,
+                f"Cannot preserve the previous run: a Nextflow session is active or "
+                f"locked in {original}.",
+                fix="Stop the existing engine and its tasks before resuming.") from None
 
 
 def archive_previous_run(outdir: Path, inventory: dict[str, dict[str, str]],
@@ -74,7 +75,8 @@ def archive_previous_run(outdir: Path, inventory: dict[str, dict[str, str]],
             raise NfclawError(ErrorCode.ENVIRONMENT,
                               f"Cannot preserve the previous run: pipeline/configuration {config} "
                               f"is inside {outdir}.",
-                              fix="Keep pipeline code and configuration outside the output directory.")
+                              fix="Keep pipeline code and configuration outside "
+                                  "the output directory.")
 
     suffix = f".previous-{uuid.uuid4().hex}"
     prefix = original.name

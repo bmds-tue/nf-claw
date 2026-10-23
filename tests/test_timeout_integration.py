@@ -37,7 +37,8 @@ def _library(root: Path, delay: float):
             "outdir": {"type": "string", "format": "directory-path"}}}))
         operation = (f"touch {ready}\nsleep {delay}\n"
                      "tr 'ACGT' 'TGCA' < ${data} | rev > complement.txt" if name == "producer"
-                     else "cat ${data} > final.txt\nsha256sum final.txt | cut -d' ' -f1 > digest.txt")
+                     else "cat ${data} > final.txt\n"
+                          "sha256sum final.txt | cut -d' ' -f1 > digest.txt")
         output = ("path 'complement.txt'" if name == "producer"
                   else "path 'final.txt'\n path 'digest.txt'")
         (tree / "main.nf").write_text('''process TRANSFORM {
@@ -105,7 +106,8 @@ def test_unlimited_detached_chain_survives_hangup_and_preserves_scientific_bytes
     state, problems = chain.status(out)
     assert not problems and chain.status_exit_code(state, problems) == 0
     assert (out / "02-consumer/final.txt").read_bytes() == expected
-    assert (out / "02-consumer/digest.txt").read_text().strip() == hashlib.sha256(expected).hexdigest()
+    assert ((out / "02-consumer/digest.txt").read_text().strip()
+            == hashlib.sha256(expected).hexdigest())
     assert count.read_text().splitlines() == ["producer", "consumer"]
     assert runlog.read_state(out / "chain/logs/chain.log").state == "success"
     # Frozen stages stay frozen on resume: no hidden recomputation of scientific outputs.

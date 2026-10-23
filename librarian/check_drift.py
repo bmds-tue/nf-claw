@@ -102,8 +102,9 @@ def _gitlinks(repo: Path) -> dict[str, str]:
 
 
 def _handoff_drift(repo: Path, pipelines_dir: Path) -> list[str]:
-    """Every handoff rule must name library pipelines and fit their pinned schemas, so a release that
-    renames a parameter or a samplesheet column a rule relies on is caught when it is pinned."""
+    """Every handoff rule must name library pipelines and fit their pinned schemas, so a release
+    that renames a parameter or a samplesheet column a rule relies on is caught when it
+    is pinned."""
     try:
         rules = handoff.load_registry(repo)
     except NfclawError as exc:

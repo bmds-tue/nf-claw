@@ -77,7 +77,8 @@ def new_pipelines(
     return [c for c in candidates(workflows) if c[0] not in existing]
 
 
-def _run(args: list[str], *, check: bool = False, timeout: float = 60) -> subprocess.CompletedProcess:
+def _run(args: list[str], *, check: bool = False,
+         timeout: float = 60) -> subprocess.CompletedProcess:
     result = capture(args, timeout=timeout, env=submodule._git_env())
     if check and result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, args,
@@ -138,7 +139,8 @@ def _gitmodules_snapshot(repo_root: Path) -> _GitmodulesSnapshot:
     if flags not in {f"{tag} .gitmodules\0" for tag in "HhSs"}:
         raise ValueError("cannot inspect .gitmodules index flags")
     diffs = [_run(["git", "-C", str(repo_root), "diff", "--cached", "--raw", "-z",
-                   "--no-ext-diff", "--no-textconv", f"--ita-{visibility}-in-index", "--", ".gitmodules"],
+                   "--no-ext-diff", "--no-textconv", f"--ita-{visibility}-in-index", "--",
+                   ".gitmodules"],
                   check=True).stdout for visibility in ("visible", "invisible")]
     return _GitmodulesSnapshot(content, permissions, indexed, flags[0].islower(),
                                flags[0].upper() == "S", diffs[0] != diffs[1])

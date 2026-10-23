@@ -51,7 +51,8 @@ def _environment(original: Path, replay: Path) -> dict | None:
     for outdir in (original, replay):
         try:
             records.append(json.loads(
-                (outdir / "provenance" / environment_record.RECORD_NAME).read_text(encoding="utf-8")))
+                (outdir / "provenance"
+                 / environment_record.RECORD_NAME).read_text(encoding="utf-8")))
         except (OSError, ValueError):
             return None
     if not all(isinstance(record, dict) for record in records):
@@ -84,7 +85,8 @@ def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, di
     except ValueError as exc:
         raise NfclawError(
             ErrorCode.ENVIRONMENT, f"cannot read the recorded output manifests in {outdir}: {exc}",
-            fix="Restore valid output checksums and namespace records; do not discard records.") from exc
+            fix="Restore valid output checksums and namespace records; do not discard records.",
+        ) from exc
     except OSError as exc:
         where = getattr(exc, "filename", None) or checksums
         reason = getattr(exc, "strerror", None) or exc
@@ -97,7 +99,8 @@ def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, di
 # (written with an inline `new Date()` that no parameter pins) and the execution report, timeline,
 # trace and DAG of releases that predate `trace_report_suffix`. Only these exact names are paired;
 # any other dated file — possibly a scientific result — keeps its exact path in the comparison.
-# nf-core's launch-stamped run metadata, and the reports the nf-co2footprint plugin names the same way.
+# nf-core's launch-stamped run metadata, and the reports the nf-co2footprint plugin names the
+# same way.
 _LAUNCH_STAMPED = re.compile(
     r"^pipeline_info/(params|execution_report|execution_timeline|execution_trace|pipeline_dag"
     r"|co2footprint_report|co2footprint_summary|co2footprint_trace)_"
@@ -132,8 +135,9 @@ def compare(original: Path, replay: Path) -> Comparison:
     """
     before, original_inventory = _read(original, recorded=True)
     after, replay_inventory = _read(replay, recorded=False)
-    before_dirs = ({name for name, entry in original_inventory.items() if entry["type"] == "directory"}
-                   if original_inventory is not None else set())
+    before_dirs = (
+        {name for name, entry in original_inventory.items() if entry["type"] == "directory"}
+        if original_inventory is not None else set())
     after_dirs = {name for name, entry in replay_inventory.items() if entry["type"] == "directory"}
     changed_links = []
     if original_inventory is not None:
@@ -165,7 +169,8 @@ def compare(original: Path, replay: Path) -> Comparison:
         missing=sorted(before),
         extra=sorted(after),
         missing_directories=sorted(before_dirs - after_dirs),
-        extra_directories=sorted(after_dirs - before_dirs) if original_inventory is not None else [],
+        extra_directories=sorted(after_dirs - before_dirs)
+        if original_inventory is not None else [],
         changed_links=sorted(changed_links),
         unverified_structure=original_inventory is None,
         environment=_environment(original, replay),
@@ -192,11 +197,12 @@ def report(cmp: Comparison) -> str:
                      "The file comparison is shown, but directory agreement is unverified. "
                      "Start a fresh run to record its complete output namespace.")
     elif cmp.structurally_equal:
-        lines.append("The replay produced the same set of files and directories as the original run.")
+        lines.append("The replay produced the same set of files and directories as "
+                     "the original run.")
         if cmp.renamed:
-            lines.append(f"{len(cmp.renamed)} nf-core run-metadata file(s) are named by their launch "
-                         "time; each is paired with its counterpart and compared by bytes, as listed "
-                         "under renamed.")
+            lines.append(f"{len(cmp.renamed)} nf-core run-metadata file(s) are named by their "
+                         "launch time; each is paired with its counterpart and compared by bytes, "
+                         "as listed under renamed.")
         if cmp.changed or cmp.changed_links:
             lines.append(
                 "Changed bytes may reflect timestamps or metadata, but may also reflect different "
@@ -204,15 +210,15 @@ def report(cmp: Comparison) -> str:
                 "File structure alone does not establish scientific agreement; "
                 "inspect the changed results or use a format-aware comparison.")
         else:
-            lines.append("All compared files are byte-identical and recorded link identities match. "
-                         "This establishes output agreement, "
-                         "not the biological accuracy of either run.")
+            lines.append("All compared files are byte-identical and recorded link identities "
+                         "match. This establishes output agreement, not the biological accuracy "
+                         "of either run.")
     else:
-        lines.append("The replay did NOT produce the same set of files and directories. Check whether the runs "
-                     "completed and used the same inputs and settings.")
+        lines.append("The replay did NOT produce the same set of files and directories. Check "
+                     "whether the runs completed and used the same inputs and settings.")
     if cmp.environment and cmp.environment["status"] == "differs":
-        lines.append("The runs did NOT execute in the same environment (see environment mismatches): "
-                     "the replay is not a reproduction of the original execution.")
+        lines.append("The runs did NOT execute in the same environment (see environment "
+                     "mismatches): the replay is not a reproduction of the original execution.")
     environment = cmp.environment or {}
     for label, paths in (("environment mismatches", environment.get("mismatches") or []),
                          ("environment unverified", environment.get("unverified") or []),
@@ -220,7 +226,8 @@ def report(cmp: Comparison) -> str:
                          ("renamed", cmp.renamed), ("missing", cmp.missing), ("extra", cmp.extra),
                          ("changed", cmp.changed),
                          ("missing directories", cmp.missing_directories),
-                         ("extra directories", cmp.extra_directories), ("changed links", cmp.changed_links)):
+                         ("extra directories", cmp.extra_directories),
+                         ("changed links", cmp.changed_links)):
         if paths:
             lines.append("")
             lines.append(f"{label}:")

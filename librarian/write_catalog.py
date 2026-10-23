@@ -41,10 +41,11 @@ def generate(*, pipelines_dir: Path, out_md: Path, out_json: Path) -> None:
              "then read `pipelines/<name>/skill.md`. `input` is derived from each pipeline's "
              "samplesheet schema; `output` names output locations and potential reports "
              "(the selected workflow and parameters determine the actual files; per-release detail "
-             "is in the pipeline's upstream `docs/output.md`, linked from its skill). `catalog.json` "
-             "and each `skill.md` also carry a `summary` (the authors' own one-paragraph description "
-             "from the pipeline README, a richer signal for matching a request than the terse "
-             "`description` below) and the `tools` it runs (from the pipeline's own `CITATIONS.md`).",
+             "is in the pipeline's upstream `docs/output.md`, linked from its skill). "
+             "`catalog.json` and each `skill.md` also carry a `summary` (the authors' own "
+             "one-paragraph description from the pipeline README, a richer signal for matching a "
+             "request than the terse `description` below) and the `tools` it runs (from the "
+             "pipeline's own `CITATIONS.md`).",
              "",
              "| pipeline | version | input | output | description |",
              "|---|---|---|---|---|"]

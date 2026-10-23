@@ -546,7 +546,8 @@ def test_uninitialised_submodule_never_lists_nf_claws_own_tags(tmp_path):
     up = tmp_path / "pipelines" / "p" / "upstream"
     up.mkdir(parents=True)
     assert versions._local_tags(up) == []
-    assert versions.release_tags("p", pipelines_dir=tmp_path / "pipelines", repo_root=tmp_path) == []
+    assert versions.release_tags("p", pipelines_dir=tmp_path / "pipelines",
+                                 repo_root=tmp_path) == []
 
 
 def test_materialize_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
@@ -559,10 +560,11 @@ def test_materialize_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
         (up / f).write_text("x")
     with pytest.raises(NfclawError) as exc:
         versions.materialize("p", "1.2.0", pipelines_dir=tmp_path / "pipelines", repo_root=tmp_path)
-    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE and "not a git checkout" in str(exc.value)
+    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE
+    assert "not a git checkout" in str(exc.value)
     out = subprocess.run(["git", "-C", str(tmp_path), "worktree", "list"], capture_output=True,
                          text=True, check=True).stdout
-    assert len(out.splitlines()) == 1                        # no worktree registered against nf-claw
+    assert len(out.splitlines()) == 1  # no worktree registered against nf-claw
 
 
 def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
@@ -581,7 +583,8 @@ def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
         (up / f).write_text("x")
     with pytest.raises(NfclawError) as exc:
         versions.materialize_dev("p", pipelines_dir=root / "pipelines", repo_root=root)
-    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE and "not a git checkout" in str(exc.value)
+    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE
+    assert "not a git checkout" in str(exc.value)
     assert "git submodule update --init pipelines/p/upstream" in exc.value.fix
     worktrees = subprocess.run(["git", "-C", str(root), "worktree", "list"], capture_output=True,
                                text=True, check=True).stdout
@@ -594,7 +597,8 @@ def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
 
 def test_release_git_calls_never_wait_on_a_credential_prompt(tmp_path, monkeypatch):
     # A wrong or renamed remote makes git ask for a username on the terminal; `nfclaw versions` and
-    # a release fetch must fail instead of hanging until their timeout — as the `dev` calls already do.
+    # a release fetch must fail instead of hanging until their timeout — as the `dev` calls
+    # already do.
     seen = []
 
     def fake_run(cmd, **kw):

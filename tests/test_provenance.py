@@ -67,8 +67,9 @@ def test_copies_legacy_software_versions_yaml(tmp_path):
 
 def test_copies_modern_mqc_software_versions_yaml(tmp_path):
     # The newer nf-core template names it `nf_core_<pipeline>_software_mqc_versions.yml` (rnaseq,
-    # chipseq, fetchngs, …). The hardcoded `software_versions.yml` never matched it, so versions were
-    # silently missing from the bundle for every such pipeline. The file's own name is preserved.
+    # chipseq, fetchngs, …). The hardcoded `software_versions.yml` never matched it, so versions
+    # were silently missing from the bundle for every such pipeline. The file's own name
+    # is preserved.
     out = tmp_path / "out"
     (out / "pipeline_info").mkdir(parents=True)
     name = "nf_core_rnaseq_software_mqc_versions.yml"
@@ -133,7 +134,8 @@ def test_replay_runs_in_the_target_directory(tmp_path):
 def test_replay_into_a_relative_target_publishes_into_that_target(tmp_path):
     # The script cds into the target before launching, so a relative target passed through as-is
     # became <target>/<target>: `./commands.sh fresh` published into fresh/fresh/, and
-    # `nfclaw verify fresh --against out` then reported every file missing. --outdir must be absolute.
+    # `nfclaw verify fresh --against out` then reported every file missing. --outdir must
+    # be absolute.
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="pwd >pwd.txt; echo",
@@ -156,7 +158,7 @@ def test_records_nextflow_env_and_probes_version_with_it(tmp_path, monkeypatch):
                             submodule=_st(tmp_path / "up"), input_paths=[], env_extra=overlay)
     manifest = json.loads((prov / "run_manifest.json").read_text())
     assert manifest["nextflow_env"] == overlay          # the overlay nfclaw applied is recorded
-    assert seen["env"] == overlay                        # version probed with the overlay (reports the pin)
+    assert seen["env"] == overlay  # version probed with the overlay (reports the pin)
 
 
 def test_nextflow_env_empty_by_default(tmp_path):
@@ -374,7 +376,8 @@ def test_replay_header_records_who_runs_it(tmp_path):
 
 
 def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
-    # Like `nfclaw run`: `kill <replay pid>` must not leave Nextflow running with the log open-ended.
+    # Like `nfclaw run`: `kill <replay pid>` must not leave Nextflow running with the
+    # log open-ended.
     pidfile = tmp_path / "child.pid"
     out = tmp_path / "out"
     out.mkdir()
@@ -417,7 +420,8 @@ def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, b
     # The replay appends `--outdir <target>`; GNU touch would parse it as an option, so the
     # recorded command ignores trailing arguments, like the other replay tests here.
     prov = provenance.write(outdir=out, pipeline="mini",
-                            command_str=shlex.join(["sh", "-c", f"touch {shlex.quote(str(completed))}"]),
+                            command_str=shlex.join(["sh", "-c", "touch "
+                                                                f"{shlex.quote(str(completed))}"]),
                             submodule=_st(tmp_path / "up"), input_paths=[])
     guard = prov / "replay_guard.py"
     text = guard.read_text()

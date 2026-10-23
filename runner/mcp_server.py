@@ -2,16 +2,18 @@
 
 This module is the protocol: JSON-RPC 2.0 framing (one message per line), version negotiation,
 dispatch, cancellation and progress. It knows nothing about nfclaw — the tools, resources and prompt
-come from a handler object (`runner.mcp_tools.NfclawTools`), so the protocol is tested on its own and
-the nfclaw side never deals with JSON-RPC.
+come from a handler object (`runner.mcp_tools.NfclawTools`), so the protocol is tested on its own
+and the nfclaw side never deals with JSON-RPC.
 
 The server is *dual-era*, as the 2026-07-28 revision of MCP describes:
-- **modern** clients (2026-07-28) send their protocol version in every request's `_meta`; there is no
+- **modern** clients (2026-07-28) send their protocol version in every request's `_meta`;
+there is no
   handshake, `server/discover` describes the server, and each request is served on its own;
-- **legacy** clients (2024-11-05 … 2025-11-25) open with `initialize` and are served under the version
+- **legacy** clients (2024-11-05 … 2025-11-25) open with `initialize` and are served
+under the version
   that handshake negotiated — which is what most clients in use speak.
-Requests are answered concurrently, so a tool waiting on a long job never blocks another request, and
-the server keeps its stdout to itself: see `serve_stdio`.
+Requests are answered concurrently, so a tool waiting on a long job never blocks another request,
+and the server keeps its stdout to itself: see `serve_stdio`.
 """
 from __future__ import annotations
 
@@ -25,7 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
-# Newest first. Modern versions are declared per request; legacy ones are negotiated by `initialize`.
+# Newest first. Modern versions are declared per request; legacy ones are negotiated
+# by `initialize`.
 MODERN_VERSIONS = ("2026-07-28",)
 LEGACY_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 PROTOCOL_VERSIONS = MODERN_VERSIONS + LEGACY_VERSIONS

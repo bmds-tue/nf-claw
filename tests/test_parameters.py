@@ -35,7 +35,8 @@ def test_validate_params_boolean_enum_uses_json_literals(tmp_path):
         {"definitions": {"g": {"properties": {"flag": {"type": "boolean", "enum": [False]}}}}}))
     ps = schema.load_param_schema(tmp_path)
     assert parameters.validate_params(parameters.coerce_to_schema({"flag": "false"}, ps), ps) == []
-    assert parameters.validate_params({"flag": False}, ps) == []     # native bool from a params-file → ok
+    # native bool from a params-file → ok
+    assert parameters.validate_params({"flag": False}, ps) == []
     assert parameters.validate_params({"flag": "False"}, ps)         # Python casing → rejected
     assert parameters.validate_params({"flag": "true"}, ps)          # not in enum → rejected
 
@@ -67,7 +68,8 @@ def test_coerce_to_schema_converts_cli_strings_by_declared_type(tmp_path):
 def test_coerce_to_schema_is_case_insensitive_and_safe(tmp_path):
     ps = _schema_with_types(tmp_path)
     assert parameters.coerce_to_schema({"skip_busco": "FALSE"}, ps)["skip_busco"] is False
-    assert parameters.coerce_to_schema({"skip_busco": True}, ps)["skip_busco"] is True   # bare flag untouched
+    # bare flag untouched
+    assert parameters.coerce_to_schema({"skip_busco": True}, ps)["skip_busco"] is True
     # unparseable values are left as-is so nf-schema reports a precise error
     assert parameters.coerce_to_schema({"max_cpus": "lots"}, ps)["max_cpus"] == "lots"
     assert parameters.coerce_to_schema({"skip_busco": "maybe"}, ps)["skip_busco"] == "maybe"
@@ -91,7 +93,8 @@ def test_params_file_non_object_raises_clean_error(tmp_path):
         pf = tmp_path / "p.json"
         pf.write_text(content)
         with pytest.raises(NfclawError) as exc:
-            parameters.merge(cli_overrides={}, params_file=pf, input_path=None, outdir=tmp_path / "o")
+            parameters.merge(cli_overrides={}, params_file=pf, input_path=None,
+                             outdir=tmp_path / "o")
         assert exc.value.code == ErrorCode.PARAMS_INVALID
         assert "object of parameters" in str(exc.value)
 
@@ -102,20 +105,23 @@ def test_malformed_params_file_raises_clean_error(tmp_path):
     bad_json = tmp_path / "bad.json"
     bad_json.write_text('{"aligner": "star"')                    # unterminated
     with pytest.raises(NfclawError) as exc:
-        parameters.merge(cli_overrides={}, params_file=bad_json, input_path=None, outdir=tmp_path / "o")
+        parameters.merge(cli_overrides={}, params_file=bad_json, input_path=None,
+                         outdir=tmp_path / "o")
     assert exc.value.code == ErrorCode.PARAMS_INVALID and "not valid JSON" in str(exc.value)
 
     binary = tmp_path / "book.json"
     binary.write_bytes(bytes([0xff, 0xfe, 0x00, 0x01]))
     with pytest.raises(NfclawError) as exc:
-        parameters.merge(cli_overrides={}, params_file=binary, input_path=None, outdir=tmp_path / "o")
+        parameters.merge(cli_overrides={}, params_file=binary, input_path=None,
+                         outdir=tmp_path / "o")
     assert exc.value.code == ErrorCode.PARAMS_INVALID and "not valid UTF-8" in str(exc.value)
 
 
 def test_params_file_empty_object_is_ok(tmp_path):
     pf = tmp_path / "p.json"
     pf.write_text("{}")
-    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None, outdir=tmp_path / "o")
+    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None,
+                              outdir=tmp_path / "o")
     assert merged["outdir"].endswith("/o")   # empty params object merges cleanly
 
 
@@ -124,7 +130,8 @@ def test_params_file_with_utf8_bom_loads(tmp_path):
     # with a cryptic json error: the loader reads utf-8-sig so the BOM is stripped.
     pf = tmp_path / "p.json"
     pf.write_bytes(b"\xef\xbb\xbf" + b'{"aligner": "star"}')
-    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None, outdir=tmp_path / "o")
+    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None,
+                              outdir=tmp_path / "o")
     assert merged["aligner"] == "star"
 
 
@@ -133,7 +140,8 @@ def test_params_file_values_are_validated(tmp_path):
     ps = schema.load_param_schema(FIX / "mini")
     pf = tmp_path / "p.json"
     pf.write_text('{"aligner": "bowtie", "alnger": "star"}')        # bad enum + typo'd key
-    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None, outdir=tmp_path / "o")
+    merged = parameters.merge(cli_overrides={}, params_file=pf, input_path=None,
+                              outdir=tmp_path / "o")
     errs = parameters.validate_params(merged, ps)
     assert any("bowtie" in e and "must be one of" in e for e in errs)   # enum caught
     assert any("alnger" in e and "unknown" in e for e in errs)         # typo caught
@@ -192,19 +200,21 @@ def test_pin_report_suffix_never_overrides_a_value_the_caller_set(tmp_path):
 
 
 def test_pin_report_suffix_is_a_no_op_when_the_release_lacks_the_param():
-    # Older releases predate the parameter; setting it would be an unknown param and fail validation.
+    # Older releases predate the parameter; setting it would be an unknown param and
+    # fail validation.
     ps = schema.load_param_schema(FIX / "mini")
     assert "trace_report_suffix" not in parameters.pin_report_suffix({}, ps)
 
 
 def test_falsy_values_are_left_to_nf_schema(tmp_path):
     # Whether false/"" are valid depends on the release's nf-schema (verified: 2.5.1 and 2.6.1 drop
-    # them before validating, 2.7.2 rejects them for a string/enum); null is dropped by all three. An
-    # error that only some plugin versions raise is not unambiguous, so nfclaw does not pre-judge it.
+    # them before validating, 2.7.2 rejects them for a string/enum); null is dropped by all three.
+    # An error that only some plugin versions raise is not unambiguous, so nfclaw does not
+    # pre-judge it.
     ps = schema.load_param_schema(FIX / "mini")
     assert parameters.validate_params({"input": False, "aligner": ""}, ps) == []
     assert parameters.validate_params({"aligner": None}, ps) == []
-    assert parameters.validate_params({"alnger": False}, ps)          # an unknown name is still unknown
+    assert parameters.validate_params({"alnger": False}, ps)  # an unknown name is still unknown
     # 0 is not dropped by nf-schema, so it is still checked
     (tmp_path / "nextflow_schema.json").write_text(json.dumps({"definitions": {"g": {"properties": {
         "threads": {"type": "integer", "minimum": 1}}}}}))
@@ -352,7 +362,8 @@ def test_path_resolution_keeps_alias_format_and_checks_both_names(tmp_path):
     assert parameters.validate_params(resolved, ps) == []
     unsafe = tmp_path / "reference$(id).fa"
     unsafe.symlink_to(target)
-    assert parameters.validate_params(parameters.resolve_path_params({"fasta": str(unsafe)}, ps), ps)
+    assert parameters.validate_params(
+        parameters.resolve_path_params({"fasta": str(unsafe)}, ps), ps)
 
 
 def test_schema_declared_local_file_uri_must_use_a_recordable_filesystem_path(tmp_path):
@@ -372,13 +383,15 @@ def _numeric_schema():
 
 
 @pytest.mark.parametrize("given,expected", [
-    ({"threads": 4.0}, {"threads": 4}), ({"mode": 1.0}, {"mode": 1}), ({"ratio": 1.0}, {"ratio": 1.0})])
+    ({"threads": 4.0}, {"threads": 4}), ({"mode": 1.0}, {"mode": 1}),
+    ({"ratio": 1.0}, {"ratio": 1.0})])
 def test_numbers_valid_under_json_schema_are_not_rejected(given, expected):
     # JSON Schema: 4.0 is an integer, and 1.0 equals the allowed value 1. A params file writing
     # them that way is valid for nf-schema, so the preflight must not refuse it.
     ps = _numeric_schema()
     coerced = parameters.coerce_to_schema(given, ps)
-    assert coerced == expected and type(coerced[next(iter(expected))]) is type(next(iter(expected.values())))
+    assert coerced == expected and type(coerced[next(iter(expected))]) is type(
+        next(iter(expected.values())))
     assert parameters.validate_params(coerced, ps) == []
 
 

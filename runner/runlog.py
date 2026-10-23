@@ -5,9 +5,9 @@ paths that do not depend on where they are standing:
 
 - `<outdir>/provenance/logs/run.log` — the whole launch, with child-output lines prefixed by `| `
   to distinguish them from nfclaw's status controls: nfclaw's
-  header (command, launch dir, Nextflow log, advisories), Nextflow's stdout and stderr interleaved as
-  produced, and a last line stating the outcome. A relaunch (`--resume`) appends, so the attempt that
-  failed is never overwritten by the one that fixes it.
+  header (command, launch dir, Nextflow log, advisories), Nextflow's stdout and stderr interleaved
+  as produced, and a last line stating the outcome. A relaunch (`--resume`) appends, so the attempt
+  that failed is never overwritten by the one that fixes it.
 - Nextflow's own log — `<outdir>/.nextflow.log` (or `NXF_LOG_FILE`, resolved against `--outdir`).
 
 Nothing here guesses a cause. On failure nfclaw quotes Nextflow's own error report verbatim — plus
@@ -66,10 +66,12 @@ _ENGINE_HEAD_BYTES = 64 * 1024
 # start) of an earlier report — Nextflow re-renders a report when stdout is not a terminal.
 _CONTEXT_STOP = re.compile(r"N E X T F L O W|^Launching `|^\s*-- Check |^ERROR ~")
 _REPORT_END = re.compile(r"^\s*-- Check ")
-# A plugin logger (nf-co2footprint) relays console records as `<colour>LEVEL - [plugin] message<reset>`
-# with no line break between them, so Nextflow's `ERROR ~` report arrives as `ERROR - [plugin] …`
-# glued onto the record before it. Each relayed record starts a line, as a terminal shows it.
-_RELAYED_RECORD = re.compile(r"(?:\x1b\[[0-9;]*m)+(?=(?:TRACE|DEBUG|INFO|WARN|ERROR) - \[[\w.@-]+\] )")
+# A plugin logger (nf-co2footprint) relays console records as `<colour>LEVEL - [plugin]
+# message<reset>` with no line break between them, so Nextflow's `ERROR ~` report arrives as `ERROR
+# - [plugin] …` glued onto the record before it. Each relayed record starts a line, as a
+# terminal shows it.
+_RELAYED_RECORD = re.compile(r"(?:\x1b\[[0-9;]*m)+(?=(?:TRACE|DEBUG|INFO|WARN|ERROR) - "
+                             r"\[[\w.@-]+\] )")
 _RELAY_PREFIX = re.compile(r"^(?:TRACE|DEBUG|INFO|WARN|ERROR) - \[[\w.@-]+\] ")
 _REPORT_START = re.compile(r"^ERROR (?:~|- \[[\w.@-]+\] )")
 
@@ -82,9 +84,9 @@ def nextflow_log_path(launch_dir: Path, env_extra: dict[str, str] | None = None)
     """Where Nextflow writes its own log for a run launched from `launch_dir`.
 
     `.nextflow.log` in the launch directory unless `NXF_LOG_FILE` names another file (the overlay
-    wins over the shell, as it does at launch); a relative name resolves against the launch directory
-    because that is Nextflow's cwd. Nextflow's console only ever says "Check '.nextflow.log'" —
-    relative to a directory the reader is usually not in."""
+    wins over the shell, as it does at launch); a relative name resolves against the launch
+    directory because that is Nextflow's cwd. Nextflow's console only ever says "Check
+    '.nextflow.log'" — relative to a directory the reader is usually not in."""
     raw = (env_extra or {}).get("NXF_LOG_FILE") or os.environ.get("NXF_LOG_FILE")
     path = Path(raw) if raw else Path(".nextflow.log")
     return path if path.is_absolute() else launch_dir / path
@@ -142,13 +144,14 @@ def _reports(lines: list[str]) -> list[tuple[int, tuple[str, ...]]]:
 def error_excerpt(console: str, *, tail_if_no_report: bool = True) -> list[str]:
     """Nextflow's own error reports from a launch's console output, quoted verbatim.
 
-    Deterministic: every distinct `ERROR ~` report (Nextflow's error prefix), once each, in the order
-    they first appear — Nextflow re-renders the same report when stdout is not a terminal, and the
-    nf-core template follows the real one with a generic "ERROR ~ Pipeline failed" — preceded by the
-    paragraph printed just above the last rendering of the first: the failed step's progress lines,
-    or a config/script syntax error described above `ERROR ~ Config parsing failed`. Without an
-    `ERROR ~` line (an `error "…"` raised by a pipeline prints only its message) it is the console's
-    last paragraph, unless `tail_if_no_report` is off. A long excerpt keeps its head and its tail."""
+    Deterministic: every distinct `ERROR ~` report (Nextflow's error prefix), once each, in the
+    order they first appear — Nextflow re-renders the same report when stdout is not a terminal, and
+    the nf-core template follows the real one with a generic "ERROR ~ Pipeline failed" — preceded by
+    the paragraph printed just above the last rendering of the first: the failed step's progress
+    lines, or a config/script syntax error described above `ERROR ~ Config parsing failed`. Without
+    an `ERROR ~` line (an `error "…"` raised by a pipeline prints only its message) it is the
+    console's last paragraph, unless `tail_if_no_report` is off. A long excerpt keeps its head and
+    its tail."""
     lines = _clean(console)
     distinct: dict[tuple[str, ...], int] = {}             # report → start of its last rendering
     for at, report in _reports(lines):
@@ -207,15 +210,16 @@ def _cap(block: list[str]) -> list[str]:
 
 def stderr_excerpt(text: str) -> list[str]:
     """What a failed launch wrote on stderr, minus the launcher's update notice — nf-schema's
-    validation details ("* --param (value): Expected …"), a JVM or launcher error. A successful run's
-    stderr carries nothing but that notice, so nothing here is noise."""
+    validation details ("* --param (value): Expected …"), a JVM or launcher error. A successful
+    run's stderr carries nothing but that notice, so nothing here is noise."""
     lines = [line for line in _clean(text) if not _UPDATE_NOTICE.match(line)]
     return _cap(_squeeze(lines)[-_STDERR_LINES:])
 
 
 def failing_task_dir(excerpt: list[str]) -> Path | None:
-    """The work directory of the task that failed, as Nextflow's report names it (`Work dir:` and the
-    path on the next line). Its `.command.err`/`.command.log` hold the tool's complete output."""
+    """The work directory of the task that failed, as Nextflow's report names it (`Work dir:` and
+    the path on the next line). Its `.command.err`/`.command.log` hold the tool's
+    complete output."""
     for i, line in enumerate(excerpt):
         if line.strip() == "Work dir:":
             for nxt in excerpt[i + 1:]:
@@ -443,8 +447,8 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
         return
     command = command.replace("\r", "\\r").replace("\n", "\\n")
     error = "| " + error.rstrip("\n").replace("\n", "\n| ")
-    lines = [f"==> nfclaw run started {now()}", "    console format: prefixed", f"    command: {command}",
-             *host_header(), f"    pid: {os.getpid()}",
+    lines = [f"==> nfclaw run started {now()}", "    console format: prefixed",
+             f"    command: {command}", *host_header(), f"    pid: {os.getpid()}",
              ERROR_MARK, error, f"==> nfclaw run finished {now()}: {outcome}"]
     try:
         # Validation precedes the main writer lock. A refused attempt must not append status
@@ -463,8 +467,8 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
 _CONTROL_PREFIX = b"==> nfclaw "                 # every status control line, and only those
 _STARTED = re.compile(r"^==> nfclaw (run|replay|chain) started (\S+)")
 _FINISHED = re.compile(r"^==> nfclaw (run|replay|chain) finished (\S+): (.*)$")
-_HEADER = re.compile(r"^    (command|launch dir|nextflow log|replay of|host|host id|pid|nextflow pid|"
-                     r"replay supervisor pid|warning|caveat|console format): (.*)$")
+_HEADER = re.compile(r"^    (command|launch dir|nextflow log|replay of|host|host id|pid|nextflow "
+                     r"pid|replay supervisor pid|warning|caveat|console format): (.*)$")
 _HEAD_BYTES = 64 * 1024
 _STATE_TAIL_BYTES = 512 * 1024
 _LAST_OUTPUT_LINES = 5

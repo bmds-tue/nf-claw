@@ -19,7 +19,8 @@ def _release(tmp_path, *, plugin: str, configs: dict[str, str]) -> Path:
 
 def test_flags_a_removed_nf_validation_param_under_nf_schema_2(tmp_path):
     up = _release(tmp_path, plugin="nf-schema@2.5.1",
-                  configs={"test.config": "params {\n    validationSchemaIgnoreParams = 'genomes'\n}\n"})
+                  configs={"test.config": "params {\n"
+                                          "    validationSchemaIgnoreParams = 'genomes'\n}\n"})
     issues = plugin_compat.check(up)
     assert len(issues) == 1
     assert "conf/test.config" in issues[0]
@@ -40,9 +41,11 @@ def test_one_advisory_per_param_even_when_several_profiles_repeat_it(tmp_path):
 
 
 def test_silent_for_a_release_that_declares_nf_validation_1x(tmp_path):
-    # The same param is CORRECT there — flagging it would be a false positive on most of the library.
+    # The same param is CORRECT there — flagging it would be a false positive on most of
+    # the library.
     up = _release(tmp_path, plugin="nf-validation@1.1.3",
-                  configs={"test.config": "params {\n    validationSchemaIgnoreParams = 'genomes'\n}\n"})
+                  configs={"test.config": "params {\n"
+                                          "    validationSchemaIgnoreParams = 'genomes'\n}\n"})
     assert plugin_compat.check(up) == []
 
 
@@ -63,21 +66,24 @@ def test_advisory_states_nfclaw_neutralises_the_warning(tmp_path):
     # The advisory must say nf-claw suppresses the warning (via validation.ignoreParams), so the
     # behaviour is not mistaken for nf-claw silently hiding an upstream fault.
     up = _release(tmp_path, plugin="nf-schema@2.5.1",
-                  configs={"test.config": "params {\n    validationSchemaIgnoreParams = 'genomes'\n}\n"})
+                  configs={"test.config": "params {\n"
+                                          "    validationSchemaIgnoreParams = 'genomes'\n}\n"})
     issue = plugin_compat.check(up)[0]
     assert "validation.ignoreParams" in issue and "untouched" in issue
 
 
 def test_removed_params_in_use_lists_the_names(tmp_path):
     up = _release(tmp_path, plugin="nf-schema@2.5.1",
-                  configs={"test.config": "params {\n    validationSchemaIgnoreParams = 'genomes'\n}\n"})
+                  configs={"test.config": "params {\n"
+                                          "    validationSchemaIgnoreParams = 'genomes'\n}\n"})
     assert plugin_compat.removed_params_in_use(up) == ["validationSchemaIgnoreParams"]
 
 
 def test_removed_params_in_use_empty_for_a_clean_or_1x_release(tmp_path):
     # Same param, but declared under nf-validation 1.x where it is correct — nothing to neutralise.
     up = _release(tmp_path, plugin="nf-validation@1.1.3",
-                  configs={"test.config": "params {\n    validationSchemaIgnoreParams = 'genomes'\n}\n"})
+                  configs={"test.config": "params {\n"
+                                          "    validationSchemaIgnoreParams = 'genomes'\n}\n"})
     assert plugin_compat.removed_params_in_use(up) == []
 
 
@@ -85,8 +91,9 @@ def test_write_ignore_params_config_adds_the_names_to_validation_ignoreparams(tm
     out = plugin_compat.write_ignore_params_config(
         ["validationSchemaIgnoreParams", "validationMonochromeLogs"], tmp_path / "compat.config")
     text = out.read_text()
-    assert "validation { ignoreParams = ['validationSchemaIgnoreParams', 'validationMonochromeLogs'] }" in text
-    assert text.lstrip().startswith("//")                      # explains itself for anyone who opens it
+    assert ("validation { ignoreParams = ['validationSchemaIgnoreParams', "
+            "'validationMonochromeLogs'] }") in text
+    assert text.lstrip().startswith("//")  # explains itself for anyone who opens it
 
 
 def test_known_plugin_bug_is_flagged(tmp_path):
@@ -133,9 +140,9 @@ def test_no_other_pinned_release_is_flagged():
 
 
 def test_the_pinned_sarek_release_declares_the_buggy_plugin():
-    # Anchored to the real library: sarek 3.9.0 declares nf-core-utils@0.4.0, whose observer logs the
-    # spurious "positional argument `nextflow`" on every run. If a future bump moves off 0.4.0, this
-    # test fails and the known-issues entry (and the _KNOWN_PLUGIN_BUGS entry) can come out.
+    # Anchored to the real library: sarek 3.9.0 declares nf-core-utils@0.4.0, whose observer logs
+    # the spurious "positional argument `nextflow`" on every run. If a future bump moves off 0.4.0,
+    # this test fails and the known-issues entry (and the _KNOWN_PLUGIN_BUGS entry) can come out.
     up = REPO / "pipelines" / "sarek" / "upstream"
     if not (up / "nextflow.config").exists():
         pytest.skip("submodule not initialised")

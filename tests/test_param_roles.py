@@ -31,7 +31,8 @@ def _release(tmp_path, monkeypatch):
     registry = tmp_path / "param_roles.json"
     registry.write_text(json.dumps({digest: {
         "pipeline": "fixture", "releases": {"1.0.0": head},
-        "values": {"protocol": {"source": ["workflows/fixture.nf:1"], "use": "compared with literals"}}}}))
+        "values": {"protocol": {"source": ["workflows/fixture.nf:1"],
+                                "use": "compared with literals"}}}}))
     monkeypatch.setattr(schema, "_PARAM_ROLES", registry)
     monkeypatch.chdir(tmp_path)
     return repo
@@ -51,7 +52,8 @@ def test_audited_value_parameter_is_passed_as_written(tmp_path, monkeypatch):
 
 def test_value_role_does_not_extend_to_other_revisions(tmp_path, monkeypatch):
     repo = _release(tmp_path, monkeypatch)
-    subprocess.run(GIT + ["-C", str(repo), "commit", "-q", "--allow-empty", "-m", "unaudited"], check=True)
+    subprocess.run(
+        GIT + ["-C", str(repo), "commit", "-q", "--allow-empty", "-m", "unaudited"], check=True)
     assert inputs.samplesheet_parameters(repo) == ("input", "protocol")
     assert schema.load_param_schema(repo).params["protocol"].fmt == "file-path"
 

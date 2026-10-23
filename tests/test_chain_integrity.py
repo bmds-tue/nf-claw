@@ -305,7 +305,8 @@ def test_stages_use_the_commit_resolved_before_checks_even_if_dev_moves(
         result = launch(name, **kw)
         if not kw["check_only"]:
             tree = kw.get("resolved_tree") or resolve(name, kw.get("pipeline_version"),
-                                                     pipelines_dir=root / "pipelines", repo_root=root)
+                                                     pipelines_dir=root / "pipelines",
+                                                      repo_root=root)
             path = kw["outdir"] / "provenance/run_manifest.json"
             manifest = json.loads(path.read_text())
             manifest["commit"] = tree.commit
@@ -377,7 +378,8 @@ def test_handoff_records_a_verified_external_reference(library, finished_run, tm
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
     (up / "provenance/inputs.sha256").write_text(f"{digest}  {reference}\n")
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf"}}})
-    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "h")
     assert result.record["params"]["fasta"]["input_dependencies"] == {str(reference): digest}
 
 
@@ -401,7 +403,8 @@ def test_status_detects_a_changed_external_handoff_reference(
             nodes = provenance.read_input_inventory(prov / "inputs.inventory.json")
             nodes.update(provenance.snapshot_inputs([reference])[1])
             (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
-            (prov / "inputs.sha256").write_text("".join(f"{value}  {path}\n" for path, value in hashes.items()))
+            (prov / "inputs.sha256").write_text(
+                "".join(f"{value}  {path}\n" for path, value in hashes.items()))
         return result
 
     monkeypatch.setattr(chain.orchestration, "run_pipeline", with_reference)
@@ -485,7 +488,8 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
                 (reference / "index.bin").write_bytes(b"original index")
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
                 hashes, nodes, _ = outputs.snapshot(kw["outdir"], provenance._sha256)
-                (prov / "outputs.inventory.json").write_text(json.dumps({"version": 1, "entries": nodes}))
+                (prov / "outputs.inventory.json").write_text(
+                    json.dumps({"version": 1, "entries": nodes}))
                 (prov / "outputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
             else:

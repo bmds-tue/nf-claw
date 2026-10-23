@@ -56,11 +56,13 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
         try:
             ignored = capture(
                 ["git", "-C", str(repo_root), "check-ignore", "-q", str(output_dir / "_probe")],
-                timeout=seconds("NFCLAW_GIT_TIMEOUT", 10), text=False, env=_git_env()).returncode == 0
+                timeout=seconds("NFCLAW_GIT_TIMEOUT", 10), text=False,
+                env=_git_env()).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             ignored = False
         if not ignored:
-            issues.append(f"--outdir must be outside the repo or a gitignored path (got {output_dir})")
+            issues.append("--outdir must be outside the repo or a gitignored "
+                          f"path (got {output_dir})")
     if issue := outdir_issue(output_dir, resume=resume, check_only=check_only):
         issues.append(issue)
     if work_dir is not None and (work_issue := _work_dir_issue(work_dir)):
@@ -86,7 +88,8 @@ def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | N
             return unwritable
         # A non-empty outdir is a guard for an actual run — it would clobber a previous run's
         # results. `--check` only validates params and prints the command without launching, so
-        # this guard must not block it: a dry run against an existing results directory is legitimate.
+        # this guard must not block it: a dry run against an existing results directory
+        # is legitimate.
         if is_dir and not resume and not check_only and any(output_dir.iterdir()):
             return (f"--outdir is not empty: {output_dir} (pass --resume to continue that run, "
                     "or use a fresh --outdir)")

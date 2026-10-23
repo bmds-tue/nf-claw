@@ -28,7 +28,8 @@ def _write(path, content):
 
 @pytest.mark.parametrize("compressed", [False, True])
 @pytest.mark.parametrize("count,splits", [(3, 2), (2, 4), (5, 3), (12, 5), (1001, 1001)])
-def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path, compressed, count, splits):
+def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path, compressed,
+                                                                        count, splits):
     content = b"".join(f"@read{i}\nACGT\n+\nIIII\n".encode() for i in range(count))
     source = _write(tmp_path / ("reads.fastq.gz" if compressed else "reads.fastq"), content)
     files = compat.scatter(source, splits, "source", tmp_path / "chunks")
@@ -40,7 +41,8 @@ def test_record_splitting_preserves_every_byte_and_all_frame_boundaries(tmp_path
     for path in files:
         lines = _decode(path).splitlines()
         assert len(lines) % 4 == 0
-        assert all(lines[i].startswith(b"@read") and lines[i + 2] == b"+" for i in range(0, len(lines), 4))
+        assert all(lines[i].startswith(b"@read") and lines[i + 2] == b"+"
+                   for i in range(0, len(lines), 4))
 
 
 @pytest.mark.parametrize("content", [b"noise\n@r\nACGT\n+\nIIII\n", b"@r\nACGT\n+\nIII\n",
@@ -135,7 +137,8 @@ def test_restarts_are_used_wherever_they_exist(tmp_path):
     # Records whose quality holds "@" offer no restart before the next header; others do.
     content = (b"@a\nAC\n+\nI@\n@b\nAC\n+\nII\n@c\nAC\n+\n@I\n@d\nAC\n+\nII\n"
                b"@e\nAC\n+\nII\n@f\nAC\n+\nII\n")
-    files = compat.scatter(_write(tmp_path / "reads.fastq", content), 10, "source", tmp_path / "chunks")
+    files = compat.scatter(_write(tmp_path / "reads.fastq", content), 10, "source",
+                           tmp_path / "chunks")
     assert [_decode(path).split(b"\n")[0] for path in files] == [b"@a", b"@c", b"@e", b"@f"]
 
 
@@ -159,7 +162,8 @@ def test_repair_quality_offset_and_log_redirection_reach_the_actual_command(tmp_
     fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
     fake.chmod(0o755)
     script = tmp_path / ".command.sh"
-    script.write_text('#!/bin/bash -eu\nrepair.sh \\\n    threads=1\n    qin=64 \\\n    &> repair.log\n')
+    script.write_text('#!/bin/bash -eu\nrepair.sh \\\n    threads=1\n'
+                      '    qin=64 \\\n    &> repair.log\n')
     compat.patch_task("repair", script)
     result = subprocess.run(["bash", str(script)], cwd=tmp_path,
                             env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"},
@@ -181,13 +185,15 @@ def test_recorded_helper_executes_without_installed_runner_modules(tmp_path):
     source = tmp_path / "reads.fastq"
     source.write_bytes(b"@A\nACGT\n+\nIIII\n@B\nTGCA\n+\nHHHH\n@C\nAAAA\n+\n@@@@\n")
     script = tmp_path / ".command.sh"
-    script.write_text('wipertools \\\n    fastqscatter \\\n    -f reads.fastq -n 2 -p source -o chunks\n'
+    script.write_text('wipertools \\\n    fastqscatter \\\n'
+                      '    -f reads.fastq -n 2 -p source -o chunks\n'
                       'echo "wipertools fastqscatter: $(wipertools fastqscatter --version)"\n')
     compat.patch_task("scatter", script)
     result = subprocess.run(["bash", str(script)], cwd=tmp_path, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert compat.recipe_digest() in result.stdout
-    assert b"".join(_decode(path) for path in sorted((tmp_path / "chunks").iterdir())) == source.read_bytes()
+    chunks = sorted((tmp_path / "chunks").iterdir())
+    assert b"".join(_decode(path) for path in chunks) == source.read_bytes()
     config = compat.write_config(tmp_path / "recorded.config").read_text()
     assert compat.recipe_digest()[:16] in config
     assert "import runner" not in config
@@ -195,7 +201,8 @@ def test_recorded_helper_executes_without_installed_runner_modules(tmp_path):
 
 
 WIPER_RECIPE = ('#!/usr/bin/env bash -C -e -u -o pipefail\nwipertools \\\n    fastqwiper \\\n'
-                '    -i {chunk} \\\n    -o {chunk}_wiped.fastq.gz \\\n    -r {chunk}_wiped.report \\\n'
+                '    -i {chunk} \\\n    -o {chunk}_wiped.fastq.gz \\\n'
+                '    -r {chunk}_wiped.report \\\n'
                 '    --alphabet ACGTN\n\ncat <<-END_VERSIONS > versions.yml\n"WIPER":\n'
                 '    wipertools fastqwiper: $(wipertools fastqwiper --version)\nEND_VERSIONS\n')
 
@@ -216,7 +223,8 @@ def test_placeholder_chunk_yields_an_empty_output_and_zero_report(tmp_path):
     script = tmp_path / ".command.sh"
     script.write_text(WIPER_RECIPE.format(chunk="source_001.fastq.gz"))
     compat.patch_task("wiper", script)
-    result = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True)
+    result = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env,
+                            capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert gzip.decompress((tmp_path / "source_001.fastq.gz_wiped.fastq.gz").read_bytes()) == b""
     report = (tmp_path / "source_001.fastq.gz_wiped.report").read_text()
@@ -268,8 +276,10 @@ def test_real_chunk_reaches_fastqwiper_with_every_argument(tmp_path):
 
 
 def _report(total, fixed, blank=0):
-    return (f"FASTQWIPER REPORT:\n\nTotal lines: {total}\nWell-formed lines: 8 (1.0%)\nClean reads: 2\n"
-            f"Bad headers or misplaced lines: 40 (10.0%) of which {fixed} fixed\nBAD SEQ lines: 5 (1.25%)\n"
+    return (f"FASTQWIPER REPORT:\n\nTotal lines: {total}\nWell-formed lines: 8 (1.0%)\n"
+            "Clean reads: 2\n"
+            f"Bad headers or misplaced lines: 40 (10.0%) of which {fixed} fixed\n"
+            "BAD SEQ lines: 5 (1.25%)\n"
             "BAD '+' lines: 3 (0.75%)\nBAD QUAL lines: 0 (0.0%)\n"
             f"Reads discarded because len(SEQ) neq len(QUAL): 2\nBlank lines: {blank} (0.25%)\n")
 
@@ -309,13 +319,16 @@ def test_report_gathering_runs_from_the_recorded_recipe(tmp_path):
     result = subprocess.run(["bash", str(script)], cwd=tmp_path, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "of which 24 fixed" in (tmp_path / "sample.report").read_text()
-    assert f"nfclaw_record_reportgather: nfclaw-fastqrepair-compat-sha256:{compat.recipe_digest()}" in result.stdout
+    recipe = f"nfclaw-fastqrepair-compat-sha256:{compat.recipe_digest()}"
+    assert f"nfclaw_record_reportgather: {recipe}" in result.stdout
 
 
 def test_unsuffixed_mates_follow_samplesheet_order_in_the_actual_repair_command(tmp_path):
     script = tmp_path / ".command.sh"
-    script.write_text('repair.sh \\\n    in=right_gather__nfclaw_0123456789abcdef.fastq.gz in2=left_gather__nfclaw_0123456789abcdef.fastq.gz \\\n'
-                      '    out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz out2=S__nfclaw_0123456789abcdef_2_repaired.fastq.gz \\\n'
+    script.write_text('repair.sh \\\n    in=right_gather__nfclaw_0123456789abcdef.fastq.gz '
+                      'in2=left_gather__nfclaw_0123456789abcdef.fastq.gz \\\n'
+                      '    out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz '
+                      'out2=S__nfclaw_0123456789abcdef_2_repaired.fastq.gz \\\n'
                       '    threads=1\n    qin=64 \\\n    &> repair.log\n')
     compat.patch_task("repair", script, mate_orders={"S": ["left", "right"]})
     text = script.read_text()
@@ -369,13 +382,15 @@ def test_profile_fallback_cannot_infer_all_mates_from_the_first_header(tmp_path,
     for name, mate in zip(names, (1, 2), strict=True):
         with gzip.open(name, "wt") as stream:
             stream.write(f"@first/{mate}\nACGT\n+\nIIII\n@second\nTGCA\n+\nHHHH\n")
-    script = 'in=left.fastq.gz in2=right.fastq.gz out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz'
+    script = ('in=left.fastq.gz in2=right.fastq.gz '
+              'out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz')
     with pytest.raises(ValueError, match="mate order|explicit local"):
         compat._ordered_inputs(script, {})
 
 
 @pytest.mark.parametrize("problem", [None, "opposite", "conflicting", "truncated"])
-def test_profile_fallback_requires_consistent_labels_on_every_complete_record(tmp_path, monkeypatch, problem):
+def test_profile_fallback_requires_consistent_labels_on_every_complete_record(tmp_path,
+                                                                              monkeypatch, problem):
     monkeypatch.chdir(tmp_path)
     for name, role in (("left.fastq", 2), ("right.fastq", 1)):
         label = 3 - role if problem == "opposite" else role

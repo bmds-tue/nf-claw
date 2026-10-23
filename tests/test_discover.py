@@ -74,7 +74,8 @@ def test_new_pipelines_excludes_already_tracked():
     assert [c[0] for c in fresh] == ["demo"]
 
 
-def test_discovery_reports_partial_addition_failure_and_attempts_every_candidate(tmp_path, monkeypatch):
+def test_discovery_reports_partial_addition_failure_and_attempts_every_candidate(
+        tmp_path, monkeypatch):
     sources = tmp_path / "sources.tsv"
     sources.write_text("")
     monkeypatch.setattr(dp, "fetch_catalog", lambda: WORKFLOWS)

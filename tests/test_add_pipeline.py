@@ -36,4 +36,5 @@ def test_gitmodules_text():
     text = add_pipeline.gitmodules_text([Source("sarek", "https://x/sarek.git", "latest-release")])
     assert 'path = pipelines/sarek/upstream' in text
     assert 'url = https://x/sarek.git' in text
-    assert 'branch' not in text  # matches what `git submodule add` writes (.gitmodules has no branch pin)
+    # matches what `git submodule add` writes (.gitmodules has no branch pin)
+    assert 'branch' not in text

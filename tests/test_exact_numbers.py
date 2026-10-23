@@ -7,8 +7,8 @@ import pytest
 from runner import chain, exact_json, parameters, samplesheet, schema, submodule
 
 
-TOKENS = ("9007199254740993.0", "9007199254740993e0", "100000000000000000000001e0", "1e-9999", "1e9999",
-          "0.1000000000000000000001", "-0.1000000000000000000001", "1.25", "0.1",
+TOKENS = ("9007199254740993.0", "9007199254740993e0", "100000000000000000000001e0", "1e-9999",
+          "1e9999", "0.1000000000000000000001", "-0.1000000000000000000001", "1.25", "0.1",
           "2.2250738585072014e-308", "5e-324", "0.0", "-0.0")
 
 
@@ -50,7 +50,8 @@ def test_integer_wire_notation_avoids_native_signed_long_overflow(value):
 def test_nested_parameter_records_preserve_precision_and_aliases(tmp_path, suffix):
     if suffix == "yaml":
         pytest.importorskip("yaml")
-        text = "values: &values [9007199254740993.0, 1.0e-9999, 0.1000000000000000000001]\ncopy: *values\n"
+        text = ("values: &values [9007199254740993.0, 1.0e-9999, 0.1000000000000000000001]\n"
+                "copy: *values\n")
     else:
         text = '{"values": [9007199254740993.0, 1e-9999, 0.1000000000000000000001]}'
     source = tmp_path / f"input.{suffix}"
@@ -109,12 +110,14 @@ def test_integer_coercion_preserves_emitted_decimal_and_compact_extreme_exponent
 
 
 def test_numeric_samplesheet_boundary_is_not_rounded(tmp_path):
-    column = schema.Column("value", "number", False, None, maximum=Decimal("0.1000000000000000000001"))
+    column = schema.Column("value", "number", False, None,
+                           maximum=Decimal("0.1000000000000000000001"))
     assert not samplesheet.value_problems(column, "0.1")
     assert samplesheet.value_problems(column, "0.1000000000000000000002")
     path = tmp_path / "samples.csv"
     path.write_text("value\n0.1000000000000000000002\n")
-    assert any("must be <=" in issue for issue in samplesheet.validate(path, schema.InputSchema((column,))))
+    assert any("must be <=" in issue
+               for issue in samplesheet.validate(path, schema.InputSchema((column,))))
 
 
 def test_yaml_sample_scalar_and_sexagesimal_formats_retain_precision(tmp_path):
@@ -125,7 +128,8 @@ def test_yaml_sample_scalar_and_sexagesimal_formats_retain_precision(tmp_path):
     assert row["value"] == Decimal("9007199254740993")
     assert row["fraction"] == Decimal("0.1000000000000000000001")
     source = tmp_path / "params.yaml"
-    source.write_text("positive: 1:00.1000000000000000000001\nnegative: -1:00.1000000000000000000001\n")
+    source.write_text("positive: 1:00.1000000000000000000001\n"
+                      "negative: -1:00.1000000000000000000001\n")
     params = parameters.load_params_file(source)
     assert params["positive"] == Decimal("60.1000000000000000000001")
     assert params["negative"] == Decimal("-60.1000000000000000000001")
@@ -146,8 +150,9 @@ def test_chain_records_and_fingerprints_preserve_decimal_parameters(tmp_path, to
     path.write_text('{"stages":[{"pipeline":"fixture","params":{"choice":'+token+'}}]}')
     spec = chain.load_spec(path)
     stage = spec.stages[0]
-    planned = chain.Planned(stage, submodule.SubmoduleStatus("fixture", tmp_path, True, True, "test", "test", ()), None,
-                            None, stage.params)
+    planned = chain.Planned(
+        stage, submodule.SubmoduleStatus("fixture", tmp_path, True, True, "test", "test", ()), None,
+        None, stage.params)
     value = stage.params["choice"]
     assert exact_json.decimal(value) == Decimal(token)
     normalized = chain.normalized(spec, [planned])
@@ -174,10 +179,12 @@ def test_precision_does_not_depend_on_decimal_arithmetic_context():
     with localcontext() as context:
         context.prec = 2
         for token in TOKENS:
-            assert json.loads(exact_json.dumps(exact_json.number(token)), parse_float=Decimal) == Decimal(token)
+            text = exact_json.dumps(exact_json.number(token))
+            assert json.loads(text, parse_float=Decimal) == Decimal(token)
 
 
-@pytest.mark.parametrize("value", [Decimal("NaN"), Decimal("sNaN"), Decimal("Infinity"), Decimal("-Infinity")])
+@pytest.mark.parametrize(
+    "value", [Decimal("NaN"), Decimal("sNaN"), Decimal("Infinity"), Decimal("-Infinity")])
 def test_nonfinite_decimals_cannot_be_validated_or_written(tmp_path, value):
     parsed = schema.ParamSchema("test", "", {
         "choice": schema.Param("choice", "number", None, None, "", None, False, "")})

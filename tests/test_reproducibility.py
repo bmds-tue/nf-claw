@@ -64,7 +64,8 @@ SOURMASH = {
     "subworkflows/local/preprocessing/main.nf":
         "ch_prepped_dna_fastas = ch_x\n    .map { _meta, fasta -> [[id: params.dbname], fasta] }\n"
         "    .groupTuple()\n",
-    "conf/test.config": "params {\n    build_sourmash_dna = true\n    build_sourmash_protein = true\n}\n",
+    "conf/test.config": "params {\n    build_sourmash_dna = true\n"
+                        "    build_sourmash_protein = true\n}\n",
 }
 
 

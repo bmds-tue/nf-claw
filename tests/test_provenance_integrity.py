@@ -102,7 +102,8 @@ def test_directory_and_glob_inputs_have_content_checksums(tmp_path):
     snapshot = provenance.hash_inputs([data, data / "*.txt"])
     assert snapshot == {
         str(data / "a.txt"): "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
-        str(data / "nested" / "b.txt"): "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+        str(data / "nested" / "b.txt"):
+            "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
     }
 
 
@@ -194,7 +195,8 @@ def test_unchanged_dependencies_allow_replay(tmp_path):
     assert "REPLAY_RAN" in result.stdout
 
 
-def test_unobserved_unpinned_engine_cannot_silently_replay_on_a_moving_default(tmp_path, monkeypatch):
+def test_unobserved_unpinned_engine_cannot_silently_replay_on_a_moving_default(
+        tmp_path, monkeypatch):
     monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "")
     prov = _write(tmp_path / "out", input_paths=[])
     result = subprocess.run([str(prov / "commands.sh"), str(tmp_path / "fresh")],
@@ -297,9 +299,11 @@ def test_prelaunch_pipeline_snapshot_preserves_original_dirty_bytes(tmp_path):
     assert result.returncode != 0 and "REPLAY_RAN" not in result.stdout
 
 
-def test_default_engine_is_pinned_for_replay_without_falsifying_recorded_environment(tmp_path, monkeypatch):
+def test_default_engine_is_pinned_for_replay_without_falsifying_recorded_environment(
+        tmp_path, monkeypatch):
     monkeypatch.delenv("NXF_VER", raising=False)
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "nextflow version 25.10.4 build 11033")
+    monkeypatch.setattr(provenance, "_nextflow_version",
+                        lambda env_extra=None: "nextflow version 25.10.4 build 11033")
     prov = _write(tmp_path / "out", input_paths=[],
                   command_str="sh -c 'printf %s \"$NXF_VER\"'")
     manifest = json.loads((prov / "run_manifest.json").read_text())

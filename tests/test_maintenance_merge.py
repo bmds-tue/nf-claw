@@ -41,7 +41,8 @@ def run_merge(tmp_path, **overrides):
     }
     result = subprocess.run(["bash", str(ROOT / "scripts/merge_validated_update.sh")],
                             env=env, text=True, capture_output=True)
-    calls = [json.loads(line) for line in commands.read_text().splitlines()] if commands.exists() else []
+    calls = ([json.loads(line) for line in commands.read_text().splitlines()]
+             if commands.exists() else [])
     return result, calls
 
 

@@ -42,11 +42,12 @@ def _raise_terminated(signum, _frame) -> None:
 
 @contextmanager
 def stop_on_signals() -> Iterator[None]:
-    """While active, SIGTERM and SIGHUP raise `Terminated` in the main thread, so a stopped run tears
-    Nextflow's process group down and records its outcome. Python's default for both is to die on the
-    spot: Nextflow, in its own session, went on running orphaned, and run.log never got its last line.
-    A signal the caller ignores stays ignored (`nohup` ignores SIGHUP so a run survives its terminal),
-    and the previous handlers come back on exit. Outside the main thread it changes nothing."""
+    """While active, SIGTERM and SIGHUP raise `Terminated` in the main thread, so a stopped run
+    tears Nextflow's process group down and records its outcome. Python's default for both is to die
+    on the spot: Nextflow, in its own session, went on running orphaned, and run.log never got its
+    last line. A signal the caller ignores stays ignored (`nohup` ignores SIGHUP so a run survives
+    its terminal), and the previous handlers come back on exit. Outside the main thread it
+    changes nothing."""
     previous: dict[int, Any] = {}
     if threading.current_thread() is threading.main_thread():
         for sig in _STOP_SIGNALS:
@@ -75,11 +76,11 @@ def _tee(src, term_stream, log_file, run_log: runlog.RunLog, stream: str) -> Non
     """Forward a child stream to the terminal, its own log file and the run log at once, live.
 
     Reads whatever is already available (`read1`) instead of waiting for a full buffer or a whole
-    line, so a long pipeline's progress reaches the terminal as Nextflow produces it rather than only
-    when the run ends. Bytes are copied verbatim to preserve the child's own formatting (carriage
-    returns, colour). The terminal and the files are written independently: a closed or unusable
-    terminal never costs the run its captured logs, which the provenance bundle and error messages
-    point at.
+    line, so a long pipeline's progress reaches the terminal as Nextflow produces it rather than
+    only when the run ends. Bytes are copied verbatim to preserve the child's own formatting
+    (carriage returns, colour). The terminal and the files are written independently: a closed or
+    unusable terminal never costs the run its captured logs, which the provenance bundle and error
+    messages point at.
     """
     term = getattr(term_stream, "buffer", None)          # write bytes; None if not a real byte sink
     try:
@@ -114,11 +115,12 @@ def run(command: list[str], *, cwd: Path, logs_dir: Path,
         run_log: runlog.RunLog | None = None) -> ExecResult:
     """Run `command` from `cwd`, streaming its output live and recording it under `logs_dir`.
 
-    `stdout.txt`/`stderr.txt` keep the child's two streams; `run.log` keeps the whole launch in order
-    (see `runner.runlog`). All three are appended to, so a relaunch (`--resume`) never overwrites the
-    attempt that failed. A caller that does more work after the launch (`nfclaw run` writes the
-    provenance bundle) passes its own open `run_log` and finishes it itself; otherwise one is opened
-    here — with `nextflow_log` and the `notes` advisories in its header — and finished on return."""
+    `stdout.txt`/`stderr.txt` keep the child's two streams; `run.log` keeps the whole launch in
+    order (see `runner.runlog`). All three are appended to, so a relaunch (`--resume`) never
+    overwrites the attempt that failed. A caller that does more work after the launch (`nfclaw run`
+    writes the provenance bundle) passes its own open `run_log` and finishes it itself; otherwise
+    one is opened here — with `nextflow_log` and the `notes` advisories in its header — and finished
+    on return."""
     own = run_log is None
     if run_log is None:
         run_log = runlog.RunLog.open(logs_dir, command=command, launch_dir=cwd,
@@ -139,7 +141,8 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
     out_p, err_p = logs_dir / "stdout.txt", logs_dir / "stderr.txt"
     # start_new_session puts the child in its own process group, so nfclaw owns its shutdown: the
     # terminal's Ctrl-C reaches nfclaw as a KeyboardInterrupt (not the child), and nfclaw then tears
-    # down the whole group below. Without this the child kept running in the background after Ctrl-C.
+    # down the whole group below. Without this the child kept running in the background
+    # after Ctrl-C.
     popen_kwargs: dict[str, Any] = {} if sys.platform == "win32" else {"start_new_session": True}
     die_with_nfclaw = _die_with_parent()
     if die_with_nfclaw is not None:
@@ -163,8 +166,8 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
             raise err from exc
         run_log.launched(proc.pid)
         # One drainer per stream: both pipes must be read concurrently, or a child that fills one
-        # while nfclaw is blocked reading the other would deadlock. Daemon threads so a wedged reader
-        # can never keep the process alive on its own.
+        # while nfclaw is blocked reading the other would deadlock. Daemon threads so a wedged
+        # reader can never keep the process alive on its own.
         readers = [
             threading.Thread(target=_tee, args=(proc.stdout, sys.stdout, out_fh, run_log, "out"),
                              daemon=True),
@@ -279,7 +282,8 @@ def _failure(code: int, run_log: runlog.RunLog) -> NfclawError:
                        "before 26.10.0 then aborts the whole run instead of retrying that task "
                        "(nextflow-io/nextflow#7569). Pulling the task's container image counts "
                        "toward the limit, so --resume often completes it; if it times out again, "
-                       "raise that process's `time` with --config or use Nextflow 26.10.0 or later. "
+                       "raise that process's `time` with --config or use Nextflow "
+                       "26.10.0 or later. "
                        if any(_TIME_LIMIT_ABORT in line for line in on_stdout + on_stderr + causes)
                        else "")
     return NfclawError(
@@ -314,10 +318,10 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS) -> None:
     """Stop the child and everything it launched.
 
     Signals the whole process group, because killing just the child would orphan the task processes
-    it spawned: SIGTERM first, so Nextflow runs its JVM shutdown hooks and cleans up its own tasks, then
-    SIGKILL for whatever is still running once the grace period is over. The group is waited on, not
-    just its leader — Nextflow exiting does not mean its tasks did, and a task that ignores or is
-    still handling SIGTERM would otherwise be left running in the background.
+    it spawned: SIGTERM first, so Nextflow runs its JVM shutdown hooks and cleans up its own tasks,
+    then SIGKILL for whatever is still running once the grace period is over. The group is waited
+    on, not just its leader — Nextflow exiting does not mean its tasks did, and a task that ignores
+    or is still handling SIGTERM would otherwise be left running in the background.
     """
     if not hasattr(os, "killpg"):                     # Windows: no process groups to signal
         proc.kill()

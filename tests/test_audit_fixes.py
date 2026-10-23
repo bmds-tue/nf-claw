@@ -157,7 +157,8 @@ def test_required_params_lists_only_required_in_schema_order():
     ps = ParamSchema(title="t", description="d", params={
         "input": Param("input", "string", None, None, "ss", None, True, "io"),
         "outdir": Param("outdir", "string", None, None, "out", None, True, "io"),
-        "aligner": Param("aligner", "string", "star", None, "no default but optional", None, False, "ref"),
+        "aligner": Param("aligner", "string", "star", None, "no default but optional",
+                         None, False, "ref"),
     })
     out = write_skill._required_params(ps)
     assert "--input" in out and "--outdir" in out          # required → shown
@@ -196,7 +197,8 @@ def test_param_groups_maps_every_group_with_counts():
 def test_catalog_md_escapes_pipes(tmp_path):
     d = tmp_path / "pX"
     (d / "upstream").mkdir(parents=True)
-    (d / "skill.md").write_text("---\nname: pX\nversion: 1.0.0\ndescription: does A | B things\n---\n")
+    (d / "skill.md").write_text("---\nname: pX\nversion: 1.0.0\n"
+                                "description: does A | B things\n---\n")
     out_md, out_json = tmp_path / "catalog.md", tmp_path / "catalog.json"
     write_catalog.generate(pipelines_dir=tmp_path, out_md=out_md, out_json=out_json)
     md = out_md.read_text()
@@ -327,7 +329,8 @@ def test_column_fmt_is_symmetric_with_param_and_drives_is_path(tmp_path):
         '"name": {"type": "string"}}}}')
     cols = {c.name: c for c in schema.load_input_schema(tmp_path).columns}
     assert cols["reads"].fmt == "file-path" and cols["reads"].is_path is True
-    assert cols["refdir"].fmt == "directory-path" and cols["refdir"].is_path is True   # not flattened
+    # not flattened
+    assert cols["refdir"].fmt == "directory-path" and cols["refdir"].is_path is True
     assert cols["name"].fmt is None and cols["name"].is_path is False
 
 
@@ -360,7 +363,8 @@ def test_reference_surfaces_hidden_fmt_and_title():
     ps = ParamSchema(title="nf-core/pZ parameters", description="d", params={
         "input": Param("input", "string", None, None, "samplesheet", "file-path", True, "io"),
         "outdir": Param("outdir", "string", None, None, "results", "directory-path", True, "io"),
-        "email": Param("email", "string", None, None, "notify", None, False, "generic", hidden=True),
+        "email": Param("email", "string", None, None, "notify", None, False,
+                       "generic", hidden=True),
     })
     out = write_skill._render_reference("pZ", st, ps, None)
     assert "nf-core/pZ parameters" in out               # schema title surfaced in the intro
@@ -407,13 +411,15 @@ def test_run_invocation_omits_input_without_samplesheet():
 def test_run_invocation_shows_required_without_default_only():
     ps = ParamSchema(title="t", description="d", params={
         "outdir": Param("outdir", "string", None, None, "o", "directory-path", True, "io"),
-        "genome": Param("genome", "string", None, None, "g", None, True, "ref"),            # required, no default
-        "step": Param("step", "string", "mapping", ("mapping", "x"), "s", None, True, "main"),  # required, has default
+        # required, no default
+        "genome": Param("genome", "string", None, None, "g", None, True, "ref"),
+        # required, has default
+        "step": Param("step", "string", "mapping", ("mapping", "x"), "s", None, True, "main"),
     })
     nf, raw = write_skill._run_invocation("p", ps, InputSchema(columns=()))
-    assert "--genome <genome>" in nf and "--genome <genome>" in raw   # must-pass → placeholder shown
-    assert "--step" not in nf                                         # default filled by nf-schema → omitted
-    assert "--input samplesheet.csv" in nf                            # samplesheet present → --input shown
+    assert "--genome <genome>" in nf and "--genome <genome>" in raw  # must-pass → placeholder shown
+    assert "--step" not in nf  # default filled by nf-schema → omitted
+    assert "--input samplesheet.csv" in nf  # samplesheet present → --input shown
 
 
 def test_reference_renders_boolean_default_as_json_literal():
@@ -432,9 +438,10 @@ def test_reference_renders_boolean_default_as_json_literal():
 #     and rendered by ONE helper (so the two never drift apart), excluding enum (own column). ---
 def test_constraints_helper_renders_all_and_excludes_enum():
     p = Param("x", "integer", None, ("a", "b"), "d", None, False, "g",
-              pattern=r"^(a|b)$", minimum=1, maximum=10, min_length=2, max_length=8, deprecated=True)
+              pattern=r"^(a|b)$", minimum=1, maximum=10, min_length=2, max_length=8,
+              deprecated=True)
     out = write_skill._constraints(p)
-    assert r"matches ^(a\|b)$" in out                   # pattern rendered, pipe escaped for the table
+    assert r"matches ^(a\|b)$" in out  # pattern rendered, pipe escaped for the table
     assert "≥ 1" in out and "≤ 10" in out               # numeric bounds
     assert "length ≥ 2" in out and "length ≤ 8" in out  # length bounds
     assert "deprecated" in out
@@ -475,7 +482,7 @@ def test_load_input_schema_captures_column_constraints(tmp_path):
         '"cells": {"type": "integer", "minimum": 1}, '
         '"name": {"type": "string", "minLength": 1}}}}')
     cols = {c.name: c for c in schema.load_input_schema(tmp_path).columns}
-    assert cols["cells"].minimum == 1                    # numeric column bound captured, not dropped
+    assert cols["cells"].minimum == 1  # numeric column bound captured, not dropped
     assert cols["name"].min_length == 1
 
 
@@ -490,7 +497,7 @@ def test_reference_has_constraints_column_with_real_pattern():
     out = write_skill._render_reference("pZ", st, ps, None)
     assert "| constraints |" in out                                  # column present
     input_row = next(line for line in out.splitlines() if line.startswith("| `--input`"))
-    assert r"matches ^\S+\.(csv\|tsv)$" in input_row                 # pattern in the right cell, pipe escaped
+    assert r"matches ^\S+\.(csv\|tsv)$" in input_row  # pattern in the right cell, pipe escaped
     n_row = next(line for line in out.splitlines() if line.startswith("| `--n`"))
     assert "≥ 1" in n_row
 
@@ -793,7 +800,8 @@ def test_coproid_genome_sheet_oneof_matches_pinned_upstream():
 # --- Demo-run failures: three verified additions to the symptom→fix map —
 #     marsseq (NF 26 parser → --nxf-ver 25.10.2), lsmquant (declares !>=25.10.4 → --nxf-ver
 #     25.10.4) and metapep (demo's DOWNLOAD_PROTEINS fetches from NCBI Entrez via a secret). Each
-#     is checked against the doc and the pinned upstream (source-of-truth tests skip without it). ---
+#     is checked against the doc and the pinned upstream (source-of-truth tests skip
+#     without it). ---
 def test_known_issues_documents_marsseq_lsmquant_metapep():
     assert "`marsseq`" in KNOWN_ISSUES and "`lsmquant`" in KNOWN_ISSUES
     assert "`metapep`" in KNOWN_ISSUES

@@ -94,7 +94,7 @@ def test_nonempty_outdir_blocks_run_but_not_check(tmp_path, monkeypatch):
     _clean_env(monkeypatch)
     repo = tmp_path / "repo"
     repo.mkdir()
-    out = tmp_path / "out"                                  # outside the repo, so only the empty rule can fire
+    out = tmp_path / "out"  # outside the repo, so only the empty rule can fire
     out.mkdir()
     (out / "old.txt").write_text("a previous run")
     common = dict(profile="singularity", submodule=_st(repo / "up"),
@@ -200,7 +200,8 @@ def test_unwritable_work_dir_is_flagged_with_the_nxf_work_fix(tmp_path, monkeypa
     monkeypatch.setattr(preflight.os, "access",
                         lambda p, mode: False if Path(p) == work else real_access(p, mode))
     issues = preflight.check_environment(profile="singularity", output_dir=tmp_path / "out",
-                                         submodule=_st(tmp_path / "up"), repo_root=tmp_path / "repo",
+                                         submodule=_st(tmp_path / "up"),
+                                         repo_root=tmp_path / "repo",
                                          resume=False, work_dir=work)
     assert any("work directory is not writable" in i and "NXF_WORK" in i for i in issues), issues
     fine = preflight.check_environment(profile="singularity", output_dir=tmp_path / "out",
@@ -213,7 +214,8 @@ def test_unwritable_work_dir_is_flagged_with_the_nxf_work_fix(tmp_path, monkeypa
 # must not authorize them in launch paths.
 @pytest.mark.parametrize("separator", ["\n", "\r"])
 @pytest.mark.parametrize("allow_spaces", [False, True])
-def test_launch_path_line_breaks_are_refused_even_with_the_space_override(tmp_path, separator, allow_spaces):
+def test_launch_path_line_breaks_are_refused_even_with_the_space_override(tmp_path,
+                                                                          separator, allow_spaces):
     for field in ("repo_root", "output_dir", "work_dir"):
         paths = {"repo_root": tmp_path / "repo", "output_dir": tmp_path / "out",
                  "work_dir": tmp_path / "work"}

@@ -20,7 +20,8 @@ def _record_input(outdir, path):
     (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
 
 
-@pytest.mark.parametrize("damage", ["missing-version", "unsupported-version", "unverified", None, 0])
+@pytest.mark.parametrize("damage",
+                         ["missing-version", "unsupported-version", "unverified", None, 0])
 def test_external_directory_handoff_requires_verified_prelaunch_namespace(
         library, finished_run, tmp_path, damage):
     _, down = _trees(library("mini_up", "mini"))

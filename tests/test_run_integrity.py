@@ -61,7 +61,8 @@ def test_strict_verification_rejects_changed_scientific_result(tmp_path, monkeyp
     assert cli.main(["verify", str(replay), "--against", str(original), "--strict"]) == 1
 
 
-def test_provenance_snapshots_sheet_data_and_config_before_execution(library, tmp_path, monkeypatch):
+def test_provenance_snapshots_sheet_data_and_config_before_execution(library,
+                                                                     tmp_path, monkeypatch):
     root = library("mini")
     data = tmp_path / "reads.fastq.gz"
     data.write_bytes(b"original reads")
@@ -150,11 +151,13 @@ def test_missing_schema_required_path_is_still_refused(library, tmp_path, monkey
     source.write_text(json.dumps(schema))
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
     monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
-    monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("launched"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *args, **kwargs: pytest.fail("launched"))
     with pytest.raises(NfclawError, match="cannot snapshot local run dependencies"):
         orchestration.run_pipeline(
             "mini", repo_root=root, input_path=None, outdir=tmp_path / "results",
-            profile="docker", params_file=None, cli_overrides={"fasta": str(tmp_path / "missing.fa")},
+            profile="docker", params_file=None,
+            cli_overrides={"fasta": str(tmp_path / "missing.fa")},
             resume=False, demo=True, check_only=False, write_provenance=True, timeout_seconds=None)
 
 
@@ -177,7 +180,8 @@ def test_optional_existing_source_with_broken_member_is_refused(
         value = cache
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
     monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
-    monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: pytest.fail("launched"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *args, **kwargs: pytest.fail("launched"))
     # Directory inputs and patterns inspect staged entries before the dependency snapshot.
     # Broken members must remain fatal and never reach pipeline execution.
     with pytest.raises(NfclawError, match="cannot inspect local input filenames") as exc:

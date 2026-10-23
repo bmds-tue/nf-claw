@@ -1,12 +1,12 @@
 """Handoffs: how one finished pipeline run becomes the next pipeline's parameters.
 
-A handoff rule is data, not code: `handoffs/<upstream>/<downstream>.json`. Where a pipeline publishes
-a samplesheet for another one, and which columns it holds, is in no schema, so it cannot be derived
-the way skill.md is — but everything a rule claims about either pipeline's *parameters and
-samplesheet columns* is checked against their pinned schemas (`check_rule`, also run by the drift
-gate), so a release that breaks a rule is caught the day it is pinned. The runner itself still knows
-no pipeline: which parameter takes a samplesheet, and which of its columns hold paths, come from the
-downstream schema.
+A handoff rule is data, not code: `handoffs/<upstream>/<downstream>.json`. Where a pipeline
+publishes a samplesheet for another one, and which columns it holds, is in no schema, so it cannot
+be derived the way skill.md is — but everything a rule claims about either pipeline's *parameters
+and samplesheet columns* is checked against their pinned schemas (`check_rule`, also run by the
+drift gate), so a release that breaks a rule is caught the day it is pinned. The runner itself still
+knows no pipeline: which parameter takes a samplesheet, and which of its columns hold paths, come
+from the downstream schema.
 
 A rule maps downstream parameters to sources:
 - `samplesheet`    — a sheet the upstream already wrote for the target, copied (optionally with
@@ -145,7 +145,8 @@ def parse_rule(data: Any, *, upstream: str, downstream: str, origin: str) -> Rul
             _check_build(src["build"], target, bad)
         sources[target] = Source(kind, src, bool(src.get("optional", False)))
     # `paired_with`: a file list whose candidates belong to another file list's, index by index
-    # (rnaseq's gene lengths to the counts of the same quantification). The partner's choice decides.
+    # (rnaseq's gene lengths to the counts of the same quantification). The partner's
+    # choice decides.
     for target, source in sources.items():
         if "paired_with" not in source.spec:
             continue
@@ -213,10 +214,11 @@ def provided_columns(source: Source) -> list[str]:
 
 
 def check_rule(rule: Rule, upstream_tree: Path, downstream_tree: Path) -> list[str]:
-    """Whether `rule` fits these two pipeline trees — everything that can be judged before either has
-    run: the upstream parameters it sets, the downstream parameters it fills, and whether the header
-    of a sheet it hands over can satisfy the downstream samplesheet schema. Runtime facts (files
-    exist, rows are valid) are `materialize`'s. Each issue is prefixed with the rule's origin."""
+    """Whether `rule` fits these two pipeline trees — everything that can be judged before either
+    has run: the upstream parameters it sets, the downstream parameters it fills, and whether the
+    header of a sheet it hands over can satisfy the downstream samplesheet schema. Runtime facts
+    (files exist, rows are valid) are `materialize`'s. Each issue is prefixed with the
+    rule's origin."""
     up = schema_mod.load_param_schema(upstream_tree)
     down = schema_mod.load_param_schema(downstream_tree)
     issues = [f"upstream {rule.upstream}: {e}"
@@ -333,7 +335,8 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
     internal = _under(path, upstream)
     if internal == ".":
         historical = recorded_outputs(upstream)
-        recorded_nodes = output_mod.read_inventory(upstream / "provenance/outputs.inventory.json", historical)
+        recorded_nodes = output_mod.read_inventory(
+            upstream / "provenance/outputs.inventory.json", historical)
         current, raw_nodes = provenance.snapshot_inputs([path])
         _, nodes, raw_published = output_mod.snapshot(upstream)
         actual = {name: current.get(str(upstream / name)) for name, entry in nodes.items()
@@ -341,19 +344,24 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
         published = {name: entry for name, entry in raw_nodes.items()
                      if Path(name) != path and output_mod.is_result(Path(name).relative_to(path))}
         if (historical != actual or recorded_nodes != nodes or raw_published != published
-                or any(current.get(str(upstream / name)) != digest for name, digest in historical.items())):
+                or any(current.get(str(upstream / name)) != digest
+                       for name, digest in historical.items())):
             raise ValueError("published results changed while recording the complete run directory")
         evidence = {"directory_reference": str(path), "directory_inventory": raw_nodes,
                     "directory_source": "bundle", "bundle_dependencies": current,
                     "output_dependencies": historical, "directory_output_inventory": recorded_nodes}
-        if boundary is not None and any(boundary.get(key) != value for key, value in evidence.items()):
+        if boundary is not None and any(boundary.get(key) != value
+                                        for key, value in evidence.items()):
             raise ValueError("complete run directory changed since its recorded handoff boundary")
         return evidence
     if internal is None:
-        historical = provenance.read_checksums(upstream / "provenance/inputs.sha256", relative=False)
-        expected = {name: digest for name, digest in historical.items() if Path(name).is_relative_to(path)}
+        historical = provenance.read_checksums(upstream / "provenance/inputs.sha256",
+                                               relative=False)
+        expected = {name: digest for name, digest in historical.items()
+                    if Path(name).is_relative_to(path)}
         nodes = recorded_input_inventory(upstream)
-        expected_nodes = {name: entry for name, entry in nodes.items() if Path(name).is_relative_to(path)}
+        expected_nodes = {name: entry for name, entry in nodes.items()
+                          if Path(name).is_relative_to(path)}
         current, current_nodes = provenance.snapshot_inputs([path])
         raw_nodes = current_nodes
         root_key = str(path)
@@ -362,8 +370,10 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
         historical = recorded_outputs(upstream)
         expected = {str(upstream / name): digest for name, digest in historical.items()
                     if Path(name).is_relative_to(internal)}
-        nodes = output_mod.read_inventory(upstream / "provenance/outputs.inventory.json", historical)
-        expected_nodes = {name: entry for name, entry in nodes.items() if Path(name).is_relative_to(internal)}
+        nodes = output_mod.read_inventory(upstream
+                                          / "provenance/outputs.inventory.json", historical)
+        expected_nodes = {name: entry for name, entry in nodes.items()
+                          if Path(name).is_relative_to(internal)}
         hashes, current_nodes, raw_nodes = output_mod.snapshot(upstream, sha256_file, only=path)
         current = {str(upstream / name): digest for name, digest in hashes.items()}
         root_key = internal
@@ -380,7 +390,8 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
         evidence["input_dependencies"] = expected
     else:
         evidence["output_dependencies"] = {
-            Path(name).relative_to(upstream).as_posix(): digest for name, digest in expected.items()}
+            Path(name).relative_to(upstream).as_posix(): digest
+            for name, digest in expected.items()}
         evidence["directory_output_inventory"] = expected_nodes
     return evidence
 
@@ -421,8 +432,8 @@ def _one_match(root: Path, pattern: str) -> Path:
         raise _NoMatch(f"nothing in {root} matches {pattern!r}")
     if len(found) > 1:
         shown = ", ".join(p.relative_to(root).as_posix() for p in found[:5])
-        raise _Unresolved(f"{len(found)} files match {pattern!r} ({shown}); a handoff needs exactly "
-                          "one — give the stage an inline handoff with a narrower pattern")
+        raise _Unresolved(f"{len(found)} files match {pattern!r} ({shown}); a handoff needs "
+                          "exactly one — give the stage an inline handoff with a narrower pattern")
     return found[0]
 
 
@@ -482,8 +493,8 @@ def _write_sheet(dest: Path, header: list[str], rows: list[dict[str, str]]) -> P
 
 
 def _absolute(value: str, root: Path) -> str:
-    """A samplesheet path made absolute against the upstream outdir: Nextflow would otherwise resolve
-    a relative one against the downstream's launch directory (its own --outdir)."""
+    """A samplesheet path made absolute against the upstream outdir: Nextflow would otherwise
+    resolve a relative one against the downstream's launch directory (its own --outdir)."""
     if inputs.is_remote_url(value) or Path(value).is_absolute():
         return value
     return os.path.normpath(root / value)
@@ -516,13 +527,16 @@ def consumption_evidence(paths: list[Path], upstream: Path) -> dict[str, Any]:
                 raise ValueError(f"reference directory {path} changed while recording its handoff")
         elif (relative := _under(path, upstream)) is not None:
             if published.get(relative) != hashes[str(path)]:
-                raise ValueError(f"upstream result {relative} changed or has no historical checksum")
+                raise ValueError(f"upstream result {relative} changed or has "
+                                 "no historical checksum")
         else:
-            historical = provenance.read_checksums(upstream / "provenance/inputs.sha256", relative=False)
+            historical = provenance.read_checksums(upstream / "provenance/inputs.sha256",
+                                                   relative=False)
             historical_nodes = recorded_input_inventory(upstream)
             if (historical.get(str(path)) != hashes[str(path)]
                     or historical_nodes.get(str(path)) != nodes[str(path)]):
-                raise ValueError(f"local upstream reference {path} changed or has no historical input record")
+                raise ValueError(f"local upstream reference {path} changed or has no "
+                                 "historical input record")
     return {"consumed_sources": [str(path) for path in sorted(set(paths))],
             "consumed_dependencies": hashes, "consumed_inventory": nodes}
 
@@ -546,7 +560,8 @@ def legacy_consumption_paths(item: dict, upstream: Path) -> list[Path]:
     published = recorded_outputs(upstream)
     paths = set()
     with Path(value).open(newline="", encoding="utf-8-sig") as stream:
-        for row in csv.DictReader(stream, delimiter=samplesheet.delimiter_for(Path(value)), strict=True):
+        for row in csv.DictReader(stream,
+                                  delimiter=samplesheet.delimiter_for(Path(value)), strict=True):
             for cell in row.values():
                 if not isinstance(cell, str) or inputs.is_remote_url(cell):
                     continue
@@ -572,7 +587,8 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
     if duplicates:
         raise _Unresolved(f"{sheet.name} has duplicate columns: {', '.join(duplicates)}")
     if extra := [str(i) for i, row in enumerate(rows, start=2) if None in row]:
-        raise _Unresolved(f"{sheet.name} has values beyond its header on row(s) {', '.join(extra[:5])}")
+        raise _Unresolved(f"{sheet.name} has values beyond its header on "
+                          f"row(s) {', '.join(extra[:5])}")
     rename = src.spec.get("rename", {})
     if missing := [old for old in rename if old not in header]:
         raise _Unresolved(f"{sheet.name} has no column {', '.join(missing)} to rename")
@@ -615,11 +631,13 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
         if col not in header:
             raise _Unresolved(f"{sheet.name} has no column '{col}' to check against the values "
                               f"{downstream} can analyse")
-        if outside := [f"row {i} ({r.get('sample') or '?'}: {(r.get(col) or '').strip() or 'empty'})"
+        if outside := [f"row {i} ({r.get('sample') or '?'}: "
+                       f"{(r.get(col) or '').strip() or 'empty'})"
                        for i, r in enumerate(rows, start=2)
                        if (r.get(col) or "").strip() not in values]:
-            raise _Unresolved(f"{downstream} takes only {col} {', '.join(values)}; "
-                              f"{', '.join(outside[:5])}" + (" and more" if len(outside) > 5 else "")
+            raise _Unresolved(f"{downstream} takes only {col} "
+                              f"{', '.join(values)}; {', '.join(outside[:5])}" + (" and more"
+                                                             if len(outside) > 5 else "")
                               + " — leave those runs out, or analyse them with a pipeline for "
                                 "their data")
     # Rows a downstream cannot take although its schema allows them (sarek reads paired-end FastQ
@@ -632,7 +650,8 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                               + ("have none" if len(missing) > 1 else "has none"))
     derived = [sheet.relative_to(root).as_posix()]
     excluded = {*sheet_schema.metadata_columns, *sheet_schema.destination_columns}
-    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format() and c.name not in excluded}
+    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()
+                 and c.name not in excluded}
     pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     for r in rows:
         for col in header:
@@ -642,7 +661,8 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                 continue
             values = (value,)
             if col in path_cols and path_cols[col].path_format(value):
-                values = tuple(_absolute(part, root) for part in path_cols[col].path_values(value, r))
+                values = tuple(_absolute(part, root)
+                               for part in path_cols[col].path_values(value, r))
                 r[col] = path_cols[col].join_paths(values)
             elif col in pattern_cols and samplesheet.names_relative_file(pattern_cols[col], value):
                 values = (_absolute(value, root),)
@@ -664,7 +684,8 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
     spec = src.spec["build"]
     glob, rx = _pattern(spec["rows"])
     excluded = {*sheet_schema.metadata_columns, *sheet_schema.destination_columns}
-    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format() and c.name not in excluded}
+    path_cols = {c.name: c for c in sheet_schema.columns if c.path_format()
+                 and c.name not in excluded}
     pattern_cols = samplesheet.pattern_file_columns(sheet_schema)
     rows: list[dict[str, str]] = []
     derived: list[str] = []
@@ -786,7 +807,8 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                         f"{rule.origin}: cannot verify local upstream reference {value}: {exc}",
                         fix=remedy) from exc
                 if (digest is None or actual != {str(path): digest} or (not legacy and (
-                        current_nodes != expected_nodes or expected_nodes.get(str(path), {}).get("type") != "file"))):
+                        current_nodes != expected_nodes
+                        or expected_nodes.get(str(path), {}).get("type") != "file"))):
                     raise NfclawError(
                         ErrorCode.HANDOFF_FAILED,
                         f"{rule.origin}: local upstream reference {value} has no historical input "
@@ -848,7 +870,8 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
                 ErrorCode.HANDOFF_FAILED,
                 f"{rule.origin}: cannot prepare {rule.downstream} {_flag(target)}: {why}",
                 fix=(f"Check the {rule.upstream} results in {upstream_outdir}; set "
-                     f"{_flag(target)} in the stage's params, or give the stage an inline handoff."),
+                     f"{_flag(target)} in the stage's params, or give the stage "
+                     "an inline handoff."),
                 details={"upstream_outdir": str(upstream_outdir)}) from None
         for rel in dict.fromkeys(derived):
             digest = outputs.get(rel)

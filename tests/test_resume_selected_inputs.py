@@ -25,7 +25,7 @@ def test_resume_compares_complete_file_membership_and_identity(tmp_path, change)
     if change == "alias":
         alias.unlink()
         alias.symlink_to(second)
-    after = [alias] if change == "alias" else [second] if change == "replace" else [first, second] if change == "add" else [first]
+    after = {"alias": [alias], "replace": [second], "add": [first, second]}.get(change, [first])
     hashes, namespace = provenance.snapshot_inputs(after)
     warning = orchestration._input_resume_warning(out, namespace, hashes)
     assert warning and "fresh Nextflow cache session" in warning

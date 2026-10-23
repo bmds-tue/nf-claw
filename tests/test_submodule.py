@@ -30,11 +30,11 @@ def test_ensure_initialized_serializes_parallel_init(tmp_path, monkeypatch):
     # Several processes/threads initialising the same submodule at once must not race on
     # .git/config: the lock + re-check means `git submodule update` runs exactly once.
     up = tmp_path / "pipelines" / "mini" / "upstream"
-    up.mkdir(parents=True)                                        # exists but empty → not initialised
+    up.mkdir(parents=True)  # exists but empty → not initialised
     calls = []
 
     def fake_capture(args, **kw):
-        if "submodule" in args:                                  # the init call (not the _git reads)
+        if "submodule" in args:  # the init call (not the _git reads)
             calls.append(args)
             for f in submodule.REQUIRED_FILES:
                 (up / f).write_text("x")                         # simulate a successful init
@@ -55,11 +55,12 @@ def test_ensure_initialized_serializes_parallel_init(tmp_path, monkeypatch):
     for t in threads:
         t.join()
     assert not errors
-    assert len(calls) == 1                                       # ran once under the lock + re-check
+    assert len(calls) == 1  # ran once under the lock + re-check
 
 
 def test_resolve_at_uses_explicit_path(tmp_path):
-    # resolve_at points at an arbitrary tree (e.g. a version worktree), not pipelines/<name>/upstream.
+    # resolve_at points at an arbitrary tree (e.g. a version worktree),
+    # not pipelines/<name>/upstream.
     tree = tmp_path / ".versions" / "1.2.0" / "upstream"
     tree.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config", "nextflow_schema.json"):
@@ -145,8 +146,8 @@ def _git_repo(path):
 
 
 def test_init_lock_lives_in_the_repositorys_git_dir(tmp_path):
-    # The lock used to live in the shared temp dir (/tmp on Linux), where a file left by another user
-    # sharing the clone made every first-time `nfclaw run` crash with a raw PermissionError.
+    # The lock used to live in the shared temp dir (/tmp on Linux), where a file left by another
+    # user sharing the clone made every first-time `nfclaw run` crash with a raw PermissionError.
     repo = _git_repo(tmp_path / "repo")
     with submodule._init_lock(repo):
         assert (repo / ".git" / "nfclaw-submodule.lock").is_file()
@@ -184,8 +185,9 @@ def _committed_repo(path):
 
 
 def test_a_tree_inside_another_repo_never_reports_that_repos_commit(tmp_path):
-    # An uninitialised (or hand-filled) submodule directory sits inside the nf-claw checkout, and git
-    # run there answers for nf-claw: provenance recorded nf-claw's HEAD as the pipeline's commit.
+    # An uninitialised (or hand-filled) submodule directory sits inside the nf-claw checkout, and
+    # git run there answers for nf-claw: provenance recorded nf-claw's HEAD as the
+    # pipeline's commit.
     outer_head = _committed_repo(tmp_path)
     up = tmp_path / "pipelines" / "sarek" / "upstream"
     up.mkdir(parents=True)

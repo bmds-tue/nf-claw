@@ -4,9 +4,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_agents_md_matches_claude_md():
-    # Two entry points to the same agent guide: CLAUDE.md (Claude Code) and AGENTS.md (other agents).
-    # AGENTS.md had silently fallen five sections behind (replay, --limit-*, `nfclaw verify`, remote
-    # reference defaults, warnings that are not faults), so agents reading it never learned them.
+    # Two entry points to the same agent guide: CLAUDE.md (Claude Code) and AGENTS.md (other
+    # agents). AGENTS.md had silently fallen five sections behind (replay, --limit-*, `nfclaw
+    # verify`, remote reference defaults, warnings that are not faults), so agents reading it never
+    # learned them.
     assert (ROOT / "AGENTS.md").read_text(encoding="utf-8") == \
         (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
@@ -15,7 +16,8 @@ def test_llms_txt_exists_and_matches_website_public():
     llms_root = ROOT / "llms.txt"
     llms_public = ROOT / "website" / "public" / "llms.txt"
     assert llms_root.is_file(), "llms.txt must exist at repo root"
-    assert llms_public.is_file(), "llms.txt must exist in website/public for GitHub Pages deployment"
+    assert llms_public.is_file(), ("llms.txt must exist in website/public for "
+                                   "GitHub Pages deployment")
     assert llms_root.read_text(encoding="utf-8") == llms_public.read_text(encoding="utf-8"), \
         "website/public/llms.txt must be identical to root llms.txt"
 

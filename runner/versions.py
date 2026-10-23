@@ -33,8 +33,9 @@ DEV_BRANCH = "dev"
 # Where the submodule clone remembers the last `dev` head nfclaw resolved: the conventional
 # remote-tracking ref, so `git log origin/dev` works there too. It is the offline fallback.
 _DEV_TRACKING_REF = f"refs/remotes/origin/{DEV_BRANCH}"
-# A release tag: `X.Y.Z`, or the `X.Y` nf-core used before settling on three parts (fetchngs 1.0–1.9,
-# sarek 2.5–2.7, rnaseq 1.0–3.9, …). `dev`, release candidates and other refs are not releases.
+# A release tag: `X.Y.Z`, or the `X.Y` nf-core used before settling on three parts (fetchngs
+# 1.0–1.9, sarek 2.5–2.7, rnaseq 1.0–3.9, …). `dev`, release candidates and other refs are
+# not releases.
 _RELEASE_TAG = re.compile(r"^v?(\d+)\.(\d+)(?:\.(\d+))?$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _GIT_TIMEOUT = 120
@@ -223,8 +224,8 @@ def _record_dev_head(upstream: Path, sha: str) -> None:
 
 def _dev_advisory(name: str, commit: str) -> str:
     return (f"nf-core/{name}@{DEV_BRANCH} is unreleased development code (commit {commit}). "
-            f"The `{DEV_BRANCH}` branch moves, so a later `--pipeline-version {DEV_BRANCH}` run may "
-            "execute different code; provenance records this commit and `commands.sh` replays "
+            f"The `{DEV_BRANCH}` branch moves, so a later `--pipeline-version {DEV_BRANCH}` run "
+            "may execute different code; provenance records this commit and `commands.sh` replays "
             "exactly it. Use a release for results you need to reproduce from a version number.")
 
 
@@ -301,7 +302,8 @@ def _require_own_clone(name: str, upstream: Path, what: str) -> None:
     if not submod.is_git_tree(upstream):
         raise NfclawError(
             ErrorCode.SUBMODULE_INCOMPLETE,
-            f"pipelines/{name}/upstream is not a git checkout, so {what} cannot be fetched from it.",
+            f"pipelines/{name}/upstream is not a git checkout, so {what} cannot be "
+            "fetched from it.",
             fix=f"Re-initialise it: git submodule update --init pipelines/{name}/upstream")
 
 
@@ -348,8 +350,8 @@ def _check_cache_commit(st: SubmoduleStatus, expected: str, label: str) -> None:
             ErrorCode.SUBMODULE_INCOMPLETE,
             f"Version cache {st.path} does not match nf-core/{st.name}@{label}: "
             f"expected {expected or '(unresolved commit)'}, found {st.commit or '(no Git HEAD)'}.",
-            fix="Preserve any local changes, move this version's cache directory aside, then retry. "
-                "nfclaw will recreate the requested revision without overwriting that tree.")
+            fix="Preserve any local changes, move this version's cache directory aside, then "
+                "retry. nfclaw will recreate the requested revision without overwriting that tree.")
 
 
 def materialize(name: str, tag: str, *, pipelines_dir: Path, repo_root: Path) -> SubmoduleStatus:
@@ -366,7 +368,8 @@ def materialize(name: str, tag: str, *, pipelines_dir: Path, repo_root: Path) ->
             st = submod.resolve_at(name, dest)
             if not _has_tag(upstream, tag):
                 _fetch_tag(upstream, tag)
-            expected = submod._git(upstream, "rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}")
+            expected = submod._git(upstream, "rev-parse", "-q", "--verify",
+                                   f"refs/tags/{tag}^{{commit}}")
             if not st.complete:
                 _add_worktree(upstream, dest, f"tags/{tag}")
                 st = submod.resolve_at(name, dest)
@@ -414,8 +417,8 @@ def ensure(name: str, version: str | None, *, pipelines_dir: Path,
 def generate_docs(st: SubmoduleStatus, *, dest_dir: Path) -> tuple[Path, Path]:
     """Write `skill.md`/`reference.md` for a version's tree, reusing the librarian's
     renderer. Imported lazily so the runtime never hard-depends on the librarian."""
-    from librarian import write_skill                          # lazy: avoid runner→librarian coupling
-    version = st.version if is_cached(st) else None             # version-aware commands only for a cache
+    from librarian import write_skill  # lazy: avoid runner→librarian coupling
+    version = st.version if is_cached(st) else None  # version-aware commands only for a cache
     skill_text, ref_text = write_skill.render_status(st, pipeline_version=version)
     dest_dir.mkdir(parents=True, exist_ok=True)
     skill_path = dest_dir / "skill.md"

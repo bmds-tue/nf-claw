@@ -76,5 +76,6 @@ def test_check_detects_a_changed_read_or_report(tmp_path, damage):
 def test_gzip_fixture_holds_the_exact_control_bytes(tmp_path):
     write_fixture(tmp_path / "fixture", compressed=True)
     for sample, content in SAMPLES.items():
-        assert gzip.decompress((tmp_path / "fixture" / f"{sample}.fastq.gz").read_bytes()) == content
+        written = tmp_path / "fixture" / f"{sample}.fastq.gz"
+        assert gzip.decompress(written.read_bytes()) == content
     assert (tmp_path / "fixture/samples.csv").read_text().splitlines()[0] == "sample,fastq_1"

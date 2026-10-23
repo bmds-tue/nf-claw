@@ -6,7 +6,8 @@ import json
 import re
 from pathlib import Path
 
-from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs, nextflow_command,
+from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs,
+                    nextflow_command,
                     sheetgen, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
@@ -15,7 +16,8 @@ from runner.submodule import SubmoduleStatus
 
 
 def _cell(text: object) -> str:
-    """Collapse all whitespace (incl. newlines/tabs) and escape pipes so free text is safe inside a markdown table cell."""
+    """Collapse all whitespace (incl. newlines/tabs) and escape pipes so free text is safe inside a
+    markdown table cell."""
     return " ".join(str(text).split()).replace("|", "\\|")
 
 
@@ -126,7 +128,7 @@ def _is_tool_section(header: str) -> bool:
     t = header.strip().lower()
     if t.startswith("["):                            # `## [Name](url)` — paper/framework citation
         return False
-    if "packaging" in t or "containeri" in t:        # packaging/containerisation (incl. /testing) — infra
+    if "packaging" in t or "containeri" in t:  # packaging/containerisation (incl. /testing) — infra
         return False
     if re.search(r"\bdata(bases?|sets?)?\b", t) or "resource" in t:
         return False                                 # test data, reference databases, archives
@@ -215,9 +217,12 @@ def _resources_section(name: str, ps: ParamSchema, insch: InputSchema | None,
         "```\n\n"
         "nfclaw turns those into Nextflow's `process.resourceLimits` and passes them as a `-c` "
         "config — the mechanism nf-core prescribes for exactly this "
-        "([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). "
-        "Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes. The generated config is kept in "
-        "`<outdir>/provenance/`, so `commands.sh` replays the run under the same ceiling.\n"
+        "([docs](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources)). "  # noqa: E501
+        "Set them to the machine's real capacity. `--limit-time DURATION` also caps how long any "
+        "one task may run: a task that needs longer is stopped, and so is every retry, so set it "
+        "only as a deliberate ceiling, never as a guess at how long the analysis takes. The "
+        "generated config is kept in `<outdir>/provenance/`, so `commands.sh` replays the run "
+        "under the same ceiling.\n"
     )
 
 
@@ -293,10 +298,11 @@ def _reference_section(ps: ParamSchema, upstream: Path | None = None) -> str:
         fasta_note = (f" The pinned configuration gives that key the FASTA `{configured}`."
                       if configured else "")
         return (
-            f"**This release resolves a reference genome remotely by default.** `--genome` defaults "
-            f"to `{genome.default}`; the schema declares {provider} at `{source}`.{fasta_note} "
-            "Resolving references through that default needs access to this source. For a "
-            f"self-contained run, pass your own reference instead ({own}).{ignore} {config_note}\n"
+            "**This release resolves a reference genome remotely by default.** `--genome` "
+            f"defaults to `{genome.default}`; the schema declares {provider} at "
+            f"`{source}`.{fasta_note} Resolving references through that default needs access to "
+            "this source. For a self-contained run, pass your own reference instead "
+            f"({own}).{ignore} {config_note}\n"
         )
     return (
         f"{selected}The schema declares {provider} at `{source}`; selecting `--genome <id>` uses "
@@ -326,19 +332,19 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
         # The declared minimum cannot run on the Java 17+ nf-claw requires; advising it as the pin
         # made every run fail before Nextflow read the pipeline.
         later = engine_version.LEGACY_RELEASE_ENGINE
-        pin_line = (f"\n\nThat minimum predates Nextflow's Java 17 support (21.10.0): on the Java 17+ "
-                    "nf-claw requires it fails to compile the configuration (`Unsupported class "
-                    "file major version 61`), and `nfclaw run` refuses it. Run this "
-                    f"{what} on a later engine — the one nf-claw's acceptance gate checks such "
-                    f"releases on:\n```bash\nnfclaw run {name} ... --nxf-ver {later}\n```\n"
-                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
-                    f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
+        pin_line = ("\n\nThat minimum predates Nextflow's Java 17 support (21.10.0): on the Java "
+                    "17+ nf-claw requires it fails to compile the configuration (`Unsupported "
+                    f"class file major version 61`), and `nfclaw run` refuses it. Run this {what} "
+                    "on a later engine — the one nf-claw's acceptance gate checks such releases "
+                    f"on:\n```bash\nnfclaw run {name} ... --nxf-ver {later}\n```\n"
+                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the "
+                    f"same engine. See [known-issues]({repo_up}/docs/known-issues.md).")
     elif pin:
         pin_line = (f"\n\nTo pin this {what}'s declared minimum engine — useful when a newer "
                     "Nextflow has incompatible config parsing:\n```bash\n"
                     f"nfclaw run {name} ... --nxf-ver {pin}\n```\n"
-                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the same "
-                    f"engine. See [known-issues]({repo_up}/docs/known-issues.md).")
+                    "`--nxf-ver` is recorded in `<outdir>/provenance/`, so the replay uses the "
+                    f"same engine. See [known-issues]({repo_up}/docs/known-issues.md).")
         if not engine_version.supports_resource_limits(pin):
             # The Resources section's --limit-* ceiling is process.resourceLimits, which an engine
             # this old ignores without a word; nfclaw refuses the combination.
@@ -354,16 +360,18 @@ def _engine_section(name: str, st: SubmoduleStatus, what: str = "release",
 
 # A Nextflow secret read by the pinned tree: `secrets.NAME` in a config (seqsubmit's ENA Webin login
 # in its `env` scope) or a process's `secret 'NAME'` directive (metapep's NCBI e-mail).
-_STORE_ENTRY_REF = re.compile(r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
+_STORE_ENTRY_REF = re.compile(
+    r"\bsecrets\.([A-Z_][A-Z0-9_]*)\b|^\s*secret\s+['\"]([A-Z_][A-Z0-9_]*)['\"]", re.M)
 
 
 def _nextflow_store_section(st: SubmoduleStatus) -> str:
-    """Which Nextflow secrets the pinned tree reads, and where, so a run's credentials are known up front."""
+    """Which Nextflow secrets the pinned tree reads, and where, so a run's credentials are known
+    up front."""
     root = st.path
     files = [root / "nextflow.config", *sorted((root / "conf").glob("**/*.config"))]
     for sub in ("workflows", "subworkflows", "modules"):
         files += sorted((root / sub).glob("**/*.nf"))
-    found: dict[str, list[str]] = {}                      # secret → files reading it, in reading order
+    found: dict[str, list[str]] = {}  # secret → files reading it, in reading order
     for path in files:
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -379,9 +387,10 @@ def _nextflow_store_section(st: SubmoduleStatus) -> str:
         return f"in {shown}" + (f" and {len(paths) - 2} more files" if len(paths) > 2 else "")
     listed = "; ".join(f"`{name}` ({where(paths)})" for name, paths in found.items())
     return (f"This release reads Nextflow secrets: {listed}. Set each one a run needs with "
-            "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its "
-            "tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), "
-            "and a task that needs it then fails. Secrets are not written to nfclaw's provenance.\n")
+            "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches "
+            "its tasks as an empty value (Nextflow warns that the variable evaluates to an empty "
+            "value), and a task that needs it then fails. Secrets are not written "
+            "to nfclaw's provenance.\n")
 
 
 def _outputs_section(name: str, st: SubmoduleStatus, ref: str | None = None,
@@ -395,7 +404,8 @@ def _outputs_section(name: str, st: SubmoduleStatus, ref: str | None = None,
     link = ""
     if (st.path / "docs" / "output.md").exists():
         link = (f"\n\nThe exact output files and directory layout for this {what} are documented "
-                f"upstream: https://github.com/nf-core/{name}/blob/{ref or st.version}/docs/output.md")
+                "upstream: "
+                f"https://github.com/nf-core/{name}/blob/{ref or st.version}/docs/output.md")
     return (
         "Results land in `--outdir`; the files and directory layout depend on the selected "
         "workflow, parameters and publication settings. Run metadata is normally placed in "
@@ -464,7 +474,8 @@ def _sheet_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> 
                 f"fails validation):\n{groups}\n\n"
                 f"{_dependent_rules_section(insch)}"
                 "Fill each value per the table above and `reference.md`. Valid headers — pick the "
-                f"group that matches your data (optional columns from the table may be added):\n{headers}")
+                "group that matches your data (optional columns from the table "
+                f"may be added):\n{headers}")
     # The header lists the columns the schema *requires*, not every column it allows. A pipeline can
     # declare optional columns that only apply to one aligner/mode (scrnaseq's `sample_type` and
     # `feature_type` are cellranger-arc/multi only), and emitting them all produces a header whose
@@ -480,13 +491,15 @@ def _sheet_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> 
         cols = ", ".join(f"`{c}`" for c in optional_cols)
         optional_note = ("\nAny of the optional columns above may be appended to the header when "
                          f"your data needs them: {cols}.\n")
-    required_note = (" (the required header order; optional values may be empty)" if insch.header_prefix
+    required_note = (" (the required header order; optional values may be empty)"
+                     if insch.header_prefix
                      else " (the columns the schema requires)" if required_cols else "")
     return (f"{insch.audit_note}\n\n" if insch.audit_note else "") + (f"{head}{rows}\n"
             f"{input_note}"
             f"{_dependent_rules_section(insch)}"
             f"{tabular_intro}{required_note}; fill each value per the table above "
-            f"and `reference.md` (no example value is invented here):\n```{ext}\n{header_line}\n```\n"
+            "and `reference.md` (no example value is invented "
+            f"here):\n```{ext}\n{header_line}\n```\n"
             f"{optional_note}")
 
 
@@ -578,7 +591,8 @@ def _mandatory_params(ps: ParamSchema) -> str:
 
 
 def _param_groups(ps: ParamSchema) -> str:
-    """The schema's own parameter groups (titles + full counts) — a deterministic map, no curation."""
+    """The schema's own parameter groups (titles + full counts) — a deterministic map,
+    no curation."""
     groups = sorted(ps.groups().items())
     if not groups:
         return "_No additional parameters._\n"
@@ -632,11 +646,11 @@ def _chaining_section(name: str, rules) -> str:
     fed_by = sorted(u for (u, d) in rules if d == name)
     if not feeds and not fed_by:
         return ""
-    lines = [f"Run {name} as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` starts "
-             "each stage only after the one before it succeeded, and prepares its inputs from that "
-             "stage's outputs. The rules live in `handoffs/` (format and spec in "
-             "[docs/chaining.md](../../docs/chaining.md)); list them with "
-             f"`nfclaw chain edges {name}`."]
+    lines = [f"Run {name} as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` "
+             "starts each stage only after the one before it succeeded, and prepares its inputs "
+             "from that stage's outputs. The rules live in `handoffs/` (format and spec in "
+             "[docs/chaining.md](../../docs/chaining.md)); list them with `nfclaw "
+             f"chain edges {name}`."]
     if feeds:
         lines += ["", "Feeds into:"] + [f"- `{d}` — {rules[(name, d)].description}" for d in feeds]
     if fed_by:
@@ -679,66 +693,71 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     tree = versions.dev_label(st.commit) if dev else pipeline_version
     tools_md = _tools_section(name, st, tools, ref)
     tools_block = f"## Tools this pipeline runs\n{tools_md}\n" if tools_md else ""
-    # A test profile that runs every task as a stub (`stubRun = true`) computes nothing: say so where
-    # --demo is offered, so a successful demo is not read as analysis results.
-    demo_note = ("This release's `test` profile sets `stubRun = true`: the demo runs every task's stub "
-                 "block, which writes placeholder files instead of running its tool. It checks the "
-                 "workflow's wiring and publication, not its analysis, and its outputs hold no "
-                 "results; `nfclaw status` reports the success with a `stub run:` caveat.\n\n"
+    # A test profile that runs every task as a stub (`stubRun = true`) computes nothing: say so
+    # where --demo is offered, so a successful demo is not read as analysis results.
+    demo_note = ("This release's `test` profile sets `stubRun = true`: the demo runs every task's "
+                 "stub block, which writes placeholder files instead of running its tool. It "
+                 "checks the workflow's wiring and publication, not its analysis, and its outputs "
+                 "hold no results; `nfclaw status` reports the success with a "
+                 "`stub run:` caveat.\n\n"
                  if nextflow_command.stub_profiles(st.path, "test") else "")
     nfclaw_cmd, raw_cmd = _run_invocation(name, ps, insch, pipeline_version, tree)
     if dev:
-        first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its current head "
-                      f"on every run (these docs: commit {st.commit[:12]}); the default (no "
-                      "--pipeline-version) is the latest release.")
+        first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its "
+                      f"current head on every run (these docs: commit {st.commit[:12]}); the "
+                      "default (no --pipeline-version) is the latest release.")
         raw_comment = (f"# raw equivalent (runs the materialized {pipeline_version} commit "
                        f"{st.commit[:12]} directly):")
-        demo_line = (f"nfclaw run {name} --demo --outdir results --pipeline-version {pipeline_version}"
-                     "   # adds the upstream test profile (-profile test,docker)")
+        demo_line = (f"nfclaw run {name} --demo --outdir results --pipeline-version "
+                     f"{pipeline_version}   # adds the upstream test "
+                     "profile (-profile test,docker)")
         version_note = (f"**Unreleased development code.** These docs describe nf-core/{name}'s "
-                        f"`{pipeline_version}` branch at commit `{st.commit}` — code that has not been "
-                        "released. The branch moves: every `--pipeline-version "
-                        f"{pipeline_version}` run resolves its head afresh, so two runs can execute "
-                        "different code, and a parameter documented here can change or disappear. "
-                        "Each run records the commit it executed in "
-                        "`<outdir>/provenance/run_manifest.json`, and `commands.sh` replays exactly "
-                        f"that commit. Prefer a release (`nfclaw versions {name}`) unless you need "
-                        "changes that are not in one yet.\n\n")
+                        f"`{pipeline_version}` branch at commit `{st.commit}` — code that has not "
+                        "been released. The branch moves: every `--pipeline-version "
+                        f"{pipeline_version}` run resolves its head afresh, so two runs can "
+                        "execute different code, and a parameter documented here can change or "
+                        "disappear. Each run records the commit it executed in "
+                        "`<outdir>/provenance/run_manifest.json`, and `commands.sh` replays "
+                        f"exactly that commit. Prefer a release (`nfclaw versions {name}`) unless "
+                        "you need changes that are not in one yet.\n\n")
     elif pipeline_version:
         first_line = (f"# nfclaw fetches and materializes nf-core/{name}@{pipeline_version} "
                       "on first use; the default (no --pipeline-version) is the latest release.")
         raw_comment = f"# raw equivalent (runs the materialized {pipeline_version} tree directly):"
-        demo_line = (f"nfclaw run {name} --demo --outdir results --pipeline-version {pipeline_version}"
-                     "   # adds the upstream test profile (-profile test,docker)")
-        version_note = ""                                     # the Run-it comment already explains the default
+        demo_line = (f"nfclaw run {name} --demo --outdir results --pipeline-version "
+                     f"{pipeline_version}   # adds the upstream test "
+                     "profile (-profile test,docker)")
+        version_note = ""  # the Run-it comment already explains the default
     else:
         first_line = f"git submodule update --init pipelines/{name}/upstream   # first time only"
-        raw_comment = "# raw equivalent (the submodule is already pinned to this release, so no -r is needed):"
+        raw_comment = ("# raw equivalent (the submodule is already pinned to this release, so no "
+                       "-r is needed):")
         demo_line = (f"nfclaw run {name} --demo --outdir results"
                      "   # adds the upstream test profile (-profile test,docker)")
-        version_note = (f"This is the pinned latest release. To run a different one, list the available "
-                        f"releases with `nfclaw versions {name}` and add `--pipeline-version X.Y.Z` to the "
-                        f"command above (`nfclaw show {name} --pipeline-version X.Y.Z` prints that release's "
-                        "docs). To run unreleased development code instead, add `--pipeline-version "
-                        f"{versions.DEV_BRANCH}`: nfclaw resolves nf-core's `{versions.DEV_BRANCH}` "
-                        "branch to its current head commit at run time and records that commit in "
-                        f"provenance (`nfclaw show {name} --pipeline-version {versions.DEV_BRANCH}` "
-                        "prints the docs generated from it). Use it only for changes not yet "
-                        "released.\n\n")
+        version_note = ("This is the pinned latest release. To run a different one, list the "
+                        f"available releases with `nfclaw versions {name}` and add "
+                        f"`--pipeline-version X.Y.Z` to the command above (`nfclaw show {name} "
+                        "--pipeline-version X.Y.Z` prints that release's docs). To run unreleased "
+                        "development code instead, add `--pipeline-version "
+                        f"{versions.DEV_BRANCH}`: nfclaw resolves nf-core's "
+                        f"`{versions.DEV_BRANCH}` branch to its current head commit at run time "
+                        f"and records that commit in provenance (`nfclaw show {name} "
+                        f"--pipeline-version {versions.DEV_BRANCH}` prints the docs generated from "
+                        "it). Use it only for changes not yet released.\n\n")
     if name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT:
         raw_comment = "# direct upstream execution (omits nfclaw's recorded runtime corrections):"
         version_note += (
             "**Runtime corrections.** For this exact commit, `nfclaw run` splits FASTQ only "
             "where wiping the chunks equals wiping the whole file, sums the repair reports "
-            "exactly, preserves the samplesheet's mate order, passes the declared quality offset to BBMap, and publishes singleton "
-            "reads, repair logs and mate reports separately. The pinned "
-            "source remains unchanged; the generated task corrections and complete splitter "
-            "are recorded in `provenance/fastqrepair_compat.config` and reused by replay. "
-            "The direct Nextflow command above omits these corrections and can lose valid "
-            "reads, swap unsuffixed mates, or overwrite output. Use `nfclaw run` for this release. "
-            "Provide one row per sample, distinct staged mate filenames and matching compression "
-            "formats. Without a local samplesheet, every gathered read must consistently identify "
-            "its mate; ambiguous identity is refused. Paired runs that skip BBMap require a local "
+            "exactly, preserves the samplesheet's mate order, passes the declared quality offset "
+            "to BBMap, and publishes singleton reads, repair logs and mate reports separately. The "
+            "pinned source remains unchanged; the generated task corrections and complete splitter "
+            "are recorded in `provenance/fastqrepair_compat.config` and reused by replay. The "
+            "direct Nextflow command above omits these corrections and can lose valid reads, swap "
+            "unsuffixed mates, or overwrite output. Use `nfclaw run` for this release. Provide one "
+            "row per sample, distinct staged mate filenames and matching compression formats. "
+            "Without a local samplesheet, every gathered read must consistently identify its mate; "
+            "ambiguous identity is refused. Paired runs that skip BBMap require a local "
             "samplesheet and publish both mates separately.\n\n"
             "**Quality encoding.** The native quality-offset control validates Phred+64 "
             "input converted to Phred+33 by BBMap. Historical Solexa log-odds quality "
@@ -783,11 +802,11 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{demo_note}"
         "## Full reference\n"
         "Every parameter — name, type, required, hidden, allowed values, constraints, default and "
-        "description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. "
-        "nfclaw checks explicit parameters before launch; the pinned pipeline's validation "
-        "handles conditional and complex constraints at runtime. The reference uses nfclaw's "
-        "hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). "
-        "Upstream usage: "
+        "description — is in [reference.md](reference.md). Use it as the source of truth; do not "
+        "guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's "
+        "validation handles conditional and complex constraints at runtime. The reference uses "
+        "nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually "
+        "underscores). Upstream usage: "
         f"https://github.com/nf-core/{name}/blob/{ref}/docs/usage.md\n\n"
         f"<!-- Generated from nf-core/{name}@{st.commit}. Do not edit by hand. -->\n"
     )
@@ -798,12 +817,12 @@ def _render_reference(name: str, st: SubmoduleStatus, ps: ParamSchema,
                       insch: InputSchema | None) -> str:
     out = (f"---\nname: {name}\nversion: {st.version}\ncommit: {st.commit}\n---\n\n"
            f"# {name} — full parameter reference\n\n"
-           f"{ps.title}. Every parameter from the pinned `nextflow_schema.json`. Flags use nfclaw's "
-           "hyphenated spelling; raw Nextflow requires the exact schema spelling (usually underscores). "
-           "`hidden` marks parameters hidden from upstream's normal help output; "
-           "`constraints` lists each parameter's declared value bounds (pattern, min/max, length) — "
-           "conditional or composed rules (e.g. anyOf/oneOf) remain subject to the pinned "
-           "pipeline's runtime validation.\n\n")
+           f"{ps.title}. Every parameter from the pinned `nextflow_schema.json`. Flags use "
+           "nfclaw's hyphenated spelling; raw Nextflow requires the exact schema spelling "
+           "(usually underscores). `hidden` marks parameters hidden from upstream's normal help "
+           "output; `constraints` lists each parameter's declared value bounds (pattern, min/max, "
+           "length) — conditional or composed rules (e.g. anyOf/oneOf) remain subject to the "
+           "pinned pipeline's runtime validation.\n\n")
     for group, params in sorted(ps.groups().items()):
         out += f"## {group or 'general'}\n\n"
         out += ("| parameter | type | required | hidden | allowed values | constraints | "

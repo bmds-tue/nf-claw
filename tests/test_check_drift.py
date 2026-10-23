@@ -112,7 +112,8 @@ def test_drift_when_a_checkout_is_not_the_recorded_gitlink(tmp_path):
     (up / "main.nf").write_text("y")
     git(up, "commit", "-qam", "two")
     git(tmp_path, "init", "-q")
-    git(tmp_path, "update-index", "--add", "--cacheinfo", f"160000,{pinned},pipelines/mini/upstream")
+    git(tmp_path, "update-index", "--add", "--cacheinfo",
+        f"160000,{pinned},pipelines/mini/upstream")
     write_skill.generate("mini", pipelines_dir=pdir)               # docs of the checked-out "two"
     write_catalog.generate(pipelines_dir=pdir,
                            out_md=tmp_path / "catalog.md", out_json=tmp_path / "catalog.json")

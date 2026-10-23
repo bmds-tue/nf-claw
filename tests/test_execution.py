@@ -79,7 +79,8 @@ def test_failure_explains_a_task_that_ran_past_its_time_limit(tmp_path):
     child = ("import sys; print(\"ERROR ~ Error executing process > 'CLIPKIT (x)'\"); print(); "
              "print('Caused by:'); print(\"  process hasn't exited\"); sys.exit(1)")
     with pytest.raises(NfclawError) as exc:
-        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
     assert "time limit" in exc.value.fix and "nextflow-io/nextflow#7569" in exc.value.fix
     assert "--resume" in exc.value.fix and "26.10.0" in exc.value.fix
 
@@ -87,7 +88,8 @@ def test_failure_explains_a_task_that_ran_past_its_time_limit(tmp_path):
 def test_failure_without_that_message_gives_no_time_limit_hint(tmp_path):
     child = "import sys; print('ERROR ~ Error executing process > BOOM'); sys.exit(1)"
     with pytest.raises(NfclawError) as exc:
-        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
     assert "time limit" not in exc.value.fix
 
 
@@ -106,12 +108,13 @@ def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
 
 
 def test_failure_quotes_what_nextflow_wrote_on_stderr(tmp_path):
-    # nf-schema writes *which* parameter is invalid to stderr; stdout only says that validation failed.
+    # nf-schema writes *which* parameter is invalid to stderr; stdout only says that
+    # validation failed.
     child = ("import sys; print('Nextflow 99 is available - Please consider updating your version "
-             "to it', file=sys.stderr); print('ERROR ~ Validation of pipeline parameters failed!'); "
-             "print(' -- Check .nextflow.log file for details'); sys.stdout.flush(); "
-             "print('* --publish_dir_mode (bogus): Expected any of [copy, link]', file=sys.stderr); "
-             "sys.exit(1)")
+             "to it', file=sys.stderr); print('ERROR ~ Validation of pipeline parameters "
+             "failed!'); print(' -- Check .nextflow.log file for details'); sys.stdout.flush(); "
+             "print('* --publish_dir_mode (bogus): Expected any of [copy, link]', "
+             "file=sys.stderr); sys.exit(1)")
     with pytest.raises(NfclawError) as exc:
         execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
                       timeout_seconds=30)
@@ -247,8 +250,8 @@ def test_output_is_streamed_live_to_the_terminal_and_the_logs(tmp_path, capfd):
 @pytest.mark.skipif(not hasattr(os, "killpg"), reason="needs POSIX process groups")
 def test_keyboard_interrupt_tears_down_the_child_and_its_children(tmp_path):
     # Ctrl-C during a run must not leave Nextflow (or the task processes it launched) running in the
-    # background. Reproduce the interrupt with interrupt_main() while run() is blocked in wait(), and
-    # confirm both the child and a grandchild it spawned are gone afterwards.
+    # background. Reproduce the interrupt with interrupt_main() while run() is blocked in wait(),
+    # and confirm both the child and a grandchild it spawned are gone afterwards.
     pids = tmp_path / "pids.txt"
     script = (
         "import os, sys, subprocess, time;"
@@ -258,8 +261,9 @@ def test_keyboard_interrupt_tears_down_the_child_and_its_children(tmp_path):
         "time.sleep(60)"
     )
 
-    # interrupt_main() does nothing when SIGINT is ignored — as it is for a job a shell started in the
-    # background (`nohup … &`) — so give this test the handler an interactive Ctrl-C would reach.
+    # interrupt_main() does nothing when SIGINT is ignored — as it is for a job a shell started in
+    # the background (`nohup … &`) — so give this test the handler an interactive Ctrl-C
+    # would reach.
     previous = signal.signal(signal.SIGINT, signal.default_int_handler)
     timer = threading.Timer(1.5, _thread.interrupt_main)
     timer.start()
@@ -345,8 +349,8 @@ def test_no_timeout_waits_for_the_run_to_finish(tmp_path):
 
 
 def test_teardown_kills_a_task_that_outlives_sigterm(tmp_path):
-    # Nextflow exiting on SIGTERM does not mean its tasks did: one that ignores (or is still handling)
-    # SIGTERM was left running in the background once the leader had exited.
+    # Nextflow exiting on SIGTERM does not mean its tasks did: one that ignores (or is still
+    # handling) SIGTERM was left running in the background once the leader had exited.
     if sys.platform != "linux":
         pytest.skip("reads process state from /proc")
     pid_file = tmp_path / "task.pid"

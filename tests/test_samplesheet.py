@@ -23,7 +23,8 @@ def _csv(path, *rows):
 
 
 def _serialized(path, data):
-    """Write `data` as JSON or, for any other suffix, YAML (skipping without the optional parser)."""
+    """Write `data` as JSON or, for any other suffix, YAML (skipping without the
+    optional parser)."""
     if path.suffix == ".json":
         path.write_text(json.dumps(data))
     else:
@@ -41,7 +42,8 @@ def test_schema_declared_identifier_rejects_code_paths_and_glob_expansion(tmp_pa
         "description": {"type": "string"}}, "required": ["specimen_label"]}}))
     schema = load_input_schema(tmp_path)
     sheet = tmp_path / "samples.csv"
-    _csv(sheet, ["specimen_label", "description"], [identifier, "unrestricted $(annotation); free text"])
+    _csv(sheet, ["specimen_label", "description"],
+         [identifier, "unrestricted $(annotation); free text"])
     issues = samplesheet.validate(sheet, schema)
     assert any("identifier" in issue and "specimen_label" in issue for issue in issues)
 
@@ -53,7 +55,8 @@ def test_identifier_guard_preserves_safe_names_and_descriptive_text(tmp_path, id
         "specimen_label": {"type": "string", "meta": "id"},
         "description": {"type": "string"}}}}))
     sheet = tmp_path / "samples.csv"
-    _csv(sheet, ["specimen_label", "description"], [identifier, "annotation $x; 'quotes'\nand newlines"])
+    _csv(sheet, ["specimen_label", "description"],
+         [identifier, "annotation $x; 'quotes'\nand newlines"])
     assert samplesheet.validate(sheet, load_input_schema(tmp_path)) == []
 
 
@@ -76,7 +79,8 @@ def test_serialized_sample_identity_cannot_bypass_the_guard(tmp_path, extension)
     ("json", '[{"sample":"A","sample":"B"}]'),
     ("yaml", '- sample: A\n  sample: B\n'),
 ])
-def test_serialized_samplesheet_duplicate_keys_cannot_silently_change_identity(tmp_path, extension, content):
+def test_serialized_samplesheet_duplicate_keys_cannot_silently_change_identity(tmp_path,
+                                                                               extension, content):
     if extension == "yaml":
         pytest.importorskip("yaml")
     sheet = tmp_path / f"samples.{extension}"
@@ -99,7 +103,8 @@ def test_absolute_glob_paths_are_not_treated_as_literal_filenames(tmp_path):
 
 
 @pytest.mark.parametrize("extension,delimiter", [("csv", ","), ("tsv", "\t")])
-def test_incomplete_quoted_record_cannot_silently_change_sample_metadata(tmp_path, extension, delimiter):
+def test_incomplete_quoted_record_cannot_silently_change_sample_metadata(tmp_path,
+                                                                         extension, delimiter):
     schema = InputSchema(columns=(Column("sample", "string", True, None, None),
                                   Column("description", "string", False, None, None)))
     sheet = tmp_path / f"samples.{extension}"
@@ -136,7 +141,8 @@ def test_binary_samplesheet_is_flagged_not_crashed(tmp_path):
     ss.write_bytes(bytes([0x50, 0x4b, 0x03, 0x04]) + bytes(range(200, 256)))   # not UTF-8
     named = samplesheet.validate(ss, SCH)
     assert named and "not valid UTF-8" in named[0]
-    unnamed = samplesheet.validate(ss, InputSchema(columns=(Column("", "string", False, None, None),)))
+    unnamed = samplesheet.validate(ss,
+                                   InputSchema(columns=(Column("", "string", False, None, None),)))
     assert unnamed and "not valid UTF-8" in unnamed[0]
 
 
@@ -257,12 +263,12 @@ def test_utf8_bom_header_is_stripped(tmp_path):
     (tmp_path / "r1.fq.gz").write_text("x")
     ss = tmp_path / "ss.csv"
     ss.write_bytes(b"\xef\xbb\xbf" + f"sample,fastq_1\nA,{tmp_path / 'r1.fq.gz'}\n".encode())  # BOM
-    assert samplesheet.validate(ss, SCH) == []                          # was "missing column 'sample'"
+    assert samplesheet.validate(ss, SCH) == []  # was "missing column 'sample'"
 
 
 def test_bom_does_not_mask_a_genuinely_missing_column(tmp_path):
     ss = tmp_path / "ss.csv"
-    ss.write_bytes(b"\xef\xbb\xbf" + b"sample\nA\n")                     # BOM + fastq_1 truly absent
+    ss.write_bytes(b"\xef\xbb\xbf" + b"sample\nA\n")  # BOM + fastq_1 truly absent
     assert any("fastq_1" in i for i in samplesheet.validate(ss, SCH))
 
 
@@ -352,7 +358,8 @@ def test_a_column_naming_a_staged_file_stays_a_name_without_an_audit(tmp_path):
     rcc = tmp_path / "a.RCC"
     rcc.write_text("x")
     ss = tmp_path / "ss.csv"
-    ss.write_text(f"sample,fastq_1,RCC_FILE,RCC_FILE_NAME\nA,{tmp_path / 'a_R1.fastq.gz'},{rcc},a.RCC\n")
+    ss.write_text(
+        f"sample,fastq_1,RCC_FILE,RCC_FILE_NAME\nA,{tmp_path / 'a_R1.fastq.gz'},{rcc},a.RCC\n")
     assert samplesheet.validate(ss, unaudited) == []
     assert "RCC_FILE_NAME" not in samplesheet.pattern_file_columns(unaudited)
     assert "fastq_1" in samplesheet.pattern_file_columns(unaudited)
@@ -378,13 +385,16 @@ def test_matching_read_patterns_do_not_turn_an_unformatted_mate_into_metadata(tm
     if extension == ".csv":
         sheet.write_text(f"sample,fastq_1,fastq_2\nA,{read},A_2.fastq.gz\n")
     else:
-        sheet.write_text(json.dumps([{"sample": "A", "fastq_1": str(read), "fastq_2": "A_2.fastq.gz"}]))
-    assert any("fastq_2" in issue and "relative path" in issue for issue in samplesheet.validate(sheet, contract))
+        sheet.write_text(
+            json.dumps([{"sample": "A", "fastq_1": str(read), "fastq_2": "A_2.fastq.gz"}]))
+    assert any("fastq_2" in issue and "relative path" in issue
+               for issue in samplesheet.validate(sheet, contract))
 
 
 @pytest.mark.parametrize("extension", [".csv", ".json"])
 @pytest.mark.parametrize("location", ["local", "remote"])
-def test_pattern_only_read_paths_receive_the_same_literal_filename_guard(tmp_path, extension, location):
+def test_pattern_only_read_paths_receive_the_same_literal_filename_guard(tmp_path,
+                                                                         extension, location):
     contract = InputSchema(columns=(Column("sample", "string", True, None),
         Column("reads", "string", True, r"^\S+\.fastq\.gz$")))
     data = tmp_path / "O'Brien.fastq.gz"
@@ -395,7 +405,8 @@ def test_pattern_only_read_paths_receive_the_same_literal_filename_guard(tmp_pat
         sheet.write_text(f"sample,reads\nA,{value}\n")
     else:
         sheet.write_text(json.dumps([{"sample": "A", "reads": value}]))
-    assert any("unsafe" in issue and "filename" in issue for issue in samplesheet.validate(sheet, contract))
+    assert any("unsafe" in issue and "filename" in issue
+               for issue in samplesheet.validate(sheet, contract))
 
 
 def test_path_format_columns_are_checked_too(tmp_path):

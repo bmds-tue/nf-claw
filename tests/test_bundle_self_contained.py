@@ -47,7 +47,7 @@ log)
   printf 'NFCORE_DEMO:DEMO:FASTQC\t%s\tCOMPLETED\t%s\n' "$FAKE_IMAGE" "$PWD/work/ab/cdef"
   ;;
 esac
-"""
+"""  # noqa: E501
 
 # A stand-in for docker: the identity of FAKE_IMAGE is whatever FAKE_DIGEST says.
 FAKE_DOCKER = r"""#!/usr/bin/env bash
@@ -61,7 +61,7 @@ case "$1 $2" in
 "version --format") echo "29.1.3" ;;
 *) exit 1 ;;
 esac
-"""
+"""  # noqa: E501
 
 
 pytestmark = pytest.mark.usefixtures("no_engine_probe")
@@ -107,7 +107,8 @@ def _launch(tmp_path, st, *, configs=(), resume=False):
         command.append("-resume")
     subprocess.run(command, cwd=out, check=True, capture_output=True)
     snapshot, inventory = provenance.snapshot_inputs(list(configs))
-    return provenance.write(outdir=out, pipeline="demo", command_str=subprocess.list2cmdline(command),
+    return provenance.write(outdir=out, pipeline="demo",
+                            command_str=subprocess.list2cmdline(command),
                             submodule=st, input_paths=[], config_paths=tuple(configs),
                             config_checksums=snapshot, config_inventory=inventory,
                             pipeline_checksums=provenance.hash_pipeline(st.path), history_offset=0)
@@ -154,7 +155,8 @@ def test_bundle_records_its_source_archive(tmp_path, fake_tools):
 
 
 @pytest.mark.parametrize("change", ["tracked_bytes", "head", "deleted"])
-def test_replay_runs_the_archived_source_whatever_happens_to_the_checkout(tmp_path, fake_tools, change):
+def test_replay_runs_the_archived_source_whatever_happens_to_the_checkout(tmp_path,
+                                                                          fake_tools, change):
     st = _git_pipeline(tmp_path)
     prov = _launch(tmp_path, st)
     if change == "tracked_bytes":
@@ -291,7 +293,8 @@ def test_bundle_records_container_identities_plugins_and_remote_inputs(tmp_path,
         "containers": [IMAGE], "tasks": 1, "without_container": 0}}
     image = environment["images"][IMAGE]
     assert image["kind"] == "registry" and image["digest"] == DIGEST_A
-    assert image["repository"] == "quay.io/biocontainers/fastqc" and image["platform"] == "linux/amd64"
+    assert image["repository"] == "quay.io/biocontainers/fastqc"
+    assert image["platform"] == "linux/amd64"
     assert environment["pinned_containers"] == {
         "NFCORE_DEMO:DEMO:FASTQC": f"quay.io/biocontainers/fastqc@{DIGEST_A}"}
     assert environment["nextflow_plugins"] == ["nf-schema@2.5.1"]
@@ -331,7 +334,8 @@ def test_a_faithful_replay_records_and_matches_its_environment(tmp_path, fake_to
     ({"FAKE_DIGEST": DIGEST_B}, "another image than the recorded"),
     ({"FAKE_PLUGIN": "nf-schema@2.6.0"}, "Nextflow plugins differ"),
 ])
-def test_a_replay_in_another_environment_fails_after_nextflow(tmp_path, fake_tools, drift, expected):
+def test_a_replay_in_another_environment_fails_after_nextflow(tmp_path, fake_tools,
+                                                              drift, expected):
     st = _git_pipeline(tmp_path)
     prov = _launch(tmp_path, st)
     result = _replay(prov, tmp_path / "fresh", **drift)
@@ -354,7 +358,8 @@ def test_a_changed_remote_input_fails_the_replay(tmp_path, fake_tools):
         (prov / "environment.json").read_bytes()).hexdigest()
     (prov / "run_manifest.json").write_text(json.dumps(manifest))
     result = _replay(prov, tmp_path / "fresh")
-    assert result.returncode == 1 and "remote input https://example.org/reads.fq changed" in result.stderr
+    assert result.returncode == 1
+    assert "remote input https://example.org/reads.fq changed" in result.stderr
 
 
 @pytest.mark.parametrize("name", ["environment.json", "containers.config"])
@@ -383,7 +388,8 @@ def test_a_launch_that_never_started_a_session_records_that(tmp_path, fake_tools
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="demo", command_str="nextflow run x",
-                            submodule=SubmoduleStatus("demo", tmp_path / "up", True, True, "1", "x", ()),
+                            submodule=SubmoduleStatus("demo", tmp_path / "up", True,
+                                                      True, "1", "x", ()),
                             input_paths=[], history_offset=0)
     environment = json.loads((prov / "environment.json").read_text())
     assert environment["run"] is None and "no task ran" in environment["issues"][0]
@@ -423,9 +429,9 @@ def _record(images, processes, engine="docker"):
 def test_pins_skip_what_a_digest_cannot_name():
     images = {
         "quay.io/a:1": {"kind": "registry", "repository": "quay.io/a", "digest": DIGEST_A},
-        "quay.io/b:1": {"kind": "registry", "repository": "quay.io/b"},                    # no digest
+        "quay.io/b:1": {"kind": "registry", "repository": "quay.io/b"},  # no digest
         "wave.seqera.io/wt/tok/c:1": {"kind": "registry", "repository": "wave.seqera.io/wt/tok/c",
-                                      "digest": DIGEST_A},                                    # ephemeral
+                                      "digest": DIGEST_A},  # ephemeral
     }
     processes = {
         "P:ONE": {"containers": ["quay.io/a:1"], "without_container": 0},
@@ -445,7 +451,8 @@ def test_registry_identity_uses_the_digest_of_its_own_repository(monkeypatch):
         a[0], 0, json.dumps(inspect), ""))
     image = env_record.resolve_registry_image("docker", "quay.io/tool:1", None)
     assert image["digest"] == DIGEST_A and image["platform"] == "linux/arm64/v8"
-    assert image["repo_digests"] == [f"mirror.example.org/tool@{DIGEST_B}", f"quay.io/tool@{DIGEST_A}"]
+    assert image["repo_digests"] == [f"mirror.example.org/tool@{DIGEST_B}",
+                                     f"quay.io/tool@{DIGEST_A}"]
     podman = [{"Id": "d" * 64, "RepoDigests": []}]
     monkeypatch.setattr(env_record, "_run", lambda *a, **k: subprocess.CompletedProcess(
         a[0], 0, json.dumps(podman), ""))
@@ -466,7 +473,8 @@ def test_file_images_are_hashed(tmp_path):
     image = tmp_path / "tool.img"
     image.write_bytes(b"squashfs")
     assert env_record.resolve_file_image(str(image)) == {
-        "kind": "file", "path": str(image), "sha256": hashlib.sha256(b"squashfs").hexdigest(), "size": 8}
+        "kind": "file", "path": str(image),
+        "sha256": hashlib.sha256(b"squashfs").hexdigest(), "size": 8}
     assert env_record.resolve_file_image(str(tmp_path / "gone.img"))["kind"] == "unresolved"
 
 
@@ -489,18 +497,22 @@ def test_log_facts_follow_the_session_across_rotated_logs(tmp_path):
         "  Version: 25.10.4 build 11173\n"
         "x DEBUG nextflow.plugin.BasePlugin - Plugin started nf-schema@2.5.1\n"
         "x INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-schema@2.5.1'\n"
-        f"x DEBUG FilePorter - Local cache found for foreign file https://e.org/a.fq at /w/stage-{SESSION}/1/a.fq\n")
+        "x DEBUG FilePorter - Local cache found for foreign file https://e.org/a.fq at "
+        f"/w/stage-{SESSION}/1/a.fq\n")
     # An earlier attempt of the same (resumed) session, staged in the pre-23 shared layout.
     (tmp_path / ".nextflow.log.1").write_text(
         session_line +
-        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: /w/stage/2a/b3/b.fq\n"
+        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: "
+        "/w/stage/2a/b3/b.fq\n"
         "x INFO  org.pf4j.AbstractPluginManager - Start plugin 'nf-old@1.0.0'\n")
     # Another session's log is not this run's.
     (tmp_path / ".nextflow.log.2").write_text(
         "x [main] DEBUG nextflow.Session - Session UUID: 00000000-0000-0000-0000-000000000000\n"
-        "x DEBUG FilePorter - Copying foreign file https://e.org/c.fq to work dir: /w/stage/3/c.fq\n")
+        "x DEBUG FilePorter - Copying foreign file https://e.org/c.fq to "
+        "work dir: /w/stage/3/c.fq\n")
     facts = env_record.log_facts(log, SESSION)
-    assert facts["runtime"] == "Groovy 4.0.28 on OpenJDK 17" and facts["build"] == "25.10.4 build 11173"
+    assert facts["runtime"] == "Groovy 4.0.28 on OpenJDK 17"
+    assert facts["build"] == "25.10.4 build 11173"
     assert facts["plugins"] == ["nf-schema@2.5.1"]
     assert facts["staged"] == {"https://e.org/a.fq": f"/w/stage-{SESSION}/1/a.fq",
                                "https://e.org/b.fq": "/w/stage/2a/b3/b.fq"}
@@ -508,9 +520,11 @@ def test_log_facts_follow_the_session_across_rotated_logs(tmp_path):
 
 def test_log_facts_of_a_log_that_names_no_session_use_only_the_current_log(tmp_path):
     (tmp_path / ".nextflow.log").write_text(
-        "x DEBUG FilePorter - Copying foreign file https://e.org/a.fq to work dir: /w/stage/1/a.fq\n")
+        "x DEBUG FilePorter - Copying foreign file https://e.org/a.fq to "
+        "work dir: /w/stage/1/a.fq\n")
     (tmp_path / ".nextflow.log.1").write_text(
-        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to work dir: /w/stage/2/b.fq\n")
+        "x DEBUG FilePorter - Copying foreign file https://e.org/b.fq to "
+        "work dir: /w/stage/2/b.fq\n")
     assert env_record.log_facts(tmp_path / ".nextflow.log", SESSION)["staged"] == {
         "https://e.org/a.fq": "/w/stage/1/a.fq"}
 
@@ -520,7 +534,8 @@ def test_remote_directories_are_recorded_by_tree_digest(tmp_path):
     (staged / "sub").mkdir(parents=True)
     (staged / "sub" / "x").write_text("1")
     record = env_record.remote_inputs({"s3://bucket/db/": str(staged), "s3://b/f": "s3://b/f"})
-    assert record["s3://bucket/db/"]["type"] == "directory" and record["s3://bucket/db/"]["files"] == 1
+    assert record["s3://bucket/db/"]["type"] == "directory"
+    assert record["s3://bucket/db/"]["files"] == 1
     assert "unresolved" in record["s3://b/f"]
 
 
@@ -529,7 +544,8 @@ def test_compare_separates_mismatches_from_undecidable_entries():
     original = {"nextflow_plugins": ["nf-schema@2.5.1"], "container_engine": {"name": "docker"},
                 "images": {"quay.io/a:1": registry, "/c/x.img": {"kind": "file", "path": "/c/x.img",
                                                                   "sha256": "1" * 64}},
-                "processes": {"A": {"containers": ["quay.io/a:1"]}, "B": {"containers": ["/c/x.img"]},
+                "processes": {"A": {"containers": ["quay.io/a:1"]},
+                              "B": {"containers": ["/c/x.img"]},
                               "C": {"containers": ["quay.io/a:1"]}},
                 "remote_inputs": {"https://e.org/a": {"sha256": "2" * 64}}}
     same = json.loads(json.dumps(original))
@@ -613,7 +629,8 @@ def test_an_official_docker_hub_image_named_with_its_registry_gets_its_digest(mo
     image = env_record.resolve_registry_image("docker", "docker.io/ubuntu:20.04", None)
     assert image["repository"] == "docker.io/library/ubuntu" and image["digest"] == DIGEST_A
     record = {"container_engine": {"name": "docker"}, "images": {"docker.io/ubuntu:20.04": image},
-              "processes": {"P:CAT": {"containers": ["docker.io/ubuntu:20.04"], "without_container": 0}}}
+              "processes": {
+                  "P:CAT": {"containers": ["docker.io/ubuntu:20.04"], "without_container": 0}}}
     assert env_record.pins(record) == {"P:CAT": f"docker.io/library/ubuntu@{DIGEST_A}"}
 
 

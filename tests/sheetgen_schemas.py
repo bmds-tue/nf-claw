@@ -34,7 +34,8 @@ RNASEQ = {
 }
 
 # atacseq 2.1.2: no path format on its FastQ columns, fastq_2's pattern only inside anyOf, and an
-# integer replicate whose pattern must never be mistaken for a file type. No `schema` key on --input.
+# integer replicate whose pattern must never be mistaken for a file type. No `schema` key
+# on --input.
 ATACSEQ = {
     "input": {"type": "string", "format": "file-path", "exists": True, "mimetype": "text/csv",
               "pattern": "^\\S+\\.csv$"},

@@ -75,7 +75,8 @@ def test_historical_replay_command_retains_default_grace(tmp_path, monkeypatch):
     assert observed == [10]
 
 
-def test_bundle_records_and_replays_its_original_shutdown_grace(tmp_path, monkeypatch, no_engine_probe):
+def test_bundle_records_and_replays_its_original_shutdown_grace(tmp_path, monkeypatch,
+                                                                no_engine_probe):
     monkeypatch.setenv("NFCLAW_SHUTDOWN_GRACE", "0.25")
     out = tmp_path / "out"
     tree = tmp_path / "tree"
