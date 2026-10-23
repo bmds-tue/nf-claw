@@ -16,7 +16,12 @@ from runner import (budget, container_watch, dependency_stability, discovery, en
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
-from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
+from runner.replay_guard import (
+    _capture_input_inventory,
+    pipeline_head,
+    stub_caveat,
+    stub_sources,
+)
 from runner.submodule import SubmoduleStatus
 
 
@@ -552,16 +557,18 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     warnings += reproducibility.advisories(st.path, merged, demo=demo)
     if institutional_advisory:
         warnings.append(institutional_advisory)
-    # A selected profile that runs every task as a stub (proteinfold's `test`): the run exercises
-    # the workflow, not the tools, so its success must not read as analysis results.
+    # A selected profile (proteinfold's `test`) or a `--config` that runs every task as a stub:
+    # the run exercises the workflow, not the tools, so its success must not read as analysis
+    # results.
     stubbed = nextflow_command.stub_profiles(st.path, composed_profile)
-    stub_caveats = [stub_caveat(stubbed)] if stubbed else []
-    if stubbed:
+    stubbed_by = nextflow_command.stub_configs(extra_configs)
+    stub_caveats = [stub_caveat(stubbed, stubbed_by)] if stubbed or stubbed_by else []
+    if stub_caveats:
+        source = stub_sources(stubbed, stubbed_by)
         warnings.append(
-            f"the selected {', '.join(f'`{n}`' for n in stubbed)} profile sets `stubRun = true`: "
-            "every task runs its stub block, which writes placeholder files instead of running its "
-            "tool, so this run checks the workflow's wiring, not its analysis, and its outputs "
-            "will hold no results.")
+            f"{source[0].upper()}{source[1:]}: every task runs its stub block, which writes "
+            "placeholder files instead of running its tool, so this run checks the workflow's "
+            "wiring, not its analysis, and its outputs will hold no results.")
     if sheet is not None:
         # What the generated samplesheet holds and where it is, before the run starts (a --check
         # stages it in a temp directory: the result and the printed command name it).
@@ -770,7 +777,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
                              dependency_stability=stability, completion_caveats=caveats,
-                             stub_profiles=stubbed,
+                             stub_profiles=stubbed, stub_configs=stubbed_by,
                              shutdown_grace_seconds=run_log.shutdown_grace_seconds,
                              nextflow_log=run_log.nextflow_log,
                              history_offset=history_offset,

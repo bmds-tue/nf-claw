@@ -1806,6 +1806,36 @@ def test_a_stub_test_profile_is_announced_and_reported_as_a_caveat(tmp_path, mon
     assert any(c.startswith("stub run:") for c in state.caveats)
 
 
+
+def test_a_config_that_runs_stubs_is_announced_and_reported_as_a_caveat(tmp_path, monkeypatch):
+    # `stubRun = true` in a `--config` file stubs every task just as a test profile can, so the
+    # run must not report a plain success either.
+    root = _make_pipeline(tmp_path, "mini")
+    stub = tmp_path / "stub.config"
+    stub.write_text("stubRun = true\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    launched, shown = [], []
+
+    def run(*args, **kwargs):
+        launched.append(len(shown))
+        kwargs["run_log"].write(b"-[nf-core/mini] Pipeline completed successfully-\n")
+
+    monkeypatch.setattr(orchestration.execution, "run", run)
+    out = tmp_path / "out"
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=out, profile="docker", params_file=None,
+        cli_overrides={}, resume=False, demo=False, check_only=False, write_provenance=True,
+        timeout_seconds=10, on_warning=shown.append, configs=[str(stub)])
+    assert any("`stub.config`" in w and "stubRun = true" in w for w in shown[:launched[0]])
+    manifest = json.loads((out / "provenance/run_manifest.json").read_text())
+    assert manifest["stub_configs"] == ["stub.config"]
+    assert "stub_profiles" not in manifest
+    assert any(c.startswith("stub run: the `stub.config` config")
+               for c in manifest["completion_caveats"])
+    state = runlog.read_state(out / "provenance/logs/run.log")
+    assert state.state == "success"
+    assert any(c.startswith("stub run:") for c in state.caveats)
+
 def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
     root = _make_pipeline(tmp_path, "mini")
     up = root / "pipelines/mini/upstream"
@@ -1822,7 +1852,8 @@ def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
         write_provenance=True, timeout_seconds=10, on_warning=shown.append)
     assert not any("stub" in w for w in shown)
     manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
-    assert "stub_profiles" not in manifest and not manifest.get("completion_caveats")
+    assert "stub_profiles" not in manifest and "stub_configs" not in manifest
+    assert not manifest.get("completion_caveats")
 
 
 @pytest.mark.parametrize("java,refused", [(17, True), (21, True), (11, False), (None, False)])

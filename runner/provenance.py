@@ -466,6 +466,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           dependency_stability: dict | None = None,
           completion_caveats: list[str] | None = None,
           stub_profiles: list[str] | None = None,
+          stub_configs: list[str] | None = None,
           shutdown_grace_seconds: float | None = None,
           nextflow_log: Path | None = None,
           history_offset: int | None = None,
@@ -540,6 +541,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # Selected profiles that run every task as a stub; a replay (replay_guard) reports it too.
     if stub_profiles:
         manifest["stub_profiles"] = list(stub_profiles)
+    if stub_configs:
+        manifest["stub_configs"] = list(stub_configs)
     # The nf-core/configs revision the run's institutional config include
     # read (runner.institutional).
     if institutional_configs:

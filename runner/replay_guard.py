@@ -35,29 +35,47 @@ def quote_console(data: bytes, at_line_start: bool) -> tuple[bytes, bool]:
     return (quoted[:-2] if at_line_start else quoted), at_line_start
 
 
-def stub_caveat(profiles: list[str]) -> str:
-    """What a run's results lack when a selected profile runs every task as a stub."""
-    names = ", ".join(f"`{name}`" for name in profiles)
-    return (f"stub run: the {names} profile sets `stubRun = true`, so every task ran its stub "
-            "block and wrote placeholder files instead of running its tool; the outputs hold "
-            "no analysis results")
+def stub_sources(profiles: list[str], configs: list[str] = ()) -> str:
+    """Which selected profiles and given configs set `stubRun = true`, as one phrase."""
+    sources = []
+    if profiles:
+        sources.append("the " + ", ".join(f"`{name}`" for name in profiles) + " profile")
+    if configs:
+        sources.append("the " + ", ".join(f"`{name}`" for name in configs) + " config")
+    verb = "sets" if len(sources) == 1 else "set"
+    return f"{' and '.join(sources)} {verb} `stubRun = true`"
 
 
-def _recorded_stub_profiles(original: str) -> list[str]:
+def stub_caveat(profiles: list[str], configs: list[str] = ()) -> str:
+    """What a run's results lack when a selected profile or a given config runs every task as a
+    stub."""
+    return (f"stub run: {stub_sources(profiles, configs)}, so every task ran its stub block and "
+            "wrote placeholder files instead of running its tool; the outputs hold no analysis "
+            "results")
+
+
+def _recorded_stub_sources(original: str) -> tuple[list[str], list[str]]:
+    """The profiles and configs that stubbed the original run, as its manifest recorded them."""
     try:
         manifest = json.loads((Path(original) / "provenance" / "run_manifest.json")
                               .read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return []
-    names = manifest.get("stub_profiles") if isinstance(manifest, dict) else None
-    return ([name for name in names if isinstance(name, str) and re.fullmatch(r"\w+", name)]
-            if isinstance(names, list) else [])
+        return [], []
+    if not isinstance(manifest, dict):
+        return [], []
+
+    def names(key, pattern):
+        values = manifest.get(key)
+        return ([v for v in values if isinstance(v, str) and re.fullmatch(pattern, v)]
+                if isinstance(values, list) else [])
+
+    return names("stub_profiles", r"\w+"), names("stub_configs", r"[\w.+-]+")
 
 
 def start_replay_log(log: Path, original: str, pid: str) -> None:
     """Write trusted replay controls independently of arbitrary path text."""
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    stubbed = _recorded_stub_profiles(original)          # a replay runs the same stubs
+    stub_profiles, stub_configs = _recorded_stub_sources(original)  # a replay runs the same stubs
     original = original.replace("\r", "\\r").replace("\n", "\\n")
     host = socket.gethostname().replace("\r", "\\r").replace("\n", "\\n")
     lines = [f"==> nfclaw replay started {stamp}", "    console format: prefixed",
@@ -67,8 +85,8 @@ def start_replay_log(log: Path, original: str, pid: str) -> None:
     if not pid.isdigit():
         raise ValueError("invalid replay pid")
     lines.append(f"    pid: {pid}")
-    if stubbed:
-        lines.append(f"    caveat: {stub_caveat(stubbed)}")
+    if stub_profiles or stub_configs:
+        lines.append(f"    caveat: {stub_caveat(stub_profiles, stub_configs)}")
     with log.open("a", encoding="utf-8") as handle:
         handle.write("\n" + "\n".join(lines) + "\n")
 

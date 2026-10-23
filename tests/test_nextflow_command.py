@@ -77,3 +77,14 @@ def test_stub_profiles_names_the_selected_profiles_whose_config_runs_stubs(tmp_p
     (tmp_path / "nextflow.config").write_text(
         "profiles { test { includeConfig 'conf/test.config' } }\n")
     assert nc.stub_profiles(tmp_path, "test") == ["test"]
+
+
+def test_stub_configs_names_the_given_configs_that_run_stubs(tmp_path):
+    # `--config stub.config` with `stubRun = true` makes every task a stub, as proteinfold's test
+    # profile does; it must be caught the same way.
+    stub, commented, plain = (tmp_path / n for n in ("stub.config", "commented.config", "x.config"))
+    stub.write_text("process { cpus = 1 }\nstubRun = true\n")
+    commented.write_text("// stubRun = true\n/*\nstubRun = true\n*/\nparams { a = 1 }\n")
+    plain.write_text("params { a = 1 }\n")
+    assert nc.stub_configs([stub, commented, plain, tmp_path / "missing.config"]) == ["stub.config"]
+    assert nc.stub_configs([]) == []
