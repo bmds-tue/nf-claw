@@ -431,6 +431,13 @@ files are reports, logs and plots that embed timestamps or paths. Notes on the r
   ([known issue](known-issues.md#pipeline-specific-run-notes)).
 - **seqsubmit**: needs an ENA Webin account. The run failed where its test queries ENA, and its replay
   failed the same way.
+  On 2026-10-23 its bundled test also ran in stub mode (`--demo` with a `--config` setting
+  `stubRun = true`, Nextflow 25.10.4), which needs no ENA access. All 17 tasks completed, among them every
+  step up to and including the manifests (`CREATE_MANIFESTS`). `nfclaw status` reported the success with its
+  `stub run:` caveat. The replay ran with an identical execution environment (13 processes, 12 images), and
+  `nfclaw verify` exited 0 (20 identical, 4 changed reports). Stub mode cannot reach the submission
+  (`SUBMIT`): the stub manifest's name matches no genome, so nothing is handed on. The ENA query and
+  submission themselves remain unverified without a Webin account.
 - **epitopeprediction** 3.1.1: the plain run's replay met a malformed Ensembl BioMart reply, the
   [upstream run note](known-issues.md#pipeline-specific-run-notes), and failed. With the retry config
   passed as `--config`, which the bundle copies and the replay passes on, the run and its replay
@@ -556,7 +563,8 @@ For the [provenance bundle sweep](#provenance-bundles):
   would. The reference build itself ran only on the STAR-Fusion tutorial's minigenome (upstream's
   `test_build` profile).
 - seqsubmit was not run to completion: its test queries ENA with a Webin account, which this validation
-  did not have. The tasks before that query completed ([details](known-issues.md#pipeline-specific-run-notes)).
+  did not have. The tasks before that query completed ([details](known-issues.md#pipeline-specific-run-notes)),
+  and a stub run covered its workflow up to the ENA submission ([above](#provenance-bundles)).
 - The host's IPv6-only network shaped several runs: host networking, a local FTP relay, and local copies
   of ENA reads. A host with IPv4 connectivity should need none of these.
 - A bundle records the images Nextflow runs and the remote files Nextflow stages. It does not record
