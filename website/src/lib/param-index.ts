@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { ParamIndex } from "@/lib/derive";
+import { BASE_PATH } from "@/lib/site";
 
 let request: Promise<ParamIndex> | null = null;
 
 function load(): Promise<ParamIndex> {
-  request ??= fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/search/params.json`)
+  request ??= fetch(`${BASE_PATH}/search/params.json`)
     .then((r) => {
       if (!r.ok) throw new Error(`params index: HTTP ${r.status}`);
       return r.json() as Promise<ParamIndex>;

@@ -73,8 +73,8 @@ npm run build          # writes ./out
 npx serve out          # preview the static bundle
 ```
 
-`npm run typecheck` checks TypeScript without building. `npm start` invokes `next start`,
-which cannot serve this static export; preview the generated `out/` directory instead.
+`npm run typecheck` checks TypeScript without building. There is no `npm start`: `next start`
+cannot serve a static export, so preview the generated `out/` directory instead.
 
 The Tailwind 4 build targets Safari 16.4+, Chrome 111+ and Firefox 128+; see the
 [official browser requirements](https://tailwindcss.com/docs/upgrade-guide#browser-requirements).

@@ -142,5 +142,6 @@ def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
         except MissingInputSource:
             continue
         except (OSError, RuntimeError) as exc:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"Cannot inspect local dependency boundaries: {source}: {exc}") from exc
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT,
+                f"Cannot inspect local dependency boundaries: {source}: {exc}") from exc

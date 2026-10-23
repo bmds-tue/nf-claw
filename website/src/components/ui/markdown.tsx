@@ -48,7 +48,8 @@ function textOf(node: ReactNode): string {
   return "";
 }
 
-type HeadingProps = { children?: ReactNode; node?: { position?: { start: { line: number } } } };
+/** A rendered element's props with its source position (react-markdown passes the mdast node). */
+type PositionedProps = { children?: ReactNode; node?: { position?: { start: { line: number } } } };
 
 export function Markdown({
   content,
@@ -63,7 +64,7 @@ export function Markdown({
     // heading's line — never counted during render, which React may repeat.
     const ids = new Map(docHeadings(content).map((h) => [h.line, h.id]));
     const anchored = (Tag: "h2" | "h3", className: string) =>
-      function Heading({ children, node }: HeadingProps) {
+      function Heading({ children, node }: PositionedProps) {
         const id = ids.get(node?.position?.start.line ?? -1) ?? slugify(textOf(children));
         return (
           <Tag
@@ -122,7 +123,7 @@ export function Markdown({
       ),
       hr: () => <div className="hairline my-10" />,
       strong: ({ children }) => <strong className="font-semibold text-fog">{children}</strong>,
-      table: ({ children, node }: { children?: ReactNode; node?: { position?: { start: { line: number } } } }) => {
+      table: ({ children, node }: PositionedProps) => {
         // a focusable, labelled region so a keyboard can scroll a wide table; the label names the
         // table by its columns and source line, which keeps it unique on the page
         const head = textOf(Children.toArray(children)[0]).replace(/\s+/g, " ").trim().slice(0, 60);

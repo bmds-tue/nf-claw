@@ -8,15 +8,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (budget, dependency_stability, discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
-                    input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
-                    reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
-                    submodule, versions)
-from runner import container_watch, environment_record, institutional
+from runner import (budget, container_watch, dependency_stability, discovery, engine_version,
+                    environment_record, execution, fastqrepair_compat, input_safety, inputs,
+                    institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
+                    preflight, provenance, reproducibility, resources, resume_safety, runlog,
+                    samplesheet, sheetgen, submodule, versions)
 from runner import schema as schema_mod
-from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
+from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.submodule import SubmoduleStatus
 
 
@@ -27,7 +27,8 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
     earlier run used, but `dev` moves: the run being resumed may have executed an older commit.
     Nextflow's cache stays correct either way (it reuses only tasks whose code and inputs are
     unchanged), so this is advisory — it explains why some tasks re-run and that the results now
-    mix two commits. The earlier commit comes from that run's provenance manifest, if it wrote one."""
+    mix two commits. The earlier commit comes from that run's provenance manifest, if it
+    wrote one."""
     try:
         prev = json.loads((outdir / "provenance" / "run_manifest.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -49,7 +50,7 @@ def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str
 
 
 def _input_file_digests(inventory: dict[str, dict[str, str]],
-                            known: dict[str, str] | None) -> dict[str, str]:
+                        known: dict[str, str] | None) -> dict[str, str]:
     """SHA-256 of every local input file (from `known` when already hashed)."""
     digests = {}
     physical_digests = {}
@@ -66,7 +67,7 @@ def _input_file_digests(inventory: dict[str, dict[str, str]],
 
 
 def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
-                              current_digests: dict[str, str]) -> str | None:
+                          current_digests: dict[str, str]) -> str | None:
     """Guard resume against metadata-preserving input changes, including directory members.
 
     Ordinary file and directory cache keys omit file content. A changed local input's bytes
@@ -77,7 +78,7 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
     after a sample was removed would leave its earlier publications beside the new results.
     """
     current_nodes = _directory_nodes(current)
-    previous_state = runlog.read_state(outdir / "provenance/logs/run.log")
+    previous_state = runlog.read_state(outdir / "provenance" / "logs" / runlog.RUN_LOG_NAME)
     if previous_state.outcome in {dependency_stability.FAILED_OUTCOME,
                                   dependency_stability.FAILED_EXECUTION_OUTCOME}:
         return ("--resume starts a fresh Nextflow cache session because local dependencies changed "
@@ -86,7 +87,7 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                 "will be preserved in a sibling archive.")
     try:
         previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
-        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text(encoding="utf-8"))
         if (not isinstance(manifest, dict)
                 or type(manifest.get("dependency_inventory_version")) is not int
                 or manifest["dependency_inventory_version"] != 1
@@ -106,7 +107,8 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             return None
         reason = "the earlier local-input inventory is unavailable or invalid"
     else:
-        directory_roots = [Path(name) for name, entry in current_nodes.items() if entry["type"] == "directory"]
+        directory_roots = [Path(name) for name, entry in current_nodes.items()
+                           if entry["type"] == "directory"]
         files = {name for name, entry in current_nodes.items() if entry["type"] == "file"}
         historical_files = {name for name in previous_digests
                             if any(Path(name).is_relative_to(root) for root in directory_roots)}
@@ -131,8 +133,8 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
         else:
             return None
     return (f"--resume starts a fresh Nextflow cache session because {reason}. "
-            "File and directory metadata alone cannot establish unchanged task inputs; all tasks will "
-            "be recomputed to prevent stale results. An existing output directory will be "
+            "File and directory metadata alone cannot establish unchanged task inputs; all tasks "
+            "will be recomputed to prevent stale results. An existing output directory will be "
             "preserved in a sibling archive before launching.")
 
 
@@ -149,7 +151,7 @@ class RunResult:
     command: str
     outdir: Path
     checked_only: bool
-    outputs_report: "outputs.OutputsReport | None"
+    outputs_report: outputs.OutputsReport | None
     warnings: list[str] = field(default_factory=list)
     log_path: Path | None = None            # the run log; None for --check, which launches nothing
     # The NXF_* overlay `command` runs under (--nxf-ver, --nxf-env): part of the command as shown.
@@ -193,7 +195,8 @@ def _check_samplesheet_snapshots(expected: dict, current=None) -> None:
     or write-boundary checks. `current` is the exact input baseline when already captured.
     """
     for path, (hashes, inventory) in expected.items():
-        after_hashes, after_inventory = current if current is not None else _samplesheet_snapshot(path)
+        after_hashes, after_inventory = (current if current is not None
+                                         else _samplesheet_snapshot(path))
         if (any(after_hashes.get(name) != digest for name, digest in hashes.items())
                 or any(after_inventory.get(name) != entry for name, entry in inventory.items())):
             raise NfclawError(
@@ -203,7 +206,7 @@ def _check_samplesheet_snapshots(expected: dict, current=None) -> None:
 
 
 @budget.bounded
-def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
+def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[str] | None,
                  outdir: Path, profile: str, params_file: Path | None,
                  cli_overrides: dict, resume: bool, demo: bool,
                  check_only: bool, write_provenance: bool,
@@ -212,7 +215,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  nxf_env: dict[str, str] | None = None,
                  allow_spaces: bool = False,
                  configs: tuple[str, ...] | list[str] = (),
-                 limits: "resources.ResourceLimits | None" = None,
+                 limits: resources.ResourceLimits | None = None,
                  on_warning: Callable[[str], None] | None = None,
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
@@ -275,15 +278,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # Read the params file once; it is merged below, and it may be what supplies `input`.
     file_params = parameters.load_params_file(params_file) if params_file is not None else {}
 
-    # What --input is comes from the pipeline's own schema, not an assumption: a samplesheet, another
-    # local path (a directory, an SDRF file), or a plain value (a PRIDE accession, a URL, `false`).
-    # Only a local samplesheet gets the deterministic pre-check; a remote one is staged by Nextflow and
-    # validated by nf-schema at runtime, and a plain value is forwarded unchanged. The flag wins over
-    # the params file's `input` (as in the merge below), and whichever supplies the value, it is
-    # interpreted the same way — a params-file `input: false` or relative samplesheet means exactly
-    # what `--input false` or `--input sheet.csv` does.
-    # A chain's --check judges a later stage before the stage feeding it has run: an --input a
-    # handoff will write does not exist yet, so it is neither resolved nor pre-checked.
+    # What --input is comes from the pipeline's own schema, not an assumption: a samplesheet,
+    # another local path (a directory, an SDRF file), or a plain value (a PRIDE accession, a URL,
+    # `false`). Only a local samplesheet gets the deterministic pre-check; a remote one is staged by
+    # Nextflow and validated by nf-schema at runtime, and a plain value is forwarded unchanged. The
+    # flag wins over the params file's `input` (as in the merge below), and whichever supplies the
+    # value, it is interpreted the same way — a params-file `input: false` or relative samplesheet
+    # means exactly what `--input false` or `--input sheet.csv` does. A chain's --check judges a
+    # later stage before the stage feeding it has run: an --input a handoff will write does not
+    # exist yet, so it is neither resolved nor pre-checked.
     raw_input = (None if "input" in deferred_params
                  else input_path if input_path is not None else file_params.get("input"))
     # Data files where the pipeline takes a samplesheet — a directory, a glob, one or several files:
@@ -338,17 +341,20 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         if name_param == "input" or name_param in deferred_params or name_param not in merged:
             continue
         auxiliary = inputs.resolve(merged[name_param], st.path, param_name=name_param)
-        if auxiliary is None or auxiliary.local_path is None or auxiliary.samplesheet_schema is None:
+        if (auxiliary is None or auxiliary.local_path is None
+                or auxiliary.samplesheet_schema is None):
             continue
         sheet_schema = schema_mod.load_input_schema(st.path, auxiliary.samplesheet_schema)
         if sheet_schema is None:
             continue
         if auxiliary.local_path not in sheet_snapshots:
-            sheet_snapshots[auxiliary.local_path] = _samplesheet_snapshot(auxiliary.local_path, validating=True)
+            sheet_snapshots[auxiliary.local_path] = _samplesheet_snapshot(auxiliary.local_path,
+                                                                          validating=True)
         problems = samplesheet.validate(auxiliary.local_path, sheet_schema)
         if problems:
             raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
-                              f"Samplesheet for --{name_param.replace('_', '-')} failed validation.",
+                              f"Samplesheet for --{name_param.replace('_', '-')} "
+                              "failed validation.",
                               details={"issues": problems})
         merged[name_param] = auxiliary.value
         sheet_inputs.append((auxiliary.local_path, sheet_schema))
@@ -358,7 +364,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # rather than writing a second, differently-named set of reports beside them.
     merged = parameters.pin_report_suffix(merged, param_schema)
     # The same for the institutional configs every nf-core release includes from nf-core/configs'
-    # moving `master` at launch: read one commit, recorded in params.json, so the replay reads it too.
+    # moving `master` at launch: read one commit, recorded in params.json, so the replay reads
+    # it too.
     merged, institutional_configs, institutional_advisory = institutional.pin(
         merged, param_schema.params, st.path, {**os.environ, **nxf_overlay},
         previous=institutional.previous_commit(outdir) if resume else None)
@@ -369,8 +376,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     composed_profile = nextflow_command.compose_profile(profile, demo=demo)
     # A missing required parameter can only be judged up front when nothing but the values merged
     # above can supply one. A `test` or institutional profile, or a --config file, can assign params
-    # that nf-schema then sees — nf-core's own `-profile test,docker` sets --input — so then (and for
-    # --demo, which adds `test`) nf-schema judges required-ness at launch instead.
+    # that nf-schema then sees — nf-core's own `-profile test,docker` sets --input — so then (and
+    # for --demo, which adds `test`) nf-schema judges required-ness at launch instead.
     if not extra_configs and not nextflow_command.may_set_params(composed_profile):
         supplied_later = {n: "<from handoff>" for n in deferred_params if n not in merged}
         param_errors.extend(parameters.missing_required_params(
@@ -408,8 +415,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     prov_inputs = []
     unverified_paths = {}
     for key, value in resolved.items():
-        if key not in refs or key in {"input", "outdir"} or key in output_only_dirs or not isinstance(value, str) \
-                or not value or inputs.is_remote_url(value):
+        if (key not in refs or key in {"input", "outdir"} or key in output_only_dirs
+                or not isinstance(value, str) or not value or inputs.is_remote_url(value)):
             continue
         path = Path(value)
         try:
@@ -426,11 +433,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         except OSError as exc:
             raise NfclawError(
                 ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                fix="Make the input data and configuration files readable before launching.") from exc
+                fix="Make the input data and configuration files readable before launching.",
+            ) from exc
         prov_inputs.append(path)
     # A parameter whose schema declares no path format can still name a local file the pipeline
     # opens (differentialabundance's --feature-length-matrix, which a chain hands over). An existing
-    # absolute file there is an input too: hashed, checked by the replay guard and traced by a chain.
+    # absolute file there is an input too: hashed, checked by the replay guard and traced by
+    # a chain.
     for key, value in resolved.items():
         if (key in refs or key in {"input", "outdir"} or not isinstance(value, str)
                 or not value.startswith("/") or inputs.is_remote_url(value)):
@@ -443,8 +452,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     # A local --input is an input whatever its declared format (mhcquant's carries none).
     if resolved_input is not None and resolved_input.local_path is not None:
         prov_inputs = list(dict.fromkeys([resolved_input.local_path, *prov_inputs]))
-    # A generated samplesheet is a file nfclaw writes for the run (recorded with the configs, below);
-    # every local path it names is an input — whether or not its column declares a path format.
+    # A generated samplesheet is a file nfclaw writes for the run (recorded with the configs,
+    # below); every local path it names is an input — whether or not its column declares a
+    # path format.
     prov_inputs = list(dict.fromkeys([*prov_inputs, *(path for path, _ in sheet_inputs),
                                     *sheet_dependencies,
                                     *(sheet.files if sheet is not None else ())]))
@@ -461,7 +471,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         except (OSError, ValueError, csv.Error) as exc:
             raise NfclawError(
                 ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
-                fix="Use one row per sample, distinct staged mate names, and matching compression formats.") from exc
+                fix="Use one row per sample, distinct staged mate names, and "
+                    "matching compression formats.") from exc
     writes = [("--outdir", outdir, True),
               ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
               ("Nextflow work directory", work_dir, False),
@@ -498,8 +509,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 f"Nextflow {pinned} cannot run on Java {java}: Java 17 support began in Nextflow "
                 "21.10.0, and an older engine fails to compile the pipeline configuration "
                 "(\"Unsupported class file major version\").",
-                fix=f"Pin a later engine, e.g. --nxf-ver {engine_version.LEGACY_RELEASE_ENGINE}, or "
-                    f"point NXF_JAVA_HOME at a Java 11 installation to run Nextflow {pinned}.")
+                fix=f"Pin a later engine, e.g. --nxf-ver {engine_version.LEGACY_RELEASE_ENGINE}, "
+                    f"or point NXF_JAVA_HOME at a Java 11 installation to run Nextflow {pinned}.")
     # A resource ceiling only exists if the engine enforces it; say so before anything runs.
     if limits is not None and not limits.is_empty():
         engine = engine_version.effective(nxf_overlay.get("NXF_VER"))
@@ -529,7 +540,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
     budget.check()
     # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
-    # reason that is invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
+    # reason that is invisible in its log, so it is not mistaken for a fault in the run or
+    # in nfclaw.
     warnings += plugin_compat.check(st.path)
     # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
     # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
@@ -561,10 +573,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
     if repair_compat:
         warnings.append("Applying recorded corrections for fastqrepair 1.1.1: split FASTQ only "
                         "where wiping the chunks equals wiping the whole file, sum repair reports "
-                        "exactly, preserve declared mate identity, pass the declared quality offset to BBMap, and keep "
-                        "singleton reads, logs and mate reports in distinct publications. "
-                        "Pinned source stays unchanged; generated task recipes and the complete "
-                        "splitter implementation are recorded in the compatibility config.")
+                        "exactly, preserve declared mate identity, pass the declared quality "
+                        "offset to BBMap, and keep singleton reads, logs and mate reports in "
+                        "distinct publications. Pinned source stays unchanged; generated task "
+                        "recipes and the complete splitter implementation are recorded in "
+                        "the compatibility config.")
     # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
     # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
     if on_warning is not None:
@@ -585,12 +598,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
     with output_writer(outdir, check_only=check_only):
         # A competing writer may have completed between validation and lock acquisition.
-        if issue := preflight._outdir_issue(outdir, resume=resume, check_only=check_only):
+        if issue := preflight.outdir_issue(outdir, resume=resume, check_only=check_only):
             raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
                               details={"issues": [issue]})
-        # Capture the local dependency content the launch sees, before a long analysis can change it.
-        # The replay guard uses these snapshots, rather than hashing a potentially changed input only
-        # after the run has finished. Remote references and runtime downloads remain upstream inputs.
+        # Capture the local dependency content the launch sees, before a long analysis can change
+        # it. The replay guard uses these snapshots, rather than hashing a potentially changed input
+        # only after the run has finished. Remote references and runtime downloads remain
+        # upstream inputs.
         input_snapshot = config_snapshot = pipeline_snapshot = None
         input_inventory = config_inventory = None
         if not check_only:
@@ -599,15 +613,18 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             except OSError as exc:
                 raise NfclawError(
                     ErrorCode.ENVIRONMENT, f"cannot snapshot local run dependencies: {exc}",
-                    fix="Make the input data and configuration files readable before launching.") from exc
+                    fix="Make the input data and configuration files readable before launching.",
+                ) from exc
             _check_samplesheet_snapshots(sheet_snapshots, (input_snapshot, input_inventory))
             budget.check()
             if unverified_paths:
                 warning = ("Local path parameters absent before launch were not input-snapshotted: "
                            + ", ".join(sorted(unverified_paths))
                            + ". Their schemas do not require existing paths; Nextflow validates "
-                           "their use. These paths are outside the initial local-dependency snapshot."
-                           + (" Provenance records them as unverified." if write_provenance else ""))
+                           "their use. These paths are outside the initial "
+                           "local-dependency snapshot."
+                           + (" Provenance records them as unverified."
+                              if write_provenance else ""))
                 warnings.append(warning)
                 if on_warning is not None:
                     on_warning(warning)
@@ -634,18 +651,19 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 if not check_only and outdir.exists():
                     archive = resume_safety.archive_previous_run(outdir, resume_inventory,
                                                                 [st.path, *extra_configs])
-                    warning = f"Preserved the previous run in {archive}; this output directory starts fresh."
+                    warning = (f"Preserved the previous run in {archive}; this output "
+                               "directory starts fresh.")
                     warnings.append(warning)
                     if on_warning is not None:
                         on_warning(warning)
 
-        # Where the files nfclaw generates for the run (params file, resource-limits config) are staged.
-        # A real run stages them in its own provenance bundle. `--check` must not: it validates and
-        # prints the command *without launching*, so it has to leave `--outdir` exactly as it found it —
-        # creating it, or dropping a provenance/ directory in it, makes the next real run fail the
-        # "--outdir is not empty" guard against a directory that holds no results at all. The staged
-        # files are still written (to a temp directory that outlives the process), so the command
-        # `--check` prints stays runnable as printed.
+        # Where the files nfclaw generates for the run (params file, resource-limits config) are
+        # staged. A real run stages them in its own provenance bundle. `--check` must not: it
+        # validates and prints the command *without launching*, so it has to leave `--outdir`
+        # exactly as it found it — creating it, or dropping a provenance/ directory in it, makes the
+        # next real run fail the "--outdir is not empty" guard against a directory that holds no
+        # results at all. The staged files are still written (to a temp directory that outlives the
+        # process), so the command `--check` prints stays runnable as printed.
         budget.check()
         if check_only:
             staging = Path(tempfile.mkdtemp(prefix="nfclaw-check-"))
@@ -666,9 +684,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         params_file_out = parameters.write_params_file(resolved, staging / "params.json")
 
         # A resource ceiling (--limit-cpus/--limit-memory/--limit-time) becomes a generated Nextflow
-        # config passed with `-c`, exactly as nf-core's configuration docs prescribe. It goes *first*
-        # so an explicit `--config` the caller passed still wins, and it lives in the provenance bundle
-        # so `commands.sh` — which carries the same absolute `-c` path — replays the same ceiling.
+        # config passed with `-c`, exactly as nf-core's configuration docs prescribe. It goes
+        # *first* so an explicit `--config` the caller passed still wins, and it lives in the
+        # provenance bundle so `commands.sh` — which carries the same absolute `-c` path — replays
+        # the same ceiling.
         if limits is not None and not limits.is_empty():
             extra_configs.insert(0, resources.write_config(
                 limits, staging / "resource_limits.config"))
@@ -677,13 +696,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             extra_configs.insert(0, fastqrepair_compat.write_config(
                 staging / "fastqrepair_compat.config", input_path=sheet_path or repair_input))
 
-        # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed (the
-        # `plugin_compat` advisory above), add those names to nf-schema's `validation.ignoreParams` via a
-        # generated `-c` config, so its inert "not a valid parameter" warning does not clutter the run.
-        # The release tree stays byte-identical (drift-check green) and results are unaffected. Inserted
-        # before any user `--config` so the caller can still override, and staged like the ceiling above
-        # so `commands.sh` replays it. Harmless when the param is absent (e.g. a real run that loads no
-        # test profile): ignoring a name that is never set is a no-op.
+        # If the pinned release still sets an nf-validation 1.x param that nf-schema 2.x removed
+        # (the `plugin_compat` advisory above), add those names to nf-schema's
+        # `validation.ignoreParams` via a generated `-c` config, so its inert "not a valid
+        # parameter" warning does not clutter the run. The release tree stays byte-identical
+        # (drift-check green) and results are unaffected. Inserted before any user `--config` so the
+        # caller can still override, and staged like the ceiling above so `commands.sh` replays it.
+        # Harmless when the param is absent (e.g. a real run that loads no test profile): ignoring a
+        # name that is never set is a no-op.
         if compat_params:
             extra_configs.insert(0, plugin_compat.write_ignore_params_config(
                 compat_params, staging / "nf_schema_compat.config"))
@@ -706,7 +726,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot snapshot local run dependencies: {exc}",
-                                  fix="Make the configuration and pipeline files readable before launching.") from exc
+                                  fix="Make the configuration and pipeline files "
+                                      "readable before launching.") from exc
 
             if st.commit and git_head != st.commit:
                 raise NfclawError(
@@ -720,7 +741,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         if check_only:
             budget.check()
             return RunResult(command=cmd_str, outdir=outdir, checked_only=True,
-                             outputs_report=None, warnings=warnings, env=nxf_overlay, staging=staging,
+                             outputs_report=None, warnings=warnings, env=nxf_overlay,
+                             staging=staging,
                              local_dependencies=local_dependencies,
                              generated_samplesheet=sheet_path)
 
@@ -731,8 +753,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
         caveats: list[str] = []                 # what a successful pipeline said its results lack
-        # The runs Nextflow already knows in this directory (a resumed one has earlier attempts): the
-        # bundle records the execution environment of the session this launch adds after them.
+        # The runs Nextflow already knows in this directory (a resumed one has earlier attempts):
+        # the bundle records the execution environment of the session this launch adds after them.
         history_offset = len(environment_record.history(outdir))
         observed_images: dict[str, list[dict]] = {}
 
@@ -758,10 +780,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
         # the cwd only decides where the engine state lands — including Nextflow's own log.
-        # The run is recorded at a fixed place, `<outdir>/provenance/logs/run.log` (see runner.runlog):
-        # nobody launching it, in the foreground or the background, has to redirect it or be told where.
-        # Its last line states the outcome and is written last of all — after the bundle — because it
-        # is what a background run is polled on.
+        # The run is recorded at a fixed place, `<outdir>/provenance/logs/run.log` (see
+        # runner.runlog): nobody launching it, in the foreground or the background, has to redirect
+        # it or be told where. Its last line states the outcome and is written last of all — after
+        # the bundle — because it is what a background run is polled on.
         logs_dir = outdir / "provenance" / "logs"
         run_log = runlog.RunLog.open(logs_dir, command=cmd, launch_dir=outdir,
                                      nextflow_log=runlog.nextflow_log_path(outdir, nxf_overlay),
@@ -769,8 +791,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
         # Watch task containers start (docker/podman), so the bundle records the exact image each
         # ran even when an image is removed or its tag re-pulled before the run ends.
         watch_engine = container_watch.engine_for(composed_profile)
-        watch = (container_watch.ContainerWatch(watch_engine, work_dir, {**os.environ, **nxf_overlay})
-                 if write_provenance and watch_engine else None)
+        watch = (
+            container_watch.ContainerWatch(watch_engine, work_dir, {**os.environ, **nxf_overlay})
+            if write_provenance and watch_engine else None)
         try:
             try:
                 if watch is not None:
@@ -783,20 +806,25 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                     if watch is not None:
                         observed_images.update(watch.stop())
             except BaseException as failure:
-                # A failed run is exactly when the bundle is needed most: `commands.sh` is what replays
-                # the run once the cause is fixed, and the checksums record what it did manage to
-                # produce. Write it, then re-raise — a provenance error must never replace the real
-                # failure as the cause. A stopped run (Ctrl-C, `kill`) is compared too: its finished
-                # tasks are the cache `--resume` continues from, usable only if the dependencies held.
+                # A failed run is exactly when the bundle is needed most: `commands.sh` is what
+                # replays the run once the cause is fixed, and the checksums record what it did
+                # manage to produce. Write it, then re-raise — a provenance error must never replace
+                # the real failure as the cause. A stopped run (Ctrl-C, `kill`) is compared too: its
+                # finished tasks are the cache `--resume` continues from, usable only if the
+                # dependencies held.
                 stopped = isinstance(failure, (KeyboardInterrupt, execution.Terminated))
                 if isinstance(failure, NfclawError) and "timeout_seconds" in failure.details:
-                    run_log.fail(f"timed out after {failure.details['timeout_seconds']} s", str(failure))
+                    run_log.fail(
+                        f"timed out after {failure.details['timeout_seconds']} s", str(failure))
                 try:
                     with budget.suspend():
                         stability = dependency_stability.compare(
-                            inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
-                            configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
-                            pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                            inputs=prov_inputs, input_checksums=input_snapshot,
+                            input_inventory=input_inventory,
+                            configs=replay_configs, config_checksums=config_snapshot,
+                            config_inventory=config_inventory,
+                            pipeline=st.path, pipeline_checksums=pipeline_snapshot,
+                            git_head=git_head)
                     if stability["status"] == "changed" and not stopped:
                         run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
                 except Exception:
@@ -805,7 +833,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                     try:
                         with budget.suspend():
                             record("failed")
-                    except Exception:                     # best effort; must not mask the real failure
+                    except Exception:  # best effort; must not mask the real failure
                         pass
                 raise
             # Exit status 0 is not proof that every sample and task made it into the results: say
@@ -823,8 +851,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 report = outputs.collect(outdir)
                 budget.check()
                 stability = dependency_stability.compare(
-                    inputs=prov_inputs, input_checksums=input_snapshot, input_inventory=input_inventory,
-                    configs=replay_configs, config_checksums=config_snapshot, config_inventory=config_inventory,
+                    inputs=prov_inputs, input_checksums=input_snapshot,
+                    input_inventory=input_inventory,
+                    configs=replay_configs, config_checksums=config_snapshot,
+                    config_inventory=config_inventory,
                     pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
                 if stability["status"] != "unchanged":
                     if write_provenance:
@@ -841,8 +871,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         "Local dependencies changed or became unreadable during execution; "
                         "the results cannot be attributed to the recorded launch dependencies.",
                         details={"issues": problems, "outdir": str(outdir)},
-                        fix="Keep inputs, configurations and pipeline source stable, then start a fresh run. "
-                            "The existing results and launch snapshots are retained for inspection.")
+                        fix="Keep inputs, configurations and pipeline source stable, then start a "
+                            "fresh run. The existing results and launch snapshots are "
+                            "retained for inspection.")
                 budget.check()
                 if write_provenance:
                     recording_started = True
@@ -857,8 +888,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                 budget.check()
                 run_log.outcome = "success"
             except BaseException as exc:
-                # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs, an
-                # interrupt): the log's last line must not claim a success the bundle does not back.
+                # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs,
+                # an interrupt): the log's last line must not claim a success the bundle does
+                # not back.
                 what = (execution.stop_outcome(exc)
                         if isinstance(exc, (KeyboardInterrupt, execution.Terminated)) else "failed")
                 outcome = (dependency_stability.FAILED_OUTCOME if stability["status"] == "changed"
@@ -886,9 +918,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                         ErrorCode.ENVIRONMENT,
                         f"The run succeeded, but its provenance bundle could not be written: "
                         f"{exc.strerror or exc}" + (f" ({exc.filename})" if exc.filename else ""),
-                        fix=f"The results are in {outdir}. Free disk space or fix the permission, then "
-                            "rerun the same command with --resume: every task is reused from the cache "
-                            "and the bundle is written.") from exc
+                        fix=f"The results are in {outdir}. Free disk space or fix the permission, "
+                            "then rerun the same command with --resume: every task is reused from "
+                            "the cache and the bundle is written.") from exc
                 raise
         finally:
             run_log.finish()

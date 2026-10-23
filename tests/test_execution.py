@@ -1,11 +1,23 @@
+import _thread
 import os
+import shutil
+import signal
+import socket
+import subprocess
 import sys
-import pytest
+import threading
+import time
+import types
 from pathlib import Path
+
+import pytest
+
 from runner import execution
 from runner.errors import NfclawError
+from runner.runlog import read_state
 
 PY = sys.executable
+
 
 def test_success_writes_logs(tmp_path):
     res = execution.run([PY, "-c", "print('hi')"], cwd=tmp_path,
@@ -13,10 +25,12 @@ def test_success_writes_logs(tmp_path):
     assert res.exit_code == 0
     assert (tmp_path / "logs" / "stdout.txt").read_text().strip() == "hi"
 
+
 def test_nonzero_raises(tmp_path):
     with pytest.raises(NfclawError):
         execution.run([PY, "-c", "import sys; sys.exit(3)"], cwd=tmp_path,
                       logs_dir=tmp_path / "logs", timeout_seconds=30)
+
 
 def test_timeout_raises(tmp_path):
     with pytest.raises(NfclawError):
@@ -65,7 +79,8 @@ def test_failure_explains_a_task_that_ran_past_its_time_limit(tmp_path):
     child = ("import sys; print(\"ERROR ~ Error executing process > 'CLIPKIT (x)'\"); print(); "
              "print('Caused by:'); print(\"  process hasn't exited\"); sys.exit(1)")
     with pytest.raises(NfclawError) as exc:
-        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
     assert "time limit" in exc.value.fix and "nextflow-io/nextflow#7569" in exc.value.fix
     assert "--resume" in exc.value.fix and "26.10.0" in exc.value.fix
 
@@ -73,13 +88,13 @@ def test_failure_explains_a_task_that_ran_past_its_time_limit(tmp_path):
 def test_failure_without_that_message_gives_no_time_limit_hint(tmp_path):
     child = "import sys; print('ERROR ~ Error executing process > BOOM'); sys.exit(1)"
     with pytest.raises(NfclawError) as exc:
-        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
     assert "time limit" not in exc.value.fix
 
 
 def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
     # The console said only "Unable to parse config file"; the cause is in Nextflow's log alone.
-    import shutil
     nf_log = tmp_path / ".nextflow.log"
     shutil.copy(Path(__file__).parent / "fixtures" / "nextflow_console" /
                 "nextflow_log_config_unreachable.log", nf_log)
@@ -93,12 +108,13 @@ def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
 
 
 def test_failure_quotes_what_nextflow_wrote_on_stderr(tmp_path):
-    # nf-schema writes *which* parameter is invalid to stderr; stdout only says that validation failed.
+    # nf-schema writes *which* parameter is invalid to stderr; stdout only says that
+    # validation failed.
     child = ("import sys; print('Nextflow 99 is available - Please consider updating your version "
-             "to it', file=sys.stderr); print('ERROR ~ Validation of pipeline parameters failed!'); "
-             "print(' -- Check .nextflow.log file for details'); sys.stdout.flush(); "
-             "print('* --publish_dir_mode (bogus): Expected any of [copy, link]', file=sys.stderr); "
-             "sys.exit(1)")
+             "to it', file=sys.stderr); print('ERROR ~ Validation of pipeline parameters "
+             "failed!'); print(' -- Check .nextflow.log file for details'); sys.stdout.flush(); "
+             "print('* --publish_dir_mode (bogus): Expected any of [copy, link]', "
+             "file=sys.stderr); sys.exit(1)")
     with pytest.raises(NfclawError) as exc:
         execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
                       timeout_seconds=30)
@@ -173,7 +189,6 @@ def test_failed_run_log_ends_with_the_outcome_after_the_error(tmp_path):
         execution.run([PY, "-c", "import sys; print('ERROR ~ boom'); sys.exit(4)"], cwd=tmp_path,
                       logs_dir=tmp_path / "logs", timeout_seconds=30)
     log = (tmp_path / "logs" / "run.log").read_text()
-    from runner.runlog import read_state
     # Quoting protects controls in the log; status reconstructs the exact terminal error.
     assert "\n".join(read_state(tmp_path / "logs" / "run.log").error) == str(exc.value)
     assert log.rstrip().splitlines()[-1].endswith(": failed (exit status 4)")
@@ -235,12 +250,8 @@ def test_output_is_streamed_live_to_the_terminal_and_the_logs(tmp_path, capfd):
 @pytest.mark.skipif(not hasattr(os, "killpg"), reason="needs POSIX process groups")
 def test_keyboard_interrupt_tears_down_the_child_and_its_children(tmp_path):
     # Ctrl-C during a run must not leave Nextflow (or the task processes it launched) running in the
-    # background. Reproduce the interrupt with interrupt_main() while run() is blocked in wait(), and
-    # confirm both the child and a grandchild it spawned are gone afterwards.
-    import _thread
-    import threading
-    import time
-
+    # background. Reproduce the interrupt with interrupt_main() while run() is blocked in wait(),
+    # and confirm both the child and a grandchild it spawned are gone afterwards.
     pids = tmp_path / "pids.txt"
     script = (
         "import os, sys, subprocess, time;"
@@ -249,10 +260,10 @@ def test_keyboard_interrupt_tears_down_the_child_and_its_children(tmp_path):
         "sys.stdout.flush();"
         "time.sleep(60)"
     )
-    import signal
 
-    # interrupt_main() does nothing when SIGINT is ignored — as it is for a job a shell started in the
-    # background (`nohup … &`) — so give this test the handler an interactive Ctrl-C would reach.
+    # interrupt_main() does nothing when SIGINT is ignored — as it is for a job a shell started in
+    # the background (`nohup … &`) — so give this test the handler an interactive Ctrl-C
+    # would reach.
     previous = signal.signal(signal.SIGINT, signal.default_int_handler)
     timer = threading.Timer(1.5, _thread.interrupt_main)
     timer.start()
@@ -265,22 +276,11 @@ def test_keyboard_interrupt_tears_down_the_child_and_its_children(tmp_path):
         signal.signal(signal.SIGINT, previous)
     log = (tmp_path / "logs" / "run.log").read_text()
     assert log.rstrip().splitlines()[-1].endswith(": interrupted")   # the log says how it ended
-
-    child_pid, grand_pid = (int(x) for x in pids.read_text().split())
-    deadline = time.time() + 5
-    for pid in (child_pid, grand_pid):
-        while time.time() < deadline:
-            try:
-                os.kill(pid, 0)                          # still alive → wait for the teardown
-                time.sleep(0.1)
-            except ProcessLookupError:
-                break                                    # gone, as required
-        else:
-            raise AssertionError(f"process {pid} survived the interrupt")
+    assert _gone(int(x) for x in pids.read_text().split()), "a process survived the interrupt"
 
 
 def _gone(pids, within=5.0):
-    import time
+    """Whether every pid exits within `within` seconds (waiting out the teardown)."""
     deadline = time.time() + within
     for pid in pids:
         while time.time() < deadline:
@@ -299,9 +299,6 @@ def test_sigterm_stops_the_run_cleanly_and_is_logged(tmp_path):
     # `kill <pid>` is how a run started in the background is stopped. It used to kill nfclaw on the
     # spot: Nextflow went on running orphaned and run.log never got its outcome line, so polling
     # `tail -n 1 run.log` waited forever.
-    import signal
-    import threading
-
     pids = tmp_path / "pids.txt"
     script = (
         "import os, sys, subprocess, time;"
@@ -326,17 +323,15 @@ def test_sigterm_stops_the_run_cleanly_and_is_logged(tmp_path):
 
 
 def test_stop_on_signals_restores_the_previous_handlers():
-    import signal
     before = signal.getsignal(signal.SIGTERM)
     with execution.stop_on_signals():
         assert signal.getsignal(signal.SIGTERM) is not before
     assert signal.getsignal(signal.SIGTERM) is before
 
 
-@pytest.mark.skipif(not hasattr(__import__("signal"), "SIGHUP"), reason="needs SIGHUP")
+@pytest.mark.skipif(not hasattr(signal, "SIGHUP"), reason="needs SIGHUP")
 def test_a_signal_the_caller_ignores_stays_ignored():
     # `nohup` ignores SIGHUP so a run survives its terminal closing; nfclaw must not undo that.
-    import signal
     previous = signal.signal(signal.SIGHUP, signal.SIG_IGN)
     try:
         with execution.stop_on_signals():
@@ -354,14 +349,8 @@ def test_no_timeout_waits_for_the_run_to_finish(tmp_path):
 
 
 def test_teardown_kills_a_task_that_outlives_sigterm(tmp_path):
-    # Nextflow exiting on SIGTERM does not mean its tasks did: one that ignores (or is still handling)
-    # SIGTERM was left running in the background once the leader had exited.
-    import os
-    import subprocess
-    import sys
-    import time
-
-    import pytest
+    # Nextflow exiting on SIGTERM does not mean its tasks did: one that ignores (or is still
+    # handling) SIGTERM was left running in the background once the leader had exited.
     if sys.platform != "linux":
         pytest.skip("reads process state from /proc")
     pid_file = tmp_path / "task.pid"
@@ -381,7 +370,7 @@ def test_teardown_kills_a_task_that_outlives_sigterm(tmp_path):
 
     def state():
         try:
-            return open(f"/proc/{task}/stat").read().split()[2]
+            return Path(f"/proc/{task}/stat").read_text().split()[2]
         except FileNotFoundError:
             return "gone"
 
@@ -396,10 +385,6 @@ def test_teardown_kills_a_task_that_outlives_sigterm(tmp_path):
 
 def test_a_second_interrupt_during_teardown_still_kills_the_group(monkeypatch):
     # A second Ctrl-C while waiting out the grace period aborted the teardown before SIGKILL.
-    import signal
-    import types
-
-    import pytest
     sent = []
     monkeypatch.setattr(execution.os, "killpg", lambda pgid, sig: sent.append(sig))
 
@@ -425,7 +410,6 @@ def test_run_log_header_command_carries_the_nxf_overlay(tmp_path):
 
 def test_run_log_header_records_who_runs_it(tmp_path):
     # pid + host let `nfclaw status` tell a live run from one whose nfclaw was killed outright.
-    import socket
     execution.run([PY, "-c", "import os; print('CHILD', os.getpid())"], cwd=tmp_path,
                   logs_dir=tmp_path / "logs", timeout_seconds=30)
     log = (tmp_path / "logs" / "run.log").read_text()
@@ -441,7 +425,6 @@ def test_recorded_error_is_marked_in_the_run_log(tmp_path):
         execution.run([PY, "-c", "import sys; print('ERROR ~ boom'); sys.exit(2)"], cwd=tmp_path,
                       logs_dir=tmp_path / "logs", timeout_seconds=30)
     log = (tmp_path / "logs" / "run.log").read_text()
-    from runner.runlog import read_state
     assert "==> nfclaw error:\n| " in log
     assert "\n".join(read_state(tmp_path / "logs" / "run.log").error) == str(exc.value)
 
@@ -450,10 +433,6 @@ def test_recorded_error_is_marked_in_the_run_log(tmp_path):
 def test_nextflow_does_not_outlive_an_nfclaw_killed_with_sigkill(tmp_path):
     # SIGKILL (kill -9, the OOM killer) cannot be caught, so nfclaw cannot stop Nextflow itself: on
     # Linux the kernel does it — Nextflow is told to exit when the nfclaw that launched it dies.
-    import signal
-    import subprocess
-    import time
-
     pidfile = tmp_path / "child.pid"
     launcher = (
         "import sys; from pathlib import Path; from runner import execution;"

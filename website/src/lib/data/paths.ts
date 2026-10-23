@@ -34,10 +34,6 @@ export function repoPath(...segments: string[]): string {
   return path.join(repoRoot(), ...segments);
 }
 
-export function exists(...segments: string[]): boolean {
-  return fs.existsSync(repoPath(...segments));
-}
-
 export function readText(...segments: string[]): string | null {
   try {
     return fs.readFileSync(repoPath(...segments), "utf8");

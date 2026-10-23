@@ -43,13 +43,7 @@ export default async function HomePage() {
 
   const catByName = new Map(pipelines.map((p) => [p.name, categorize(p)]));
   const timeline: TimelineItem[] = getTimeline().map((e) => ({
-    id: e.id,
-    kind: e.kind,
-    title: e.title,
-    subtitle: e.subtitle,
-    date: e.date,
-    version: e.version,
-    pipeline: e.pipeline,
+    ...e,
     accent: e.pipeline ? colorForCategory(catByName.get(e.pipeline) ?? "Other") : "#39D353",
   }));
 

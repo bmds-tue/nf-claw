@@ -1,8 +1,18 @@
+import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import pytest
 
-from runner import cli
+from runner import chain, cli, orchestration, versions
+from runner.errors import ErrorCode, NfclawError
+from runner.outputs import OutputsReport
+from runner.submodule import SubmoduleStatus
 
 
 def _seed(tmp_path):
@@ -11,6 +21,17 @@ def _seed(tmp_path):
         (d / "upstream").mkdir(parents=True)
         d.joinpath("skill.md").write_text(f"---\nname: {name}\nversion: 1.0.0\n---\n# {name}\n")
     return tmp_path
+
+
+@pytest.fixture
+def captured(tmp_path, monkeypatch):
+    """`run_pipeline` replaced by a stub that records the keyword arguments the CLI passes it."""
+    seen = {}
+    monkeypatch.setattr(orchestration, "run_pipeline",
+                        lambda *a, **k: seen.update(k) or orchestration.RunResult(
+                            "CMD", Path("/o"), True, None))
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    return seen
 
 
 def test_list_prints_pipelines(tmp_path, monkeypatch, capsys):
@@ -28,15 +49,10 @@ def test_show_prints_skill(tmp_path, monkeypatch, capsys):
     assert "# sarek" in capsys.readouterr().out
 
 
-def test_run_hands_the_raw_input_to_the_pipeline_schema(tmp_path, monkeypatch):
-    # What `--input` is — a samplesheet, a directory, an accession, `false` — depends on the pipeline's
-    # schema, so the CLI must not pre-judge it as a local path (PXD009752 became <cwd>/PXD009752).
-    from runner import orchestration
-    captured = {}
-    monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
-                            "CMD", Path("/o"), True, None))
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+def test_run_hands_the_raw_input_to_the_pipeline_schema(tmp_path, captured):
+    # What `--input` is — a samplesheet, a directory, an accession, `false` — depends on the
+    # pipeline's schema, so the CLI must not pre-judge it as a local path (PXD009752
+    # became <cwd>/PXD009752).
     for raw in ("PXD009752", "false", "rel/ss.csv", "https://example.test/ss.csv"):
         assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--input", raw]) == 0
         assert captured["input_path"] == raw
@@ -47,7 +63,6 @@ def test_run_hands_the_raw_input_to_the_pipeline_schema(tmp_path, monkeypatch):
 def test_unknown_options_are_rejected_outside_run(tmp_path, monkeypatch, capsys):
     # Only `run` forwards unknown flags (to the pipeline). Elsewhere a typo was silently ignored:
     # `show rnaseq --pipeline-versoin 3.0.0` printed the *latest* docs and exited 0.
-    import pytest
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     for argv in (["show", "sarek", "--pipeline-versoin", "3.0.0"], ["list", "--bogus"],
@@ -58,15 +73,9 @@ def test_unknown_options_are_rejected_outside_run(tmp_path, monkeypatch, capsys)
         assert "unrecognized arguments" in capsys.readouterr().err
 
 
-def test_run_has_no_wall_clock_limit_unless_asked(tmp_path, monkeypatch):
+def test_run_has_no_wall_clock_limit_unless_asked(tmp_path, captured):
     # A real sarek WGS or a large rnaseq run routinely exceeds 12 h; an undocumented default that
     # killed the whole run at that point must not exist. --timeout stays available on request.
-    from runner import orchestration
-    captured = {}
-    monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
-                            "CMD", Path("/o"), True, None))
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 0
     assert captured["timeout_seconds"] is None
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--timeout", "3600"]) == 0
@@ -86,9 +95,6 @@ def test_collect_overrides_handles_equals_form():
 
 
 def test_collect_overrides_rejects_stray_tokens():
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
-
     with pytest.raises(NfclawError) as exc:
         cli._collect_overrides(["orphan.csv"])
     assert exc.value.code == ErrorCode.PARAMS_INVALID
@@ -96,9 +102,7 @@ def test_collect_overrides_rejects_stray_tokens():
 
 
 def test_run_prints_command_and_outputs_summary(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
-    from runner.outputs import OutputsReport
-    rep = OutputsReport(pipeline_info=None, multiqc_report=Path("/o/multiqc_report.html"),
+    rep = OutputsReport(multiqc_report=Path("/o/multiqc_report.html"),
                         files=("a.txt", "b.txt"))
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: orchestration.RunResult("CMD", Path("/o"), False, rep))
@@ -109,9 +113,7 @@ def test_run_prints_command_and_outputs_summary(tmp_path, monkeypatch, capsys):
 
 
 def test_run_summary_names_the_run_log(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
-    from runner.outputs import OutputsReport
-    rep = OutputsReport(pipeline_info=None, multiqc_report=None, files=("a.txt",))
+    rep = OutputsReport(multiqc_report=None, files=("a.txt",))
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: orchestration.RunResult(
                             "CMD", Path("/o"), False, rep,
@@ -122,7 +124,6 @@ def test_run_summary_names_the_run_log(tmp_path, monkeypatch, capsys):
 
 
 def test_versions_command_lists_tags_and_marks_pin(tmp_path, monkeypatch, capsys):
-    from runner import versions
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     monkeypatch.setattr(versions, "available",
@@ -132,24 +133,13 @@ def test_versions_command_lists_tags_and_marks_pin(tmp_path, monkeypatch, capsys
     assert "2.0.0" in out and "latest" in out and "1.2.0" in out
 
 
-def test_run_threads_pipeline_version(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
-    captured = {}
-
-    def fake_run(*a, **k):
-        captured.update(k)
-        return orchestration.RunResult("CMD", Path("/o"), True, None)
-
-    monkeypatch.setattr(orchestration, "run_pipeline", fake_run)
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+def test_run_threads_pipeline_version(tmp_path, captured):
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
                      "--pipeline-version", "1.2.0"]) == 0
     assert captured["pipeline_version"] == "1.2.0"
 
 
 def test_show_pipeline_version_prints_generated_docs(tmp_path, monkeypatch, capsys):
-    from runner import versions
-    from runner.submodule import SubmoduleStatus
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     cached = root / "pipelines" / "sarek" / ".versions" / "1.2.0" / "upstream"
@@ -194,7 +184,6 @@ def test_non_editable_install_reports_missing_repository_content(tmp_path, monke
 
 
 def test_versions_empty_reports_none_found(tmp_path, monkeypatch, capsys):
-    from runner import versions
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     monkeypatch.setattr(versions, "available", lambda name, **k: [])
@@ -202,16 +191,7 @@ def test_versions_empty_reports_none_found(tmp_path, monkeypatch, capsys):
     assert "no release" in capsys.readouterr().err.lower()
 
 
-def test_run_threads_nxf_ver_and_env(tmp_path, monkeypatch):
-    from runner import orchestration
-    captured = {}
-
-    def fake_run(*a, **k):
-        captured.update(k)
-        return orchestration.RunResult("CMD", Path("/o"), True, None)
-
-    monkeypatch.setattr(orchestration, "run_pipeline", fake_run)
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+def test_run_threads_nxf_ver_and_env(tmp_path, captured):
     rc = cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
                    "--nxf-ver", "25.10.2",
                    "--nxf-env", "NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true",
@@ -224,8 +204,8 @@ def test_run_threads_nxf_ver_and_env(tmp_path, monkeypatch):
 
 def test_run_prints_the_command_with_the_nxf_env_it_runs_under(tmp_path, monkeypatch, capsys):
     # `--check` promises the exact command that would run; under `--nxf-ver 25.10.4` that command
-    # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell defaults to.
-    from runner import orchestration
+    # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell
+    # defaults to.
     monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: orchestration.RunResult(
         "nextflow run /t -profile binac2", Path("/o"), True, None,
         env={"NXF_VER": "25.10.4", "NXF_JVM_ARGS": "-Da=b -Dc=d"}))
@@ -242,13 +222,7 @@ def test_run_rejects_non_nxf_env_var(tmp_path, monkeypatch, capsys):
     assert "NXF_" in capsys.readouterr().err
 
 
-def test_run_threads_config(tmp_path, monkeypatch):
-    from runner import orchestration
-    captured = {}
-    monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
-                            "CMD", Path("/o"), True, None))
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+def test_run_threads_config(tmp_path, captured):
     cfg = tmp_path / "host.config"
     cfg.write_text("docker { runOptions = '--network host' }\n")
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
@@ -266,7 +240,6 @@ def test_attached_short_config_values_are_named_not_split(tmp_path, monkeypatch,
                                                           hint):
     # argparse would read `-config x.config` as `-c onfig` and report the real path as a stray
     # extra argument; the Nextflow spelling is named instead, before anything runs.
-    from runner import orchestration
     monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), token, "x.config"]) == 1
@@ -274,16 +247,10 @@ def test_attached_short_config_values_are_named_not_split(tmp_path, monkeypatch,
     assert hint in err and "onfig" not in err.replace("config", "")
 
 
-def test_run_passes_through_pipeline_flag_that_prefixes_a_reserved_flag(tmp_path, monkeypatch):
+def test_run_passes_through_pipeline_flag_that_prefixes_a_reserved_flag(tmp_path, captured):
     # A pipeline parameter whose name is a prefix of a reserved nfclaw flag (e.g. `--res` vs
     # `--resume`, `--time` vs `--timeout`) must reach the pipeline as an override, not be silently
     # swallowed by argparse abbreviation. Guards the passthrough contract (allow_abbrev=False).
-    from runner import orchestration
-    captured = {}
-    monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
-                            "CMD", Path("/o"), True, None))
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     rc = cli.main(["run", "x", "--outdir", str(tmp_path / "out"),
                    "--res", "5", "--time", "30"])
     assert rc == 0
@@ -292,13 +259,7 @@ def test_run_passes_through_pipeline_flag_that_prefixes_a_reserved_flag(tmp_path
     assert captured["timeout_seconds"] is None                       # reserved --timeout untouched
 
 
-def test_run_threads_allow_spaces(tmp_path, monkeypatch):
-    from runner import orchestration
-    captured = {}
-    monkeypatch.setattr(orchestration, "run_pipeline",
-                        lambda *a, **k: captured.update(k) or orchestration.RunResult(
-                            "CMD", Path("/o"), True, None))
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+def test_run_threads_allow_spaces(tmp_path, captured):
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--allow-spaces"]) == 0
     assert captured["allow_spaces"] is True
     captured.clear()
@@ -313,15 +274,15 @@ def test_run_rejects_malformed_nxf_env(tmp_path, monkeypatch, capsys):
     assert "KEY=VALUE" in capsys.readouterr().err
 
 
-def test_nxf_env_rejects_invalid_environment_name():
-    import pytest
-    from runner.errors import NfclawError
-    with pytest.raises(NfclawError, match="invalid environment variable name"):
-        cli._parse_nxf_env(["NXF_BAD-NAME=value"])
+def test_nxf_env_rejects_invalid_environment_name(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    rc = cli.main(
+        ["run", "x", "--outdir", str(tmp_path / "out"), "--nxf-env", "NXF_BAD-NAME=value"])
+    assert rc == 1
+    assert "invalid environment variable name" in capsys.readouterr().err
 
 
 def test_timeout_and_engine_version_are_validated(tmp_path, monkeypatch):
-    import pytest
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     for args in (["--timeout", "0"], ["--timeout", "-1"], ["--nxf-ver", "latest"]):
         with pytest.raises(SystemExit) as exc:
@@ -330,7 +291,6 @@ def test_timeout_and_engine_version_are_validated(tmp_path, monkeypatch):
 
 
 def test_run_surfaces_engine_warning_on_stderr(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: orchestration.RunResult(
                             "CMD", Path("/o"), True, None, warnings=["engine too old"]))
@@ -344,7 +304,6 @@ def test_run_surfaces_engine_warning_on_stderr(tmp_path, monkeypatch, capsys):
 # --- dev: the unreleased development branch ---------------------------------------------------
 
 def test_versions_lists_dev_after_every_release(tmp_path, monkeypatch, capsys):
-    from runner import versions
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     monkeypatch.setattr(versions, "available",
@@ -352,13 +311,12 @@ def test_versions_lists_dev_after_every_release(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(versions, "dev_head", lambda name, **k: ("f754e0a247b0" + "0" * 28, True))
     assert cli.main(["versions", "sarek"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[0].startswith("2.0.0\tlatest")              # the first line is still the newest release
+    assert lines[0].startswith("2.0.0\tlatest")  # the first line is still the newest release
     assert lines[-1].startswith("dev\t") and "unreleased" in lines[-1]
     assert "f754e0a247b0" in lines[-1] and "last fetched" not in lines[-1]
 
 
 def test_versions_marks_an_offline_dev_head_as_last_fetched(tmp_path, monkeypatch, capsys):
-    from runner import versions
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     monkeypatch.setattr(versions, "available", lambda name, **k: [])
@@ -370,7 +328,6 @@ def test_versions_marks_an_offline_dev_head_as_last_fetched(tmp_path, monkeypatc
 
 
 def test_versions_omits_dev_when_the_pipeline_has_none(tmp_path, monkeypatch, capsys):
-    from runner import versions
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     monkeypatch.setattr(versions, "available", lambda name, **k: [("2.0.0", True)])
@@ -380,8 +337,6 @@ def test_versions_omits_dev_when_the_pipeline_has_none(tmp_path, monkeypatch, ca
 
 
 def test_show_dev_prints_generated_docs_and_the_advisory(tmp_path, monkeypatch, capsys):
-    from runner import versions
-    from runner.submodule import SubmoduleStatus
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     cached = root / "pipelines" / "sarek" / ".versions" / "dev-f754e0a247b0" / "upstream"
@@ -410,7 +365,6 @@ def test_show_dev_prints_generated_docs_and_the_advisory(tmp_path, monkeypatch, 
 
 def test_run_threads_dev_with_the_users_exact_flags(tmp_path, monkeypatch, capsys):
     # The command from the feature request: dev + an institutional profile + a pinned engine.
-    from runner import orchestration
     captured = {}
 
     def fake_run(*a, **k):
@@ -432,9 +386,6 @@ def test_run_threads_dev_with_the_users_exact_flags(tmp_path, monkeypatch, capsy
 def test_run_says_warnings_before_launch_and_only_once(tmp_path, monkeypatch, capsys):
     # A dev run can take hours, and a failed one never returns: the advisory must be printed as
     # soon as it is known (before Nextflow starts), not with the result — and not twice.
-    from runner import orchestration
-    from runner.errors import ErrorCode, NfclawError
-
     def fake_run(*a, on_warning, **k):
         on_warning("nf-core/fetchngs@dev is unreleased")
         raise NfclawError(ErrorCode.EXECUTION_FAILED, "Nextflow execution failed.")
@@ -457,11 +408,9 @@ def test_run_says_warnings_before_launch_and_only_once(tmp_path, monkeypatch, ca
     assert err.count("warning: said early") == 1 and "warning: only in result" in err
 
 
-def test_output_into_a_closed_pipe_ends_quietly(tmp_path):
-    # `nfclaw versions X | head -1` (or `list | grep -m1`) closes the pipe early; the next write used
-    # to end the command with a BrokenPipeError traceback on stderr.
-    import subprocess
-    import sys
+def test_output_into_a_closed_pipe_ends_quietly():
+    # `nfclaw versions X | head -1` (or `list | grep -m1`) closes the pipe early; the next write
+    # used to end the command with a BrokenPipeError traceback on stderr.
     script = (
         "import sys\n"
         "from runner import cli\n"
@@ -484,12 +433,6 @@ def test_output_into_a_closed_pipe_ends_quietly(tmp_path):
 def test_run_stopped_by_sigterm_exits_cleanly(tmp_path, monkeypatch, capsys):
     # A background run is stopped with `kill`: nfclaw shuts Nextflow down (execution) and exits with
     # the conventional 128+15, naming the run log — not a traceback, and not left running.
-    import os
-    import signal
-    import time
-
-    from runner import orchestration
-
     def stopped(*a, **k):
         os.kill(os.getpid(), signal.SIGTERM)
         time.sleep(5)                                   # the handler interrupts this
@@ -505,8 +448,6 @@ def test_run_stopped_by_sigterm_exits_cleanly(tmp_path, monkeypatch, capsys):
 
 
 def test_run_interrupted_by_ctrl_c_exits_cleanly(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
-
     def interrupted(*a, **k):
         raise KeyboardInterrupt
 
@@ -519,7 +460,6 @@ def test_run_interrupted_by_ctrl_c_exits_cleanly(tmp_path, monkeypatch, capsys):
 # --- nfclaw chain ---------------------------------------------------------------------------
 
 def _chain_spec(tmp_path):
-    import json
     spec = tmp_path / "spec.json"
     spec.write_text(json.dumps({"stages": [{"pipeline": "fetchngs", "input": "/x/ids.csv"},
                                            {"pipeline": "rnaseq"}]}))
@@ -527,7 +467,6 @@ def _chain_spec(tmp_path):
 
 
 def test_chain_run_threads_its_flags(tmp_path, monkeypatch, capsys):
-    from runner import chain
     seen = {}
 
     def fake(spec, **kw):
@@ -548,7 +487,6 @@ def test_chain_run_threads_its_flags(tmp_path, monkeypatch, capsys):
 
 
 def test_chain_check_prints_each_stages_command(tmp_path, monkeypatch, capsys):
-    from runner import chain
     monkeypatch.setattr(cli.chain, "run_chain", lambda spec, **kw: chain.ChainResult(
         outdir=kw["outdir"], outcome="checked", stages=[],
         commands=[("01-fetchngs", "nextflow run a"), ("02-rnaseq", "nextflow run b")]))
@@ -559,7 +497,6 @@ def test_chain_check_prints_each_stages_command(tmp_path, monkeypatch, capsys):
 
 
 def test_chain_resume_may_omit_the_spec(tmp_path, monkeypatch):
-    from runner import chain
     seen = {}
     monkeypatch.setattr(cli.chain, "run_chain", lambda spec, **kw: seen.update(spec=spec, **kw)
                         or chain.ChainResult(outdir=kw["outdir"], outcome="success", stages=[]))
@@ -587,8 +524,6 @@ def test_chain_errors_are_reported_cleanly(tmp_path, capsys):
 
 
 def test_chain_stop_signal_exit_code(tmp_path, monkeypatch, capsys):
-    import signal
-
     def stopped(*a, **k):
         raise cli.execution.Terminated(signal.SIGTERM)
 
@@ -598,7 +533,7 @@ def test_chain_stop_signal_exit_code(tmp_path, monkeypatch, capsys):
     assert "stopped by SIGTERM" in capsys.readouterr().err
 
 
-def test_chain_edges_lists_the_registry(tmp_path, monkeypatch, capsys, library):
+def test_chain_edges_lists_the_registry(monkeypatch, capsys, library):
     root = library("mini_up", "mini", rules={("mini_up", "mini"): {
         "description": "mini_up writes a mini sheet",
         "params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"]}}}})
@@ -631,7 +566,6 @@ def _write_run_log(outdir, text):
 
 
 def _finished_block(outcome, body=""):
-    import socket
     return ("==> nfclaw run started 2026-10-06T10:00:00+00:00\n    command: nextflow run x\n"
             f"    host: {socket.gethostname()}\n    pid: 1\n{body}"
             f"==> nfclaw run finished 2026-10-06T10:05:00+00:00: {outcome}\n")
@@ -647,7 +581,8 @@ def test_status_of_a_successful_run(tmp_path, monkeypatch, capsys):
 
 def test_status_of_a_failed_run_prints_the_recorded_error(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
-    body = "ERROR ~ x\n==> nfclaw error:\n[execution_failed] Nextflow execution failed (exit status 1).\n"
+    body = ("ERROR ~ x\n==> nfclaw error:\n[execution_failed] Nextflow execution failed "
+            "(exit status 1).\n")
     _write_run_log(tmp_path / "out", _finished_block("failed (exit status 1)", body))
     assert cli.main(["status", str(tmp_path / "out")]) == 1
     out = capsys.readouterr().out
@@ -656,7 +591,6 @@ def test_status_of_a_failed_run_prints_the_recorded_error(tmp_path, monkeypatch,
 
 
 def test_status_of_a_running_run_exits_3(tmp_path, monkeypatch, capsys, named_process):
-    import socket
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     proc = named_process("nfclaw")
     try:
@@ -672,9 +606,6 @@ def test_status_of_a_running_run_exits_3(tmp_path, monkeypatch, capsys, named_pr
 
 
 def test_status_of_a_run_killed_outright(tmp_path, monkeypatch, capsys):
-    import socket
-    import subprocess
-    import sys
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     proc = subprocess.Popen([sys.executable, "-c", "pass", "nfclaw"])
     proc.wait()
@@ -694,10 +625,7 @@ def test_status_without_a_run_log_says_why(tmp_path, monkeypatch, capsys):
 
 # --- a refused relaunch must not leave the previous attempt's outcome as the last line -----------
 
-def test_refused_relaunch_is_recorded_in_the_existing_run_log(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
-    from runner.errors import ErrorCode, NfclawError
-
+def test_refused_relaunch_is_recorded_in_the_existing_run_log(tmp_path, monkeypatch):
     log = _write_run_log(tmp_path / "out", _finished_block("failed (exit status 1)"))
 
     def refused(*a, **k):
@@ -714,9 +642,6 @@ def test_refused_relaunch_is_recorded_in_the_existing_run_log(tmp_path, monkeypa
 
 
 def test_refusal_into_a_fresh_outdir_leaves_it_untouched(tmp_path, monkeypatch):
-    from runner import orchestration
-    from runner.errors import ErrorCode, NfclawError
-
     def refused(*a, **k):
         raise NfclawError(ErrorCode.PARAMS_INVALID, "Parameters failed validation.")
 
@@ -727,9 +652,6 @@ def test_refusal_into_a_fresh_outdir_leaves_it_untouched(tmp_path, monkeypatch):
 
 
 def test_check_never_writes_into_the_run_log(tmp_path, monkeypatch):
-    from runner import orchestration
-    from runner.errors import ErrorCode, NfclawError
-
     log = _write_run_log(tmp_path / "out", _finished_block("success"))
     before = log.read_text()
 
@@ -744,9 +666,6 @@ def test_check_never_writes_into_the_run_log(tmp_path, monkeypatch):
 
 def test_a_launched_run_is_not_recorded_twice(tmp_path, monkeypatch):
     # The run log already records a failure that happened after launch; cli adds nothing.
-    from runner import orchestration
-    from runner.errors import ErrorCode, NfclawError
-
     log = _write_run_log(tmp_path / "out", _finished_block("success"))
 
     def launched_then_failed(*a, **k):
@@ -775,7 +694,6 @@ def test_status_of_a_chain_outdir_points_at_chain_status(tmp_path, capsys, libra
     ("-resume", "`--resume`"), ("-params-file", "`--params-file`"),
     ("-r", "`--pipeline-version`"), ("-with-tower", "single-dash options itself")])
 def test_nextflow_style_single_dash_options_name_the_nfclaw_flag(token, hint):
-    from runner.errors import NfclawError
     with pytest.raises(NfclawError) as exc:
         cli._collect_overrides([token])
     assert hint in exc.value.fix
@@ -784,7 +702,6 @@ def test_nextflow_style_single_dash_options_name_the_nfclaw_flag(token, hint):
 def test_run_takes_data_files_and_sheet_columns(tmp_path, monkeypatch, capsys):
     # A shell glob expands into several --input values; --sheet-set columns are nfclaw's own,
     # never forwarded to the pipeline as parameters.
-    from runner import orchestration
     captured = {}
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: captured.update(k) or orchestration.RunResult(
@@ -803,7 +720,6 @@ def test_run_takes_data_files_and_sheet_columns(tmp_path, monkeypatch, capsys):
 
 
 def test_a_malformed_sheet_column_is_refused_before_anything_runs(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: pytest.fail("must not run"))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
@@ -815,7 +731,6 @@ def test_a_malformed_sheet_column_is_refused_before_anything_runs(tmp_path, monk
 
 def test_input_before_the_pipeline_name_still_parses(tmp_path, monkeypatch, capsys):
     # Options may precede the pipeline name; an --input value must not swallow it.
-    from runner import orchestration
     captured = {}
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: captured.update(name=a[0], **k) or orchestration.RunResult(
@@ -835,7 +750,6 @@ def test_input_before_the_pipeline_name_still_parses(tmp_path, monkeypatch, caps
 
 
 def test_an_odd_extra_token_is_a_clear_error_not_a_traceback(tmp_path, monkeypatch, capsys):
-    from runner import orchestration
     monkeypatch.setattr(orchestration, "run_pipeline", lambda *a, **k: pytest.fail("must not run"))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     for token in ("~nosuchuser_nfclaw/x", "x" * 300):

@@ -31,7 +31,8 @@ def test_macos_identity_uses_hashed_platform_uuid(monkeypatch):
     uuid = "12345678-1234-5678-9abc-123456789abc"
     monkeypatch.setattr(guard.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(
         returncode=0, stdout=f'  "IOPlatformUUID" = "{uuid.upper()}"'))
-    assert guard.host_identity() == hashlib.sha256(f"nfclaw-host-v1:darwin:{uuid}".encode()).hexdigest()
+    expected = hashlib.sha256(f"nfclaw-host-v1:darwin:{uuid}".encode()).hexdigest()
+    assert guard.host_identity() == expected
 
 
 def test_failed_macos_probe_falls_back_without_breaking_logging(monkeypatch):

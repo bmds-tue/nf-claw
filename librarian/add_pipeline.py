@@ -1,4 +1,4 @@
-# librarian/add_pipeline.py
+"""Read sources.tsv and print the .gitmodules entries and `git submodule add` commands for it."""
 from __future__ import annotations
 
 import argparse

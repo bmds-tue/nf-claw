@@ -1,14 +1,20 @@
 import json
+import os
+import shlex
+import shutil
+import signal
+import socket
+import subprocess
+import time
+
 import pytest
 
-from runner import provenance
+from runner import provenance, runlog
+from runner.nextflow_command import shell_line
 from runner.submodule import SubmoduleStatus
 
 
-@pytest.fixture(autouse=True)
-def _no_engine_probe(monkeypatch):
-    # Bundle unit tests must not download engines. Real probe cleanup is exercised separately.
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+pytestmark = pytest.mark.usefixtures("no_engine_probe")
 
 
 def _st(path):
@@ -61,8 +67,9 @@ def test_copies_legacy_software_versions_yaml(tmp_path):
 
 def test_copies_modern_mqc_software_versions_yaml(tmp_path):
     # The newer nf-core template names it `nf_core_<pipeline>_software_mqc_versions.yml` (rnaseq,
-    # chipseq, fetchngs, …). The hardcoded `software_versions.yml` never matched it, so versions were
-    # silently missing from the bundle for every such pipeline. The file's own name is preserved.
+    # chipseq, fetchngs, …). The hardcoded `software_versions.yml` never matched it, so versions
+    # were silently missing from the bundle for every such pipeline. The file's own name
+    # is preserved.
     out = tmp_path / "out"
     (out / "pipeline_info").mkdir(parents=True)
     name = "nf_core_rnaseq_software_mqc_versions.yml"
@@ -99,8 +106,6 @@ def test_replay_reproduces_into_a_fresh_outdir_not_the_original(tmp_path):
 
 def test_replay_refuses_a_target_that_already_holds_results(tmp_path):
     # Executed, not just string-matched: the guard is the whole point of the script.
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="true",
@@ -116,8 +121,6 @@ def test_replay_refuses_a_target_that_already_holds_results(tmp_path):
 
 def test_replay_runs_in_the_target_directory(tmp_path):
     # The replay must launch from the target, so `.nextflow/` state never lands in the original run.
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="pwd >pwd.txt; echo",
@@ -128,13 +131,11 @@ def test_replay_runs_in_the_target_directory(tmp_path):
     assert (target / "pwd.txt").read_text().strip() == str(target)
 
 
-
 def test_replay_into_a_relative_target_publishes_into_that_target(tmp_path):
     # The script cds into the target before launching, so a relative target passed through as-is
     # became <target>/<target>: `./commands.sh fresh` published into fresh/fresh/, and
-    # `nfclaw verify fresh --against out` then reported every file missing. --outdir must be absolute.
-    import subprocess
-
+    # `nfclaw verify fresh --against out` then reported every file missing. --outdir must
+    # be absolute.
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="pwd >pwd.txt; echo",
@@ -144,6 +145,7 @@ def test_replay_into_a_relative_target_publishes_into_that_target(tmp_path):
     assert r.returncode == 0, r.stderr
     assert (tmp_path / "fresh" / "pwd.txt").read_text().strip() == str(tmp_path / "fresh")
     assert r.stdout.strip() == f"--outdir {tmp_path / 'fresh'}"
+
 
 def test_records_nextflow_env_and_probes_version_with_it(tmp_path, monkeypatch):
     out = tmp_path / "out"
@@ -156,7 +158,7 @@ def test_records_nextflow_env_and_probes_version_with_it(tmp_path, monkeypatch):
                             submodule=_st(tmp_path / "up"), input_paths=[], env_extra=overlay)
     manifest = json.loads((prov / "run_manifest.json").read_text())
     assert manifest["nextflow_env"] == overlay          # the overlay nfclaw applied is recorded
-    assert seen["env"] == overlay                        # version probed with the overlay (reports the pin)
+    assert seen["env"] == overlay  # version probed with the overlay (reports the pin)
 
 
 def test_nextflow_env_empty_by_default(tmp_path):
@@ -227,7 +229,6 @@ def test_uri_userinfo_credentials_are_redacted_without_a_sensitive_variable_name
     replay = (prov / "commands.sh").read_text()
     assert "private-value" not in replay and "opaque-credential" not in replay
     assert not any(f"export {name}=" in replay for name in overlay)
-    from runner.nextflow_command import shell_line
     displayed = shell_line("nextflow run x", overlay)
     assert "private-value" not in displayed and "opaque-credential" not in displayed
 
@@ -312,8 +313,6 @@ def test_commands_sh_is_executable(tmp_path):
 def test_replay_logs_itself_into_the_target_bundle(tmp_path):
     # A replay is a run too: it logs to <target>/provenance/logs/run.log exactly like the original,
     # so it needs no `> replay.log 2>&1` of its own — and the log ends with the outcome.
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="echo REPLAYED",
@@ -329,8 +328,6 @@ def test_replay_logs_itself_into_the_target_bundle(tmp_path):
 
 
 def test_replay_failure_keeps_its_exit_status_and_is_logged(tmp_path):
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="sh -c 'echo NOPE; exit 7'",
@@ -345,8 +342,6 @@ def test_replay_failure_keeps_its_exit_status_and_is_logged(tmp_path):
 
 def test_replay_log_is_not_counted_as_a_replayed_output(tmp_path):
     # `nfclaw verify` hashes the replay directory; its log must not show up as an "extra" result.
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="echo",
@@ -368,9 +363,6 @@ def test_manifest_records_the_chain_link_only_when_given(tmp_path):
 
 
 def test_replay_header_records_who_runs_it(tmp_path):
-    import socket
-    import subprocess
-
     out = tmp_path / "out"
     out.mkdir()
     prov = provenance.write(outdir=out, pipeline="mini", command_str="echo",
@@ -379,18 +371,13 @@ def test_replay_header_records_who_runs_it(tmp_path):
     subprocess.run([str(prov / "commands.sh"), str(target)], capture_output=True, check=True)
     log = (target / "provenance" / "logs" / "run.log").read_text()
     assert f"    host: {socket.gethostname()}\n" in log and "    pid: " in log
-    from runner import runlog
     if identity := runlog.host_identity():
         assert f"    host id: {identity}\n" in log
 
 
 def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
-    # Like `nfclaw run`: `kill <replay pid>` must not leave Nextflow running with the log open-ended.
-    import os
-    import signal
-    import subprocess
-    import time
-
+    # Like `nfclaw run`: `kill <replay pid>` must not leave Nextflow running with the
+    # log open-ended.
     pidfile = tmp_path / "child.pid"
     out = tmp_path / "out"
     out.mkdir()
@@ -401,7 +388,6 @@ def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
     target = tmp_path / "fresh"
     for bash in ("/bin/bash", "bash"):                       # macOS ships bash 3.2 as /bin/bash
         if target.exists():
-            import shutil
             shutil.rmtree(target)
         pidfile.unlink(missing_ok=True)
         replay = subprocess.Popen([bash, str(prov / "commands.sh"), str(target)],
@@ -427,12 +413,6 @@ def test_a_stopped_replay_stops_nextflow_and_logs_the_outcome(tmp_path):
 
 @pytest.mark.parametrize("bash", ["/bin/bash", "bash"])
 def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, bash):
-    import os
-    import shlex
-    import signal
-    import subprocess
-    import time
-
     completed = tmp_path / "command_completed"
     pidfile = tmp_path / "verification.pid"
     out = tmp_path / "out"
@@ -440,7 +420,8 @@ def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, b
     # The replay appends `--outdir <target>`; GNU touch would parse it as an option, so the
     # recorded command ignores trailing arguments, like the other replay tests here.
     prov = provenance.write(outdir=out, pipeline="mini",
-                            command_str=shlex.join(["sh", "-c", f"touch {shlex.quote(str(completed))}"]),
+                            command_str=shlex.join(["sh", "-c", "touch "
+                                                                f"{shlex.quote(str(completed))}"]),
                             submodule=_st(tmp_path / "up"), input_paths=[])
     guard = prov / "replay_guard.py"
     text = guard.read_text()

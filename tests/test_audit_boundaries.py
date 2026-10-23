@@ -1,5 +1,7 @@
 """Execution and inventory regressions for the repository audit."""
+import csv
 import json
+import os
 
 import pytest
 
@@ -14,7 +16,8 @@ def test_directory_reference_handoff_requires_historical_inventory(
     _, down = _trees(library("mini_up", "mini"))
     schema_path = down / "nextflow_schema.json"
     data = json.loads(schema_path.read_text())
-    data["definitions"]["reference_genome_options"]["properties"]["fasta"]["format"] = "directory-path"
+    fasta = data["definitions"]["reference_genome_options"]["properties"]["fasta"]
+    fasta["format"] = "directory-path"
     schema_path.write_text(json.dumps(data))
     reference = tmp_path / "index"
     reference.mkdir()
@@ -24,7 +27,7 @@ def test_directory_reference_handoff_requires_historical_inventory(
     if change == "unrecorded":
         (up / "provenance/inputs.sha256").write_text("")
         (up / "provenance/inputs.inventory.json").write_text("{}")
-    if change != "unrecorded":
+    else:
         snapshot, inventory = provenance.snapshot_inputs([reference])
         (up / "provenance/inputs.sha256").write_text("".join(
             f"{digest}  {path}\n" for path, digest in snapshot.items()))
@@ -41,8 +44,6 @@ def test_directory_reference_handoff_requires_historical_inventory(
 
 
 def test_verification_cannot_certify_two_unreadable_result_trees(tmp_path, monkeypatch):
-    import os
-
     original, replay = tmp_path / "original", tmp_path / "replay"
     for root in (original, replay):
         root.mkdir()
@@ -154,7 +155,8 @@ def test_unchanged_reference_directory_has_complete_handoff_lineage(
         (up / "provenance/inputs.inventory.json").write_text(json.dumps(inventory))
     (up / "provenance/params.json").write_text(json.dumps({"gtf": str(reference)}))
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf"}}})
-    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "h")
     record = result.record["params"]["fasta"]
     assert result.params["fasta"] == str(reference)
     assert record["directory_reference"] == str(reference)
@@ -183,7 +185,6 @@ def test_chain_run_options_reject_values_of_the_wrong_shape(options):
 
 def test_repeated_handoff_placeholder_matches_one_consistent_sample(
         library, finished_run, tmp_path):
-    import csv
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {
         "fastq/A/A_1.fastq.gz": "A reads",
@@ -191,7 +192,8 @@ def test_repeated_handoff_placeholder_matches_one_consistent_sample(
     rule = _rule({"params": {"input": {"build": {
         "rows": "fastq/{sample}/{sample}_1.fastq.gz",
         "columns": {"sample": "{sample}", "fastq_1": "fastq/{sample}/{sample}_1.fastq.gz"}}}}})
-    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "h")
     with open(result.params["input"], newline="") as stream:
         rows = list(csv.DictReader(stream))
     assert rows == [{"sample": "A", "fastq_1": str(up / "fastq/A/A_1.fastq.gz")}]

@@ -1,13 +1,12 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { OPEN_PALETTE_EVENT } from "@/components/layout/command-palette";
-import { cn } from "@/lib/utils";
+import { openPalette } from "@/components/layout/command-palette";
 
 /** Opens the site-wide command palette. */
 export function SearchButton({ className, children }: { className?: string; children?: React.ReactNode }) {
   return (
-    <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))} className={cn(className)}>
+    <button type="button" onClick={openPalette} className={className}>
       <Search className="h-4 w-4" />
       {children ?? "Search"}
     </button>

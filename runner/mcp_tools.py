@@ -1,12 +1,12 @@
 """nfclaw's MCP tools, resources and prompt — each one a documented `nfclaw` command.
 
-Nothing here reimplements the runner. A tool turns its arguments into the command line a person would
-type, runs the CLI (`python -m runner …`), and hands back what it printed. Commands that answer at
-once (`show`, `versions`, `status`, `verify`, `chain edges`, `chain status`) run in the foreground;
-`run` and `chain run` — which can take days — run as detached jobs (runner.jobs) that keep going
-after the client disconnects and are followed with `get_job`. The pipeline docs an agent reads
-(`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are served as they are, as resources and through
-`show_pipeline`.
+Nothing here reimplements the runner. A tool turns its arguments into the command line a person
+would type, runs the CLI (`python -m runner …`), and hands back what it printed. Commands that
+answer at once (`show`, `versions`, `status`, `verify`, `chain edges`, `chain status`) run in the
+foreground; `run` and `chain run` — which can take days — run as detached jobs (runner.jobs) that
+keep going after the client disconnects and are followed with `get_job`. The pipeline docs an agent
+reads (`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are served as they are, as resources and
+through `show_pipeline`.
 """
 from __future__ import annotations
 
@@ -22,26 +22,27 @@ from pathlib import Path
 
 from runner import chain, cli, jobs, settings
 from runner.errors import NfclawError
-from runner.mcp_server import RESOURCE_NOT_FOUND, Context, RpcError, tool_result
+from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
 
 INSTRUCTIONS = """\
-nf-claw runs pinned nf-core pipelines through its own CLI (nfclaw), with validation before launch and \
-a provenance bundle after. Workflow:
+nf-claw runs pinned nf-core pipelines through its own CLI (nfclaw), with validation before launch \
+and a provenance bundle after. Workflow:
 1. list_pipelines(query) to find a pipeline.
 2. show_pipeline(pipeline): its skill.md is authoritative for inputs, required parameters and the \
-reference genome. For any other parameter use show_pipeline(pipeline, document="reference", grep=...). \
-Never invent a parameter or value.
-3. run_pipeline(..., check=true) validates everything and prints the exact command without running it.
-4. run_pipeline(...) starts a detached job and returns its job_id. It keeps running after this session \
-ends; nothing needs to stay connected.
-5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then succeeded, \
-failed, cancelled or lost. On failure, read status_report and output_tail, fix the cause, and \
-resubmit with resume=true to continue from Nextflow's cache.
-Chains: chain_edges shows which pipeline can feed which; run_chain(spec) runs stages in order, each \
-started only after the previous one succeeded (spec format: resource nfclaw://docs/chaining). \
-run_status(outdir, chain=true) verifies a chain's lineage. cancel_job stops a job cleanly (Nextflow \
-and its tasks shut down, provenance written). Use absolute paths and one new outdir per run. Before \
-reporting a warning as a fault, check nfclaw://docs/known-issues.
+reference genome. For any other parameter use show_pipeline(pipeline, document="reference", \
+grep=...). Never invent a parameter or value.
+3. run_pipeline(..., check=true) validates everything and prints the exact command without running \
+it.
+4. run_pipeline(...) starts a detached job and returns its job_id. It keeps running after this \
+session ends; nothing needs to stay connected.
+5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then \
+succeeded, failed, cancelled or lost. On failure, read status_report and output_tail, fix the \
+cause, and resubmit with resume=true to continue from Nextflow's cache.
+Chains: chain_edges shows which pipeline can feed which; run_chain(spec) runs stages in order, \
+each started only after the previous one succeeded (spec format: resource nfclaw://docs/chaining). \
+run_status(outdir, chain=true) verifies a chain's lineage. cancel_job stops a job cleanly \
+(Nextflow and its tasks shut down, provenance written). Use absolute paths and one new outdir per \
+run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
 """
 
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -129,7 +130,7 @@ def _tool(name: str, title: str, description: str, properties: dict, required: l
 
 TOOLS = [
     _tool("list_pipelines", "Find a pipeline",
-          "Search the nf-claw library (91 pinned nf-core pipelines) by keyword: assay, data type, "
+          "Search the nf-claw library of pinned nf-core pipelines by keyword: assay, data type, "
           "method or tool (e.g. 'rna-seq', 'variant calling', 'nanopore', 'kraken'). Returns each "
           "match's pinned version, description, expected input and the pipelines it can feed in a "
           "chain. An empty query lists the library.",
@@ -138,10 +139,10 @@ TOOLS = [
           [], read_only=True, idempotent=True),
     _tool("show_pipeline", "Read a pipeline's skill",
           "Return a pipeline's skill.md — how to run it: inputs and samplesheet columns, required "
-          "parameters with allowed values, reference genome handling, outputs and chaining — or its "
-          "reference.md (every parameter with type, allowed values, constraints and default). Both "
-          "are generated from the pinned release and override anything remembered. Use grep to get "
-          "only the matching lines of a long document.",
+          "parameters with allowed values, reference genome handling, outputs and chaining — or "
+          "its reference.md (every parameter with type, allowed values, constraints and default). "
+          "Both are generated from the pinned release and override anything remembered. Use grep "
+          "to get only the matching lines of a long document.",
           {"pipeline": _PIPELINE,
            "document": _s("'skill' (default) or 'reference'.", enum=["skill", "reference"]),
            "grep": _s("Only lines containing any of these words (case-insensitive), with their "
@@ -162,14 +163,16 @@ TOOLS = [
           "Run a pinned nf-core pipeline with `nfclaw run`, as a detached job that survives this "
           "session. nfclaw validates the samplesheet and parameters against the pinned schema and "
           "checks the environment before launching, then records a provenance bundle "
-          "(<outdir>/provenance). Returns a job_id: follow it with get_job. With check=true nothing "
-          "runs: the job validates and prints the exact command. Arguments mirror the CLI flags.",
+          "(<outdir>/provenance). Returns a job_id: follow it with get_job. With check=true "
+          "nothing runs: the job validates and prints the exact command. Arguments mirror "
+          "the CLI flags.",
           {"pipeline": _PIPELINE,
            "outdir": _s("Results directory, absolute path. New or empty, unless resume=true. One "
                         "directory per run."),
-           "input": _a("The pipeline's --input: one samplesheet, directory, URL or accession list as "
-                       "skill.md describes; or several data files / a quoted glob / a directory of "
-                       "FastQ files to generate the samplesheet from (see sheet_set). Absolute paths."),
+           "input": _a("The pipeline's --input: one samplesheet, directory, URL or accession list "
+                       "as skill.md describes; or several data files / a quoted glob / a directory "
+                       "of FastQ files to generate the samplesheet from (see "
+                       "sheet_set). Absolute paths."),
            "sheet_set": _o("Samplesheet columns no file determines, when generating it from data "
                            "files: {column: value}; a value may use {sample} or {lane}."),
            "params": _o("Pipeline parameters by their schema name, e.g. {\"genome\": \"GRCh38\", "
@@ -193,16 +196,18 @@ TOOLS = [
            "allow_spaces": _b("Run even if a path contains spaces (they break many tools)."),
            "no_provenance": _b("Skip the replay bundle and checksum records."),
            "wait_seconds": {**_WAIT, "description": _WAIT["description"]
-                            + f" Default {_DEFAULT_RUN_WAIT}: a refused launch is reported inline."}},
+                            + f" Default {_DEFAULT_RUN_WAIT}: a refused launch "
+                              "is reported inline."}},
           ["pipeline", "outdir"], read_only=False, open_world=True),
     _tool("run_chain", "Run a chain of pipelines",
-          "Run several pipelines in sequence with `nfclaw chain run`, as one detached job: each stage "
-          "starts only after the previous one succeeded, and its input is prepared from that stage's "
-          "outputs, verified by checksum. The spec is the chain file's JSON (format: resource "
-          "nfclaw://docs/chaining), e.g. {\"stages\": [{\"pipeline\": \"fetchngs\", \"input\": "
-          "\"/abs/ids.csv\"}, {\"pipeline\": \"rnaseq\", \"params\": {\"genome\": \"GRCh38\"}}]}. "
-          "Each stage gets <outdir>/NN-<pipeline>/. check=true validates every stage and handoff and "
-          "runs nothing. Follow the job with get_job; verify lineage with run_status(chain=true).",
+          "Run several pipelines in sequence with `nfclaw chain run`, as one detached job: each "
+          "stage starts only after the previous one succeeded, and its input is prepared from that "
+          "stage's outputs, verified by checksum. The spec is the chain file's JSON (format: "
+          "resource nfclaw://docs/chaining), e.g. {\"stages\": [{\"pipeline\": \"fetchngs\", "
+          "\"input\": \"/abs/ids.csv\"}, {\"pipeline\": \"rnaseq\", \"params\": {\"genome\": "
+          "\"GRCh38\"}}]}. Each stage gets <outdir>/NN-<pipeline>/. check=true validates every "
+          "stage and handoff and runs nothing. Follow the job with get_job; verify lineage "
+          "with run_status(chain=true).",
           {"spec": _o("The chain spec. Omit only with resume=true (the recorded spec is reused)."),
            "outdir": _s("The chain's directory, absolute path."),
            "check": _b("Validate every stage and handoff; launch nothing."),
@@ -215,11 +220,12 @@ TOOLS = [
           ["outdir"], read_only=False, open_world=True),
     _tool("get_job", "Follow a job",
           "State of a job started by run_pipeline or run_chain: running (phase 'preparing' = "
-          "validating or staging, 'launched' = Nextflow is running), succeeded, failed, cancelled, or "
-          "lost (its supervisor was killed). Includes nfclaw's status report and the job's latest "
-          "output. With wait_seconds it returns as soon as the job ends.",
+          "validating or staging, 'launched' = Nextflow is running), succeeded, failed, cancelled, "
+          "or lost (its supervisor was killed). Includes nfclaw's status report and the job's "
+          "latest output. With wait_seconds it returns as soon as the job ends.",
           {"job_id": _JOB_ID, "wait_seconds": _WAIT,
-           "log_lines": _i("How many of the job's last output lines to include (0-500, default 20).",
+           "log_lines": _i("How many of the job's last output lines to include "
+                           "(0-500, default 20).",
                            minimum=0, maximum=500)},
           ["job_id"], read_only=True, idempotent=True),
     _tool("list_jobs", "List jobs",
@@ -230,9 +236,9 @@ TOOLS = [
            "limit": _i("Maximum results (1-200, default 20).", minimum=1, maximum=200)},
           [], read_only=True, idempotent=True),
     _tool("cancel_job", "Stop a job",
-          "Stop a running job the way `kill <nfclaw pid>` does: nfclaw shuts Nextflow and its tasks "
-          "down, records the outcome in the run log and writes the provenance bundle, so the run can "
-          "be resumed later with resume=true. A chain stops at its current stage.",
+          "Stop a running job the way `kill <nfclaw pid>` does: nfclaw shuts Nextflow and its "
+          "tasks down, records the outcome in the run log and writes the provenance bundle, so the "
+          "run can be resumed later with resume=true. A chain stops at its current stage.",
           {"job_id": _JOB_ID,
            "wait_seconds": {**_WAIT, "description": "Seconds to wait for the job to finish "
                             "stopping (default 15)."}},
@@ -240,8 +246,8 @@ TOOLS = [
     _tool("run_status", "Status of any run directory",
           "nfclaw's report on a run or chain directory, including ones not started through MCP: "
           "`nfclaw status` (success, running, how it ended, the error and where the logs are), or "
-          "with chain=true `nfclaw chain status`, which lists the stages and verifies every handoff "
-          "by SHA-256 (quick=true skips the hashing).",
+          "with chain=true `nfclaw chain status`, which lists the stages and verifies every "
+          "handoff by SHA-256 (quick=true skips the hashing).",
           {"outdir": _s("The run's or chain's --outdir."),
            "chain": _b("Report a chain's stages and verify its lineage."),
            "quick": _b("With chain=true: report states without hashing data.")},
@@ -410,19 +416,20 @@ class NfclawTools:
 
     def get_prompt(self, name: str, arguments: dict, ctx: Context) -> dict:
         if name != "use_pipeline":
-            raise RpcError(-32602, f"unknown prompt: {name}")
+            raise RpcError(INVALID_PARAMS, f"unknown prompt: {name}")
         pipeline = str(arguments.get("pipeline") or "")
         if pipeline not in self._pipelines():
-            raise RpcError(-32602, f"unknown pipeline: {pipeline!r} (see list_pipelines)")
+            raise RpcError(INVALID_PARAMS, f"unknown pipeline: {pipeline!r} (see list_pipelines)")
         goal = str(arguments.get("goal") or "").strip()
         skill = (self.pipelines_dir / pipeline / "skill.md").read_text(encoding="utf-8")
         text = (f"Run nf-core/{pipeline} with the nf-claw tools"
                 + (f" for this goal: {goal}" if goal else "") + ".\n\n"
-                "Steps: prepare inputs exactly as the skill below describes (absolute paths); look up "
-                "any parameter beyond the required ones with show_pipeline(document=\"reference\", "
-                "grep=...); validate with run_pipeline(check=true); then run_pipeline and follow "
-                "the job with get_job(wait_seconds=...). On failure, read the report, fix, and "
-                "resubmit with resume=true.\n\n"
+                "Steps: prepare inputs exactly as the skill below describes (absolute paths); look "
+                "up any parameter beyond the required ones with "
+                "show_pipeline(document=\"reference\", grep=...); validate with "
+                "run_pipeline(check=true); then run_pipeline and follow the job with "
+                "get_job(wait_seconds=...). On failure, read the report, fix, and resubmit with "
+                "resume=true.\n\n"
                 f"--- pipelines/{pipeline}/skill.md ---\n{skill}")
         return {"description": f"Run nf-core/{pipeline} with nf-claw",
                 "messages": [{"role": "user", "content": {"type": "text", "text": text}}]}
@@ -723,7 +730,8 @@ class NfclawTools:
         job = jobs.load(args["job_id"])
         if not jobs.cancel(job):
             view = self.job_view(job, log_lines=5)
-            return tool_result(f"job {job.id} is not running ({view['state']}); nothing to stop.\n\n"
+            return tool_result(f"job {job.id} is not running ({view['state']}); "
+                               "nothing to stop.\n\n"
                                + _render_job(view), view)
         wait = args.get("wait_seconds")
         job = self._wait(job.id, 15 if wait is None else wait, ctx)
@@ -806,8 +814,8 @@ def _next_step(view: dict) -> str:
     if state == "lost":
         return ("The job's supervisor was killed (or the host restarted). status_report says "
                 "whether nfclaw itself is still running; otherwise resubmit with resume=true.")
-    return ("Read status_report / output_tail for the cause (docs: nfclaw://docs/known-issues), fix "
-            "it, then resubmit" + (" with resume=true." if view.get("status_report") and
+    return ("Read status_report / output_tail for the cause (docs: nfclaw://docs/known-issues), "
+            "fix it, then resubmit" + (" with resume=true." if view.get("status_report") and
                                    not view["check"] else "."))
 
 

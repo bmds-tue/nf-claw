@@ -3,8 +3,8 @@ import pytest
 
 import sheetgen_schemas as S
 from runner import sheetgen
-from test_sheetgen import fq, gen, rows
 from runner.errors import NfclawError
+from test_sheetgen import fq, gen, rows
 
 
 @pytest.mark.parametrize("accession", ["SRR390728", "ERR390728", "DRR390728"])
@@ -35,7 +35,7 @@ def test_explicitly_named_sra_mates_with_different_spots_raise_a_note(tmp_path):
 def test_bare_numbers_cannot_override_explicit_illumina_mate_orientation(tmp_path, roles):
     paths = [fq(tmp_path / f"data/technical_{index}.fastq.gz",
                 f"M1:1:FC:1:1101:100:200 {role}:N:0:ACGT")
-             for index, role in zip((1, 2), roles)]
+             for index, role in zip((1, 2), roles, strict=True)]
     with pytest.raises(NfclawError, match="mate|orientation"):
         gen(tmp_path, S.ATACSEQ, paths, {"replicate": "1"})
 

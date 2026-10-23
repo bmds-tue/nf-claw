@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Iterator
-from runner.errors import ErrorCode, NfclawError
+from typing import Any
 
 from runner import exact_json as json
+from runner import submodule as submod
+from runner.errors import ErrorCode, NfclawError
 
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
@@ -26,10 +28,11 @@ class Param:
     fmt: str | None          # "file-path" | "directory-path" | None
     required: bool
     group: str
-    # The group's human title from the schema (e.g. "Mandatory arguments" for the `mandatory_arguments`
-    # group). The authors' own labelling of what a group means — surfaced in the generated docs.
+    # The group's human title from the schema (e.g. "Mandatory arguments" for the
+    # `mandatory_arguments` group). The authors' own labelling of what a group means — surfaced in
+    # the generated docs.
     group_title: str = ""
-    hidden: bool = False      # nf-core marks generic/boilerplate params (email, validation*, …) hidden
+    hidden: bool = False  # nf-core marks generic/boilerplate params (email, validation*, …) hidden
     # Value-shape constraints nf-schema enforces at runtime (enum has its own field above).
     pattern: str | None = None
     minimum: int | float | Decimal | None = None
@@ -134,10 +137,10 @@ class Column:
 
     @property
     def is_path(self) -> bool:
-        """Any filesystem path (a file, a directory, or nf-schema's `path` for either) — these values
-        must be absolute and get an existence check. A glob (`file-path-pattern`) cannot be checked
-        for literal existence; glob matching is left to nf-schema, but the runner still requires
-        an absolute local pattern."""
+        """Any filesystem path (a file, a directory, or nf-schema's `path` for either) — these
+        values must be absolute and get an existence check. A glob (`file-path-pattern`) cannot be
+        checked for literal existence; glob matching is left to nf-schema, but the runner still
+        requires an absolute local pattern."""
         return self.path_format() in ("file-path", "directory-path", "path")
 
     @property
@@ -173,9 +176,9 @@ class InputSchema:
     # the runner can fail malformed tabular inputs before launching Nextflow.
     dependent_required: tuple[tuple[str, tuple[str, ...]], ...] = ()
     any_of_dependent_required: tuple[tuple[tuple[str, tuple[str, ...]], ...], ...] = ()
-    # `items.anyOf` branches that require columns (mag: short_reads_1 or long_reads), and nf-schema's
-    # `uniqueEntries` column combinations (top level or inside a top-level `allOf`). Read by
-    # samplesheet generation, which must not write a sheet nf-schema would then reject.
+    # `items.anyOf` branches that require columns (mag: short_reads_1 or long_reads), and
+    # nf-schema's `uniqueEntries` column combinations (top level or inside a top-level `allOf`).
+    # Read by samplesheet generation, which must not write a sheet nf-schema would then reject.
     any_of_required: tuple[tuple[str, ...], ...] = ()
     unique_entries: tuple[tuple[str, ...], ...] = ()
     header_prefix: tuple[str, ...] = ()
@@ -198,7 +201,7 @@ def json_scalar(value: Any) -> str:
 def _type_of(obj: dict) -> str:
     """Render a JSON-schema type, unioning list/anyOf/oneOf variants (e.g. 'integer or string')."""
     t = obj.get("type")
-    if isinstance(t, list):                       # JSON Schema allows a type array, e.g. ["boolean","string"]
+    if isinstance(t, list):  # JSON Schema allows a type array, e.g. ["boolean","string"]
         types = [str(x) for x in t if x]
         if types:
             return " or ".join(dict.fromkeys(types))
@@ -244,8 +247,7 @@ def read_param_schema(repo: Path) -> dict:
     registry = json.loads(_PARAM_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest())
     if audited:
-        from runner.submodule import _own_head
-        if _own_head(repo) in audited["releases"].values():
+        if submod._own_head(repo) in audited["releases"].values():
             for _, group in iter_param_groups(data):
                 for name, obj in (group.get("properties") or {}).items():
                     if name in audited["values"] and isinstance(obj, dict):
@@ -356,14 +358,16 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
                 min_length=cobj.get("minLength"),
                 max_length=cobj.get("maxLength"),
                 deprecated=bool(cobj.get("deprecated", False)),
-                meta=tuple(key for key in meta if isinstance(key, str)) if isinstance(meta, list) else (),
+                meta=tuple(key for key in meta if isinstance(key, str))
+                if isinstance(meta, list) else (),
                 default=cobj.get("default"),
                 alternatives=_branch_patterns(cobj),
                 path_branches=_path_branches(cobj),
                 audited_path_format=audited_roles.get(cname, {}).get("format"),
                 path_sentinels=tuple(audited_roles.get(cname, {}).get("sentinels", [])),
                 path_separator=audited_roles.get(cname, {}).get("separator"),
-                path_selector=tuple(audited_roles[cname]["selector"]) if audited_roles.get(cname, {}).get("selector") else None,
+                path_selector=tuple(audited_roles[cname]["selector"])
+                if audited_roles.get(cname, {}).get("selector") else None,
                 path_count=audited_roles.get(cname, {}).get("count"),
                 audited_identifier=cname in audited.get("identifiers", []),
                 info_identifier_keys=tuple(audited.get("info_identifiers", {}).get(cname, [])),
@@ -401,18 +405,19 @@ def _audited_input_contract(content: bytes, repo: Path) -> dict:
     """
     registry = json.loads(_INPUT_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest(), {})
-    if ("replacement" in audited or audited.get("destination_columns") or audited.get("metadata_columns")
+    if ("replacement" in audited or audited.get("destination_columns")
+        or audited.get("metadata_columns")
             or audited.get("double_quoted_columns")
             or any(role.get("separator") for role in audited.get("columns", {}).values())):
-        from runner.submodule import _own_head
-        if _own_head(repo) != audited["commit"]:
+        if submod._own_head(repo) != audited["commit"]:
             return {}
         for name, digest in audited["source_sha256"].items():
             path = repo / name
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                 raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
                                  f"audited samplesheet consumer source changed: {path}",
-                                 fix="Restore the pinned consumer source before using its corrected input contract.")
+                                 fix="Restore the pinned consumer source before using its "
+                                     "corrected input contract.")
     return audited
 
 
@@ -454,7 +459,8 @@ _ASSIGNMENT = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
 
 def _strip_comment(text: str) -> str:
-    """`text` without a trailing `//` comment — one outside quotes (a URL's `//` is not a comment)."""
+    """`text` without a trailing `//` comment — one outside quotes (a URL's `//` is not
+    a comment)."""
     quote = None
     for i, ch in enumerate(text):
         if quote:
@@ -468,9 +474,9 @@ def _strip_comment(text: str) -> str:
 
 
 def config_param_defaults(repo: Path) -> dict[str, str]:
-    """The defaults the pipeline's own `nextflow.config` assigns in its top-level `params { }` block,
-    as {name: value as written}. nf-schema validates the value a parameter ends up with, so a required
-    parameter this config sets is supplied even though the schema gives it no default
+    """The defaults the pipeline's own `nextflow.config` assigns in its top-level `params { }`
+    block, as {name: value as written}. nf-schema validates the value a parameter ends up with, so a
+    required parameter this config sets is supplied even though the schema gives it no default
     (differentialabundance's `filtering_min_abundance = 1`). Only direct assignments at the block's
     first level are read — the block nf-core's template declares every default in."""
     try:

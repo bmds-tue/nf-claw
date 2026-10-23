@@ -117,8 +117,8 @@ def names_relative_file(col, value: str) -> bool:
 def _pattern_file_issues(row_num: int, col, value: str) -> list[str]:
     if names_relative_file(col, value):
         return [f"row {row_num}: '{col.name}' is a relative path: {value} — use an absolute path "
-                "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw sets "
-                "to --outdir)"]
+                "(Nextflow resolves samplesheet paths against its launch directory, which nfclaw "
+                "sets to --outdir)"]
     from runner import sheetgen
     if ((is_remote_url(value) or Path(value).is_absolute())
             and sheetgen._matches(col, Path(value))):
@@ -151,8 +151,9 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
     try:
         if not named:
             # Headerless, one value per line (e.g. nf-core/fetchngs accession list). csv.DictReader
-            # would mistake the first value for a header; just require >=1 non-empty value. Per-value
-            # pattern checks are delegated to nf-schema, exactly as for named-column samplesheets.
+            # would mistake the first value for a header; just require >=1 non-empty value.
+            # Per-value pattern checks are delegated to nf-schema, exactly as for
+            # named-column samplesheets.
             values = [ln.strip() for ln in path.read_text(encoding="utf-8-sig").splitlines()
                       if ln.strip()]
             return [] if values else ["input file has no values"]
@@ -166,7 +167,8 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             for i, row in enumerate(data, start=1):
                 for col in named:
                     value = row.get(col.name)
-                    if col.is_identifier and value is not None and not isinstance(value, (str, *json.NUMBER_TYPES, bool)):
+                    if col.is_identifier and value is not None and not isinstance(
+                            value, (str, *json.NUMBER_TYPES, bool)):
                         issues.append(f"row {i}: '{col.name}' identifier must be a literal scalar; "
                                       "quote YAML identifiers to preserve their text")
                     else:
@@ -183,8 +185,10 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter, strict=True)
             fields = reader.fieldnames or []
-            if input_schema.header_prefix and tuple(fields[:len(input_schema.header_prefix)]) != input_schema.header_prefix:
-                issues.append("samplesheet header must begin with " + ",".join(input_schema.header_prefix)
+            if input_schema.header_prefix and (tuple(fields[:len(input_schema.header_prefix)])
+                                               != input_schema.header_prefix):
+                issues.append("samplesheet header must begin with "
+                              + ",".join(input_schema.header_prefix)
                               + " in this order, as required by the pinned consumer")
             duplicates = sorted(name for name, count in Counter(fields).items() if count > 1)
             if duplicates:
@@ -272,7 +276,8 @@ def _info_identifier_issues(row_num: int, col, value: str) -> list[str]:
                               "dots, underscores or hyphens")
             if separator and key.upper() in single_quoted and "'" in identity:
                 issues.append(f"row {row_num}: '{col.name}.{key}' contains a single quote; "
-                              "the pinned consumer cannot pass this value in its single-quoted argument")
+                              "the pinned consumer cannot pass this value in "
+                              "its single-quoted argument")
     return issues
 
 
@@ -306,12 +311,14 @@ def _path_issues(row_num: int, col, value: str) -> list[str]:
 
 
 def delimiter_for(path: Path) -> str:
-    """nf-schema picks the parser from the file extension: TAB for `.tsv`, comma for anything else."""
+    """nf-schema picks the parser from the file extension: TAB for `.tsv`, comma for
+    anything else."""
     return "\t" if path.suffix.lower() == ".tsv" else ","
 
 
 def header_issues(columns: Iterable[str], input_schema: InputSchema) -> list[str]:
-    """Why a samplesheet with exactly these `columns`, every one filled, could not satisfy the schema.
+    """Why a samplesheet with exactly these `columns`, every one filled, could not satisfy
+    the schema.
 
     The column-level half of `validate`, for judging a sheet before any row of it exists — a chain's
     handoff, checked before the pipeline that writes the sheet has run. Rows are assumed filled, so

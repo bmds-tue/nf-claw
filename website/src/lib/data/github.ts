@@ -1,8 +1,7 @@
-// Optional live-data adapter. The site is local-first: it is fully driven by
-// repository files and local git. When a GitHub remote AND a token are present
-// (GITHUB_TOKEN / GH_TOKEN), this augments the build with live Actions runs and
-// releases via the REST API. With no remote (the current setup), it no-ops and
-// the UI uses the local equivalents (git tags, workflow definitions, git log).
+// Optional live-data adapter. The site is local-first: it is fully driven by repository files
+// and local git. When the checkout has a GitHub remote AND a token is present (GITHUB_TOKEN /
+// GH_TOKEN), the build adds the repository's latest Actions runs from the REST API. Without a
+// token it no-ops, and the UI shows the local equivalents (workflow definitions, git log).
 
 import { getRemote } from "./repo";
 
@@ -15,14 +14,7 @@ export interface LiveRun {
   date: string;
 }
 
-export interface LiveRelease {
-  name: string;
-  tag: string;
-  date: string;
-  url: string;
-}
-
-export function liveEnabled(): boolean {
+function liveEnabled(): boolean {
   return Boolean(getRemote() && (process.env.GITHUB_TOKEN || process.env.GH_TOKEN));
 }
 
@@ -35,7 +27,8 @@ async function gh<T>(repo: string, endpoint: string): Promise<T | null> {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
       },
-      // Revalidate hourly so the static build stays live without rebuilds.
+      // A static export fetches only while it builds; repeated local builds reuse the
+      // response for up to an hour instead of calling the API again.
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
@@ -60,18 +53,5 @@ export async function getLiveRuns(limit = 6): Promise<LiveRun[] | null> {
     branch: String(r.head_branch ?? ""),
     url: String(r.html_url ?? ""),
     date: String(r.created_at ?? ""),
-  }));
-}
-
-export async function getLiveReleases(limit = 10): Promise<LiveRelease[] | null> {
-  const repo = getRemote();
-  if (!repo || !liveEnabled()) return null;
-  const data = await gh<Record<string, unknown>[]>(repo, `releases?per_page=${limit}`);
-  if (!Array.isArray(data)) return null;
-  return data.map((r) => ({
-    name: String(r.name ?? r.tag_name ?? ""),
-    tag: String(r.tag_name ?? ""),
-    date: String(r.published_at ?? r.created_at ?? ""),
-    url: String(r.html_url ?? ""),
   }));
 }

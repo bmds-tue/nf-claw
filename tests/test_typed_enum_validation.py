@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -6,7 +7,8 @@ from runner import parameters, schema
 
 
 def load(tmp_path, property_schema):
-    (tmp_path / 'nextflow_schema.json').write_text(json.dumps({'properties': {'choice': property_schema}}))
+    (tmp_path / 'nextflow_schema.json').write_text(
+        json.dumps({'properties': {'choice': property_schema}}))
     return schema.load_param_schema(tmp_path)
 
 
@@ -34,7 +36,8 @@ def test_typed_enum_and_independent_constraints(tmp_path, definition, accepted, 
 
 def test_cli_coercion_precedes_typed_enum_validation(tmp_path):
     parsed = load(tmp_path, {'type': 'boolean', 'enum': [True]})
-    assert parameters.validate_params(parameters.coerce_to_schema({'choice': 'true'}, parsed), parsed) == []
+    coerced = parameters.coerce_to_schema({'choice': 'true'}, parsed)
+    assert parameters.validate_params(coerced, parsed) == []
 
 
 def test_number_cli_integer_token_retains_all_digits(tmp_path):
@@ -52,8 +55,6 @@ def test_enum_comparison_handles_shared_nested_values_without_expansion(tmp_path
 
 
 def test_number_cli_integer_digit_limit_reports_validation_error(tmp_path):
-    import sys
-
     limit = sys.get_int_max_str_digits()
     if not limit:
         pytest.skip('Python integer digit limit is disabled')

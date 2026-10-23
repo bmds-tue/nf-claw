@@ -8,9 +8,9 @@ import pytest
 from runner import chain, consumption, handoff, provenance
 from runner.errors import NfclawError
 from runner.inputs import absolute_local_path
+from test_chain import RULE, _spec, fake_runs  # noqa: F401
 from test_handoff import _rule, _trees
 from test_output_namespace import record
-from test_chain import RULE, _spec, fake_runs  # noqa: F401
 
 
 def _database_schema(tree):
@@ -35,7 +35,8 @@ def _linked_state(up, down, evidence, destination, sources):
                              {"handoff_sha256": provenance._sha256(path)}}
         manifest_path.write_text(json.dumps(manifest))
         stages.append({"id": sid, "pipeline": "fixture", "index": index, "outdir": str(out),
-                       "status": "success", "version": manifest["version"], "commit": manifest["commit"],
+                       "status": "success", "version": manifest["version"],
+                       "commit": manifest["commit"],
                        "handoff": None if index == 1 else str(path)})
     return {"chain_id": "audit", "outcome": "success", "stages": stages}
 
@@ -52,13 +53,15 @@ def test_database_samplesheet_refuses_directory_bytes_changed_after_publication(
     rule = _rule({"params": {"input": {"samplesheet": "database.csv",
                                          "provides": ["sample", "db_path"]}}})
     with pytest.raises(NfclawError, match="changed|historical"):
-        handoff.materialize(rule, upstream_outdir=up, downstream_tree=tree, dest=tmp_path / "handoff")
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=tree,
+                            dest=tmp_path / "handoff")
 
 
 @pytest.mark.parametrize("kind", ["file", "sheet", "directory", "glob", "published_reference"])
 @pytest.mark.parametrize("damage", ["bytes", "missing"])
 @pytest.mark.parametrize("legacy", [False, True])
-def test_lineage_matches_downstream_prelaunch_data_to_producer(library, tmp_path, kind, damage, legacy):
+def test_lineage_matches_downstream_prelaunch_data_to_producer(library, tmp_path, kind,
+                                                               damage, legacy):
     _, tree = _trees(library("mini_up", "mini"))
     up, down = tmp_path / "up", tmp_path / "down"
     (up / "db/empty").mkdir(parents=True)
@@ -80,12 +83,14 @@ def test_lineage_matches_downstream_prelaunch_data_to_producer(library, tmp_path
         rule = _rule({"params": {"input": {"samplesheet": "database.csv",
                                              "provides": ["sample", "db_path"]}}})
     record(up, params={"gtf": str(data)} if kind == "published_reference" else None)
-    evidence = handoff.materialize(rule, upstream_outdir=up, downstream_tree=tree, dest=tmp_path / "snapshot")
+    evidence = handoff.materialize(rule, upstream_outdir=up, downstream_tree=tree,
+                                   dest=tmp_path / "snapshot")
     if legacy:
         for item in evidence.record["params"].values():
             for key in ("consumed_sources", "consumed_dependencies", "consumed_inventory"):
                 item.pop(key, None)
-    sources = [data] if kind in ("file", "published_reference") else [tmp_path / "snapshot/input.csv", sheet_value]
+    sources = [data] if kind in ("file", "published_reference") else [
+        tmp_path / "snapshot/input.csv", sheet_value]
     state = _linked_state(up, down, evidence, tmp_path / "link", sources)
     assert chain._integrity_problems(state) == []
     checksums = down / "provenance/inputs.sha256"
@@ -117,9 +122,11 @@ def test_lineage_refuses_extra_glob_members_consumed_then_removed(library, tmp_p
         upstream_outdir=up, downstream_tree=tree, dest=tmp_path / "snapshot")
     extra = up / "db/extra.bin"
     extra.write_bytes(b"extra data consumed downstream")
-    state = _linked_state(up, down, evidence, tmp_path / "link", [tmp_path / "snapshot/input.csv", pattern])
+    state = _linked_state(up, down, evidence, tmp_path / "link",
+                          [tmp_path / "snapshot/input.csv", pattern])
     extra.unlink()
-    assert chain._integrity_problems(state), "glob membership must use recorded consumption, not live matches"
+    assert chain._integrity_problems(state), ("glob membership must use recorded consumption, "
+                                              "not live matches")
 
 
 @pytest.mark.parametrize("pattern", ["*.fa", "**/*.fa"])
@@ -150,7 +157,8 @@ def test_scalar_handoff_preserves_parent_resolution_and_final_basename(library, 
     record(up)
     evidence = handoff.materialize(_rule({"params": {"fasta": {"file": "alias/index.bin"}}}),
         upstream_outdir=up, downstream_tree=tree, dest=tmp_path / "snapshot")
-    state = _linked_state(up, down, evidence, tmp_path / "link", [absolute_local_path(up / "alias/index.bin")])
+    state = _linked_state(up, down, evidence, tmp_path / "link",
+                          [absolute_local_path(up / "alias/index.bin")])
     assert chain._integrity_problems(state) == []
 
 
@@ -179,7 +187,8 @@ def test_chain_cannot_report_success_after_consuming_changed_then_restored_data(
 
 @pytest.mark.parametrize("kind", ["direct", "build"])
 @pytest.mark.parametrize("changed", [False, True])
-def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library, tmp_path, kind, changed):
+def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library, tmp_path,
+                                                                         kind, changed):
     _, tree = _trees(library("mini_up", "mini"))
     (tree / "assets/schema_input.json").write_text(json.dumps({"items": {
         "properties": {"sample": {"type": "string"},
@@ -196,7 +205,8 @@ def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library
     record(up)
     spec = ({"samplesheet": "samples.csv", "provides": ["sample", "fastq_1", "reference"]}
             if kind == "direct" else {"build": {"rows": "{sample}.fastq.gz", "columns": {
-                "sample": "{sample}", "fastq_1": "{sample}.fastq.gz", "reference": "reference.fa"}}})
+                "sample": "{sample}", "fastq_1": "{sample}.fastq.gz",
+                "reference": "reference.fa"}}})
     evidence = handoff.materialize(_rule({"params": {"input": spec}}), upstream_outdir=up,
                                   downstream_tree=tree, dest=tmp_path / "snapshot")
     if changed:
@@ -209,4 +219,5 @@ def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library
         assert problems, "a declared reference must not mask different pattern-only read bytes"
     else:
         assert problems == []
-        assert evidence.record["params"]["input"]["consumed_sources"] == sorted(map(str, (reads, reference)))
+        assert evidence.record["params"]["input"]["consumed_sources"] == sorted(
+            map(str, (reads, reference)))

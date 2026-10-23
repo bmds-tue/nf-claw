@@ -1,5 +1,8 @@
 """Run-time advisories for pinned tools whose results vary between executions of identical input."""
-from runner import reproducibility
+import shutil
+from pathlib import Path
+
+from runner import orchestration, reproducibility
 
 
 def _tree(tmp_path, files):
@@ -37,9 +40,6 @@ def test_pipelines_without_these_steps_get_no_advisory(tmp_path):
 
 
 def test_the_runner_announces_variability_before_launch(tmp_path, monkeypatch):
-    import shutil
-    from pathlib import Path
-    from runner import orchestration
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
@@ -64,7 +64,8 @@ SOURMASH = {
     "subworkflows/local/preprocessing/main.nf":
         "ch_prepped_dna_fastas = ch_x\n    .map { _meta, fasta -> [[id: params.dbname], fasta] }\n"
         "    .groupTuple()\n",
-    "conf/test.config": "params {\n    build_sourmash_dna = true\n    build_sourmash_protein = true\n}\n",
+    "conf/test.config": "params {\n    build_sourmash_dna = true\n"
+                        "    build_sourmash_protein = true\n}\n",
 }
 
 

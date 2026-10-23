@@ -77,6 +77,7 @@ export interface Commit {
   author: string;
   date: string;
   subject: string;
+  summary: string; // the subject without its conventional-commit prefix
   type: string | null; // conventional-commit type
   scope: string | null;
 }
@@ -98,7 +99,7 @@ export interface DocPage {
 
 export interface TimelineEntry {
   id: string;
-  kind: "release" | "tag" | "milestone";
+  kind: "release" | "tag";
   title: string;
   subtitle: string;
   date: string | null;
@@ -111,16 +112,12 @@ export interface RepoStats {
   skills: number;
   parameters: number;
   modules: number;
-  commits: number;
   latestUpdate: string | null;
 }
 
 export interface RepoMeta {
-  name: string;
   tagline: string;
   description: string;
   stats: RepoStats;
   remote: string | null; // GitHub "owner/repo" if a remote is configured
-  defaultBranch: string;
-  live: boolean; // whether live GitHub data augmented the build
 }

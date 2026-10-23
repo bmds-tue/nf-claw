@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from runner import outputs, verify
+from runner import cli, outputs, verify
 from runner.errors import NfclawError
 
 
@@ -108,7 +108,6 @@ def test_dated_path_changes_cannot_claim_identical_output_inventory(tmp_path, pr
 
 @pytest.mark.parametrize("strict", [False, True])
 def test_cli_refuses_dated_inventory_changes_even_with_identical_bytes(tmp_path, capsys, strict):
-    from runner import cli
     original = _run(tmp_path, "original", {
         "pipeline_info/sample_2026-10-08_10-00-00.json": b"unchanged"})
     replay = _run(tmp_path, "replay", {
@@ -121,7 +120,6 @@ def test_cli_refuses_dated_inventory_changes_even_with_identical_bytes(tmp_path,
 
 @pytest.mark.parametrize("strict", [False, True])
 def test_cli_pairs_launch_stamped_run_metadata_explicitly(tmp_path, capsys, strict):
-    from runner import cli
     original = _run(tmp_path, "original", {
         "pipeline_info/params_2026-10-08_10-00-00.json": b"unchanged"})
     replay = _run(tmp_path, "replay", {
@@ -135,7 +133,6 @@ def test_cli_pairs_launch_stamped_run_metadata_explicitly(tmp_path, capsys, stri
 
 
 def _environment(outdir, digest, plugins=("nf-schema@2.5.1",)):
-    import json
     record = {"processes": {"P:A": {"containers": ["quay.io/a:1"]}},
               "images": {"quay.io/a:1": {"kind": "registry", "repository": "quay.io/a",
                                          "digest": "sha256:" + digest * 64}},
@@ -145,7 +142,6 @@ def _environment(outdir, digest, plugins=("nf-schema@2.5.1",)):
 
 @pytest.mark.parametrize("strict", [False, True])
 def test_cli_reports_whether_both_runs_executed_in_the_same_environment(tmp_path, capsys, strict):
-    from runner import cli
     original = _run(tmp_path, "original", {"result.txt": b"same"})
     replay = _run(tmp_path, "replay", {"result.txt": b"same"})
     _environment(original, "a")

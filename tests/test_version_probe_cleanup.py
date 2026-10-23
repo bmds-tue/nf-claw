@@ -6,11 +6,12 @@ import time
 
 import pytest
 
-from runner import engine_version, provenance
+from runner import chain, engine_version, provenance
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])
-def test_failed_version_probe_cannot_supply_version_evidence_or_diagnostic_secrets(monkeypatch, probe):
+def test_failed_version_probe_cannot_supply_version_evidence_or_diagnostic_secrets(
+        monkeypatch, probe):
     module = provenance if probe is provenance._nextflow_version else engine_version
     monkeypatch.setattr(module, "capture", lambda *a, **k: subprocess.CompletedProcess(
                             ["nextflow", "-version"], 1, "nextflow version 25.10.4 build 11033\n",
@@ -39,7 +40,8 @@ def test_missing_or_conflicting_version_lines_are_unknown(monkeypatch, output):
 def _alive(pid):
     result = subprocess.run(["ps", "-p", str(pid), "-o", "stat="],
                             capture_output=True, text=True, timeout=2)
-    return result.returncode == 0 and bool(result.stdout.strip()) and not result.stdout.strip().startswith("Z")
+    state = result.stdout.strip()
+    return result.returncode == 0 and bool(state) and not state.startswith("Z")
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])
@@ -91,7 +93,6 @@ def test_stopped_version_probe_cleans_up_download_children(tmp_path, monkeypatch
 
 def test_timed_out_chain_config_probe_stops_children_before_scratch_cleanup(
         tmp_path, monkeypatch, library):
-    from runner import chain
     root = library("mini_up")
     spec = chain.parse_spec({"stages": [{"pipeline": "mini_up"}]})
     planned = chain.plan(spec, repo_root=root)

@@ -107,7 +107,7 @@ export function LiveStatus({
                             </span>
                           )}
                           <span className="truncate text-sm text-fog transition group-hover:text-white">
-                            {stripPrefix(c.subject)}
+                            {c.summary}
                           </span>
                         </div>
                         <div className="mt-0.5 flex items-center gap-2 text-xs text-fog-dim">
@@ -271,8 +271,4 @@ function RunDot({ conclusion, status }: { conclusion: string | null; status: str
       <span className="sr-only">{label}</span>
     </span>
   );
-}
-
-function stripPrefix(subject: string) {
-  return subject.replace(/^(\w+)(\([^)]+\))?!?:\s*/, "");
 }

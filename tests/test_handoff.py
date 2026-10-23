@@ -1,11 +1,12 @@
 """Handoff rules: their shape, their fit with two pipelines' schemas, and producing a handoff from a
-finished upstream run. `mini_up` and `mini` are synthetic fixture pipelines; `mini` takes a samplesheet
-(sample, fastq_1, fastq_2 — the FastQ columns are file paths)."""
+finished upstream run. `mini_up` and `mini` are synthetic fixture pipelines; `mini` takes a
+samplesheet (sample, fastq_1, fastq_2 — the FastQ columns are file paths)."""
 import csv
+import json
 
 import pytest
 
-from runner import handoff
+from runner import handoff, provenance
 from runner.errors import ErrorCode, NfclawError
 
 DIRECT = {"description": "mini_up writes a mini sheet",
@@ -88,7 +89,7 @@ def test_check_rule_reports_every_incompatibility(library):
     issues = "\n".join(handoff.check_rule(_rule(body), up, down))
     assert "must be one of: mini, other" in issues                 # enum from the upstream schema
     assert "unknown parameter '--unknown-flag'" in issues
-    assert "missing required column 'fastq_1'" in issues           # from the downstream sheet schema
+    assert "missing required column 'fastq_1'" in issues  # from the downstream sheet schema
     assert "has no parameter '--not-a-param'" in issues
     assert "mini_up has no parameter '--missing'" in issues
     assert "'--aligner' of mini is not a samplesheet" in issues
@@ -179,7 +180,6 @@ def test_rename_set_and_relative_paths(library, finished_run, tmp_path):
 def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, finished_run, tmp_path):
     # atacseq's FastQ columns carry a file pattern but no path format: a relative value names a file
     # in the upstream outdir there too, and must not reach the downstream as a relative path.
-    import json
     root = library("mini_up", "mini")
     _, down = _trees(root)
     (down / "assets/schema_input.json").write_text(json.dumps({"items": {
@@ -201,7 +201,8 @@ def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, fini
                     "fastq_2": "fastq/{s}_2.fastq.gz"}}}}})
     handoff.materialize(built, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "b")
     row = _rows(tmp_path / "b" / "input.csv")[0]
-    assert (row["fastq_1"], row["fastq_2"]) == (f"{up}/fastq/A_1.fastq.gz", f"{up}/fastq/A_2.fastq.gz")
+    assert (row["fastq_1"], row["fastq_2"]) == (f"{up}/fastq/A_1.fastq.gz",
+                                                f"{up}/fastq/A_2.fastq.gz")
 
 
 PLATFORM_SHEET = ("sample,fastq_1,fastq_2,instrument_platform\n"
@@ -209,11 +210,14 @@ PLATFORM_SHEET = ("sample,fastq_1,fastq_2,instrument_platform\n"
                   "B,{outdir}/fastq/A_1.fastq.gz,,OXFORD_NANOPORE\n"
                   "C,{outdir}/fastq/A_1.fastq.gz,,\n")
 SHORT_ONLY = {"params": {"input": {"samplesheet": "s.csv",
-                                   "provides": ["sample", "fastq_1", "fastq_2", "instrument_platform"],
-                                   "allowed_values": {"instrument_platform": ["ILLUMINA", "BGISEQ"]}}}}
+                                   "provides": ["sample", "fastq_1", "fastq_2",
+                                                "instrument_platform"],
+                                   "allowed_values": {
+                                       "instrument_platform": ["ILLUMINA", "BGISEQ"]}}}}
 
 
-def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library, finished_run, tmp_path):
+def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library,
+                                                                    finished_run, tmp_path):
     # A Nanopore run in fetchngs's sheet would reach a short-read aligner as if it were Illumina.
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"s.csv": PLATFORM_SHEET, **FASTQS})
@@ -232,7 +236,7 @@ def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library, fin
 
 def test_allowed_values_need_their_column(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
-    up = finished_run(tmp_path / "up", {"s.csv": SHEET.replace("{outdir}", "{outdir}"), **FASTQS})
+    up = finished_run(tmp_path / "up", {"s.csv": SHEET, **FASTQS})
     with pytest.raises(NfclawError, match="has no column 'instrument_platform'"):
         handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
                             dest=tmp_path / "h")
@@ -357,7 +361,8 @@ def test_lineage_follows_absolute_paths_in_any_column(library, finished_run, tmp
     # atacseq declares no path format for fastq_1; the files it names are still traced.
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {
-        "s.csv": "sample,fastq_1,notes\nA,{outdir}/fastq/A_1.fastq.gz,{outdir}/fastq/A_2.fastq.gz\n",
+        "s.csv": "sample,fastq_1,notes\n"
+                 "A,{outdir}/fastq/A_1.fastq.gz,{outdir}/fastq/A_2.fastq.gz\n",
         **FASTQS})
     rule = _rule({"params": {"input": {"samplesheet": "s.csv",
                                        "provides": ["sample", "fastq_1"]}}})
@@ -366,16 +371,14 @@ def test_lineage_follows_absolute_paths_in_any_column(library, finished_run, tmp
 
 
 def test_upstream_param_prefers_the_pipelines_own_resolved_params(library, finished_run, tmp_path):
-    # A value a profile set (a --demo run's --gtf) is not in nfclaw's provenance/params.json, but the
-    # nf-core template dumps every resolved parameter to pipeline_info/params_<timestamp>.json.
-    import json
+    # A value a profile set (a --demo run's --gtf) is not in nfclaw's provenance/params.json, but
+    # the nf-core template dumps every resolved parameter to pipeline_info/params_<timestamp>.json.
     _, down = _trees(library("mini_up", "mini"))
     reference = tmp_path / "test.gtf"
     reference.write_text("annotation")
     up = finished_run(tmp_path / "up", {
         "pipeline_info/params_2026-01-01_10-00-00.json": json.dumps({"gtf": "/old.gtf"}),
         "pipeline_info/params_2026-01-02_10-00-00.json": json.dumps({"gtf": str(reference)})})
-    from runner import provenance
     (up / "provenance/inputs.inventory.json").write_text(json.dumps(
         provenance.snapshot_inputs([reference])[1]))
     (up / "provenance/inputs.sha256").write_text(
@@ -401,7 +404,6 @@ def test_file_source_takes_the_first_candidate_that_matches(library, finished_ru
 def _with_lengths(down):
     """The mini fixture with a second file parameter, as differentialabundance takes counts and
     lengths."""
-    import json
     path = down / "nextflow_schema.json"
     schema = json.loads(path.read_text())
     schema["definitions"]["reference_genome_options"]["properties"]["lengths"] = {
@@ -471,7 +473,6 @@ def test_file_source_candidates_must_be_relative_paths(bad):
 
 def _enum_sheet_library(library):
     """mini, with a samplesheet column that only allows some values (taxprofiler's `tool`)."""
-    import json
     root = library("mini_up", "mini")
     sheet = root / "pipelines" / "mini" / "upstream" / "assets" / "schema_input.json"
     data = json.loads(sheet.read_text())
@@ -552,7 +553,8 @@ def test_add_empty_adds_a_missing_column_and_keeps_a_present_one(library, finish
     assert (tmp_path / "h1" / "input.csv").read_text().splitlines() == [
         "sample,fastq_1,fastq_2", f"A,{se}/a.fq.gz,"]
     pe = finished_run(tmp_path / "pe", {"s.csv": "sample,fastq_1,fastq_2\nA,{outdir}/a.fq.gz,"
-                                                 "{outdir}/b.fq.gz\n", "a.fq.gz": "a", "b.fq.gz": "b"})
+                                                 "{outdir}/b.fq.gz\n", "a.fq.gz": "a",
+                                        "b.fq.gz": "b"})
     handoff.materialize(rule, upstream_outdir=pe, downstream_tree=down, dest=tmp_path / "h2")
     assert _rows(tmp_path / "h2" / "input.csv")[0]["fastq_2"] == f"{pe}/b.fq.gz"
     assert "fastq_2" in handoff.provided_columns(rule.params["input"])
@@ -565,7 +567,8 @@ def test_require_values_fails_the_handoff_for_rows_the_downstream_cannot_take(li
     # "Missing or unknown field in csv file header". The handoff says why, before sarek launches.
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {
-        "s.csv": "sample,fastq_1,fastq_2\nA,{outdir}/a.fq.gz,{outdir}/b.fq.gz\nB,{outdir}/a.fq.gz,\n",
+        "s.csv": "sample,fastq_1,fastq_2\nA,{outdir}/a.fq.gz,{outdir}/b.fq.gz\n"
+                 "B,{outdir}/a.fq.gz,\n",
         "a.fq.gz": "a", "b.fq.gz": "b"})
     rule = _rule({"params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"],
                                        "require_values": ["fastq_2"]}}})

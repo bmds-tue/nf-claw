@@ -1,7 +1,7 @@
 """The MCP protocol layer (runner.mcp_server), driven over real pipes with a stand-in handler.
 
-What a client relies on: the handshake and version negotiation, JSON-RPC errors with the right codes,
-notifications that get no reply, concurrent requests (a long tool call never blocks a ping),
+What a client relies on: the handshake and version negotiation, JSON-RPC errors with the right
+codes, notifications that get no reply, concurrent requests (a long tool call never blocks a ping),
 cancellation, progress, and a stdout that carries protocol messages and nothing else.
 """
 from __future__ import annotations
@@ -128,7 +128,8 @@ def test_initialize_echoes_a_supported_version(session, version):
 
 @pytest.mark.parametrize("version", ["1999-01-01", "2026-07-28"])
 def test_initialize_answers_any_other_version_with_the_latest_handshake_one(session, version):
-    # 2026-07-28 has no handshake: a client opening with `initialize` gets the newest version that has.
+    # 2026-07-28 has no handshake: a client opening with `initialize` gets the newest version
+    # that has.
     assert session.initialize(version)["result"]["protocolVersion"] == mcp_server.LATEST_LEGACY
 
 
@@ -307,8 +308,8 @@ def test_a_modern_request_for_an_unknown_version_lists_the_supported_ones(sessio
 
 
 def test_resource_not_found_uses_each_eras_code(session):
-    assert session.request(1, "resources/read", {"uri": "x://b", "_meta": MODERN})["error"]["code"] \
-        == -32602
+    reply = session.request(1, "resources/read", {"uri": "x://b", "_meta": MODERN})
+    assert reply["error"]["code"] == -32602
     session.initialize()
     assert session.request(2, "resources/read", {"uri": "x://b"})["error"]["code"] == -32002
 

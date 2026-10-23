@@ -55,6 +55,16 @@ export const CATEGORIES: { name: string; color: string; test: RegExp }[] = [
 
 export const OTHER_CATEGORY = { name: "Other", color: "#6b7280" };
 
+/** Every domain name in palette order, "Other" last. */
+export const DOMAIN_ORDER = [...CATEGORIES.map((c) => c.name), OTHER_CATEGORY.name];
+
+/** The domains `items` fall into, in palette order, with how many items each holds. */
+export function domainCounts(items: { category: string }[]): { name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const item of items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+  return DOMAIN_ORDER.filter((name) => counts.has(name)).map((name) => ({ name, count: counts.get(name)! }));
+}
+
 /**
  * Matching order. A description often names more than one domain ("RNA and DNA … somatic mutation",
  * "metagenomes to peptides"), so the more specific domains are tried before the broad ones:

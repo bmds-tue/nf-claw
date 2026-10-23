@@ -1,5 +1,5 @@
-"""nfclaw's MCP tools (runner.mcp_tools): arguments become the CLI command a person would type, docs are
-served as they are, and runs become detached jobs followed through `nfclaw status`.
+"""nfclaw's MCP tools (runner.mcp_tools): arguments become the CLI command a person would type, docs
+are served as they are, and runs become detached jobs followed through `nfclaw status`.
 
 Job tests swap the CLI for a small stand-in script (FAKE_NFCLAW) so a "run" can be made to refuse,
 succeed or hang on demand; one test runs the real CLI to prove the job path reaches it unmodified.
@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import sys
 import textwrap
-import time
 from pathlib import Path
 
 import pytest
@@ -20,8 +19,9 @@ from runner.mcp_server import Context, RpcError
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Stands in for `python -m runner`: `run` refuses (--mode=refuse), succeeds after writing its run log
-# (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads that log.
+# Stands in for `python -m runner`: `run` refuses (--mode=refuse), succeeds after writing its run
+# log (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads
+# that log.
 FAKE_NFCLAW = textwrap.dedent("""
     import signal, sys, time
     from pathlib import Path
@@ -82,18 +82,9 @@ def text(result) -> str:
     return result["content"][0]["text"]
 
 
-def _until(predicate, timeout=30.0):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        if predicate():
-            return True
-        time.sleep(0.05)
-    return False
-
-
 # --- arguments -> the nfclaw command line ---------------------------------------------------------
 
-def test_run_arguments_become_one_token_per_cli_option(tools, tmp_path):
+def test_run_arguments_become_one_token_per_cli_option(tools):
     argv = tools.run_argv({
         "pipeline": "rnaseq", "outdir": "/data/out", "input": ["/data/a.fq.gz", "/data/b.fq.gz"],
         "sheet_set": {"strandedness": "auto"}, "params": {"genome": "GRCh38", "skip_qc": True,

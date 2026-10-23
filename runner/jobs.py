@@ -26,7 +26,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import asdict, dataclass, field, fields
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -51,7 +51,7 @@ class JobError(Exception):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def state_dir() -> Path:
@@ -129,9 +129,10 @@ def _read_json(path: Path) -> dict:
 
 
 def create_dir(label: str) -> Path:
-    """A fresh, private directory for a new job. `label` (a pipeline name, `chain`) goes in its id."""
+    """A fresh, private directory for a new job. `label` (a pipeline name, `chain`) goes in
+    its id."""
     slug = re.sub(r"[^a-z0-9-]+", "-", label.lower()).strip("-")[:40] or "job"
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     root = jobs_dir()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     while True:
@@ -175,7 +176,7 @@ def launch(job_dir: Path, *, kind: str, argv: list[str], cwd: str, outdir: str,
                     {"exit_code": 127, "finished_at": _now(), "error": f"could not start: {exc}"})
         raise JobError(f"could not start the job: {exc}") from exc
     finally:
-        os.close(lock_fd)                             # the supervisor's inherited copy keeps it held
+        os.close(lock_fd)  # the supervisor's inherited copy keeps it held
     # Reap the supervisor while this server lives, so it never lingers as a zombie. Its outcome is
     # on disk; nothing waits for this thread.
     threading.Thread(target=proc.wait, daemon=True).start()
@@ -290,7 +291,8 @@ def supervise(job_dir: Path) -> int:
 
     The lock fd inherited from the server stays open, unused, for this process's lifetime: that is
     what tells a reader the job is still running. The command is the CLI, which turns SIGTERM into a
-    clean stop of Nextflow and its tasks; the supervisor only relays the signal and keeps the record.
+    clean stop of Nextflow and its tasks; the supervisor only relays the signal and keeps
+    the record.
     """
     child: list[subprocess.Popen] = []
     stopping: list[int] = []

@@ -35,20 +35,10 @@ export function highlightShell(line: string) {
   );
 }
 
-export function CodeBlock({
-  code,
-  label = "shell",
-  className,
-  wrap = true,
-}: {
-  code: string;
-  label?: string;
-  className?: string;
-  /** Soft-wrap long lines (commands stay readable without sideways scrolling). */
-  wrap?: boolean;
-}) {
+/** A command, soft-wrapped so it stays readable without sideways scrolling, with a copy button. */
+export function CodeBlock({ code, label = "shell" }: { code: string; label?: string }) {
   return (
-    <div className={cn("group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-ink-950/80", className)}>
+    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-ink-950/80">
       <div className="flex items-center justify-between border-b border-white/[0.06] py-1.5 pl-4 pr-2">
         <span className="flex items-center gap-2 text-xs font-medium text-fog-dim">
           <TerminalSquare className="h-3.5 w-3.5" />
@@ -56,15 +46,10 @@ export function CodeBlock({
         </span>
         <CopyButton text={code} />
       </div>
-      <pre
-        className={cn(
-          "px-4 py-3.5 font-mono text-[13px] leading-relaxed",
-          wrap ? "whitespace-pre-wrap break-words [overflow-wrap:anywhere]" : "overflow-x-auto",
-        )}
-      >
+      <pre className="whitespace-pre-wrap break-words px-4 py-3.5 font-mono text-[13px] leading-relaxed [overflow-wrap:anywhere]">
         <code>
           {code.split("\n").map((line, i) => (
-            <div key={i} className={cn(wrap && "pl-[2ch] -indent-[2ch]")}>
+            <div key={i} className="pl-[2ch] -indent-[2ch]">
               {highlightShell(line)}
             </div>
           ))}

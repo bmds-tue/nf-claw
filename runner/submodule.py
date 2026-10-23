@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from runner import budget
@@ -134,8 +134,8 @@ def _own_head(path: Path) -> str | None:
     """HEAD of the git repository whose working tree is exactly `path`, or None if there is none.
 
     An uninitialised submodule is a directory inside the nf-claw checkout, and git run there acts on
-    nf-claw itself: its HEAD, its tags, its object store. Any git command aimed at a pipeline tree must
-    first confirm the tree is its own repository (a cloned submodule or a version worktree)."""
+    nf-claw itself: its HEAD, its tags, its object store. Any git command aimed at a pipeline tree
+    must first confirm the tree is its own repository (a cloned submodule or a version worktree)."""
     if not path.is_dir():
         return None
     # The final LF separates HEAD from the full path, which can itself contain separators.
@@ -174,11 +174,9 @@ def resolve(name: str, pipelines_dir: Path) -> SubmoduleStatus:
     pinned = _committed_pin(pipelines_dir / name / "skill.md")
     if (pinned and st.commit and st.commit == pinned.get("commit")
             and _looks_like_commit_version(st.version, st.commit)):
-        return SubmoduleStatus(
-            name=st.name, path=st.path, initialized=st.initialized,
-            complete=st.complete, version=pinned["version"], commit=st.commit,
-            missing_files=st.missing_files,
-        )
+        # A shallow clone without its tag describes itself by commit; the committed docs name
+        # the release that commit is.
+        return replace(st, version=pinned["version"])
     return st
 
 
@@ -255,7 +253,8 @@ def tree_issues(st: SubmoduleStatus, pin_doc: Path | None) -> list[str]:
             f"nf-claw checkout pins nf-core/{st.name} {pinned['version']} "
             f"({pinned['commit'][:12]}) — the release its skill.md and reference.md describe")
     if changed := modified_files(st.path):
-        shown = ", ".join(changed[:5]) + (f" and {len(changed) - 5} more" if len(changed) > 5 else "")
+        shown = ", ".join(changed[:5]) + (f" and {len(changed) - 5} more"
+                                          if len(changed) > 5 else "")
         issues.append(f"{st.path} has local modifications to tracked pipeline files ({shown}); "
                       f"nfclaw runs releases unmodified")
     return issues
@@ -266,7 +265,7 @@ def ensure_initialized(name: str, pipelines_dir: Path, repo_root: Path) -> Submo
     if not st.complete:
         rel = f"pipelines/{name}/upstream"
         with _init_lock(repo_root):
-            st = resolve(name, pipelines_dir)               # re-check: another run may have just done it
+            st = resolve(name, pipelines_dir)  # re-check: another run may have just done it
             if not st.complete:
                 try:
                     result = capture(

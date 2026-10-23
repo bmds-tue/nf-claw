@@ -17,17 +17,16 @@ import {
   X,
 } from "lucide-react";
 import type { PipelineSummary } from "@/lib/derive";
-import { CATEGORIES, OTHER_CATEGORY, categoryRank, colorForCategory } from "@/lib/derive";
+import { DOMAIN_ORDER, categoryRank, colorForCategory, domainCounts } from "@/lib/derive";
 import { layoutConstellation } from "@/lib/constellation";
 import { useCopy } from "@/components/ui/copy-button";
 import { Highlight } from "@/components/ui/highlight";
 import { SearchField, DomainChips } from "@/components/ui/filters";
 import { cn, formatDate } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
 type SortKey = "name" | "parameters" | "modules" | "newest";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
-const ORDER = [...CATEGORIES.map((c) => c.name), OTHER_CATEGORY.name];
 const MAX_COMPARE = 4;
 
 /** Short wedge label: the domain's first word ("Microbial & metagenomics" → "Microbial"). */
@@ -59,11 +58,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
 
   const byName = useMemo(() => new Map(pipelines.map((p) => [p.name, p])), [pipelines]);
 
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of pipelines) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
-    return ORDER.filter((c) => counts.has(c)).map((c) => ({ name: c, count: counts.get(c)! }));
-  }, [pipelines]);
+  const categories = useMemo(() => domainCounts(pipelines), [pipelines]);
 
   const q = query.trim().toLowerCase();
   const matches = (p: PipelineSummary) => {
@@ -96,17 +91,17 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
   const filtered = sorted.filter(matches);
   const matchSet = new Set(filtered.map((p) => p.name));
 
-  // A search that narrows to one pipeline selects it.
+  // A search that narrows to one pipeline selects it — once, when the narrowing happens: the
+  // filtered array itself is rebuilt on every render.
   useEffect(() => {
     if (q && filtered.length === 1) setSelected(filtered[0].name);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, filtered.length]);
 
   const layout = useMemo(
     () =>
       layoutConstellation(
         pipelines.map((p) => ({ name: p.name, category: p.category, parameterCount: p.parameterCount })),
-        ORDER,
+        DOMAIN_ORDER,
         { labelName: shortLabel },
       ),
     [pipelines],
@@ -202,16 +197,14 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
       </div>
 
       {/* domain chips */}
-      <div className="mt-4 flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <DomainChips
-            domains={categories}
-            total={pipelines.length}
-            value={category}
-            onChange={setCategory}
-            onHover={setHoverCategory}
-          />
-        </div>
+      <div className="mt-4">
+        <DomainChips
+          domains={categories}
+          total={pipelines.length}
+          value={category}
+          onChange={setCategory}
+          onHover={setHoverCategory}
+        />
       </div>
       <p className="mt-3 text-xs text-fog-dim" aria-live="polite">
         {filtered.length === pipelines.length

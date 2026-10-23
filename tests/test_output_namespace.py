@@ -1,10 +1,12 @@
 """Independent regressions for result directories and scientific handoff identities."""
 import json
+import os
 
 import pytest
 
-from runner import chain, handoff, outputs, provenance, verify
+from runner import chain, cli, handoff, outputs, provenance, verify
 from runner.errors import NfclawError
+from runner.inputs import absolute_local_path
 from runner.submodule import SubmoduleStatus
 from test_handoff import _rule, _trees
 
@@ -13,7 +15,8 @@ def record(out, inputs=(), params=None):
     (out / "provenance").mkdir(parents=True, exist_ok=True)
     (out / "provenance/params.json").write_text(json.dumps(params or {}))
     provenance.write(outdir=out, pipeline="fixture", command_str="echo AUDIT",
-        submodule=SubmoduleStatus("fixture", out.parent / "no-source", True, True, "1.0.0", "deadbeef", ()),
+        submodule=SubmoduleStatus("fixture", out.parent / "no-source", True, True, "1.0.0",
+                                  "deadbeef", ()),
         input_paths=list(inputs), nextflow_version="25.10.4", env_extra={"NXF_VER": "25.10.4"})
 
 
@@ -57,7 +60,8 @@ def test_legacy_file_only_manifest_cannot_certify_the_historical_directory_struc
     (original / "provenance/outputs.inventory.json").unlink()
     comparison = verify.compare(original, replay)
     assert comparison.unverified_structure and not comparison.structurally_equal
-    assert not comparison.byte_identical and "directory agreement is unverified" in verify.report(comparison)
+    assert not comparison.byte_identical
+    assert "directory agreement is unverified" in verify.report(comparison)
 
 
 def test_live_directories_without_bundles_can_still_be_compared(tmp_path):
@@ -100,7 +104,8 @@ def test_malformed_output_namespace_is_a_clear_error_not_an_ignored_record(tmp_p
 
 @pytest.mark.parametrize("internal", [False, True])
 @pytest.mark.parametrize("change", ["add", "remove", "rename", "alias"])
-def test_directory_handoff_refuses_namespace_changes_without_byte_changes(library, tmp_path, internal, change):
+def test_directory_handoff_refuses_namespace_changes_without_byte_changes(library, tmp_path,
+                                                                          internal, change):
     _, down = _trees(library("mini_up", "mini"))
     up = tmp_path / "producer"
     reference = up / "index" if internal else tmp_path / "reference"
@@ -123,7 +128,8 @@ def test_directory_handoff_refuses_namespace_changes_without_byte_changes(librar
 
 
 @pytest.mark.parametrize("internal", [False, True])
-def test_an_unchanged_empty_reference_directory_has_real_handoff_evidence(library, tmp_path, internal):
+def test_an_unchanged_empty_reference_directory_has_real_handoff_evidence(library,
+                                                                          tmp_path, internal):
     _, down = _trees(library("mini_up", "mini"))
     up = tmp_path / "producer"
     reference = up / "index" if internal else tmp_path / "reference"
@@ -147,7 +153,8 @@ def test_result_aliases_are_preserved_and_hashed_once(tmp_path):
         return provenance._sha256(path)
     hashes, inventory, raw = outputs.snapshot(out, hash_file)
     assert len(calls) == 1 and set(hashes) == {"data/reads.txt", "alias/reads.txt"}
-    assert set(inventory) == {"data", "data/empty", "data/reads.txt", "alias", "alias/empty", "alias/reads.txt"}
+    assert set(inventory) == {"data", "data/empty", "data/reads.txt", "alias", "alias/empty",
+                              "alias/reads.txt"}
     assert inventory["alias"]["link_target"] == {"scope": "outdir", "path": "data"}
     assert raw[str(out / "alias")]["resolved_path"] == str(out / "data")
 
@@ -171,7 +178,6 @@ def test_link_retargeting_with_identical_bytes_is_reported_separately(tmp_path):
 @pytest.mark.parametrize("strict", [False, True])
 def test_strict_cli_verification_fails_on_changed_link_identity(tmp_path, capsys, strict):
     """`--strict` promises identical bytes AND recorded link identities; the default does not."""
-    from runner import cli
     out = tmp_path / "out"
     out.mkdir()
     a, b = tmp_path / "a.txt", tmp_path / "b.txt"
@@ -188,7 +194,8 @@ def test_strict_cli_verification_fails_on_changed_link_identity(tmp_path, capsys
 
 @pytest.mark.parametrize("mode", ["external", "internal", "alias", "bundle", "file_alias"])
 @pytest.mark.parametrize("legacy_resolution", [False, True])
-def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(library, tmp_path, mode,
+def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(library,
+                                                                                tmp_path, mode,
                                                                               legacy_resolution):
     _, down_tree = _trees(library("mini_up", "mini"))
     data = json.loads((down_tree / "nextflow_schema.json").read_text())
@@ -226,7 +233,6 @@ def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(
         upstream_outdir=up, downstream_tree=down_tree, dest=tmp_path / "handoff")
     hand_path = tmp_path / "handoff.json"
     hand_path.write_text(json.dumps(hand.record))
-    from runner.inputs import absolute_local_path
     canonical = reference.resolve() if legacy_resolution else absolute_local_path(reference)
     record(down, inputs=[canonical], params={"fasta": str(canonical)})
     down_manifest = down / "provenance/run_manifest.json"
@@ -302,7 +308,6 @@ def test_external_file_alias_retargeting_is_refused_even_with_identical_data(lib
 
 
 def test_nonregular_external_reference_is_refused_without_opening_a_fifo(library, tmp_path):
-    import os
     _, down = _trees(library("mini_up", "mini"))
     source = tmp_path / "annotation.gtf"
     source.write_bytes(b"annotation")

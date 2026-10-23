@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
+
 from runner.probes import capture
 from runner.settings import seconds
 
@@ -175,6 +176,6 @@ def check(upstream: Path, *, nxf_ver: str | None = None) -> list[str]:
     spec = required_spec(upstream / "nextflow.config")
     if spec is None:                           # no declared constraint → nothing to advise
         return []
-    effective = f"version {nxf_ver}" if nxf_ver else _installed_raw()
-    w = warning(spec, effective)
+    engine = f"version {nxf_ver}" if nxf_ver else _installed_raw()
+    w = warning(spec, engine)
     return [w] if w else []

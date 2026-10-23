@@ -1,14 +1,17 @@
 """Independent Git output is the oracle for source identity and tracked-file selection."""
 import hashlib
+import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
-from runner import replay_guard, submodule
+from runner import fastqrepair_compat, orchestration, provenance, replay_guard, submodule
 
 
-@pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\u0085', '\v', '\f', '\x1c', '\x1d', '\x1e', 'Å', '\n', '\r'])
+@pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\u0085', '\v', '\f', '\x1c', '\x1d',
+                                       '\x1e', 'Å', '\n', '\r'])
 def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separator):
     repo = tmp_path / ('parent' + separator + 'part') / 'upstream'
     repo.mkdir(parents=True)
@@ -17,8 +20,10 @@ def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separ
     (repo / 'main.nf').write_bytes(tracked)
     subprocess.run(['git', '-C', str(repo), 'add', 'main.nf'], check=True)
     subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Audit',
-                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'], check=True)
-    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip()
+                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'],
+                   check=True)
+    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'],
+                                       text=True).strip()
     (repo / 'untracked-data.txt').write_bytes(b'not pipeline source\n')
     assert submodule._own_head(repo) == expected
     assert replay_guard.pipeline_head(repo) == expected
@@ -34,9 +39,6 @@ def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separ
 @pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
 @pytest.mark.parametrize('separator', ['\u2028', '\u0085', '\v', '\f'])
 def test_native_git_revision_and_tracked_source_replay(tmp_path, engine, separator):
-    import json
-    from runner import orchestration, provenance
-
     root = tmp_path / ('library' + separator + 'part')
     repo = root / 'pipelines/fixture/upstream'
     repo.mkdir(parents=True)
@@ -61,9 +63,11 @@ workflow { DIGEST(file(params.input)) }
     subprocess.run(['git', 'init', '-q', str(repo)], check=True)
     subprocess.run(['git', '-C', str(repo), 'add', '.'], check=True)
     subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Audit',
-                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'], check=True)
+                    '-c', 'user.email=audit@example.invalid', 'commit', '-q', '-m', 'fixture'],
+                   check=True)
     subprocess.run(['git', '-C', str(repo), 'tag', '1.0.0'], check=True)
-    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip()
+    expected = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'],
+                                       text=True).strip()
     scratch = repo / 'untracked-data.txt'
     scratch.write_text('untracked scratch data\n')
     data = tmp_path / 'reads.fastq'
@@ -112,17 +116,16 @@ workflow { DIGEST(file(params.input)) }
 
 
 def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_path):
-    from pathlib import Path
-    from runner import fastqrepair_compat, orchestration
-
     source = Path(__file__).resolve().parents[1] / 'pipelines/fastqrepair/upstream'
     if submodule._own_head(source) is None:
         pytest.skip('requires the pinned fastqrepair source clone')
     root = tmp_path / 'library\u2028part'
     tree = root / 'pipelines/fastqrepair/upstream'
     tree.parent.mkdir(parents=True)
-    subprocess.run(['git', 'clone', '-q', '--shared', '--no-hardlinks', str(source), str(tree)], check=True)
-    subprocess.run(['git', '-C', str(tree), 'checkout', '-q', fastqrepair_compat.SUPPORTED_COMMIT], check=True)
+    subprocess.run(
+        ['git', 'clone', '-q', '--shared', '--no-hardlinks', str(source), str(tree)], check=True)
+    subprocess.run(
+        ['git', '-C', str(tree), 'checkout', '-q', fastqrepair_compat.SUPPORTED_COMMIT], check=True)
     (tree.parent / 'skill.md').write_text('---\nname: fastqrepair\n---\n')
     reads = tmp_path / 'reads.fastq'
     reads.write_bytes(b'@R1\nACGT\n+\nIIII\n')
@@ -133,7 +136,8 @@ def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_
         outdir=out, profile='', params_file=None, cli_overrides={}, resume=False,
         demo=False, check_only=True, write_provenance=True, timeout_seconds=90, nxf_ver='25.10.4')
     try:
-        assert submodule.resolve_at('fastqrepair', tree).commit == fastqrepair_compat.SUPPORTED_COMMIT
+        resolved = submodule.resolve_at('fastqrepair', tree)
+        assert resolved.commit == fastqrepair_compat.SUPPORTED_COMMIT
         assert any('recorded corrections for fastqrepair' in warning for warning in result.warnings)
         assert 'fastqrepair_compat.config' in result.command
         assert not out.exists()

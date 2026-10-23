@@ -1,4 +1,4 @@
-# librarian/update_pipelines.py
+"""Bump every `latest-release` pipeline in sources.tsv to its newest upstream release tag."""
 from __future__ import annotations
 
 import argparse
@@ -62,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     root = Path(args.repo_root).resolve()
     # Resolve a relative --sources against --repo-root (not the CWD), so `bump` — which builds every
-    # path from `root` — and the source list always refer to the same repo. Matches discover_pipelines.
+    # path from `root` — and the source list always refer to the same repo.
+    # Matches discover_pipelines.
     sources_path = Path(args.sources)
     if not sources_path.is_absolute():
         sources_path = root / sources_path

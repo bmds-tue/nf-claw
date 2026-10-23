@@ -1,5 +1,6 @@
 """nf-core institutional configs are read at one recorded nf-core/configs commit."""
 import json
+import subprocess
 
 import pytest
 
@@ -12,7 +13,7 @@ TEMPLATE = """params {
     custom_config_base         = "https://raw.githubusercontent.com/nf-core/configs/${params.custom_config_version}"
 }
 includeConfig params.custom_config_base && (!System.getenv('NXF_OFFLINE') || !params.custom_config_base.startsWith('http')) ? "${params.custom_config_base}/nfcore_custom.config" : "/dev/null"
-"""
+"""  # noqa: E501
 SCHEMA = {"custom_config_version": {}, "custom_config_base": {}, "outdir": {}}
 
 
@@ -36,7 +37,8 @@ def resolver(monkeypatch):
 def test_master_is_resolved_and_passed_as_the_configs_version(upstream, resolver):
     params, record, advisory = institutional.pin({"outdir": "/o"}, SCHEMA, upstream, {})
     assert params == {"outdir": "/o", "custom_config_version": COMMIT}
-    assert record == {"repository": "https://github.com/nf-core/configs", "ref": "master", "commit": COMMIT}
+    assert record == {"repository": "https://github.com/nf-core/configs", "ref": "master",
+                      "commit": COMMIT}
     assert resolver == [("https://github.com/nf-core/configs", "master")]
     assert COMMIT[:12] in advisory
 
@@ -85,14 +87,13 @@ def test_a_resumed_run_keeps_the_commit_its_first_attempt_read(upstream, resolve
 
 @pytest.mark.parametrize("returncode,stdout,stderr,expected", [
     (0, f"{COMMIT}\trefs/heads/master\n", "", (COMMIT, None)),
-    (2, "", "", (None, "git ls-remote https://github.com/nf-core/configs master failed: exit status 2")),
+    (2, "", "", (None, "git ls-remote https://github.com/nf-core/configs master failed: "
+                       "exit status 2")),
     (128, "", "fatal: unable to access: Could not resolve host\n",
      (None, "git ls-remote https://github.com/nf-core/configs master failed: "
             "fatal: unable to access: Could not resolve host")),
 ])
 def test_ls_remote_reads_the_branch_head(monkeypatch, returncode, stdout, stderr, expected):
-    import subprocess
-
     seen = {}
 
     def run(command, **kwargs):
@@ -100,6 +101,7 @@ def test_ls_remote_reads_the_branch_head(monkeypatch, returncode, stdout, stderr
         return subprocess.CompletedProcess(command, returncode, stdout, stderr)
     monkeypatch.setattr(subprocess, "run", run)
     assert _REAL_LS_REMOTE("https://github.com/nf-core/configs", "master") == expected
-    assert seen["command"] == ["git", "ls-remote", "--exit-code", "https://github.com/nf-core/configs",
+    assert seen["command"] == ["git", "ls-remote", "--exit-code",
+                               "https://github.com/nf-core/configs",
                                "refs/heads/master"]
     assert seen["env"]["GIT_TERMINAL_PROMPT"] == "0"

@@ -1,14 +1,14 @@
 """Real pinned legacy schemas must protect the files their pipelines consume."""
-import json
+import csv
 import hashlib
+import json
 import subprocess
 import sys
-import csv
 from pathlib import Path
 
 import pytest
 
-from runner import handoff, provenance, replay_guard, samplesheet, schema
+from runner import handoff, provenance, replay_guard, samplesheet, schema, sheetgen
 from runner.errors import NfclawError
 from test_handoff import _rule
 from test_output_namespace import record
@@ -24,6 +24,14 @@ def _pinned(name):
     if not (tree / "assets/schema_input.json").exists():
         pytest.skip("requires initialized pinned pipeline source")
     return tree, schema.load_input_schema(tree)
+
+
+def _write_row(sheet, row):
+    """Write `row` as a one-row CSV samplesheet, quoting values as csv does."""
+    with sheet.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
 
 
 def _sheet(tmp_path, name="atacseq", *, relative=False, missing=False):
@@ -48,7 +56,8 @@ def test_legacy_read_paths_are_captured_from_pinned_schemas(tmp_path, name):
 @pytest.mark.parametrize("damage,expected", [("relative", "relative path"),
                                              ("missing", "file not found")])
 def test_legacy_read_validation_rejects_unresolvable_data(tmp_path, damage, expected):
-    _, contract, sheet, _ = _sheet(tmp_path, relative=damage == "relative", missing=damage == "missing")
+    _, contract, sheet, _ = _sheet(tmp_path, relative=damage == "relative",
+                                   missing=damage == "missing")
     assert any(expected in issue for issue in samplesheet.validate(sheet, contract))
 
 
@@ -81,15 +90,17 @@ def test_legacy_handoffs_absolutize_and_bind_both_mates(tmp_path, kind):
     (up / "samples.csv").write_text("sample,fastq_1,fastq_2,replicate\n"
                                     "A,fastq/A_1.fastq.gz,fastq/A_2.fastq.gz,1\n")
     record(up)
-    spec = ({"samplesheet": "samples.csv", "provides": ["sample", "fastq_1", "fastq_2", "replicate"]}
-            if kind == "direct" else {"build": {"rows": "fastq/{sample}_1.fastq.gz",
-                "columns": {"sample": "{sample}", "fastq_1": "fastq/{sample}_1.fastq.gz",
-                            "fastq_2": "fastq/{sample}_2.fastq.gz", "replicate": "1"}}})
+    spec = (
+        {"samplesheet": "samples.csv", "provides": ["sample", "fastq_1", "fastq_2", "replicate"]}
+        if kind == "direct" else {"build": {"rows": "fastq/{sample}_1.fastq.gz",
+            "columns": {"sample": "{sample}", "fastq_1": "fastq/{sample}_1.fastq.gz",
+                        "fastq_2": "fastq/{sample}_2.fastq.gz", "replicate": "1"}}})
     result = handoff.materialize(_rule({"params": {"input": spec}}), upstream_outdir=up,
                                  downstream_tree=tree, dest=tmp_path / "handoff")
     item = result.record["params"]["input"]
     assert item["consumed_sources"] == sorted(map(str, reads))
-    assert provenance.samplesheet_input_paths(Path(result.params["input"]), contract) == sorted(reads)
+    handed_over = Path(result.params["input"])
+    assert provenance.samplesheet_input_paths(handed_over, contract) == sorted(reads)
 
 
 def test_branch_declared_path_and_literal_sentinel_are_distinct(tmp_path):
@@ -124,10 +135,7 @@ def test_nanostring_existing_absolute_filename_metadata_is_not_a_data_dependency
     if suffix == "json":
         sheet.write_text(json.dumps([row]))
     else:
-        with sheet.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(row))
-            writer.writeheader()
-            writer.writerow(row)
+        _write_row(sheet, row)
     assert samplesheet.validate(sheet, contract) == []
     assert provenance.samplesheet_input_paths(sheet, contract) == [data]
     assert provenance.samplesheet_file_paths(sheet, contract) == []
@@ -165,12 +173,14 @@ def test_audited_schema_roles_match_the_pins_and_capture_each_data_cell(tmp_path
         pytest.skip("requires initialized pinned pipeline source")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tree, text=True).strip()
     if head != audit["commit"]:
-        pytest.skip(f"{audit['pipeline']} is no longer pinned at the audited commit {audit['commit'][:12]}")
+        pytest.skip(f"{audit['pipeline']} is no longer pinned at the audited "
+                    f"commit {audit['commit'][:12]}")
     assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
     for reference in audit["source"]:
         assert (tree / reference.partition(":")[0]).is_file(), reference
     for reference, expected_digest in audit.get("source_sha256", {}).items():
-        assert hashlib.sha256((tree / reference).read_bytes()).hexdigest() == expected_digest, reference
+        actual = hashlib.sha256((tree / reference).read_bytes()).hexdigest()
+        assert actual == expected_digest, reference
     contract = schema.load_input_schema(tree, audit["schema"])
     row = {}
     expected = []
@@ -236,7 +246,6 @@ def test_stale_templates_use_the_pinned_consumers_actual_sheet_contract(tmp_path
 
 @pytest.mark.parametrize("name", ["hgtseq", "nanoseq"])
 def test_stale_templates_cannot_generate_a_sheet_that_the_consumer_rejects(name):
-    from runner import sheetgen
     tree, contract = _pinned(name)
     assert sheetgen.plan(contract, schema.load_param_schema(tree).params["input"]).problem
 
@@ -257,7 +266,8 @@ def _shared_copy(tmp_path, name):
 
 def _other_revision(copy):
     subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-                    "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"], cwd=copy, check=True)
+                    "commit", "--quiet", "--allow-empty", "-m", "unreviewed revision"],
+                   cwd=copy, check=True)
 
 
 def _published_columns(copy):
@@ -267,7 +277,8 @@ def _published_columns(copy):
 
 def test_consumer_schema_corrections_fail_closed_when_audited_source_changes(tmp_path):
     copy = _shared_copy(tmp_path, "hgtseq")
-    assert {c.name for c in schema.load_input_schema(copy).columns} == {"sample", "input1", "input2"}
+    assert ({c.name for c in schema.load_input_schema(copy).columns}
+            == {"sample", "input1", "input2"})
     source = copy / "workflows/hgtseq.nf"
     source.write_text(source.read_text() + "\n// modified consumer\n")
     with pytest.raises(NfclawError, match="audited samplesheet"):
@@ -280,11 +291,13 @@ def test_consumer_schema_corrections_leave_other_revisions_their_published_contr
     copy = _shared_copy(tmp_path, "hgtseq")
     _other_revision(copy)
     contract = schema.load_input_schema(copy)
-    assert {c.name for c in contract.columns} == _published_columns(copy) != {"sample", "input1", "input2"}
+    assert ({c.name for c in contract.columns} == _published_columns(copy)
+            != {"sample", "input1", "input2"})
     assert contract.header_prefix == () and contract.generation_problem is None
 
 
-def test_nanoseq_configured_reference_name_remains_metadata_but_local_references_are_hashed(tmp_path):
+def test_nanoseq_configured_reference_name_remains_metadata_but_local_references_are_hashed(
+        tmp_path):
     _, contract = _pinned("nanoseq")
     reads, fasta, gtf = (tmp_path / n for n in ("A.fastq.gz", "genome.fa", "genes.gtf"))
     for data in (reads, fasta, gtf):
@@ -317,7 +330,6 @@ def test_corrected_nanoseq_sheet_is_accepted_by_the_actual_pinned_checker(tmp_pa
 
 
 def test_generated_isoseq_sheet_keeps_none_literal_out_of_data_snapshot(tmp_path):
-    from runner import sheetgen
     tree, _ = _pinned("isoseq")
     data = tmp_path / "A.bam"
     data.write_bytes(b"known BAM identity; sheet generation does not interpret alignments")
@@ -340,16 +352,14 @@ def _onco_sheet(tmp_path, *, value=None, filetype="fastq", info="library_id:LIB;
     row = {"group_id": "G", "subject_id": "P", "sample_id": "A", "sample_type": "tumor",
            "sequence_type": "dna", "info": info, "filetype": filetype,
            "filepath": value or ";".join(map(str, reads))}
-    with sheet.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(row))
-        writer.writeheader()
-        writer.writerow(row)
+    _write_row(sheet, row)
     return tree, contract, sheet, reads, row
 
 
 @pytest.mark.parametrize("filetype", ["fastq", "FASTQ"])
 @pytest.mark.parametrize("suffix", ["csv", "json"])
-def test_oncoanalyser_consumed_fastq_members_are_separate_replay_dependencies(tmp_path, filetype, suffix):
+def test_oncoanalyser_consumed_fastq_members_are_separate_replay_dependencies(tmp_path,
+                                                                              filetype, suffix):
     _, contract, sheet, reads, row = _onco_sheet(tmp_path, filetype=filetype)
     if suffix == "json":
         sheet = tmp_path / "samples.json"
@@ -368,7 +378,8 @@ def test_oncoanalyser_consumed_fastq_members_are_separate_replay_dependencies(tm
 @pytest.mark.parametrize("value,expected", [("relative.fastq.gz;/other.fastq.gz", "relative path"),
                                            ("/one.fastq.gz", "exactly 2"),
                                            ("/one;/two;/three", "exactly 2")])
-def test_oncoanalyser_fastq_contract_rejects_unresolvable_or_wrong_cardinality(tmp_path, value, expected):
+def test_oncoanalyser_fastq_contract_rejects_unresolvable_or_wrong_cardinality(tmp_path,
+                                                                               value, expected):
     _, contract, sheet, _, _ = _onco_sheet(tmp_path, value=value)
     assert any(expected in issue for issue in samplesheet.validate(sheet, contract))
 
@@ -424,10 +435,7 @@ def test_oncoanalyser_handoffs_normalize_and_trace_each_fastq_member(tmp_path, k
     up.mkdir()
     _, _, sheet, reads, row = _onco_sheet(up)
     row["filepath"] = ";".join(data.name for data in reads)
-    with sheet.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(row))
-        writer.writeheader()
-        writer.writerow(row)
+    _write_row(sheet, row)
     record(up)
     if kind == "direct":
         spec = {"samplesheet": sheet.name, "provides": list(row)}
@@ -451,7 +459,8 @@ def test_oncoanalyser_info_alias_keys_follow_the_consumers_uppercase_normalizati
     assert any("identifier" in issue for issue in samplesheet.validate(sheet, contract))
 
 
-@pytest.mark.parametrize("key", ["read_group_overrides", "READ_GROUP_OVERRIDES", "read_group_overrıdes"])
+@pytest.mark.parametrize("key",
+                         ["read_group_overrides", "READ_GROUP_OVERRIDES", "read_group_overrıdes"])
 def test_oncoanalyser_read_group_apostrophe_is_refused_before_single_quoted_argument(tmp_path, key):
     _, contract, sheet, _, _ = _onco_sheet(
         tmp_path, info=f"library_id:LIB;lane:1;{key}:CN=O'Brien|DS=Study")
@@ -494,7 +503,8 @@ def test_datasync_destination_exclusion_does_not_extend_to_other_revisions(tmp_p
 
 @pytest.mark.parametrize("destination", ['/archive/Study"A', '/archive/Study\\A'])
 @pytest.mark.parametrize("suffix", ["csv", "json"])
-def test_datasync_destination_must_survive_the_consumers_double_quoted_argument(tmp_path, destination, suffix):
+def test_datasync_destination_must_survive_the_consumers_double_quoted_argument(
+        tmp_path, destination, suffix):
     _, contract = _pinned("datasync")
     source, checksum = tmp_path / "source.data", tmp_path / "checksum.sha256"
     source.write_bytes(b"source identity")
@@ -505,15 +515,14 @@ def test_datasync_destination_must_survive_the_consumers_double_quoted_argument(
     if suffix == "json":
         sheet.write_text(json.dumps([row]))
     else:
-        with sheet.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(row))
-            writer.writeheader()
-            writer.writerow(row)
+        _write_row(sheet, row)
     assert any("double-quoted" in issue for issue in samplesheet.validate(sheet, contract))
 
 
-@pytest.mark.parametrize("destination", ["/archive/O'Brien", "s3://bucket/Study_A", "/archive/new-directory"])
-def test_datasync_valid_destination_is_not_required_to_exist_or_inspected_as_input(tmp_path, destination):
+@pytest.mark.parametrize("destination",
+                         ["/archive/O'Brien", "s3://bucket/Study_A", "/archive/new-directory"])
+def test_datasync_valid_destination_is_not_required_to_exist_or_inspected_as_input(
+        tmp_path, destination):
     _, contract = _pinned("datasync")
     source, checksum = tmp_path / "source.data", tmp_path / "checksum.sha256"
     source.write_bytes(b"source identity")
@@ -533,5 +542,6 @@ def test_datasync_checks_the_complete_source_string_including_parent_names(tmp_p
     source = folder / "source.data"
     source.write_bytes(b"source identity")
     sheet = tmp_path / "samples.json"
-    sheet.write_text(json.dumps([{"sample": "A", "input": str(source), "output_path": "/archive/A"}]))
+    sheet.write_text(
+        json.dumps([{"sample": "A", "input": str(source), "output_path": "/archive/A"}]))
     assert any("double-quoted" in issue for issue in samplesheet.validate(sheet, contract))

@@ -6,11 +6,12 @@ Every nf-core release includes `nfcore_custom.config` (and often `pipeline/<name
 executors, container options and resources, and a broken commit there breaks every launch, so the
 run and its replay would read whatever `master` holds on the day. nfclaw resolves the branch to its
 commit before launch and passes that commit as `custom_config_version`, exactly as nf-core documents
-for pinning institutional configs: the run reads an immutable revision, `params.json` records it, and
-`commands.sh` replays it.
+for pinning institutional configs: the run reads an immutable revision, `params.json` records it,
+and `commands.sh` replays it.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -19,7 +20,8 @@ from pathlib import Path
 REPOSITORY = "https://github.com/nf-core/configs"
 PARAM = "custom_config_version"
 BASE_PARAM = "custom_config_base"
-_INCLUDED = re.compile(r"raw\.githubusercontent\.com/nf-core/configs/\$\{\s*params\.custom_config_version\s*\}")
+_INCLUDED = re.compile(
+    r"raw\.githubusercontent\.com/nf-core/configs/\$\{\s*params\.custom_config_version\s*\}")
 _DEFAULT = re.compile(r"^\s*custom_config_version\s*=\s*['\"]([^'\"]+)['\"]", re.M)
 _COMMIT = re.compile(r"[0-9a-f]{40}")
 
@@ -27,9 +29,10 @@ _COMMIT = re.compile(r"[0-9a-f]{40}")
 def _ls_remote(repository: str, ref: str) -> tuple[str | None, str | None]:
     """(commit, None) for a branch head, or (None, why it could not be resolved)."""
     try:
-        result = subprocess.run(["git", "ls-remote", "--exit-code", repository, f"refs/heads/{ref}"],
-                                capture_output=True, text=True, timeout=30,
-                                env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+        result = subprocess.run(
+            ["git", "ls-remote", "--exit-code", repository, f"refs/heads/{ref}"],
+            capture_output=True, text=True, timeout=30,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
     except (OSError, subprocess.SubprocessError) as exc:
         return None, f"git ls-remote could not run: {exc}"
     fields = result.stdout.split()
@@ -65,23 +68,22 @@ def pin(merged: dict, schema_params, upstream: Path, env: dict[str, str], *,
     ref = default[1]
     if _COMMIT.fullmatch(ref):
         return merged, None, None                       # the release already pins a commit
-    commit, error = (previous, None) if previous and _COMMIT.fullmatch(previous) else _ls_remote(REPOSITORY, ref)
+    commit, error = ((previous, None) if previous and _COMMIT.fullmatch(previous)
+                     else _ls_remote(REPOSITORY, ref))
     if commit is None:
         if error is None:
             return merged, None, None
         return merged, {"repository": REPOSITORY, "ref": ref, "commit": None, "error": error}, (
-            f"nf-core institutional configs are not pinned ({error}); the run reads nf-core/configs "
-            f"`{ref}` as it is at launch, and a replay reads it as it is then")
+            f"nf-core institutional configs are not pinned ({error}); the run reads "
+            f"nf-core/configs `{ref}` as it is at launch, and a replay reads it as it is then")
     record = {"repository": REPOSITORY, "ref": ref, "commit": commit}
     return {**merged, PARAM: commit}, record, (
-        f"nf-core institutional configs pinned to nf-core/configs@{commit[:12]} (`{ref}` at launch) "
-        f"via --{PARAM.replace('_', '-')}; the replay reads the same revision")
+        f"nf-core institutional configs pinned to nf-core/configs@{commit[:12]} (`{ref}` at "
+        f"launch) via --{PARAM.replace('_', '-')}; the replay reads the same revision")
 
 
 def previous_commit(outdir: Path) -> str | None:
     """The configs commit an earlier attempt in this outdir pinned, from its params.json."""
-    import json
-
     try:
         params = json.loads((outdir / "provenance" / "params.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):

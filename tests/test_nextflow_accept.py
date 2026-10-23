@@ -138,7 +138,6 @@ def test_acceptance_uses_private_scratch_and_preserves_unrelated_temp_files(tmp_
     assert not list(tmp_path.glob("nfclaw-accept.*"))
 
 
-
 HANG = "barrier arrives \\(monitor: local\\)"
 
 
@@ -222,8 +221,8 @@ def test_persistently_unreachable_remote_file_is_staging_unverified(tmp_path):
 
 def test_remote_outage_outlasting_the_first_retry_is_retried_again(tmp_path):
     # GitHub answered 503 for sopa's test-data page across a 30-second retry and a rerun.
-    flaky = ("* --input: Error for field 'data_path' (https://github.com/x/blob/dev/s.csv): the file "
-             "or directory 'https://github.com/x/blob/dev/s.csv' does not exist\n")
+    flaky = ("* --input: Error for field 'data_path' (https://github.com/x/blob/dev/s.csv): the "
+             "file or directory 'https://github.com/x/blob/dev/s.csv' does not exist\n")
     process, verdict = _accept(tmp_path, flaky, 1, second=(flaky, 1), third=("* PREVIEW *\n", 0))
     assert process.returncode == 0, process.stdout
     assert verdict == "mini\taccepted\n"
@@ -242,7 +241,8 @@ def test_failed_plugin_download_is_retried_once(tmp_path):
     assert process.returncode == 0, process.stdout
     assert verdict == "mini\taccepted\n"
     assert (tmp_path / "launches.txt").read_text().strip() == "2"
-    assert "a plugin download failed (exit 1); retrying the preview in 0s (attempt 2 of 3)" in process.stdout
+    assert ("a plugin download failed (exit 1); retrying the preview in 0s (attempt 2 of 3)"
+            in process.stdout)
 
 
 def test_persistently_failing_plugin_download_is_rejected(tmp_path):
@@ -278,9 +278,11 @@ def test_committed_exceptions_are_well_formed_and_documented():
         re.compile(evidence)
         assert f"`{name}`" in known_issues, f"{name} needs its investigation in known-issues.md"
 
+
 def _discovery_step(tmp_path, verdict):
     raw = (ROOT / ".github" / "workflows" / "discover-pipelines.yml").read_text()
-    step = re.split(r"\n      [-#]", raw.split("id: disc", 1)[1], maxsplit=1)[0]  # up to the next step
+    # up to the next step
+    step = re.split(r"\n      [-#]", raw.split("id: disc", 1)[1], maxsplit=1)[0]
     script = re.search(r"^        run: \|\n(.*)", step, re.M | re.S).group(1)
     script = "\n".join(line[10:] for line in script.splitlines())
     fake = tmp_path / "bin"
@@ -345,11 +347,13 @@ def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path
     _executable(fake / "git", f'#!/bin/sh\necho {staged}\nexit {inventory_exit}\n')
     (tmp_path / "scripts").mkdir()
     _executable(tmp_path / "scripts/nextflow_accept.sh", '#!/bin/sh\n'
-                '[ -z "$NFCLAW_RESULT_FILE" ] || printf "%s" "$FAKE_VERDICT" > "$NFCLAW_RESULT_FILE"\n'
+                '[ -z "$NFCLAW_RESULT_FILE" ] || '
+                'printf "%s" "$FAKE_VERDICT" > "$NFCLAW_RESULT_FILE"\n'
                 'exit 0\n')
     # GitHub runs a step without an explicit shell as `bash -e {0}`, without pipefail.
     process = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path,
                              env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
                                   "RUNNER_TEMP": str(tmp_path), "FAKE_VERDICT": verdict},
                              capture_output=True, text=True)
-    assert (process.returncode == 0) == (inventory_exit == 0 and verdict == "mini\taccepted\n"), process.stdout
+    accepted = inventory_exit == 0 and verdict == "mini\taccepted\n"
+    assert (process.returncode == 0) == accepted, process.stdout

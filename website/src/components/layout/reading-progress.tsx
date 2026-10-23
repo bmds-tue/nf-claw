@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,11 +24,7 @@ export function ReadingProgress({ visible }: { visible: boolean }) {
   const pathname = usePathname();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
-  const [reduce, setReduce] = useState(false);
-
-  useEffect(() => {
-    setReduce(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
+  const reduce = useReducedMotion();
 
   // Collect the chapters of the page now on screen (after its content has rendered).
   useEffect(() => {

@@ -21,7 +21,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev,yaml]"
       - run: pytest -q
-      - run: pip install ruff && ruff check .
+      - run: ruff check .  # ruff comes pinned with the dev extra installed above
 
   website:
     runs-on: ubuntu-latest

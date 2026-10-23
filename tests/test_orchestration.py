@@ -1,11 +1,17 @@
-import pathlib
+import hashlib
+import json
 import re
 import shutil
+import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from runner import orchestration, submodule
+from runner import orchestration, preflight, resources, runlog, submodule
+from runner.errors import ErrorCode, NfclawError
+from runner.schema import Column, InputSchema
+from runner.submodule import SubmoduleStatus
 
 
 def _make_pipeline(tmp_path, name):
@@ -25,8 +31,7 @@ def _staged_params(res):
     `--check` stages it outside --outdir (a dry run must leave the output directory alone), so
     tests read it from the command rather than assuming a location.
     """
-    import json
-    return json.loads(pathlib.Path(
+    return json.loads(Path(
         re.search(r"-params-file (\S+)", res.command).group(1)).read_text())
 
 
@@ -40,7 +45,7 @@ def test_check_only_returns_command(tmp_path, monkeypatch):
     assert res.checked_only and "nextflow" in res.command
     # The params file the printed command names must exist, so the command runs as printed...
     params = re.search(r"-params-file (\S+)", res.command).group(1)
-    assert pathlib.Path(params).is_file()
+    assert Path(params).is_file()
     # ...but it must NOT be staged inside --outdir: `--check` launches nothing, so it has to leave
     # the output directory exactly as it found it. Creating it, or dropping a provenance/ directory
     # in it, made the next real run fail the "--outdir is not empty" guard over an empty result set.
@@ -66,7 +71,6 @@ def test_full_run_invokes_execution(tmp_path, monkeypatch):
      ["[nf-core/mini] Pipeline completed successfully, but with errored process(es)"])])
 def test_a_successful_run_reports_the_caveats_its_pipeline_printed(tmp_path, monkeypatch, console,
                                                                    expected):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: k["run_log"].write(console))
@@ -87,7 +91,6 @@ def test_a_successful_run_reports_the_caveats_its_pipeline_printed(tmp_path, mon
 def test_local_files_given_to_format_less_parameters_are_recorded_inputs(tmp_path, monkeypatch):
     # differentialabundance declares --feature-length-matrix without a path format: the gene lengths
     # a chain handed over were neither hashed nor replay-checked, and the chain's lineage broke.
-    import json
     root = _make_pipeline(tmp_path, "mini")
     schema_path = root / "pipelines/mini/upstream/nextflow_schema.json"
     schema = json.loads(schema_path.read_text())
@@ -108,12 +111,11 @@ def test_local_files_given_to_format_less_parameters_are_recorded_inputs(tmp_pat
         resume=False, demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
     hashed = (tmp_path / "out/provenance/inputs.sha256").read_text()
     assert str(lengths) in hashed                       # a file the pipeline reads
-    assert "notes" not in hashed                        # a directory or plain text is not guessed at
+    assert "notes" not in hashed  # a directory or plain text is not guessed at
 
 
 def test_engine_provenance_uses_the_executed_banner_without_probing_a_changed_launcher(
         tmp_path, monkeypatch):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k:
@@ -136,12 +138,6 @@ def test_engine_provenance_uses_the_executed_banner_without_probing_a_changed_la
 
 def test_failed_run_still_writes_the_provenance_bundle(tmp_path, monkeypatch):
     # The replay script matters most after a failure — that is when the run gets fixed and retried.
-    import json
-
-    import pytest
-
-    from runner.errors import ErrorCode, NfclawError
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
 
@@ -155,15 +151,11 @@ def test_failed_run_still_writes_the_provenance_bundle(tmp_path, monkeypatch):
             profile="docker", params_file=None, cli_overrides={}, resume=False,
             demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
     prov = tmp_path / "out" / "provenance"
-    assert (prov / "commands.sh").exists()                       # replayable once the cause is fixed
+    assert (prov / "commands.sh").exists()  # replayable once the cause is fixed
     assert json.loads((prov / "run_manifest.json").read_text())["outcome"] == "failed"
 
 
 def test_provenance_failure_never_masks_the_run_failure(tmp_path, monkeypatch):
-    import pytest
-
-    from runner.errors import ErrorCode, NfclawError
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
 
@@ -183,11 +175,11 @@ def test_provenance_failure_never_masks_the_run_failure(tmp_path, monkeypatch):
 
 
 def test_attribution_failure_survives_bundle_recording_failure(tmp_path, monkeypatch):
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     source = root / "pipelines/mini/upstream/main.nf"
-    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: source.write_text("changed"))
+    monkeypatch.setattr(orchestration.execution, "run",
+                        lambda *a, **k: source.write_text("changed"))
     def disk_full(**kwargs):
         raise OSError("disk full")
     monkeypatch.setattr(orchestration.provenance, "write", disk_full)
@@ -199,8 +191,6 @@ def test_attribution_failure_survives_bundle_recording_failure(tmp_path, monkeyp
 
 
 def test_failed_engine_keeps_its_error_and_records_changed_dependencies(tmp_path, monkeypatch):
-    import json
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     source = root / "pipelines/mini/upstream/main.nf"
@@ -220,9 +210,10 @@ def test_failed_engine_keeps_its_error_and_records_changed_dependencies(tmp_path
     assert "previous execution" in orchestration._input_resume_warning(out, {}, {})
 
 
-@pytest.mark.parametrize("stop", [lambda: orchestration.execution.Terminated(15), KeyboardInterrupt])
-def test_stopped_run_with_unchanged_dependencies_resumes_with_its_cache(tmp_path, monkeypatch, stop):
-    import json
+@pytest.mark.parametrize("stop",
+                         [lambda: orchestration.execution.Terminated(15), KeyboardInterrupt])
+def test_stopped_run_with_unchanged_dependencies_resumes_with_its_cache(tmp_path,
+                                                                        monkeypatch, stop):
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     def stopped(*args, **kwargs):
@@ -240,7 +231,6 @@ def test_stopped_run_with_unchanged_dependencies_resumes_with_its_cache(tmp_path
 
 
 def test_stopped_run_records_dependencies_changed_before_the_stop(tmp_path, monkeypatch):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     source = root / "pipelines/mini/upstream/main.nf"
@@ -259,7 +249,6 @@ def test_stopped_run_records_dependencies_changed_before_the_stop(tmp_path, monk
 
 
 def test_passes_effective_work_dir_and_allow_spaces_to_preflight(tmp_path, monkeypatch):
-    from pathlib import Path
     root = _make_pipeline(tmp_path, "mini")
     seen = {}
     monkeypatch.setattr(orchestration.preflight, "check_environment",
@@ -307,13 +296,12 @@ def test_relative_nxf_work_is_resolved_before_nextflow_changes_cwd(tmp_path, mon
 
 
 def test_space_in_repo_path_blocks_the_run(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path / "draft 2", "mini")        # repo path has a space
     # real preflight, but isolate from tool/daemon checks so only the space rule can fire
     monkeypatch.setattr(orchestration.preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     monkeypatch.setattr(orchestration.preflight, "capture",
-                        lambda *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
+                        lambda
+                        *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
     with pytest.raises(NfclawError) as exc:
         orchestration.run_pipeline(
             "mini", repo_root=root, input_path="https://example.test/samplesheet.csv",
@@ -328,7 +316,8 @@ def _healthy_env(monkeypatch):
     # real preflight, but tools present and docker daemon healthy, so only the rule under test fires
     monkeypatch.setattr(orchestration.preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     monkeypatch.setattr(orchestration.preflight, "capture",
-                        lambda *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
+                        lambda
+                        *a, **k: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
 
 
 def test_check_only_allows_nonempty_outdir(tmp_path, monkeypatch):
@@ -347,8 +336,6 @@ def test_check_only_allows_nonempty_outdir(tmp_path, monkeypatch):
 
 def test_full_run_still_blocks_nonempty_outdir(tmp_path, monkeypatch):
     # The guard is intact for an actual run: a non-empty outdir without --resume is rejected.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path / "repo", "mini")
     _healthy_env(monkeypatch)
     out = tmp_path / "out"
@@ -377,7 +364,7 @@ def test_configs_passed_to_build_as_extra_configs(tmp_path, monkeypatch):
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
         configs=[str(cfg)])
-    assert seen["extra_configs"] == (cfg.resolve(),)              # resolved to absolute, passed as -c
+    assert seen["extra_configs"] == (cfg.resolve(),)  # resolved to absolute, passed as -c
 
 
 def test_obsolete_validation_param_injects_ignoreparams_config(tmp_path, monkeypatch):
@@ -413,8 +400,6 @@ def test_clean_release_injects_no_compat_config(tmp_path, monkeypatch):
 
 
 def test_missing_config_fails_fast(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     with pytest.raises(NfclawError) as exc:
@@ -429,10 +414,10 @@ def test_missing_config_fails_fast(tmp_path, monkeypatch):
 def test_url_input_skips_local_validation_and_is_forwarded(tmp_path, monkeypatch):
     # A remote --input (URL) can't be read locally, so it must skip the samplesheet pre-check and be
     # forwarded to Nextflow unchanged (nf-schema stages + validates it). Mirrors nf-core behavior.
-    from runner.schema import Column, InputSchema
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
-    # Force a non-None input schema so the ONLY thing that skips the pre-check is the URL (str) type.
+    # Force a non-None input schema so the ONLY thing that skips the pre-check is the URL
+    # (str) type.
     monkeypatch.setattr(orchestration.schema_mod, "load_input_schema",
                         lambda repo, rel="assets/schema_input.json":
                         InputSchema(columns=(Column("sample", "string", True, None, None),)))
@@ -452,8 +437,6 @@ def test_url_input_skips_local_validation_and_is_forwarded(tmp_path, monkeypatch
 def test_missing_params_file_fails_fast(tmp_path, monkeypatch):
     # A --params-file the user named but that doesn't exist must fail fast, not be silently
     # dropped (which would run with none of its values). Mirrors the --config contract.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     ran: dict = {}
@@ -499,8 +482,8 @@ def test_runs_from_outdir_with_shared_work_dir(tmp_path, monkeypatch):
 
 
 def test_run_is_logged_in_the_bundle_with_nextflow_log_and_advisories(tmp_path, monkeypatch):
-    # The run log lives at a fixed place — <outdir>/provenance/logs/run.log — so nobody has to be told
-    # where it is; Nextflow's own log is resolved against the outdir it is launched from.
+    # The run log lives at a fixed place — <outdir>/provenance/logs/run.log — so nobody has to be
+    # told where it is; Nextflow's own log is resolved against the outdir it is launched from.
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.engine_version, "check", lambda *a, **k: ["engine too old"])
@@ -545,10 +528,6 @@ def test_run_log_states_the_outcome_only_once_the_bundle_is_written(tmp_path, mo
 
 
 def test_failed_run_log_ends_after_the_bundle_with_the_failure(tmp_path, monkeypatch):
-    import pytest
-
-    from runner.errors import ErrorCode, NfclawError
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
 
@@ -570,8 +549,6 @@ def test_failed_run_log_ends_after_the_bundle_with_the_failure(tmp_path, monkeyp
 
 
 def test_run_log_never_claims_success_when_nfclaw_fails_after_nextflow(tmp_path, monkeypatch):
-    import pytest
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
@@ -580,7 +557,6 @@ def test_run_log_never_claims_success_when_nfclaw_fails_after_nextflow(tmp_path,
         raise OSError("No space left on device")
 
     monkeypatch.setattr(orchestration.provenance, "write", disk_full)
-    from runner.errors import NfclawError
     with pytest.raises(NfclawError) as exc:                  # a clear error, not a raw OSError
         orchestration.run_pipeline(
             "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
@@ -642,7 +618,6 @@ def test_default_run_uses_no_version(tmp_path, monkeypatch):
 
 
 def test_nxf_overlay_flows_to_execution_and_provenance(tmp_path, monkeypatch):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     seen = {}
@@ -650,16 +625,17 @@ def test_nxf_overlay_flows_to_execution_and_provenance(tmp_path, monkeypatch):
                         lambda *a, **k: seen.update({"exec_env": k.get("env_extra")}))
     # stub the version probe so the provenance step doesn't invoke real `nextflow -version` with
     # NXF_VER set (which would try to fetch that engine — execution.run is mocked here).
-    monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda env_extra=None: "stub")
+    monkeypatch.setattr(orchestration.provenance, "_nextflow_version",
+                        lambda env_extra=None: "stub")
     orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=False, write_provenance=True, timeout_seconds=10,
         nxf_ver="25.10.2", nxf_env={"NXF_JVM_ARGS": "-Dx=y"})
     overlay = {"NXF_JVM_ARGS": "-Dx=y", "NXF_VER": "25.10.2"}
-    assert seen["exec_env"] == overlay                                    # applied to the nextflow subprocess
+    assert seen["exec_env"] == overlay  # applied to the nextflow subprocess
     manifest = json.loads((tmp_path / "out" / "provenance" / "run_manifest.json").read_text())
-    assert manifest["nextflow_env"] == overlay                           # and recorded for reproducibility
+    assert manifest["nextflow_env"] == overlay  # and recorded for reproducibility
 
 
 def test_nxf_ver_makes_engine_check_judge_the_pin(tmp_path, monkeypatch):
@@ -682,7 +658,6 @@ def test_nxf_ver_makes_engine_check_judge_the_pin(tmp_path, monkeypatch):
 
 
 def _make_pipeline_with_bool(tmp_path, name="boolp"):
-    import json
     up = tmp_path / "pipelines" / name / "upstream"
     up.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
@@ -702,12 +677,10 @@ def test_boolean_cli_string_is_coerced_in_params_file(tmp_path, monkeypatch):
         profile="docker", params_file=None, cli_overrides={"skip_busco": "true"},
         resume=False, demo=True, check_only=True, write_provenance=False, timeout_seconds=10)
     params = _staged_params(res)
-    assert params["skip_busco"] is True                       # CLI "true" → real boolean for nf-schema
+    assert params["skip_busco"] is True  # CLI "true" → real boolean for nf-schema
 
 
 def test_invalid_param_rejected_before_execution(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     ran: dict = {}
@@ -723,8 +696,6 @@ def test_invalid_param_rejected_before_execution(tmp_path, monkeypatch):
 
 
 def test_missing_required_param_rejected_before_preflight(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     reached_preflight = {}
     monkeypatch.setattr(orchestration.preflight, "check_environment",
@@ -750,9 +721,9 @@ def test_demo_allows_required_input_to_come_from_test_profile(tmp_path, monkeypa
 
 
 def test_a_profile_or_config_that_can_set_params_defers_required_checks(tmp_path, monkeypatch):
-    # nf-core's canonical test command is `-profile test,docker` (no --demo), and a --config file can
-    # set `params.input`; nf-schema sees both, so rejecting them as "missing --input" up front was a
-    # false positive. Only an engine-only profile with no --config is judged by nfclaw.
+    # nf-core's canonical test command is `-profile test,docker` (no --demo), and a --config file
+    # can set `params.input`; nf-schema sees both, so rejecting them as "missing --input" up front
+    # was a false positive. Only an engine-only profile with no --config is judged by nfclaw.
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     cfg = tmp_path / "params.config"
@@ -767,8 +738,6 @@ def test_a_profile_or_config_that_can_set_params_defers_required_checks(tmp_path
 
 
 def test_engine_profiles_alone_still_require_the_input(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     for profile in ("docker", "singularity,arm64", "conda,debug"):
@@ -781,8 +750,6 @@ def test_engine_profiles_alone_still_require_the_input(tmp_path, monkeypatch):
 
 def _pipeline_with_report_suffix(tmp_path, name="mini"):
     """`mini`, plus the nf-core template's trace_report_suffix parameter."""
-    import json
-
     root = _make_pipeline(tmp_path, name)
     schema_path = root / "pipelines" / name / "upstream" / "nextflow_schema.json"
     data = json.loads(schema_path.read_text())
@@ -796,8 +763,6 @@ def _pipeline_with_report_suffix(tmp_path, name="mini"):
 
 def test_resource_limits_become_a_config_passed_to_nextflow(tmp_path, monkeypatch):
     # nf-core's documented ceiling: a process.resourceLimits config handed to Nextflow with -c.
-    from runner import resources
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.engine_version, "effective", lambda *a: "25.10.4")
@@ -806,10 +771,10 @@ def test_resource_limits_become_a_config_passed_to_nextflow(tmp_path, monkeypatc
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
         limits=resources.parse(4, "15.GB", "1.h"))
-    cfg = pathlib.Path(re.search(r"-c (\S+)", res.command).group(1))
+    cfg = Path(re.search(r"-c (\S+)", res.command).group(1))
     assert cfg.name == "resource_limits.config"
     assert cfg.is_file() and "resourceLimits" in cfg.read_text()
-    assert cfg.parent == pathlib.Path(
+    assert cfg.parent == Path(
         re.search(r"-params-file (\S+)", res.command).group(1)).parent   # staged with the params
 
 
@@ -826,8 +791,6 @@ def test_no_config_is_generated_when_no_limit_is_given(tmp_path, monkeypatch):
 
 def test_an_explicit_config_still_overrides_the_generated_ceiling(tmp_path, monkeypatch):
     # Nextflow lets a later -c win, so the user's own file must come after the generated one.
-    from runner import resources
-
     root = _make_pipeline(tmp_path, "mini")
     mine = tmp_path / "mine.config"
     mine.write_text("process { resourceLimits = [ cpus: 2 ] }\n")
@@ -845,8 +808,6 @@ def test_an_explicit_config_still_overrides_the_generated_ceiling(tmp_path, monk
 def test_report_suffix_is_pinned_so_the_replay_reproduces_the_run(tmp_path, monkeypatch):
     # Without this the pipeline re-evaluates `now()` on every launch and the replay writes a second,
     # differently-named set of reports rather than reproducing the original run's outputs.
-    import json
-
     root = _pipeline_with_report_suffix(tmp_path)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
@@ -856,7 +817,7 @@ def test_report_suffix_is_pinned_so_the_replay_reproduces_the_run(tmp_path, monk
         demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
     params = json.loads((tmp_path / "out" / "provenance" / "params.json").read_text())
     suffix = params["trace_report_suffix"]
-    assert suffix and suffix != ""
+    assert suffix
     # commands.sh replays through the same params file, so the replay reuses this exact suffix.
     replay = (tmp_path / "out" / "provenance" / "commands.sh").read_text()
     assert '"$_script_dir"/params.json' in replay
@@ -864,7 +825,6 @@ def test_report_suffix_is_pinned_so_the_replay_reproduces_the_run(tmp_path, monk
 
 def test_a_release_without_the_report_suffix_param_is_untouched(tmp_path, monkeypatch):
     # Older releases predate the parameter — passing it would fail nf-schema validation.
-
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     res = orchestration.run_pipeline(
@@ -891,8 +851,6 @@ def test_check_leaves_an_existing_outdir_untouched(tmp_path, monkeypatch):
 def test_a_real_run_after_a_check_is_not_blocked_as_non_empty(tmp_path, monkeypatch):
     # The end-to-end regression, asserted against the REAL preflight guard: after a --check, the
     # output directory must still look untouched to it, so the next real run is not refused.
-    from runner import preflight
-
     root = _make_pipeline(tmp_path, "mini")
     out = tmp_path / "out"                       # outside the repo root, as a real --outdir is
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
@@ -910,7 +868,6 @@ def test_a_real_run_after_a_check_is_not_blocked_as_non_empty(tmp_path, monkeypa
 def _make_pipeline_with_input(tmp_path, input_param, name="inp"):
     """A pipeline whose `--input` is declared by `input_param`, shipping the conventional
     assets/schema_input.json (a FASTQ samplesheet) whether or not `--input` actually uses it."""
-    import json
     up = tmp_path / "pipelines" / name / "upstream"
     (up / "assets").mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
@@ -969,8 +926,6 @@ def test_directory_input_is_not_prechecked_as_a_samplesheet(tmp_path, monkeypatc
 
 
 def test_missing_directory_input_fails_fast(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, {"type": "string", "format": "path", "exists": True})
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.chdir(tmp_path)
@@ -981,8 +936,6 @@ def test_missing_directory_input_fails_fast(tmp_path, monkeypatch):
 
 
 def test_samplesheet_input_is_still_prechecked(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, {
         "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
@@ -996,7 +949,6 @@ def test_samplesheet_input_is_still_prechecked(tmp_path, monkeypatch):
 @pytest.mark.parametrize("change", ["malformed", "missing"])
 def test_input_snapshot_refuses_a_sheet_changed_after_validation_before_launch(
         tmp_path, monkeypatch, change):
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, {
         "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
     reads = tmp_path / "reads.fastq.gz"
@@ -1036,7 +988,6 @@ def test_input_snapshot_refuses_a_sheet_changed_after_validation_before_launch(
 @pytest.mark.parametrize("phase", ["validation", "discovery", "probe"])
 def test_validated_descriptor_cannot_select_different_data_before_launch(
         tmp_path, monkeypatch, check_only, auxiliary, phase):
-    from runner.errors import ErrorCode, NfclawError
     if auxiliary:
         root = _pipeline_with_auxiliary_sheet(tmp_path)
         header = "label,fasta"
@@ -1077,7 +1028,6 @@ def test_validated_descriptor_cannot_select_different_data_before_launch(
 @pytest.mark.parametrize("check_only", [False, True])
 def test_validated_descriptor_namespace_cannot_change_with_identical_bytes(
         tmp_path, monkeypatch, check_only):
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, {
         "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
     reads = tmp_path / "reads.fastq.gz"
@@ -1109,7 +1059,6 @@ def test_validated_descriptor_namespace_cannot_change_with_identical_bytes(
                                               ("command", False), ("command", True)])
 def test_descriptor_change_during_launch_preparation_is_refused(
         tmp_path, monkeypatch, phase, check_only):
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, {
         "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
     first, second = tmp_path / "first.fastq.gz", tmp_path / "second.fastq.gz"
@@ -1153,8 +1102,6 @@ def test_descriptor_change_during_launch_preparation_is_refused(
 @pytest.mark.parametrize("change_descriptor", [False, True])
 def test_a_descriptor_used_for_two_roles_retains_its_first_validation_snapshot(
         tmp_path, monkeypatch, check_only, change_descriptor):
-    import json
-    from runner.errors import ErrorCode, NfclawError
     root = _pipeline_with_auxiliary_sheet(tmp_path)
     up = root / "pipelines/inp/upstream"
     schema_file = up / "nextflow_schema.json"
@@ -1188,7 +1135,8 @@ def test_a_descriptor_used_for_two_roles_retains_its_first_validation_snapshot(
         return orchestration.run_pipeline(
             "inp", repo_root=root, input_path=str(sheet), outdir=tmp_path / "out",
             profile="docker", params_file=None, cli_overrides={"references": str(sheet)},
-            resume=False, demo=True, check_only=check_only, write_provenance=True, timeout_seconds=10)
+            resume=False, demo=True, check_only=check_only, write_provenance=True,
+            timeout_seconds=10)
 
     if not change_descriptor:
         result = run()
@@ -1223,7 +1171,6 @@ def test_local_input_without_a_path_format_is_still_hashed_into_provenance(tmp_p
 def test_samplesheet_data_without_a_path_format_is_hashed_into_provenance(tmp_path, monkeypatch):
     # Columns typed by pattern alone (hic, nanoseq, phaseimpute) and columns a custom parser reads
     # without declaring them (hgtseq's input1) name data the run consumes: hash them as inputs.
-    import json
     root = _make_pipeline_with_input(tmp_path, {
         "type": "string", "format": "file-path", "schema": "assets/schema_input.json"})
     schema = tmp_path / "pipelines/inp/upstream/assets/schema_input.json"
@@ -1253,7 +1200,6 @@ def test_samplesheet_data_without_a_path_format_is_hashed_into_provenance(tmp_pa
 # --- dev: running unreleased development code -------------------------------------------------
 
 def _git(path, *args):
-    import subprocess
     return subprocess.run(["git", "-C", str(path), "-c", "user.email=t@t", "-c", "user.name=t",
                            *args], check=True, capture_output=True, text=True).stdout.strip()
 
@@ -1261,7 +1207,6 @@ def _git(path, *args):
 def _library_with_dev(tmp_path, name="mini"):
     """A real nf-core-like remote (release 1.0.0 on main, newer code on `dev`) and an nf-claw
     root whose `pipelines/<name>/upstream` is a shallow clone of the release, as in production."""
-    import subprocess
     remote = tmp_path / "remote"
     remote.mkdir()
     _git(remote, "init", "-q", "-b", "main")
@@ -1322,11 +1267,11 @@ def test_dev_check_targets_the_materialized_commit_and_warns(tmp_path, monkeypat
 
 
 def test_dev_run_records_the_commit_and_replays_exactly_it(tmp_path, monkeypatch, dev_library):
-    import json
     root, _, dev = dev_library()
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
-    monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda env_extra=None: "stub")
+    monkeypatch.setattr(orchestration.provenance, "_nextflow_version",
+                        lambda env_extra=None: "stub")
     orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
@@ -1347,7 +1292,8 @@ def test_resuming_a_dev_run_after_dev_moved_says_so(tmp_path, monkeypatch, dev_l
     root, remote, first = dev_library()
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
-    monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda env_extra=None: "stub")
+    monkeypatch.setattr(orchestration.provenance, "_nextflow_version",
+                        lambda env_extra=None: "stub")
     kw = dict(repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
               params_file=None, cli_overrides={}, demo=True, check_only=False,
               write_provenance=True, timeout_seconds=10, pipeline_version="dev")
@@ -1365,7 +1311,6 @@ def test_resuming_a_dev_run_after_dev_moved_says_so(tmp_path, monkeypatch, dev_l
 
 
 def test_status_notes_surface_as_run_warnings(tmp_path, monkeypatch):
-    from dataclasses import replace
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
 
@@ -1383,13 +1328,13 @@ def test_status_notes_surface_as_run_warnings(tmp_path, monkeypatch):
 
 
 def test_resume_advisory_tolerates_missing_or_bad_manifests(tmp_path):
-    from runner.submodule import SubmoduleStatus
     st = SubmoduleStatus("p", tmp_path, True, True, "dev", "b" * 40, ())
     out = tmp_path / "out"
     assert orchestration._resume_advisory(out, st) == []                 # no previous bundle
     (out / "provenance").mkdir(parents=True)
     manifest = out / "provenance" / "run_manifest.json"
-    for text in ("not json", "[]", '{"commit": null}', '{"commit": ""}', '{"commit": "' + "b" * 40 + '"}'):
+    for text in ("not json", "[]", '{"commit": null}', '{"commit": ""}',
+                 '{"commit": "' + "b" * 40 + '"}'):
         manifest.write_text(text)
         assert orchestration._resume_advisory(out, st) == [], text
     manifest.write_text('{"version": "1.0.0", "commit": "' + "a" * 40 + '"}')
@@ -1398,9 +1343,6 @@ def test_resume_advisory_tolerates_missing_or_bad_manifests(tmp_path):
 
 
 def test_warnings_are_emitted_before_execution(tmp_path, monkeypatch):
-    from dataclasses import replace
-
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
 
@@ -1426,7 +1368,6 @@ def test_warnings_are_emitted_before_execution(tmp_path, monkeypatch):
 
 
 def _check_with_params_file(root, tmp_path, params, name="inp", input_value=None):
-    import json
     pf = tmp_path / "params.json"
     pf.write_text(json.dumps(params))
     return orchestration.run_pipeline(
@@ -1453,8 +1394,6 @@ def test_params_file_input_false_leaves_input_unset(tmp_path, monkeypatch):
 def test_params_file_samplesheet_is_prechecked_like_the_flag(tmp_path, monkeypatch):
     # A samplesheet named in the params file skipped the pre-check `--input` gets, so a missing or
     # malformed sheet only failed once Nextflow was running.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, _SAREK_LIKE_INPUT)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.chdir(tmp_path)
@@ -1496,8 +1435,6 @@ def test_input_flag_still_wins_over_the_params_file(tmp_path, monkeypatch):
 
 
 def test_params_file_non_string_input_is_reported_not_crashed(tmp_path, monkeypatch):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline_with_input(tmp_path, _SAREK_LIKE_INPUT)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.chdir(tmp_path)
@@ -1509,8 +1446,6 @@ def test_params_file_non_string_input_is_reported_not_crashed(tmp_path, monkeypa
 def test_provenance_failure_after_a_successful_run_is_a_clear_error(tmp_path, monkeypatch):
     # A full disk (or an unreadable result) while the bundle is written escaped as a raw OSError
     # traceback, so a run that had succeeded read as a crash with no word about its results.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     out = tmp_path / "out"
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
@@ -1536,8 +1471,6 @@ def test_provenance_failure_after_a_successful_run_is_a_clear_error(tmp_path, mo
 def test_outdir_that_cannot_be_created_is_a_clear_error(tmp_path, monkeypatch):
     # Preflight's writability check is advisory (root, ACLs, /proc); mkdir is the authority, and its
     # failure was a raw traceback.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     (tmp_path / "notes.txt").write_text("x")
@@ -1564,7 +1497,6 @@ def test_check_defers_parameters_a_handoff_will_supply(tmp_path, monkeypatch):
 
 
 def test_without_deferral_a_missing_input_is_still_reported(tmp_path, monkeypatch):
-    from runner.errors import NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     with pytest.raises(NfclawError, match="missing required parameter '--input'"):
@@ -1585,7 +1517,6 @@ def test_deferred_params_are_only_for_check(tmp_path, monkeypatch):
 
 
 def test_chain_link_lands_in_the_run_manifest(tmp_path, monkeypatch):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
@@ -1599,7 +1530,6 @@ def test_chain_link_lands_in_the_run_manifest(tmp_path, monkeypatch):
 
 
 def _pipeline_with_auxiliary_sheet(tmp_path):
-    import json
     root = _make_pipeline_with_input(tmp_path, {"type": "string"})
     up = root / "pipelines/inp/upstream"
     schema_path = up / "nextflow_schema.json"
@@ -1616,8 +1546,8 @@ def _pipeline_with_auxiliary_sheet(tmp_path):
 
 @pytest.mark.parametrize("record", ["label\nA\n", "label,fasta\nA,relative.fa\n",
                                    "label,fasta\nsafe$(touch${IFS}MARKER),{fasta}\n"])
-def test_auxiliary_samplesheet_is_validated_before_output_or_execution(tmp_path, monkeypatch, record):
-    from runner.errors import ErrorCode, NfclawError
+def test_auxiliary_samplesheet_is_validated_before_output_or_execution(tmp_path,
+                                                                       monkeypatch, record):
     root = _pipeline_with_auxiliary_sheet(tmp_path)
     fasta = tmp_path / "reference.fa"
     fasta.write_text(">chr\nACGT\n")
@@ -1635,9 +1565,7 @@ def test_auxiliary_samplesheet_is_validated_before_output_or_execution(tmp_path,
     assert not called and not (tmp_path / "out").exists()
 
 
-def test_auxiliary_samplesheet_data_enters_replay_identity(tmp_path, monkeypatch):
-    import json
-    import hashlib
+def test_auxiliary_samplesheet_data_enters_replay_identity(tmp_path, monkeypatch, no_engine_probe):
     root = _pipeline_with_auxiliary_sheet(tmp_path)
     fasta = tmp_path / "reference.fa"
     fasta.write_bytes(b">chr\nACGT\n")
@@ -1645,7 +1573,6 @@ def test_auxiliary_samplesheet_data_enters_replay_identity(tmp_path, monkeypatch
     sheet.write_text(f"label,fasta\nA,{fasta}\n")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
-    monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda **k: "test engine")
     orchestration.run_pipeline(
         "inp", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
         params_file=None, cli_overrides={"references": str(sheet)}, resume=False,
@@ -1719,7 +1646,6 @@ def test_the_documented_pin_runs(tmp_path, monkeypatch):
 @pytest.mark.parametrize("change", ["commit", "dirty"])
 def test_launch_source_must_still_be_the_validated_release(
         tmp_path, monkeypatch, check_only, phase, change):
-    from runner.errors import ErrorCode, NfclawError
     root, up = _pinned_git_pipeline(tmp_path)
     module, function = {"probe": (orchestration.engine_version, "check"),
                         "command": (orchestration.nextflow_command, "build")}[phase]
@@ -1751,7 +1677,6 @@ def test_launch_source_must_still_be_the_validated_release(
 def test_a_checkout_off_the_documented_pin_is_refused(tmp_path, monkeypatch):
     # `git pull` of nf-claw moves the pin; without `git submodule update` the old release would run
     # under the new release's docs.
-    from runner.errors import ErrorCode, NfclawError
     root, up = _pinned_git_pipeline(tmp_path)
     _git(up, "checkout", "-q", "1.0.0")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
@@ -1764,7 +1689,6 @@ def test_a_checkout_off_the_documented_pin_is_refused(tmp_path, monkeypatch):
 
 
 def test_locally_modified_pipeline_code_is_refused(tmp_path, monkeypatch):
-    from runner.errors import NfclawError
     root, up = _pinned_git_pipeline(tmp_path)
     (up / "main.nf").write_text("patched")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
@@ -1786,8 +1710,6 @@ def test_modified_file_listing_handles_renames(tmp_path):
 def test_resource_limits_refused_on_an_engine_that_would_ignore_them(tmp_path, monkeypatch, engine):
     # Verified on Nextflow 23.10.1: process.resourceLimits is accepted silently and a 16-CPU/64 GB
     # request runs uncapped. A ceiling the engine will not apply must not be reported as applied.
-    from runner import resources
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     with pytest.raises(NfclawError) as exc:
@@ -1801,8 +1723,6 @@ def test_resource_limits_refused_on_an_engine_that_would_ignore_them(tmp_path, m
 
 
 def test_resource_limits_on_the_installed_engine_are_judged_by_its_version(tmp_path, monkeypatch):
-    from runner import resources
-    from runner.errors import NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     kwargs = dict(repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
@@ -1825,7 +1745,6 @@ def test_resource_limits_on_the_installed_engine_are_judged_by_its_version(tmp_p
 
 
 def test_preplanned_tree_cannot_run_a_different_clean_commit(tmp_path, monkeypatch):
-    from runner.errors import NfclawError
     root, up = _pinned_git_pipeline(tmp_path)
     planned = submodule.resolve("mini", root / "pipelines")
     _git(up, "checkout", "-q", "1.0.0")
@@ -1835,7 +1754,6 @@ def test_preplanned_tree_cannot_run_a_different_clean_commit(tmp_path, monkeypat
 
 
 def test_preplanned_git_identity_must_still_be_verifiable(tmp_path, monkeypatch):
-    from runner.errors import NfclawError
     root, _ = _pinned_git_pipeline(tmp_path)
     planned = submodule.resolve("mini", root / "pipelines")
     monkeypatch.setattr(submodule, "_git", lambda *a: "")
@@ -1845,8 +1763,6 @@ def test_preplanned_git_identity_must_still_be_verifiable(tmp_path, monkeypatch)
 
 
 def test_unidentified_engine_cannot_launch_with_a_requested_resource_ceiling(tmp_path, monkeypatch):
-    from runner import resources
-    from runner.errors import NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.engine_version, "_installed_raw", lambda: None)
@@ -1861,22 +1777,21 @@ def test_unidentified_engine_cannot_launch_with_a_requested_resource_ceiling(tmp
 
 
 def test_a_stub_test_profile_is_announced_and_reported_as_a_caveat(tmp_path, monkeypatch):
-    # proteinfold 2.0.0's test profile sets `stubRun = true`: --demo "succeeded" with every output an
-    # empty placeholder, and nothing said the run had computed nothing.
-    import json
-    from runner import runlog
+    # proteinfold 2.0.0's test profile sets `stubRun = true`: --demo "succeeded" with every output
+    # an empty placeholder, and nothing said the run had computed nothing.
     root = _make_pipeline(tmp_path, "mini")
     up = root / "pipelines/mini/upstream"
     (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
     (up / "conf").mkdir()
     (up / "conf/test.config").write_text("stubRun = true\n")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
-    launched = []
+    launched, shown = [], []
+
     def run(*args, **kwargs):
         launched.append(len(shown))
         kwargs["run_log"].write(b"-[nf-core/mini] Pipeline completed successfully-\n")
+
     monkeypatch.setattr(orchestration.execution, "run", run)
-    shown = []
     out = tmp_path / "out"
     orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=out, profile="docker", params_file=None,
@@ -1892,7 +1807,6 @@ def test_a_stub_test_profile_is_announced_and_reported_as_a_caveat(tmp_path, mon
 
 
 def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
-    import json
     root = _make_pipeline(tmp_path, "mini")
     up = root / "pipelines/mini/upstream"
     (up / "nextflow.config").write_text("profiles { test { includeConfig 'conf/test.config' } }\n")
@@ -1914,7 +1828,6 @@ def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
 @pytest.mark.parametrize("java,refused", [(17, True), (21, True), (11, False), (None, False)])
 def test_an_engine_too_old_for_nextflows_java_is_refused_before_launch(tmp_path, monkeypatch, java,
                                                                        refused):
-    from runner.errors import ErrorCode, NfclawError
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.engine_version, "java_major_for_nextflow", lambda env: java)

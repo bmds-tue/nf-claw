@@ -1,7 +1,7 @@
 """Compare declared local dependencies at launch and completion, without trusting timestamps."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from subprocess import SubprocessError
 
@@ -43,7 +43,9 @@ def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
                            "before": git_head, "after": after_head})
         for name in sorted(pipeline_checksums.keys() | after_hashes.keys()):
             if pipeline_checksums.get(name) != after_hashes.get(name):
-                issues.append({"kind": "pipeline", "path": str(pipeline / name), "change": "content",
-                               "before": pipeline_checksums.get(name), "after": after_hashes.get(name)})
+                issues.append(
+                    {"kind": "pipeline", "path": str(pipeline / name), "change": "content",
+                     "before": pipeline_checksums.get(name),
+                     "after": after_hashes.get(name)})
     return {"version": 1, "status": "changed" if issues else "unchanged",
-            "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "issues": issues}
+            "checked_at": datetime.now(UTC).isoformat(timespec="seconds"), "issues": issues}

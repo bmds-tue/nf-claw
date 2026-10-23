@@ -2,15 +2,17 @@
 sample and mate detection, assignments, integrity rules and the written sheet."""
 import csv
 import gzip
+import importlib
 import io
 import os
+import time
 from pathlib import Path
 
 import pytest
 
 import sheetgen_schemas as S
+from runner import samplesheet, sheetgen
 from runner import schema as schema_mod
-from runner import sheetgen
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -25,7 +27,8 @@ def fq(path: Path, *ids: str, gz: bool | None = None) -> Path:
     return path
 
 
-def pair(directory: Path, r1: str, r2: str, read: str = "M1:1:FC:1:1101:100:200") -> tuple[Path, Path]:
+def pair(directory: Path, r1: str, r2: str,
+         read: str = "M1:1:FC:1:1101:100:200") -> tuple[Path, Path]:
     """Mates: the same read name, as Illumina writes it (the read number follows a space)."""
     return (fq(directory / r1, f"{read} 1:N:0:ACGT"), fq(directory / r2, f"{read} 2:N:0:ACGT"))
 
@@ -125,7 +128,8 @@ def test_detect_directory_glob_file_and_list(tmp_path, monkeypatch):
     a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     monkeypatch.chdir(tmp_path)
     assert sheetgen.detect("data", up).values == (str(data),)
-    assert sheetgen.detect("data/*_R{1,2}.fastq.gz", up).values == (str(data / "*_R{1,2}.fastq.gz"),)
+    assert sheetgen.detect("data/*_R{1,2}.fastq.gz", up).values == (
+        str(data / "*_R{1,2}.fastq.gz"),)
     assert sheetgen.detect(str(a1), up).values == (str(a1),)
     source = sheetgen.detect(["data/A_R1.fastq.gz", str(a2)], up)
     assert source.values == (str(a1), str(a2)) and source.sheet == "assets/schema_input.json"
@@ -346,7 +350,7 @@ def test_empty_mates_pair_by_name_with_a_note_but_bare_numbers_need_reads(tmp_pa
 
 def test_unreadable_fastq_is_refused(tmp_path):
     data = tmp_path / "data"
-    (data).mkdir()
+    data.mkdir()
     (data / "A_R1.fastq.gz").write_bytes(b"not gzip")
     (data / "A_R2.fastq.gz").write_bytes(b"not gzip")
     assert "A_R1.fastq.gz" in str(refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
@@ -417,7 +421,7 @@ def test_templates_constants_and_defaults(tmp_path):
     assert g.text.splitlines()[0] == "patient,sample,status,lane,fastq_1,fastq_2"
     assert g.record["sheet_set"] == {"patient": "P_{sample}", "status": "1"}
     drop = tmp_path / "drop"
-    (drop).mkdir()
+    drop.mkdir()
     (drop / "R1.bam").write_bytes(b"x")
     (drop / "R1.bam.bai").write_bytes(b"x")
     d = gen(tmp_path, S.DROP, [drop])
@@ -538,7 +542,6 @@ def test_output_does_not_depend_on_discovery_order(tmp_path):
 
 
 def test_generated_sheet_passes_the_samplesheet_check_and_lists_its_files(tmp_path):
-    from runner import samplesheet
     data = tmp_path / "data"
     a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     g = gen(tmp_path, S.ATACSEQ, [data], {"replicate": "1"})
@@ -743,7 +746,7 @@ def test_similar_names_of_different_libraries_stay_single_end(tmp_path):
     assert [r["sample"] for r in got] == ["S_read1", "S_read2"]
 
 
-# --- review findings ----------------------------------------------------------------------------
+# --- edge cases: identity templates, read names, compression, scale -----------------------------
 
 def test_an_identity_template_can_make_a_file_derived_name_acceptable(tmp_path):
     # ampliseq's `sample` must start with a letter: `S{sample}` makes `1234` acceptable, and the
@@ -771,7 +774,6 @@ def test_generic_read_names_are_no_evidence(tmp_path):
 
 @pytest.mark.parametrize("suffix, opener", [(".bz2", "bz2"), (".xz", "lzma")])
 def test_other_compressed_fastq_is_read(tmp_path, suffix, opener):
-    import importlib
     spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
         "sample": {"type": "string", "meta": ["id"]},
         "fastq_1": {"type": "string", "format": "file-path",
@@ -797,7 +799,6 @@ def test_skill_paragraph_does_not_offer_a_choice_when_generation_is_impossible(t
 
 
 def test_many_samples_stay_fast(tmp_path):
-    import time
     data = tmp_path / "data"
     data.mkdir()
     for n in range(3000):
@@ -807,7 +808,7 @@ def test_many_samples_stay_fast(tmp_path):
     assert g.record["samples"] == 3000 and time.monotonic() - started < 20
 
 
-# --- second review --------------------------------------------------------------------------------
+# --- edge cases: zstd, lone files, template paths, the work tree ----------------------------------
 
 def _zst_spec():
     pattern = "^\\S+\\.f(ast)?q(\\.gz|\\.zst)?$"
@@ -853,7 +854,8 @@ def test_paths_a_template_or_constant_writes_are_inputs(tmp_path):
 
 def test_a_glob_does_not_reach_into_the_work_tree(tmp_path):
     pair(tmp_path / "proj" / "reads", "A_R1.fastq.gz", "A_R2.fastq.gz")
-    pair(tmp_path / "proj" / "work" / "ab" / "cdef", "A_trimmed_R1.fastq.gz", "A_trimmed_R2.fastq.gz")
+    pair(tmp_path / "proj" / "work" / "ab" / "cdef", "A_trimmed_R1.fastq.gz",
+         "A_trimmed_R2.fastq.gz")
     up = S.make_pipeline(tmp_path, S.RNASEQ)
     source = sheetgen.detect(str(tmp_path / "proj" / "**" / "*.fastq.gz"), up)
     with pytest.raises(NfclawError, match="work directory"):

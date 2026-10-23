@@ -9,6 +9,7 @@ import { colorForCategory } from "@/lib/derive";
 import { lockScroll } from "@/lib/scroll-lock";
 import { readRecent } from "@/lib/recent";
 import { cn } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
 export interface PaletteData {
   pipelines: { name: string; version: string; category: string; description: string }[];
@@ -20,17 +21,22 @@ type Item =
   | { kind: "pipeline"; id: string; label: string; hint: string; href: string; color: string; version: string; description: string }
   | { kind: "doc"; id: string; label: string; hint: string; href: string };
 
-export const SECTIONS = [
+// The home page's sections, in page order.
+const SECTIONS = [
   { id: "how", label: "How it works", hint: "Find, read, run — three commands" },
   { id: "pipelines", label: "Pipeline universe", hint: "Explore the constellation" },
-  { id: "activity", label: "Live activity", hint: "Commits & automation" },
   { id: "skills", label: "Skills explorer", hint: "What an agent reads" },
+  { id: "activity", label: "Live activity", hint: "Commits & automation" },
   { id: "releases", label: "Release timeline", hint: "Pinned versions" },
   { id: "docs", label: "Documentation hub", hint: "Rendered from the repo" },
 ];
 
-/** Fire from anywhere (e.g. a search button) to open the palette. */
-export const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
+const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
+
+/** Open the palette from anywhere (a search button, the header). */
+export function openPalette(): void {
+  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+}
 
 function score(item: Item, q: string): number {
   const label = item.label.toLowerCase();
@@ -215,7 +221,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
           className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-ink-900/95 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.9),0_0_0_1px_rgba(57,211,83,0.06)] backdrop-blur-xl"
           initial={reduce ? false : { opacity: 0, y: -12, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.22, ease: EASE }}
           onKeyDown={onKeyDown}
         >
           <div className="flex items-center gap-3 border-b border-white/[0.07] px-4">

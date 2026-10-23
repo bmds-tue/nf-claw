@@ -1,9 +1,9 @@
 """Only audited output directories avoid consumed-input inspection and snapshots."""
-from dataclasses import replace
 import hashlib
 import json
-from pathlib import Path
 import subprocess
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -116,7 +116,8 @@ def test_output_destination_basename_still_receives_literal_name_guard(
     assert not (tmp_path / "results").exists()
 
 
-@pytest.mark.parametrize("change", ["revision", "tracked_source", "untracked_source", "schema_format"])
+@pytest.mark.parametrize("change",
+                         ["revision", "tracked_source", "untracked_source", "schema_format"])
 def test_destination_exemption_fails_closed_when_audited_source_or_schema_changes(
         pinned_source, tmp_path, monkeypatch, change):
     name, param, commit = PINNED_DESTINATIONS[0]
@@ -150,7 +151,8 @@ def test_destination_exemption_fails_closed_when_audited_source_or_schema_change
     assert not path_roles.output_only_directories(st, loaded)
     assert any("unsafe local input filename" in issue for issue in
                orchestration.parameters.validate_params({param: str(dest)}, loaded))
-    expected = "local modifications" if change == "tracked_source" else "unsafe local input filename"
+    expected = ("local modifications" if change == "tracked_source"
+                else "unsafe local input filename")
     with pytest.raises(NfclawError, match=expected):
         _run(st, tmp_path, monkeypatch, {param: str(dest)}, check_only=True)
     assert not (tmp_path / "results").exists()

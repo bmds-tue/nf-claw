@@ -64,41 +64,24 @@ const config: Config = {
       },
       boxShadow: {
         glow: "0 0 0 1px rgba(57,211,83,0.12), 0 24px 80px -32px rgba(57,211,83,0.25)",
-        card: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 40px 80px -48px rgba(0,0,0,0.9)",
       },
       backgroundImage: {
         "grid-faint":
           "linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px)",
-        "radial-fade":
-          "radial-gradient(ellipse at top, rgba(57,211,83,0.10), transparent 60%)",
       },
       keyframes: {
-        "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(16px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-10px)" },
-        },
-        shimmer: {
-          "100%": { transform: "translateX(100%)" },
         },
         "pulse-ring": {
           "0%": { transform: "scale(0.9)", opacity: "0.7" },
           "100%": { transform: "scale(2.4)", opacity: "0" },
         },
-        marquee: {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-50%)" },
-        },
       },
       animation: {
-        "fade-up": "fade-up 0.7s cubic-bezier(0.16,1,0.3,1) both",
         float: "float 6s ease-in-out infinite",
-        shimmer: "shimmer 2.5s infinite",
         "pulse-ring": "pulse-ring 3s cubic-bezier(0.16,1,0.3,1) infinite",
-        marquee: "marquee 40s linear infinite",
       },
       transitionTimingFunction: {
         out: "cubic-bezier(0.16,1,0.3,1)",

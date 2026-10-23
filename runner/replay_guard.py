@@ -5,8 +5,8 @@ whatever version of nfclaw happens to be installed later.
 """
 from __future__ import annotations
 
-import glob
 import errno
+import glob
 import hashlib
 import json
 import math
@@ -22,6 +22,7 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 
 
@@ -37,14 +38,15 @@ def quote_console(data: bytes, at_line_start: bool) -> tuple[bytes, bool]:
 def stub_caveat(profiles: list[str]) -> str:
     """What a run's results lack when a selected profile runs every task as a stub."""
     names = ", ".join(f"`{name}`" for name in profiles)
-    return (f"stub run: the {names} profile sets `stubRun = true`, so every task ran its stub block "
-            "and wrote placeholder files instead of running its tool; the outputs hold no analysis "
-            "results")
+    return (f"stub run: the {names} profile sets `stubRun = true`, so every task ran its stub "
+            "block and wrote placeholder files instead of running its tool; the outputs hold "
+            "no analysis results")
 
 
 def _recorded_stub_profiles(original: str) -> list[str]:
     try:
-        manifest = json.loads((Path(original) / "provenance" / "run_manifest.json").read_text())
+        manifest = json.loads((Path(original) / "provenance" / "run_manifest.json")
+                              .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     names = manifest.get("stub_profiles") if isinstance(manifest, dict) else None
@@ -168,7 +170,8 @@ def _glob_patterns(pattern: str) -> list[str]:
     """Expand Java/Nextflow brace alternatives and its recursive ``**.ext`` shorthand."""
     if match := re.search(r"\{([^{}]+)\}", pattern):
         return [expanded for option in match[1].split(",")
-                for expanded in _glob_patterns(pattern[:match.start()] + option + pattern[match.end():])]
+                for expanded
+                in _glob_patterns(pattern[:match.start()] + option + pattern[match.end():])]
     return [re.sub(r"(?<=/)\*\*(?=[^/])", "**/*", pattern)]
 
 
@@ -301,7 +304,8 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
                 or set(entry) - {"type", "link_target", "resolved_path"}
                 or ("resolved_path" in entry and not absolute_name(entry["resolved_path"]))
                 or ("link_target" in entry and (not isinstance(entry["link_target"], str)
-                                                or not entry["link_target"] or "\x00" in entry["link_target"]))):
+                                                or not entry["link_target"]
+                                                or "\x00" in entry["link_target"]))):
             raise ValueError(f"invalid input inventory entry {name!r} in {path}")
     return data
 
@@ -440,7 +444,7 @@ def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | Non
                 target.parent.mkdir(parents=True, exist_ok=True)
                 output = open(target, "xb")
             try:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                for chunk in iter(partial(stream.read, 1024 * 1024), b""):
                     digest.update(chunk)
                     if output is not None:
                         output.write(chunk)
@@ -495,7 +499,8 @@ PIPELINE_SOURCE_RECORD = "pipeline-source.json"
 
 def replay_pipeline_source(target: Path) -> dict | None:
     try:
-        record = json.loads((target / "provenance" / PIPELINE_SOURCE_RECORD).read_text(encoding="utf-8"))
+        record = json.loads(
+            (target / "provenance" / PIPELINE_SOURCE_RECORD).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     return record if isinstance(record, dict) else None
@@ -523,9 +528,11 @@ def choose_pipeline_source(bundle: Path, target: Path) -> str:
     record.parent.mkdir(parents=True, exist_ok=True)
     record.write_text(json.dumps(source, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if reason is None:
-        print(f"nfclaw replay: running the recorded pipeline checkout {source['path']}", file=sys.stderr)
+        print(f"nfclaw replay: running the recorded pipeline checkout {source['path']}",
+              file=sys.stderr)
     else:
-        print(f"nfclaw replay: running the bundle's pipeline source archive ({reason})", file=sys.stderr)
+        print(f"nfclaw replay: running the bundle's pipeline source archive ({reason})",
+              file=sys.stderr)
     return source["path"]
 
 
@@ -544,14 +551,16 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
                 or stability.get("status") not in {"unchanged", "changed", "not_checked"}):
             raise ValueError("invalid dependency stability record")
         if stability["status"] == "changed":
-            raise ValueError("local dependencies changed or could not be verified during the original run; "
-                             "these outputs have no verified launch-input attribution. Start a fresh run.")
+            raise ValueError("local dependencies changed or could not be verified during the "
+                             "original run; these outputs have no verified launch-input "
+                             "attribution. Start a fresh run.")
     if type(manifest.get("dependency_inventory_version")) is not int \
             or manifest["dependency_inventory_version"] != 1:
         raise ValueError("dependency inventory version is missing or unsupported; "
                          "a fresh run with complete directory provenance is required")
     unverified = manifest.get("unverified_dependency_inventories", [])
-    if not isinstance(unverified, list) or any(kind not in ("inputs", "configs") for kind in unverified):
+    if not isinstance(unverified, list) or any(kind not in ("inputs", "configs")
+                                               for kind in unverified):
         raise ValueError("invalid unverified dependency inventories in the run manifest")
     if manifest.get("unverified_engine"):
         raise ValueError("the engine version was neither observed nor pinned; "
@@ -585,8 +594,9 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
                 raise ValueError("the recorded provenance directory identity is missing or invalid")
         # External configs replayed from their bundle copies: the copy stands in for the original,
         # which a replay no longer reads (it may have been moved or edited since the run).
-        replayed = ({source for source, entry in _bundled_configs(manifest).items() if entry["replay"]}
-                    if kind == "configs" else set())
+        replayed = (
+            {source for source, entry in _bundled_configs(manifest).items() if entry["replay"]}
+            if kind == "configs" else set())
         current_files = {}
         current_inventory = {}
         for source in sources:
@@ -636,7 +646,8 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
             raise ValueError(f"prelaunch {kind} directory inventory was not captured; "
                              "start a fresh run")
         inventory = read_input_inventory(bundle / f"{kind}.inventory.json")
-        if {name for name, entry in inventory.items() if entry["type"] == "file"} != expected.keys():
+        if ({name for name, entry in inventory.items() if entry["type"] == "file"}
+                != expected.keys()):
             raise ValueError(f"{kind} inventory disagrees with its recorded file checksums")
         # A bundle copy is a regular file holding the recorded bytes; the original's link identity
         # belongs to a path the replay does not read.

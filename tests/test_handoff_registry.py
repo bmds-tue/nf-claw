@@ -1,12 +1,13 @@
 """The shipped handoff rules (handoffs/): they parse, name library pipelines, and fit the pinned
 schemas. The fit needs initialized submodules; the drift gate (CI) has them."""
-from pathlib import Path
 import csv
 import json
+from pathlib import Path
 
 import pytest
 
 from runner import handoff, schema, submodule
+from runner.errors import NfclawError
 
 ROOT = Path(__file__).resolve().parent.parent
 RULES = handoff.load_registry(ROOT)
@@ -113,7 +114,6 @@ def _mag_like(library):
 
 def test_fetchngs_mag_platform_is_the_runs_ena_platform(library, finished_run, tmp_path):
     """fetchngs labels every run ILLUMINA; ENA's instrument_platform says what produced it."""
-    from runner.errors import NfclawError
     down, rule = _mag_like(library), RULES[("fetchngs", "mag")]
     header = ("sample,fastq_1,fastq_2,group,short_reads_platform,long_reads_platform,run_accession,"
               "instrument_platform\n")
@@ -138,7 +138,6 @@ def test_fetchngs_mag_platform_is_the_runs_ena_platform(library, finished_run, t
 
 
 def test_detaxizer_mag_never_assumes_a_long_read_platform(library, finished_run, tmp_path):
-    from runner.errors import NfclawError
     down, rule = _mag_like(library), RULES[("detaxizer", "mag")]
     header = "sample,run,group,short_reads_1,short_reads_2,long_reads\n"
     files = {"A_1.fastq.gz": "a1", "A_2.fastq.gz": "a2", "A_long.fastq.gz": "al"}
@@ -160,7 +159,6 @@ def test_detaxizer_mag_never_assumes_a_long_read_platform(library, finished_run,
 @pytest.mark.parametrize("down", ["rnaseq", "atacseq", "sarek", "metatdenovo", "viralrecon"])
 def test_fetchngs_short_read_handoffs_refuse_other_platforms(library, finished_run, tmp_path, down):
     """fetchngs's own test accessions include ABI_SOLID (colour-space) and CAPILLARY runs."""
-    from runner.errors import NfclawError
     rule = RULES[("fetchngs", down)]
     allowed = rule.params["input"].spec["allowed_values"]["instrument_platform"]
     assert "ILLUMINA" in allowed and not {"OXFORD_NANOPORE", "PACBIO_SMRT", "ABI_SOLID",

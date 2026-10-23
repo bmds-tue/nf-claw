@@ -15,10 +15,10 @@ def _version(path):
 
 
 def _sha256sum():
-    """A sha256sum that reads GNU's escaped lines, which the manifests follow: GNU's own when present,
-    otherwise the system one (macOS's reads them too). Ubuntu 25.10+ installs uutils as `sha256sum`
-    (0.10 rejects even its own escaped carriage-return line) and keeps GNU's as `gnusha256sum`;
-    Homebrew's GNU coreutils provides `gsha256sum`."""
+    """A sha256sum that reads GNU's escaped lines, which the manifests follow: GNU's own when
+    present, otherwise the system one (macOS's reads them too). Ubuntu 25.10+ installs uutils as
+    `sha256sum` (0.10 rejects even its own escaped carriage-return line) and keeps GNU's as
+    `gnusha256sum`; Homebrew's GNU coreutils provides `gsha256sum`."""
     for tool in ("sha256sum", "gnusha256sum", "gsha256sum"):
         path = shutil.which(tool)
         if path and "GNU coreutils" in _version(path):
@@ -34,7 +34,8 @@ def record(out, source):
     (out / "provenance").mkdir(parents=True)
     (out / "result.txt").write_bytes(b"fixed result")
     provenance.write(outdir=out, pipeline="fixture", command_str="echo fixture",
-        submodule=SubmoduleStatus("fixture", out.parent / "no-source", True, True, "1.0.0", "deadbeef", ()),
+        submodule=SubmoduleStatus("fixture", out.parent / "no-source", True, True, "1.0.0",
+                                  "deadbeef", ()),
         input_paths=[source], nextflow_version="25.10.4", env_extra={"NXF_VER": "25.10.4"})
 
 
@@ -84,7 +85,8 @@ def test_absolute_checksum_reader_refuses_relative_dependency_names(tmp_path):
         provenance.read_checksums(path, relative=False)
 
 
-@pytest.mark.parametrize("parent", ["line\nfeed", "carriage\rreturn", "back\\slash", "unicode\u2028separator"])
+@pytest.mark.parametrize(
+    "parent", ["line\nfeed", "carriage\rreturn", "back\\slash", "unicode\u2028separator"])
 def test_parent_names_cannot_make_a_fresh_bundle_unreadable(tmp_path, parent):
     data = tmp_path / parent
     data.mkdir()
@@ -94,7 +96,8 @@ def test_parent_names_cannot_make_a_fresh_bundle_unreadable(tmp_path, parent):
     record(original, source)
     replay_guard.verify_dependencies(original / "provenance")
     expected = hashlib.sha256(b"fixed scientific input").hexdigest()
-    assert provenance.read_checksums(original / "provenance/inputs.sha256", relative=False) == {str(source): expected}
+    assert provenance.read_checksums(original / "provenance/inputs.sha256", relative=False) == {
+        str(source): expected}
     moved = tmp_path / "moved"
     original.rename(moved)
     replay_guard.verify_dependencies(moved / "provenance")

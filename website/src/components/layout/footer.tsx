@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { ArrowUpRight, Github } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { CATEGORIES, OTHER_CATEGORY, categorize } from "@/lib/derive";
+import { categorize, colorForCategory, domainCounts } from "@/lib/derive";
 import type { Pipeline } from "@/lib/types";
 
 export function Footer({ repo, pipelines }: { repo: string | null; pipelines: Pipeline[] }) {
   const githubUrl = repo ? `https://github.com/${repo}` : "https://github.com";
   const year = new Date().getFullYear();
 
-  const counts = new Map<string, number>();
-  for (const p of pipelines) {
-    const c = categorize(p);
-    counts.set(c, (counts.get(c) ?? 0) + 1);
-  }
-  const domains = [...CATEGORIES, OTHER_CATEGORY].filter((c) => counts.get(c.name));
+  const domains = domainCounts(pipelines.map((p) => ({ category: categorize(p) })));
 
   return (
     <footer className="relative mt-24 border-t border-white/[0.06]">
@@ -41,11 +36,9 @@ export function Footer({ repo, pipelines }: { repo: string | null; pipelines: Pi
                 href={`/pipelines/?domain=${encodeURIComponent(d.name)}`}
                 className="group inline-flex items-center gap-2.5 text-sm text-fog-muted transition hover:text-fog"
               >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: colorForCategory(d.name) }} />
                 {d.name}
-                <span className="text-xs text-fog-dim transition group-hover:text-fog-muted">
-                  {counts.get(d.name)}
-                </span>
+                <span className="text-xs text-fog-dim transition group-hover:text-fog-muted">{d.count}</span>
               </Link>
             </li>
           ))}

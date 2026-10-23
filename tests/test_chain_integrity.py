@@ -1,11 +1,13 @@
 # ruff: noqa: F811
+import hashlib
 import json
+import os
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from runner import chain, handoff
+from runner import budget, chain, handoff, outputs, provenance
 from runner.errors import ErrorCode, NfclawError
 from test_chain import RULE, _boom, _spec, fake_runs  # noqa: F401
 from test_handoff import DIRECT, FASTQS, SHEET, _rule, _trees
@@ -43,7 +45,10 @@ def test_handoff_refuses_missing_or_malformed_output_checksums(
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"counts.tsv": "original\n"})
     index = up / "provenance" / "outputs.sha256"
-    index.unlink() if contents is None else index.write_text(contents)
+    if contents is None:
+        index.unlink()
+    else:
+        index.write_text(contents)
     with pytest.raises(NfclawError) as err:
         handoff.materialize(_rule({"params": {"fasta": {"file": "counts.tsv"}}}),
                             upstream_outdir=up, downstream_tree=down, dest=tmp_path / "handoff")
@@ -183,7 +188,6 @@ def test_resume_refuses_a_changed_extra_config(library, fake_runs, tmp_path):
 
 def test_timeout_budget_includes_validation_before_launch(
         library, fake_runs, tmp_path, monkeypatch):
-    from runner import budget
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     monotonic = 0.0
     check = chain._check
@@ -301,7 +305,8 @@ def test_stages_use_the_commit_resolved_before_checks_even_if_dev_moves(
         result = launch(name, **kw)
         if not kw["check_only"]:
             tree = kw.get("resolved_tree") or resolve(name, kw.get("pipeline_version"),
-                                                     pipelines_dir=root / "pipelines", repo_root=root)
+                                                     pipelines_dir=root / "pipelines",
+                                                      repo_root=root)
             path = kw["outdir"] / "provenance/run_manifest.json"
             manifest = json.loads(path.read_text())
             manifest["commit"] = tree.commit
@@ -347,18 +352,17 @@ def test_handoff_refuses_a_many_to_one_column_rename(library, finished_run, tmp_
 @pytest.mark.parametrize("historical", [False, True])
 def test_handoff_refuses_an_unverified_or_changed_external_reference(
         library, finished_run, tmp_path, historical):
-    import hashlib
     _, down = _trees(library("mini_up", "mini"))
     reference = tmp_path / "external.gtf"
     reference.write_text("original annotation\n")
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
-    if not historical:
-        (up / "provenance/inputs.sha256").write_text("")
-        (up / "provenance/inputs.inventory.json").write_text("{}")
     if historical:
         digest = hashlib.sha256(reference.read_bytes()).hexdigest()
         (up / "provenance/inputs.sha256").write_text(f"{digest}  {reference}\n")
         reference.write_text("different annotation\n")
+    else:
+        (up / "provenance/inputs.sha256").write_text("")
+        (up / "provenance/inputs.inventory.json").write_text("{}")
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf", "optional": True}}})
     with pytest.raises(NfclawError) as err:
         handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
@@ -367,7 +371,6 @@ def test_handoff_refuses_an_unverified_or_changed_external_reference(
 
 
 def test_handoff_records_a_verified_external_reference(library, finished_run, tmp_path):
-    import hashlib
     _, down = _trees(library("mini_up", "mini"))
     reference = tmp_path / "external.gtf"
     reference.write_text("original annotation\n")
@@ -375,13 +378,13 @@ def test_handoff_records_a_verified_external_reference(library, finished_run, tm
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
     (up / "provenance/inputs.sha256").write_text(f"{digest}  {reference}\n")
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf"}}})
-    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "h")
     assert result.record["params"]["fasta"]["input_dependencies"] == {str(reference): digest}
 
 
 def test_status_detects_a_changed_external_handoff_reference(
         library, fake_runs, tmp_path, monkeypatch):
-    import hashlib
     reference = tmp_path / "external.gtf"
     reference.write_text("original annotation\n")
     digest = hashlib.sha256(reference.read_bytes()).hexdigest()
@@ -395,13 +398,13 @@ def test_status_detects_a_changed_external_handoff_reference(
             prov = kw["outdir"] / "provenance"
             if name == "mini_up":
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-            from runner import provenance
             hashes = provenance.read_checksums(prov / "inputs.sha256", relative=False)
             hashes[str(reference)] = digest
             nodes = provenance.read_input_inventory(prov / "inputs.inventory.json")
             nodes.update(provenance.snapshot_inputs([reference])[1])
             (prov / "inputs.inventory.json").write_text(json.dumps(nodes))
-            (prov / "inputs.sha256").write_text("".join(f"{value}  {path}\n" for path, value in hashes.items()))
+            (prov / "inputs.sha256").write_text(
+                "".join(f"{value}  {path}\n" for path, value in hashes.items()))
         return result
 
     monkeypatch.setattr(chain.orchestration, "run_pipeline", with_reference)
@@ -417,7 +420,6 @@ def test_status_detects_a_changed_external_handoff_reference(
 
 def test_status_detects_added_files_in_a_reference_directory(
         library, fake_runs, tmp_path, monkeypatch):
-    from runner import provenance
     reference = tmp_path / "index"
     reference.mkdir()
     (reference / "index.bin").write_bytes(b"original")
@@ -466,8 +468,6 @@ def test_resume_refuses_changed_inherited_nextflow_environment(
 @pytest.mark.parametrize("published_symlink", [False, True])
 def test_status_checks_downstream_input_inventory_for_internal_directory_handoff(
         library, fake_runs, tmp_path, monkeypatch, change, published_symlink):
-    import hashlib
-    from runner import provenance
     tmp_path = tmp_path.resolve()
     rule = {"params": {"fasta": {"upstream_param": "gtf"}}}
     root = library("mini_up", "mini", rules={("mini_up", "mini"): rule})
@@ -487,9 +487,9 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
                     reference.mkdir()
                 (reference / "index.bin").write_bytes(b"original index")
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-                from runner import outputs
                 hashes, nodes, _ = outputs.snapshot(kw["outdir"], provenance._sha256)
-                (prov / "outputs.inventory.json").write_text(json.dumps({"version": 1, "entries": nodes}))
+                (prov / "outputs.inventory.json").write_text(
+                    json.dumps({"version": 1, "entries": nodes}))
                 (prov / "outputs.sha256").write_text("".join(
                     f"{digest}  {path}\n" for path, digest in hashes.items()))
             else:
@@ -520,7 +520,6 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
 
 
 def test_chain_lock_reports_environment_error_on_oserror(tmp_path, monkeypatch):
-    import os
     record = tmp_path / "chain"
     def fail_open(*args, **kwargs):
         raise PermissionError("read-only filesystem")

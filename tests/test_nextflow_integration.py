@@ -2,28 +2,41 @@
 
 This exercises nfclaw's execution contract; it makes no claim about biological algorithms.
 """
+import base64
+import csv
+import ctypes
+import gzip
 import hashlib
+import http.server
 import json
 import os
+import re
 import shlex
 import shutil
+import signal
 import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 
 import pytest
 
-from runner import chain, orchestration, resources, runlog, verify
+from runner import (chain, fastqrepair_compat, orchestration, replay_guard, resources,
+                    resume_safety, runlog, verify)
+from runner.errors import ErrorCode, NfclawError
+from runner.inputs import local_name_issues
+from test_input_output_separation import run, tree
+
+pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
+                                reason="requires a real Nextflow engine")
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("kind,provenance", [("data", True), ("data", False), ("config", True),
                                            ("source", True), ("unchanged", True)])
-def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine, kind, provenance):
-    import time
-    from concurrent.futures import ThreadPoolExecutor
-    from runner.errors import ErrorCode, NfclawError
-    from runner import replay_guard
-
+def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine,
+                                                                            kind, provenance):
     root = tmp_path / "library"
     tree = root / "pipelines/fixture/upstream"
     tree.mkdir(parents=True)
@@ -65,7 +78,8 @@ workflow { OBSERVE(file(params.input)) }
     out = tmp_path / "result"
     def launch(resume=False):
         return orchestration.run_pipeline("fixture", repo_root=root, input_path=source, outdir=out,
-            profile="", params_file=None, cli_overrides={"ready": str(ready), "release": str(release)},
+            profile="", params_file=None,
+            cli_overrides={"ready": str(ready), "release": str(release)},
             resume=resume, demo=False, check_only=False, write_provenance=provenance,
             timeout_seconds=90, nxf_ver=engine, configs=[str(config)])
     restore = None
@@ -137,34 +151,37 @@ workflow { OBSERVE(file(params.input)) }
             stdout, stderr = process.communicate(timeout=30)
             assert process.returncode != 0, stdout + stderr
             assert "local dependencies changed" in stderr
-            assert (target / "digest.txt").read_text().split()[0] == hashlib.sha256(changed).hexdigest()
+            assert ((target / "digest.txt").read_text().split()[0]
+                    == hashlib.sha256(changed).hexdigest())
             replay_state = runlog.read_state(target / "provenance/logs/run.log")
             assert replay_state.state == "ended"
-            assert replay_state.outcome == "failed after Nextflow succeeded (local dependencies changed)"
+            assert replay_state.outcome == ("failed after Nextflow succeeded "
+                                            "(local dependencies changed)")
         if restore:
             restore()
-            replay = subprocess.run(["bash", str(bundle / "commands.sh"), str(tmp_path / "refused")],
-                                    capture_output=True, text=True, timeout=15)
+            replay = subprocess.run(
+                ["bash", str(bundle / "commands.sh"), str(tmp_path / "refused")],
+                capture_output=True, text=True, timeout=15)
             assert replay.returncode != 0 and "original run" in replay.stderr
             assert not (tmp_path / "refused/.nextflow").exists()
             if kind == "data":
                 result = launch(resume=True)
                 assert any("previous execution" in warning for warning in result.warnings)
-                assert (out / "digest.txt").read_text().split()[0] == hashlib.sha256(original).hexdigest()
+                assert ((out / "digest.txt").read_text().split()[0]
+                        == hashlib.sha256(original).hexdigest())
                 assert counter.read_text().splitlines() == ["executed", "executed"]
                 archives = list(tmp_path.glob("result.previous-*"))
                 assert len(archives) == 1
-                assert (archives[0] / "digest.txt").read_text().split()[0] == hashlib.sha256(changed).hexdigest()
+                assert ((archives[0] / "digest.txt").read_text().split()[0]
+                        == hashlib.sha256(changed).hexdigest())
     else:
         assert not (out / "provenance/run_manifest.json").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("source_kind", ["cli", "json", "yaml"])
-def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_path, engine, source_kind):
-    from decimal import Decimal
-
+def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_path,
+                                                                           engine, source_kind):
     if source_kind == "yaml":
         pytest.importorskip("yaml")
     root = tmp_path / "library"
@@ -192,7 +209,7 @@ def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_p
  """
 }
 workflow { OBSERVE(params.values + [choice: params.choice, count: params.count]) }
-''')
+''')  # noqa: E501
     tokens = {"tiny": "1e-9999", "large": "1e9999", "precise": "0.1000000000000000000001",
               "whole_decimal": "100000000000000000000001e0"}
     choice = "9007199254740993e0"
@@ -218,7 +235,6 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
         observe(raw)
         # Plain integer literals beyond signed-long range wrap in these engines. The decimal
         # notation above is a separate direct control; the wrapper must avoid this corruption.
-        import ctypes
         overflowing = tmp_path / "overflowing.json"
         overflowing.write_text(params_path.read_text().replace('"count":1e23',
                                                                '"count":100000000000000000000000'))
@@ -239,13 +255,14 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
         # An object comes from the JSON params file; its nested numbers also need preservation.
     elif source_kind == "yaml":
         params_path = tmp_path / "params.yaml"
-        params_path.write_text("choice: 9007199254740993.0\ncount: 1.0e+23\nvalues:\n  tiny: 1.0e-9999\n"
+        params_path.write_text("choice: 9007199254740993.0\ncount: 1.0e+23\nvalues:\n"
+                               "  tiny: 1.0e-9999\n"
                                "  large: 1.0e+9999\n  precise: 0.1000000000000000000001\n"
                                "  whole_decimal: 100000000000000000000001.0\n")
     out = tmp_path / "original"
     orchestration.run_pipeline("fixture", repo_root=root, input_path=None, outdir=out, profile="",
-        params_file=params_path, cli_overrides=overrides, resume=False, demo=False, check_only=False,
-        write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+        params_file=params_path, cli_overrides=overrides, resume=False, demo=False,
+        check_only=False, write_provenance=True, timeout_seconds=90, nxf_ver=engine)
     observe(out)
     recorded = json.loads((out / "provenance/params.json").read_text(), parse_float=Decimal)
     assert recorded["choice"] == Decimal(choice)
@@ -293,11 +310,9 @@ workflow {
     return root
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("mode", ["line_break", "symlink_traversal"])
 def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engine, mode):
-    from runner.errors import ErrorCode, NfclawError
     root = _path_route_fixture(tmp_path)
     payload = b"@R1\nACGT\n+\nIIII\n"
     if mode == "line_break":
@@ -319,7 +334,8 @@ def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engi
     launch.mkdir()
     raw_work = tmp_path / "raw_work"
     raw = subprocess.run(["nextflow", "run", str(root / "pipelines/fixture/upstream"),
-                          "-params-file", str(params), "-work-dir", str(raw_work), "-ansi-log", "false"],
+                          "-params-file", str(params), "-work-dir", str(raw_work),
+                          "-ansi-log", "false"],
                          cwd=launch, env={**os.environ, "NXF_VER": engine},
                          capture_output=True, text=True, timeout=90)
     if mode == "line_break":
@@ -335,21 +351,22 @@ def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engi
         assert source.read_bytes() == payload  # the checksum preflight would read different bytes
     out = tmp_path / "refused"
     with pytest.raises(NfclawError) as error:
-        orchestration.run_pipeline("fixture", repo_root=root, input_path=sheet, outdir=out, profile="",
-            params_file=None, cli_overrides={}, resume=False, demo=False, check_only=False,
-            write_provenance=True, timeout_seconds=90, nxf_ver=engine)
+        orchestration.run_pipeline("fixture", repo_root=root, input_path=sheet, outdir=out,
+            profile="", params_file=None, cli_overrides={}, resume=False, demo=False,
+            check_only=False, write_provenance=True, timeout_seconds=90, nxf_ver=engine)
     assert error.value.code == ErrorCode.SAMPLESHEET_INVALID
-    assert "line break" in str(error.value) if mode == "line_break" else "different data" in str(error.value)
+    assert ("line break" if mode == "line_break" else "different data") in str(error.value)
     assert not out.exists() and not (tmp_path / ".refused.nfclaw.lock").exists()
     assert source.read_bytes() == payload
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("parent_kind", ["escaped", "colon_separator"])
-def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renaming(tmp_path, engine, parent_kind):
+def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renaming(
+        tmp_path, engine, parent_kind):
     root = _path_route_fixture(tmp_path)
-    parent = tmp_path / ("parentwith\\slash\u2028separator" if parent_kind == "escaped" else "parent:")
+    parent = tmp_path / ("parentwith\\slash\u2028separator" if parent_kind == "escaped"
+                         else "parent:")
     (parent / "real/nested").mkdir(parents=True)
     (parent / "route").symlink_to("real/nested", target_is_directory=True)
     target = parent / "real/stored.data"
@@ -359,7 +376,8 @@ def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renamin
     (parent / "reads.fastq").write_bytes(b"wrong decoy")
     source = parent / "real/nested/../reads.fastq"
     sheet = tmp_path / "samples.json"
-    value = str(source) if parent_kind == "escaped" else str(source).replace("parent:/", "parent://", 1)
+    value = (str(source) if parent_kind == "escaped"
+             else str(source).replace("parent:/", "parent://", 1))
     sheet.write_text(json.dumps([{"sample": "S", "reads": value}]))
     out = tmp_path / "original"
     orchestration.run_pipeline("fixture", repo_root=root, input_path=sheet, outdir=out, profile="",
@@ -369,23 +387,22 @@ def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renamin
     assert (out / "digest.txt").read_text() == expected
     moved = tmp_path / "moved"
     out.rename(moved)
-    replay = subprocess.run(["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "replay")],
-                            capture_output=True, text=True, timeout=90)
+    replay = subprocess.run(
+        ["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "replay")],
+        capture_output=True, text=True, timeout=90)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     assert (tmp_path / "replay/digest.txt").read_text() == expected
     assert verify.compare(moved, tmp_path / "replay").byte_identical
     target.write_bytes(b"changed scientific input")
-    refused = subprocess.run(["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "refused")],
-                             capture_output=True, text=True, timeout=15)
+    refused = subprocess.run(
+        ["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "refused")],
+        capture_output=True, text=True, timeout=15)
     assert refused.returncode != 0 and "content changed" in refused.stderr
     assert not (tmp_path / "refused/.nextflow").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
-    from runner.errors import NfclawError
-    from test_input_output_separation import run, tree
     root = tree(tmp_path)
     data = tmp_path / "data"
     (data / "sample_A").mkdir(parents=True)
@@ -404,8 +421,9 @@ def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
     assert not result.checked_only
     assert (safe / "entries.txt").read_text() == "index.bin\nsample_A\n"
     assert runlog.read_state(safe / "provenance/logs/run.log").state == "success"
-    replay = subprocess.run(["bash", str(safe / "provenance/commands.sh"), str(tmp_path / "replay")],
-                            capture_output=True, text=True, timeout=90)
+    replay = subprocess.run(
+        ["bash", str(safe / "provenance/commands.sh"), str(tmp_path / "replay")],
+        capture_output=True, text=True, timeout=90)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     assert verify.compare(safe, tmp_path / "replay").byte_identical
     assert (data / "index.bin").read_bytes() == b"fixed scientific input"
@@ -413,7 +431,6 @@ def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
     assert data.stat().st_mtime_ns == before
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_staged_file_alias_names_survive_run_replay_and_reference_handoff(tmp_path, engine):
     root = tmp_path / "library"
@@ -422,7 +439,8 @@ def test_staged_file_alias_names_survive_run_replay_and_reference_handoff(tmp_pa
     (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
     (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
         "input": {"type": "string", "format": "file-path", "exists": True, "pattern": r"\.csv$"},
-        "reference": {"type": "string", "format": "file-path", "exists": True, "pattern": r"\.csv$"},
+        "reference": {"type": "string", "format": "file-path", "exists": True,
+                      "pattern": r"\.csv$"},
         "outdir": {"type": "string", "format": "directory-path"}}}))
     (upstream / "nextflow.config").write_text(
         "nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
@@ -468,7 +486,8 @@ workflow { OBSERVE(Channel.fromPath(params.input)) }
     chained = tmp_path / "chain"
     result = chain.run_chain(spec, repo_root=root, outdir=chained, timeout_seconds=120)
     assert result.outcome == "success"
-    assert (chained / "02-consumer/observed.txt").read_text() == f"reference.csv\n{digest}  reference.csv\n"
+    assert ((chained / "02-consumer/observed.txt").read_text()
+            == f"reference.csv\n{digest}  reference.csv\n")
     state, problems = chain.status(chained)
     assert problems == [] and chain.status_exit_code(state, problems) == 0
     # Identical data cannot hide a retargeted alias from the stored dependency identity.
@@ -476,8 +495,9 @@ workflow { OBSERVE(Channel.fromPath(params.input)) }
     second.write_bytes(target.read_bytes())
     reference.unlink()
     reference.symlink_to("second.data")
-    refused = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(tmp_path / "refused")],
-                             capture_output=True, text=True, timeout=15)
+    refused = subprocess.run(
+        ["bash", str(out / "provenance/commands.sh"), str(tmp_path / "refused")],
+        capture_output=True, text=True, timeout=15)
     assert refused.returncode != 0 and "dependency check failed" in refused.stderr
     assert not (tmp_path / "refused/observed.txt").exists()
     assert not (tmp_path / "refused/.nextflow").exists()
@@ -486,7 +506,6 @@ workflow { OBSERVE(Channel.fromPath(params.input)) }
     assert problems and chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 def test_real_run_relocated_replay_and_mutated_input_guard(tmp_path, tmp_path_factory):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
@@ -556,13 +575,12 @@ workflow {
     (chain_out / "01-fixture/result/digest.txt").write_bytes(b"changed upstream result\n")
     state, problems = chain.status(chain_out)
     assert problems and chain.status_exit_code(state, problems) == 1
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
-def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path):
-    import os
-    from runner import fastqrepair_compat
 
+
+def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path):
     fastqrepair_compat.write_config(tmp_path / "compat.config")
-    (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\nparams.outdir = 'wrong'\n")
+    (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\n"
+                                              "params.outdir = 'wrong'\n")
     report = (fastqrepair_compat._zero_report().replace("(not applicable)", "(0.0%)")
               .replace("Total lines: 0", "Total lines: 12")
               .replace("Well-formed lines: 0 (0.0%)", "Well-formed lines: 12 (100.0%)")
@@ -594,10 +612,11 @@ workflow {
                                   [id:'right',sample_id:'paired_probe',single_end:false]))
 }
 ''')
-    result = subprocess.run(["nextflow", "run", "main.nf", "-c", "compat.config", "-ansi-log", "false",
-                             "--outdir", "results", "--publish_dir_mode", "symlink"],
-                            cwd=tmp_path, env={**os.environ, "NXF_VER": "25.10.4"},
-                            capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        ["nextflow", "run", "main.nf", "-c", "compat.config", "-ansi-log", "false",
+         "--outdir", "results", "--publish_dir_mode", "symlink"],
+        cwd=tmp_path, env={**os.environ, "NXF_VER": "25.10.4"},
+        capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
     published = tmp_path / "results/repaired/reports/paired_probe"
     assert sorted(path.name for path in published.iterdir()) == ["left.report", "right.report"]
@@ -605,16 +624,9 @@ workflow {
     assert not (tmp_path / "wrong").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_remote_staging_names_match_preflight_without_decoding(engine, tmp_path):
     """A local HTTP oracle checks actual staged bytes/names, with no unsafe interpolation."""
-    import http.server
-    import os
-    import threading
-
-    from runner.inputs import local_name_issues
-
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
@@ -666,12 +678,8 @@ workflow {
     assert local_name_issues("s3://bucket/reads.txt?x=1&y=2", "file-path")
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_directory_children_become_individual_staged_inputs(engine, tmp_path):
-    import os
-    from runner.inputs import local_name_issues
-
     source = tmp_path / "safe_directory"
     source.mkdir()
     names = ["reads$(id).txt", "safe_é.txt"]
@@ -704,11 +712,8 @@ workflow { INVENTORY(channel.fromPath(params.input + '/*.txt')) }
     assert local_name_issues(str(source), "directory-path") == []
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_empty_directory_namespace_is_guarded_and_resume_is_current(engine, tmp_path):
-    import csv
-    import os
     root = tmp_path / "library"
     tree = root / "pipelines/fixture/upstream"
     tree.mkdir(parents=True)
@@ -737,7 +742,7 @@ trace {
  """
 }
 workflow { NAMESPACE(file(params.input)) }
-'''.replace("COUNTER", shlex.quote(str(tmp_path / "executions.txt"))))
+'''.replace("COUNTER", shlex.quote(str(tmp_path / "executions.txt"))))  # noqa: E501
     data = tmp_path / "data"
     data.mkdir()
     first = data / "sample_A"
@@ -793,14 +798,8 @@ workflow { NAMESPACE(file(params.input)) }
     assert counter.read_text().splitlines() == ["executed"] * 3
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_archiving_respects_the_real_engines_active_session_lock(engine, tmp_path):
-    import os
-    import signal
-    import time
-    from runner import resume_safety
-    from runner.errors import NfclawError
     tree = tmp_path / "pipeline"
     tree.mkdir()
     (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
@@ -843,10 +842,9 @@ workflow { WAIT() }
             process.communicate(timeout=10)
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("source", ["external", "external_alias", "published", "bundle"])
-def test_real_chain_refuses_changed_reference_namespace_and_resumes_after_restoration(tmp_path, monkeypatch, source):
-    from runner.errors import ErrorCode, NfclawError
+def test_real_chain_refuses_changed_reference_namespace_and_resumes_after_restoration(
+        tmp_path, monkeypatch, source):
     root = tmp_path / "library"
     for name in ("producer", "consumer"):
         tree = root / "pipelines" / name / "upstream"
@@ -884,11 +882,12 @@ workflow { PRODUCE(file(params.input)) }
  """
 }
 workflow { CONSUME(file(params.input)) }
-''')
+''')  # noqa: E501
     rule = root / "handoffs/producer/consumer.json"
     rule.parent.mkdir(parents=True)
-    rule.write_text(json.dumps({"params": {"input": {"upstream_param":
-        {"external": "input", "external_alias": "input", "published": "reference_out", "bundle": "outdir"}[source]}}}))
+    upstream_param = {"external": "input", "external_alias": "input", "published": "reference_out",
+                      "bundle": "outdir"}[source]
+    rule.write_text(json.dumps({"params": {"input": {"upstream_param": upstream_param}}}))
     reference = tmp_path / "reference"
     if source == "external_alias":
         target = tmp_path / "stored_reference"
@@ -907,7 +906,8 @@ workflow { CONSUME(file(params.input)) }
         if not options["check_only"]:
             launches.append(name)
             if name == "producer":
-                affected = reference if source.startswith("external") else options["outdir"] / "reference"
+                affected = (reference if source.startswith("external")
+                            else options["outdir"] / "reference")
                 (affected / "sample_A").rename(affected / "sample_B")
         return result
 
@@ -920,7 +920,8 @@ workflow { CONSUME(file(params.input)) }
     assert launches == ["producer"]
     assert not (out / "02-consumer/namespace.txt").exists()
     affected = reference if source.startswith("external") else out / "01-producer/reference"
-    assert (out / "01-producer/reference" / ("sample_A" if source.startswith("external") else "sample_B")).is_dir()
+    kept = "sample_A" if source.startswith("external") else "sample_B"
+    assert (out / "01-producer/reference" / kept).is_dir()
     assert (out / "01-producer/reference/index.bin").read_bytes() == b"unchanged reference bytes"
     (affected / "sample_B").rename(affected / "sample_A")
     result = chain.run_chain(None, repo_root=root, outdir=out, resume=True, timeout_seconds=90)
@@ -939,7 +940,6 @@ workflow { CONSUME(file(params.input)) }
     assert problems and chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_resume_recomputes_when_a_file_inside_an_input_directory_changes(engine, tmp_path):
     # Nextflow's cache key for a directory input is its path, size and mtime; editing a file in a
@@ -983,7 +983,7 @@ workflow { READ(file(params.input)) }
     assert (out / "value.txt").read_text() == "AAAA\n"
     stamp = data.stat(), (data / "nested").stat()
     value.write_text("BBBB\n")                                   # same size, same names
-    for path, before in zip((data, data / "nested"), stamp):
+    for path, before in zip((data, data / "nested"), stamp, strict=True):
         os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
     changed = run(True)
     assert "-resume" not in changed.command
@@ -994,13 +994,10 @@ workflow { READ(file(params.input)) }
     assert (out / "value.txt").read_text() == "BBBB\n"
 
 
-@pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
 @pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
 @pytest.mark.parametrize('write_provenance', [True, False])
 def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
         tmp_path, engine, write_provenance):
-    import shlex
-
     root = _path_route_fixture(tmp_path)
     counter = tmp_path / 'executions.txt'
     script = root / 'pipelines/fixture/upstream/main.nf'
@@ -1040,13 +1037,11 @@ def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
     assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_generated_samplesheet_runs_relocates_and_replays_as_recorded(engine, tmp_path):
     """--input names a directory of FastQ files: the generated sheet drives a real run, its moved
     bundle replays its own copy, files added later are not rescanned, and a changed read file is
     refused. The oracle digests are computed here, independently of the run."""
-    import gzip
     root = tmp_path / "library"
     upstream = root / "pipelines/sheetfixture/upstream"
     (upstream / "assets").mkdir(parents=True)
@@ -1106,7 +1101,8 @@ workflow {
     def digest(name):
         return f"{hashlib.sha256(files[name]).hexdigest()}  {name}\n"
 
-    assert (out / "A.txt").read_text() == "treated\n" + digest("A_R1.fastq.gz") + digest("A_R2.fastq.gz")
+    assert (out / "A.txt").read_text() == ("treated\n" + digest("A_R1.fastq.gz")
+                                           + digest("A_R2.fastq.gz"))
     assert (out / "B.txt").read_text() == "treated\n" + digest("B.fastq.gz")
     assert result.generated_samplesheet == out / "provenance/samplesheet.csv"
     assert sorted(result.outputs_report.files) == ["A.txt", "B.txt"]
@@ -1128,10 +1124,9 @@ workflow {
     assert not (relocated.parent / "refused/B.txt").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
-def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_data(tmp_path, monkeypatch, engine):
-    from runner.errors import NfclawError
+def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_data(
+        tmp_path, monkeypatch, engine):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
     upstream.mkdir(parents=True)
@@ -1139,7 +1134,8 @@ def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_da
     (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
         "input": {"type": "string", "format": "file-path", "exists": True},
         "outdir": {"type": "string", "format": "directory-path"}}}))
-    (upstream / "nextflow.config").write_text("nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
+    (upstream / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nprofiles { standard { process.executor = 'local' } }\n")
     (upstream / "main.nf").write_text('''process DIGEST {
     publishDir params.outdir, mode: 'copy'
     input:
@@ -1178,16 +1174,16 @@ workflow { DIGEST(Channel.fromPath(params.input)) }
     monkeypatch.setattr(orchestration, "run_pipeline", mutate_after_handoff)
     with pytest.raises(NfclawError, match="lineage"):
         chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=180)
-    assert (out / "02-consumer/result/digest.txt").read_text().split()[0] == hashlib.sha256(altered).hexdigest()
+    assert ((out / "02-consumer/result/digest.txt").read_text().split()[0]
+            == hashlib.sha256(altered).hexdigest())
     state, problems = chain.status(out)
     assert state["outcome"] != "success" and problems
     assert chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4"])
-def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(tmp_path, engine):
-    from runner import fastqrepair_compat
+def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(
+        tmp_path, engine):
     sheet = tmp_path / "cohort.csv"
     sheet.write_text("sample,fastq_1,fastq_2\n" + "".join(
         f"S{index},/data/left.fastq,/data/right.fastq\n" for index in range(10000)))
@@ -1240,8 +1236,6 @@ workflow {
                               cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
                               capture_output=True, text=True, timeout=120)
     assert executed.returncode == 0, executed.stdout + executed.stderr
-    import base64
-    import re
     selections = []
     for wrapper in work.rglob(".command.run"):
         payloads = re.findall(r"--mate-orders ([A-Za-z0-9+/=]+)", wrapper.read_text())

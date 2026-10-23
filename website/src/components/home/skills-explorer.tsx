@@ -16,16 +16,15 @@ import {
   Table2,
 } from "lucide-react";
 import type { ParamHit, SkillCard } from "@/lib/derive";
-import { CATEGORIES, OTHER_CATEGORY, colorForCategory } from "@/lib/derive";
+import { colorForCategory, domainCounts } from "@/lib/derive";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Highlight } from "@/components/ui/highlight";
 import { InlineMarkdown } from "@/components/ui/inline-markdown";
 import { SearchField, DomainChips } from "@/components/ui/filters";
 import { useParamIndex } from "@/lib/param-index";
 import { cn, formatDate, humanize } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
-const ORDER = [...CATEGORIES.map((c) => c.name), OTHER_CATEGORY.name];
 const MOBILE_PAGE = 8;
 
 type Result = { skill: SkillCard; matchedParams: ParamHit[] };
@@ -40,11 +39,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
   const [showAll, setShowAll] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const s of skills) counts.set(s.category, (counts.get(s.category) ?? 0) + 1);
-    return ORDER.filter((c) => counts.has(c)).map((c) => ({ name: c, count: counts.get(c)! }));
-  }, [skills]);
+  const categories = useMemo(() => domainCounts(skills), [skills]);
 
   const q = query.trim().toLowerCase();
   // Parameters are not in the page: they load the first time the search box is used.
@@ -315,7 +310,7 @@ function SkillDetail({ result, query, large = false }: { result: Result; query: 
         <Stat icon={<Puzzle className="h-3.5 w-3.5" />}>{skill.moduleCount} modules</Stat>
         {skill.hasSamplesheet && <Stat icon={<Table2 className="h-3.5 w-3.5" />}>{skill.samplesheetCount}-column sheet</Stat>}
         <Stat icon={<GitCommitHorizontal className="h-3.5 w-3.5" />}>
-          <span className="font-mono">{skill.commit.slice(0, 7)}</span>
+          <span className="font-mono">{skill.commit}</span>
         </Stat>
       </div>
 

@@ -4,8 +4,9 @@ import re
 import shlex
 import subprocess
 import tarfile
-import pytest
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 WF = ROOT / ".github" / "workflows"
@@ -39,11 +40,13 @@ def test_discovery_step_fails_when_discovery_fails():
 
 
 def test_jobs_that_run_upstream_code_do_not_keep_a_write_token():
-    # Both jobs evaluate upstream pipeline code (`nextflow run -preview` parses each release's Groovy
-    # config) while holding contents: write; the checkout must not leave that token in .git/config.
+    # Both jobs evaluate upstream pipeline code (`nextflow run -preview` parses each release's
+    # Groovy config) while holding contents: write; the checkout must not leave that token
+    # in .git/config.
     for name in ("auto-update.yml", "discover-pipelines.yml"):
         text = _text(name)
-        assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false"), name
+        checkouts = text.count("uses: actions/checkout@")
+        assert checkouts == text.count("persist-credentials: false"), name
 
 
 @pytest.mark.parametrize("name", ["auto-update.yml", "discover-pipelines.yml"])
@@ -62,7 +65,8 @@ def test_write_capable_test_gates_install_yaml_before_running_the_suite(name):
 @pytest.mark.parametrize("name, gate", [("auto-update.yml", "Unit tests + final drift gate"),
                                         ("discover-pipelines.yml", "Unit tests + drift gate")])
 @pytest.mark.parametrize("parsing", ["..  [100%]\n",
-                                     "ss  [100%]\nSKIPPED [1] tests/test_website_parsing.py:51: needs node\n"])
+                                     "ss  [100%]\n"
+                                     "SKIPPED [1] tests/test_website_parsing.py:51: needs node\n"])
 def test_write_capable_gates_run_the_website_parsing_tests(tmp_path, name, gate, parsing):
     # These jobs merge PRs that trigger no tests.yml run, and the site's parser tests skip without
     # node: a silent skip would merge and deploy skill.md files the site was never checked to read.
@@ -133,7 +137,8 @@ def test_parallel_acceptance_checks_every_pipeline_exactly_once(tmp_path):
     count = int(re.search(r'SHARD_COUNT: "(\d+)"', text).group(1))
     shards = [int(n) for n in re.search(r"shard: \[([^]]+)\]", text).group(1).split(",")]
     assert shards == list(range(count))
-    raw = text.split("- name: Preview every pipeline", 1)[1].split("        run: |\n", 1)[1].split("\n      - name:", 1)[0]
+    raw = text.split("- name: Preview every pipeline", 1)[1].split("        run: |\n", 1)[1]
+    raw = raw.split("\n      - name:", 1)[0]
     script = "\n".join(line[10:] for line in raw.splitlines())
     fake = tmp_path / "bin"
     fake.mkdir()
@@ -209,12 +214,14 @@ def test_execution_evidence_packaging_fails_on_a_partial_task_listing(tmp_path, 
 
 def test_every_action_is_pinned_to_a_full_commit():
     # A tag can be moved to different code after review; only a commit SHA fixes what runs with the
-    # workflow's token. Local composite actions (./.github/actions/...) are reviewed in this repository.
+    # workflow's token. Local composite actions (./.github/actions/...) are reviewed in
+    # this repository.
     for path in sorted([*WF.glob("*.yml"), *(ROOT / ".github" / "actions").glob("*/action.yml")]):
         for line in path.read_text(encoding="utf-8").splitlines():
             if m := re.match(r"^\s*-?\s*uses:\s*(\S+)", line):
                 ref = m.group(1)
-                assert ref.startswith("./") or re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", ref), f"{path.name}: {ref}"
+                pinned = ref.startswith("./") or re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", ref)
+                assert pinned, f"{path.name}: {ref}"
 
 
 def test_nextflow_launcher_download_has_connect_and_total_limits():
@@ -229,7 +236,7 @@ def test_nextflow_launcher_download_has_connect_and_total_limits():
 def test_code_scanning_covers_every_language_in_the_repository():
     text = _text("codeql.yml")
     languages = re.search(r"language: \[([^]]+)\]", text).group(1)
-    assert {lang.strip() for lang in languages.split(",")} == {"actions", "javascript-typescript", "python"}
+    assert {lang.strip() for lang in languages.split(",")} == {"actions",
+                                                               "javascript-typescript", "python"}
     assert "security-events: write" in _job(text, "analyze")
     assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false")
-

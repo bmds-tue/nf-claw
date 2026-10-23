@@ -10,15 +10,7 @@ import { cn } from "@/lib/utils";
  */
 const TOKEN = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)\s]+\))|(https?:\/\/[^\s)<]+[^\s)<.,;:!?'"])/g;
 
-export function InlineMarkdown({
-  text,
-  className,
-  codeClassName,
-}: {
-  text: string;
-  className?: string;
-  codeClassName?: string;
-}) {
+export function InlineMarkdown({ text }: { text: string }) {
   const out: ReactNode[] = [];
   let last = 0;
   let key = 0;
@@ -35,7 +27,6 @@ export function InlineMarkdown({
             "rounded-[5px] border border-white/[0.07] bg-white/[0.05] px-1 py-px font-mono text-[0.88em] text-cream/90",
             // a short flag or path never breaks at its own hyphens ("-" / "-resume")
             code.length <= 32 && "whitespace-nowrap",
-            codeClassName,
           )}
         >
           {code}
@@ -56,7 +47,7 @@ export function InlineMarkdown({
     last = at + tok.length;
   }
   if (last < text.length) out.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
-  return <span className={className}>{out}</span>;
+  return <span>{out}</span>;
 }
 
 function ExternalLink({ href, label }: { href: string; label: string }) {

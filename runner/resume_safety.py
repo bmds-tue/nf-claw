@@ -51,10 +51,11 @@ def _lock_inactive_sessions(original: Path, locks: ExitStack) -> None:
         try:
             fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise NfclawError(ErrorCode.ENVIRONMENT,
-                              f"Cannot preserve the previous run: a Nextflow session is active "
-                              f"or locked in {original}.",
-                              fix="Stop the existing engine and its tasks before resuming.") from None
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT,
+                f"Cannot preserve the previous run: a Nextflow session is active or "
+                f"locked in {original}.",
+                fix="Stop the existing engine and its tasks before resuming.") from None
 
 
 def archive_previous_run(outdir: Path, inventory: dict[str, dict[str, str]],
@@ -74,7 +75,8 @@ def archive_previous_run(outdir: Path, inventory: dict[str, dict[str, str]],
             raise NfclawError(ErrorCode.ENVIRONMENT,
                               f"Cannot preserve the previous run: pipeline/configuration {config} "
                               f"is inside {outdir}.",
-                              fix="Keep pipeline code and configuration outside the output directory.")
+                              fix="Keep pipeline code and configuration outside "
+                                  "the output directory.")
 
     suffix = f".previous-{uuid.uuid4().hex}"
     prefix = original.name
@@ -158,7 +160,8 @@ def _move_previous_run(original: Path, archive: Path) -> Path:
                 temp = rel.with_name(f".nfclaw-inventory-{uuid.uuid4().hex}")
                 staged_record = (rel, temp, original_bytes, stat.S_IMODE(record.stat().st_mode))
                 (original / temp).write_text(json.dumps({"version": 1, "entries": inventory},
-                                                       indent=2, sort_keys=True) + "\n")
+                                                       indent=2, sort_keys=True) + "\n",
+                                             encoding="utf-8")
                 (original / temp).chmod(staged_record[3])
         # Prepare every replacement while the complete original tree still exists. Permission
         # or copy failures therefore cannot strand historical publications after the rename.

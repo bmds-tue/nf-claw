@@ -1,4 +1,5 @@
 """Explicit directory dependencies cannot hide unsafe staged child names."""
+import json
 import os
 
 import pytest
@@ -29,7 +30,8 @@ def test_directory_symlinks_do_not_hide_unsafe_target_names(tmp_path):
     target = tmp_path / "target$(id).txt"
     target.write_bytes(b"scientific data")
     (root / "safe.txt").symlink_to(target)
-    assert any("target$(id).txt" in issue for issue in local_name_issues(str(root), "directory-path"))
+    assert any("target$(id).txt" in issue
+               for issue in local_name_issues(str(root), "directory-path"))
 
 
 def test_directory_parent_names_are_distinct_from_staged_child_names(tmp_path):
@@ -54,7 +56,8 @@ def test_directory_preflight_cannot_ignore_an_unreadable_subtree(tmp_path, monke
         return scandir(path)
 
     monkeypatch.setattr(os, "scandir", denied)
-    assert any("cannot inspect" in issue for issue in local_name_issues(str(root), "directory-path"))
+    assert any("cannot inspect" in issue
+               for issue in local_name_issues(str(root), "directory-path"))
 
 
 def test_directory_cycles_fail_clearly_before_launch(tmp_path):
@@ -65,7 +68,6 @@ def test_directory_cycles_fail_clearly_before_launch(tmp_path):
 
 
 def test_direct_directory_parameters_and_samplesheet_paths_have_the_same_guard(tmp_path):
-    import json
     root = tmp_path / "data"
     root.mkdir()
     (root / "reads;true.txt").write_bytes(b"scientific data")
@@ -77,7 +79,8 @@ def test_direct_directory_parameters_and_samplesheet_paths_have_the_same_guard(t
     sheet.write_text(f"sample,data\nA,{root}\n")
     input_schema = schema.InputSchema(columns=(schema.Column("sample", "string", True, None),
         schema.Column("data", "string", True, None, "directory-path")))
-    assert any("unsafe local input filename" in issue for issue in samplesheet.validate(sheet, input_schema))
+    assert any("unsafe local input filename" in issue
+               for issue in samplesheet.validate(sheet, input_schema))
 
 
 def test_inventory_visitor_sees_empty_directories_without_changing_dependency_paths(tmp_path):

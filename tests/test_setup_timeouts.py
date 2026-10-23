@@ -1,7 +1,6 @@
 """Setup operations have finite limits without creating an analysis deadline."""
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import subprocess
@@ -13,27 +12,25 @@ from contextlib import nullcontext
 import pytest
 
 from librarian import update_pipelines
-from runner import engine_version, path_roles, preflight, submodule, versions
+from runner import budget, engine_version, path_roles, preflight, settings, submodule, versions
 from runner.errors import ErrorCode, NfclawError
+from runner.schema import Param, ParamSchema
 
 
 def test_timeout_setting_uses_default_when_unset(monkeypatch):
     monkeypatch.delenv("NFCLAW_GIT_TIMEOUT", raising=False)
-    settings = importlib.import_module("runner.settings")
     assert settings.seconds("NFCLAW_GIT_TIMEOUT", 120) == 120
 
 
 @pytest.mark.parametrize("value", ["0.05", "3", " 2.5 ", "1e2"])
 def test_timeout_setting_accepts_finite_positive_seconds(monkeypatch, value):
     monkeypatch.setenv("NFCLAW_GIT_TIMEOUT", value)
-    settings = importlib.import_module("runner.settings")
     assert settings.seconds("NFCLAW_GIT_TIMEOUT", 120) == float(value)
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "nan", "inf", "-inf", "", "later"])
 def test_timeout_setting_rejects_invalid_values_by_name(monkeypatch, value):
     monkeypatch.setenv("NFCLAW_GIT_TIMEOUT", value)
-    settings = importlib.import_module("runner.settings")
     with pytest.raises(NfclawError) as exc:
         settings.seconds("NFCLAW_GIT_TIMEOUT", 120)
     assert exc.value.code == ErrorCode.PARAMS_INVALID
@@ -95,11 +92,13 @@ def test_version_git_operations_use_group_capture_and_named_limits(
                         lambda command, **kwargs: subprocess.CompletedProcess(command, 0, "", ""))
     calls = {
         "remote_tags": lambda: versions.remote_tags("https://example.invalid/p.git"),
-        "remote_branch_head": lambda: versions.remote_branch_head("https://example.invalid/p.git", "dev"),
+        "remote_branch_head": lambda: versions.remote_branch_head(
+            "https://example.invalid/p.git", "dev"),
         "_fetch_dev": lambda: versions._fetch_dev(tmp_path),
         "_fetch_tag": lambda: versions._fetch_tag(tmp_path, "1.0.0"),
         "_record_dev_head": lambda: versions._record_dev_head(tmp_path, "a" * 40),
-        "_add_worktree": lambda: versions._add_worktree(tmp_path, tmp_path / "cache" / "upstream", "a" * 40),
+        "_add_worktree": lambda: versions._add_worktree(tmp_path,
+                                                        tmp_path / "cache" / "upstream", "a" * 40),
     }
     calls[operation]()
     assert [kw["timeout"] for _, kw in seen] == ([0.25] * len(defaults) if override else defaults)
@@ -197,7 +196,8 @@ def test_maintenance_git_calls_are_bounded_and_noninteractive(monkeypatch, tmp_p
 
 def test_maintenance_reports_git_failure(monkeypatch):
     monkeypatch.setattr(update_pipelines, "capture", lambda command, **kwargs:
-                        subprocess.CompletedProcess(command, 1, "", "network unavailable"), raising=False)
+                        subprocess.CompletedProcess(command, 1, "", "network unavailable"),
+                        raising=False)
     monkeypatch.setattr(subprocess, "run", lambda command, **kwargs:
                         subprocess.CompletedProcess(command, 0, "", ""))
     with pytest.raises(subprocess.CalledProcessError):
@@ -221,8 +221,6 @@ def test_maintenance_keeps_captured_git_diagnostics(monkeypatch, tmp_path, capsy
 
 
 def test_init_lock_waiting_for_a_thread_honors_explicit_budget(monkeypatch, tmp_path):
-    from runner import budget
-
     lock = threading.Lock()
     lock.acquire()
     monkeypatch.setattr(submodule, "_thread_lock", lambda key: lock)
@@ -243,8 +241,6 @@ def test_init_lock_waiting_for_a_thread_honors_explicit_budget(monkeypatch, tmp_
 
 @pytest.mark.skipif(submodule.fcntl is None, reason="requires POSIX file locks")
 def test_init_lock_waiting_for_another_process_honors_explicit_budget(monkeypatch, tmp_path):
-    from runner import budget
-
     lock_path = tmp_path / "init.lock"
     fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
     submodule.fcntl.flock(fd, submodule.fcntl.LOCK_EX)
@@ -285,8 +281,6 @@ def test_init_lock_has_no_total_wait_limit_without_a_run_budget(monkeypatch, tmp
 
 @pytest.mark.parametrize("probe", ["docker", "git"])
 def test_preflight_probe_honors_active_run_budget(monkeypatch, tmp_path, probe):
-    from runner import budget
-
     binary = tmp_path / probe
     binary.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(0.3)\n")
     binary.chmod(0o755)
@@ -299,7 +293,8 @@ def test_preflight_probe_honors_active_run_budget(monkeypatch, tmp_path, probe):
     with pytest.raises(NfclawError) as exc:
         with budget.scope(0.05):
             preflight.check_environment(profile="docker" if probe == "docker" else "singularity",
-                                        output_dir=out, submodule=status, repo_root=root, resume=False)
+                                        output_dir=out, submodule=status,
+                                        repo_root=root, resume=False)
     assert exc.value.code == ErrorCode.EXECUTION_FAILED
     assert exc.value.details["timeout_seconds"] == 0.05
 
@@ -328,18 +323,18 @@ def test_preflight_probe_keeps_default_limit_and_failure_diagnostic(
     out = root / "results" if probe == "git" else tmp_path / "results"
     status = submodule.SubmoduleStatus("p", root / "upstream", True, True, "1.0.0", "a" * 40, ())
     issues = preflight.check_environment(profile="docker" if probe == "docker" else "singularity",
-                                        output_dir=out, submodule=status, repo_root=root, resume=False)
+                                        output_dir=out, submodule=status,
+                                         repo_root=root, resume=False)
     assert [kwargs["timeout"] for _, kwargs in seen] == [expected_timeout]
     if probe == "git":
         assert seen[0][1]["env"]["GIT_TERMINAL_PROMPT"] == "0"
-    expected = "docker daemon not responding" if probe == "docker" else "outside the repo or a gitignored path"
+    expected = ("docker daemon not responding" if probe == "docker"
+                else "outside the repo or a gitignored path")
     assert any(expected in issue for issue in issues)
 
 
 @pytest.fixture
 def audited_directory_role(monkeypatch, tmp_path):
-    from runner.schema import Param, ParamSchema
-
     commit = "a" * 40
     registry = tmp_path / "path_roles.json"
     registry.write_text(json.dumps({commit: {"temp_dir": {"pipeline": "p"}}}))
@@ -351,9 +346,8 @@ def audited_directory_role(monkeypatch, tmp_path):
     return status, loaded
 
 
-def test_path_role_git_status_honors_active_run_budget(monkeypatch, tmp_path, audited_directory_role):
-    from runner import budget
-
+def test_path_role_git_status_honors_active_run_budget(monkeypatch, tmp_path,
+                                                       audited_directory_role):
     binary = tmp_path / "git"
     binary.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(0.3)\n")
     binary.chmod(0o755)
@@ -389,7 +383,8 @@ def test_path_role_probe_keeps_default_and_accepts_git_limit(
 def test_path_role_probe_failure_or_dirty_status_never_grants_exemption(
         monkeypatch, audited_directory_role, returncode, output):
     monkeypatch.setattr(path_roles, "capture", lambda command, **kwargs:
-                        subprocess.CompletedProcess(command, returncode, output, "fatal: cannot inspect"),
+                        subprocess.CompletedProcess(command, returncode, output,
+                                                    "fatal: cannot inspect"),
                         raising=False)
     monkeypatch.setattr(subprocess, "run", lambda command, **kwargs:
                         subprocess.CompletedProcess(command, 0, "", ""))

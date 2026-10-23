@@ -10,7 +10,6 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class OutputsReport:
-    pipeline_info: Path | None
     multiqc_report: Path | None
     files: tuple[str, ...]
 
@@ -52,7 +51,8 @@ def result_entries(outdir: Path, only: Path | None = None) -> Iterator[tuple[Pat
                 elif entry.is_file(follow_symlinks=True):
                     yield path, "file"
                 else:
-                    raise OSError(errno.EINVAL, "result is missing or not a regular file", str(path))
+                    raise OSError(errno.EINVAL,
+                                  "result is missing or not a regular file", str(path))
 
     if only is None:
         yield from walk(outdir, frozenset())
@@ -74,7 +74,8 @@ def result_files(outdir: Path) -> Iterator[Path]:
             yield path
 
 
-def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *, only: Path | None = None
+def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *,
+             only: Path | None = None
              ) -> tuple[dict[str, str], dict[str, dict], dict[str, dict[str, str]]]:
     """One traversal records the namespace and optionally hashes each resolved data target once.
 
@@ -173,18 +174,20 @@ def read_inventory(path: Path, checksums: dict[str, str]) -> dict[str, dict]:
 def namespace_difference(expected: dict, current: dict) -> str:
     missing = sorted(expected.keys() - current.keys())
     extra = sorted(current.keys() - expected.keys())
-    changed = sorted(name for name in expected.keys() & current.keys() if expected[name] != current[name])
+    changed = sorted(name for name in expected.keys() & current.keys()
+                     if expected[name] != current[name])
     return f"missing: {missing}; extra: {extra}; type or link changed: {changed}"
 
 
 def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
     """Older file-only chains keep their checksum checks; declared new records stay mandatory."""
     path = outdir / "provenance/outputs.inventory.json"
-    manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+    manifest = json.loads((outdir / "provenance/run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("invalid run manifest")
     if "output_inventory_version" in manifest and (
-            type(manifest["output_inventory_version"]) is not int or manifest["output_inventory_version"] != 1):
+            type(manifest["output_inventory_version"]) is not int
+            or manifest["output_inventory_version"] != 1):
         raise ValueError("unsupported output inventory version")
     if not path.exists() and "output_inventory_version" not in manifest:
         return None
@@ -192,9 +195,7 @@ def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
 
 
 def collect(outdir: Path) -> OutputsReport:
-    pinfo = outdir / "pipeline_info"
     paths = sorted(result_files(outdir))
     mqc = next((p for p in paths if p.name == "multiqc_report.html"), None)
-    files = tuple(p.relative_to(outdir).as_posix() for p in paths)
-    return OutputsReport(pipeline_info=pinfo if pinfo.is_dir() else None,
-                         multiqc_report=mqc, files=files)
+    return OutputsReport(multiqc_report=mqc,
+                         files=tuple(p.relative_to(outdir).as_posix() for p in paths))

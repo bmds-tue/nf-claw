@@ -1,5 +1,5 @@
-"""The website reads each generated skill.md itself (website/src/lib/data/markdown.ts). These pin that
-parser to what the librarian actually emits, using the committed skill.md files.
+"""The website reads each generated skill.md itself (website/src/lib/data/markdown.ts). These pin
+that parser to what the librarian actually emits, using the committed skill.md files.
 
 They need node and the website's own TypeScript (`npm ci` in website/) and are skipped without them.
 """
@@ -50,7 +50,8 @@ def _parse(markdown_js, files):
 
 def test_every_skill_run_block_yields_both_commands(markdown_js):
     # The Run-it block holds `# raw equivalent …` shell comments; read as headings, they ended the
-    # section, so the raw `nextflow run` command was never found and the site showed an invented one.
+    # section, so the raw `nextflow run` command was never found and the site showed an
+    # invented one.
     skills = sorted(ROOT.glob("pipelines/*/skill.md"))
     assert skills
     for file, parsed in _parse(markdown_js, skills).items():

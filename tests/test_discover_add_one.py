@@ -7,14 +7,22 @@ Nextflow-acceptance step) resets the working tree off the tag, so `git describe 
 returns `<tag>-N-g<hash>` and the drift gate flags the freshly generated context as stale.
 This bit pipelines whose default branch had commits after the release. `add_one` and
 `bump` (auto-update) share the same pin-to-tag contract, so both are covered here."""
-import subprocess
+import os
 import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
 import pytest
 
 from librarian import discover_pipelines as dp
 from librarian import update_pipelines as up_mod
 from librarian import write_skill
+from test_version_probe_cleanup import _alive
 
 _SCHEMA = Path(__file__).parent / "fixtures" / "mini" / "nextflow_schema.json"
 
@@ -104,7 +112,8 @@ def test_failed_discovery_does_not_delete_a_preexisting_pipeline_entry(tmp_path,
         entry.mkdir()
         (entry / "notes.txt").write_bytes(b"existing research notes")
     else:
-        entry.symlink_to(data if kind == "symlink" else tmp_path / "missing", target_is_directory=True)
+        entry.symlink_to(data if kind == "symlink" else tmp_path / "missing",
+                         target_is_directory=True)
     calls = []
     def fail_add(args, **kwargs):
         calls.append(args)
@@ -113,7 +122,10 @@ def test_failed_discovery_does_not_delete_a_preexisting_pipeline_entry(tmp_path,
         return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
     monkeypatch.setattr(dp, "_run", fail_add)
     assert not dp.add_one("mini", "https://github.com/nf-core/mini", "1.0.0", repo)
-    assert entry.is_symlink() if kind != "directory" else (entry / "notes.txt").read_bytes() == b"existing research notes"
+    if kind == "directory":
+        assert (entry / "notes.txt").read_bytes() == b"existing research notes"
+    else:
+        assert entry.is_symlink()
     assert source.read_bytes() == b"irreplaceable scientific data"
     assert not calls, "An existing pipeline entry must be refused before Git mutations or rollback"
 
@@ -131,7 +143,8 @@ def test_bump_pins_gitlink_to_new_tag(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("linked_worktree", [False, True])
-def test_failed_discovery_preserves_a_preexisting_submodule_object_store(tmp_path, monkeypatch, linked_worktree):
+def test_failed_discovery_preserves_a_preexisting_submodule_object_store(tmp_path, monkeypatch,
+                                                                         linked_worktree):
     _allow_file_submodules(monkeypatch)
     _make_origin(tmp_path / "origin")
     repo = tmp_path / "repo"
@@ -158,7 +171,8 @@ def test_failed_discovery_preserves_a_preexisting_submodule_object_store(tmp_pat
     assert _git(repo, "status", "--porcelain") == before
 
 
-@pytest.mark.parametrize("state", ["index", "registration", "custom_registration", "partial_registration",
+@pytest.mark.parametrize("state",
+                         ["index", "registration", "custom_registration", "partial_registration",
                                     "local_configuration", "symlink_parent", "nested_root"])
 def test_discovery_refuses_preexisting_git_ownership_without_mutation(tmp_path, monkeypatch, state):
     _allow_file_submodules(monkeypatch)
@@ -179,7 +193,8 @@ def test_discovery_refuses_preexisting_git_ownership_without_mutation(tmp_path, 
             '\turl = https://example.invalid/research.git\n')
         _git(repo, "add", ".gitmodules")
     elif state == "local_configuration":
-        _git(repo, "config", "submodule.pipelines/mini/upstream.url", "https://example.invalid/research.git")
+        _git(repo, "config", "submodule.pipelines/mini/upstream.url",
+             "https://example.invalid/research.git")
     elif state == "symlink_parent":
         external = tmp_path / "external"
         external.mkdir()
@@ -188,18 +203,17 @@ def test_discovery_refuses_preexisting_git_ownership_without_mutation(tmp_path, 
         root = repo / "nested"
         root.mkdir()
     before = (_git(repo, "status", "--porcelain"), _git(repo, "ls-files", "-s"))
-    metadata = (repo / ".gitmodules").read_bytes() if (repo / ".gitmodules").exists() else None
+    gitmodules = repo / ".gitmodules"
+    metadata = gitmodules.read_bytes() if gitmodules.exists() else None
     configuration = _git(repo, "config", "--local", "--list")
     assert not dp.add_one("mini", (tmp_path / "origin").as_uri(), "99.0.0", root)
     assert not (root / "pipelines/mini").exists()
     assert (_git(repo, "status", "--porcelain"), _git(repo, "ls-files", "-s")) == before
-    assert ((repo / ".gitmodules").read_bytes() if (repo / ".gitmodules").exists() else None) == metadata
+    assert (gitmodules.read_bytes() if gitmodules.exists() else None) == metadata
     assert _git(repo, "config", "--local", "--list") == configuration
 
 
 def test_discovery_serializes_ownership_across_concurrent_additions(tmp_path, monkeypatch):
-    from concurrent.futures import ThreadPoolExecutor
-    import threading
     _allow_file_submodules(monkeypatch)
     commits = _make_origin(tmp_path / "origin")
     repo = tmp_path / "repo"
@@ -216,7 +230,8 @@ def test_discovery_serializes_ownership_across_concurrent_additions(tmp_path, mo
 
 @pytest.mark.parametrize("state", ["absent", "untracked", "staged", "conflicted", "symlink",
                                     "assume_unchanged", "skip_worktree", "intent_to_add"])
-def test_failed_new_discovery_restores_original_gitmodules_bytes_and_index(tmp_path, monkeypatch, state):
+def test_failed_new_discovery_restores_original_gitmodules_bytes_and_index(tmp_path,
+                                                                           monkeypatch, state):
     _allow_file_submodules(monkeypatch)
     _make_origin(tmp_path / "origin")
     repo = tmp_path / "repo"
@@ -247,12 +262,13 @@ def test_failed_new_discovery_restores_original_gitmodules_bytes_and_index(tmp_p
     assert not dp.add_one("mini", (tmp_path / "origin").as_uri(), "99.0.0", repo)
     assert (_git(repo, "status", "--porcelain"), _git(repo, "ls-files", "-s"),
             _git(repo, "ls-files", "-v")) == before
-    assert ((repo / ".gitmodules").read_bytes() if (repo / ".gitmodules").exists() else None) == metadata
+    assert (path.read_bytes() if path.exists() else None) == metadata
     assert not (repo / "pipelines/mini").exists()
     assert path.is_symlink() == (state == "symlink")
 
 
-def test_interrupted_discovery_restores_metadata_before_propagating_interrupt(tmp_path, monkeypatch):
+def test_interrupted_discovery_restores_metadata_before_propagating_interrupt(
+        tmp_path, monkeypatch):
     _allow_file_submodules(monkeypatch)
     _make_origin(tmp_path / "origin")
     repo = tmp_path / "repo"
@@ -271,10 +287,6 @@ def test_interrupted_discovery_restores_metadata_before_propagating_interrupt(tm
 
 
 def test_timed_out_discovery_git_command_stops_its_helper_children(tmp_path, monkeypatch):
-    import os
-    import signal
-    import time
-    from test_version_probe_cleanup import _alive
     if not hasattr(os, "killpg"):
         pytest.skip("requires POSIX process groups")
     launcher = tmp_path / "git-helper"
@@ -307,11 +319,6 @@ def test_timed_out_discovery_git_command_stops_its_helper_children(tmp_path, mon
 
 
 def test_sigterm_discovery_stops_helpers_and_restores_git_state(tmp_path, monkeypatch):
-    import os
-    import signal
-    import sys
-    import time
-    from test_version_probe_cleanup import _alive
     if not hasattr(os, "killpg"):
         pytest.skip("requires POSIX process groups")
     _allow_file_submodules(monkeypatch)
@@ -340,9 +347,10 @@ except execution.Terminated as error:
 '''
     env = {**os.environ, "CHILD_PID_FILE": str(marker),
            "PYTHONPATH": str(Path(__file__).resolve().parents[1])}
-    proc = subprocess.Popen([sys.executable, "-c", script, str(repo), str(tmp_path / "origin"), str(launcher)],
-                            env=env, cwd=tmp_path, start_new_session=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(
+        [sys.executable, "-c", script, str(repo), str(tmp_path / "origin"), str(launcher)],
+        env=env, cwd=tmp_path, start_new_session=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     child = None
     try:
         deadline = time.monotonic() + 15

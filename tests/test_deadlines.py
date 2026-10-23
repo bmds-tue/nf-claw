@@ -1,13 +1,14 @@
 # ruff: noqa: F811
 """An explicit timeout covers validation, execution and final scientific attribution."""
 import json
+import os
 import subprocess
 import sys
 import time
 
 import pytest
 
-from runner import chain, orchestration, provenance
+from runner import budget, chain, orchestration, probes, provenance
 from runner.errors import ErrorCode, NfclawError
 from test_chain import fake_runs  # noqa: F401
 
@@ -110,7 +111,8 @@ def test_no_provenance_still_refuses_success_after_attribution_exhausts_deadline
     with pytest.raises(NfclawError) as error:
         _run(prepared, outdir, write_provenance=False)
     assert error.value.details["timeout_seconds"] == 5
-    assert not (outdir / "provenance/logs/run.log").read_text().splitlines()[-1].endswith(": success")
+    last_line = (outdir / "provenance/logs/run.log").read_text().splitlines()[-1]
+    assert not last_line.endswith(": success")
 
 
 def test_unlimited_default_survives_long_preparation(prepared, monkeypatch, clock, tmp_path):
@@ -166,8 +168,6 @@ def test_chain_final_lineage_cannot_publish_success_after_deadline(
 
 
 def test_nested_unlimited_scope_inherits_original_deadline_and_resets(clock):
-    from runner import budget
-
     @budget.bounded
     def validate(*, timeout_seconds):
         assert budget.remaining(30) == pytest.approx(0.75)
@@ -188,8 +188,6 @@ def test_nested_unlimited_scope_inherits_original_deadline_and_resets(clock):
 
 
 def test_probe_respects_overall_deadline_for_real_child(tmp_path):
-    from runner import budget, probes
-
     marker = tmp_path / "late"
     started = time.monotonic()
     with budget.scope(0.1):
@@ -203,8 +201,6 @@ def test_probe_respects_overall_deadline_for_real_child(tmp_path):
 
 
 def test_probe_operation_limit_does_not_become_overall_timeout():
-    from runner import budget, probes
-
     with budget.scope(5):
         with pytest.raises(subprocess.TimeoutExpired):
             probes.capture([sys.executable, "-c", "import time; time.sleep(2)"], timeout=0.03)
@@ -212,9 +208,6 @@ def test_probe_operation_limit_does_not_become_overall_timeout():
 
 def test_deadline_detected_after_probe_exit_still_stops_its_process_group(
         monkeypatch, clock, tmp_path):
-    import os
-    from runner import budget, probes
-
     if not hasattr(os, "killpg"):
         pytest.skip("process groups require POSIX")
     marker = tmp_path / "orphan"
@@ -227,8 +220,9 @@ def test_deadline_detected_after_probe_exit_still_stops_its_process_group(
 
     monkeypatch.setattr(subprocess.Popen, "communicate", complete_then_expire)
     child = "import pathlib,sys,time; time.sleep(.2); pathlib.Path(sys.argv[1]).touch()"
-    parent = ("import subprocess,sys; subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]],"
-              "stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)")
+    parent = (
+        "import subprocess,sys; subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]],"
+        "stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)")
     with budget.scope(1):
         with pytest.raises(NfclawError):
             probes.capture([sys.executable, "-c", parent, child, str(marker)], timeout=5)
@@ -309,7 +303,8 @@ def test_last_success_checkpoint_downgrades_completed_manifest_without_rehashing
     assert error.value.details["timeout_seconds"] == 5
     assert calls == ["success"]
     assert json.loads((outdir / "provenance/run_manifest.json").read_text())["outcome"] == "failed"
-    assert not (outdir / "provenance/logs/run.log").read_text().splitlines()[-1].endswith(": success")
+    last_line = (outdir / "provenance/logs/run.log").read_text().splitlines()[-1]
+    assert not last_line.endswith(": success")
 
 
 def test_failed_timeout_metadata_rewrite_cannot_leave_successful_manifest(
@@ -336,8 +331,6 @@ def test_failed_timeout_metadata_rewrite_cannot_leave_successful_manifest(
 
 
 def test_shorter_nested_budget_resets_without_extending_parent(clock):
-    from runner import budget
-
     with budget.scope(5):
         clock[0] = 1
         with budget.scope(100):
@@ -352,8 +345,6 @@ def test_shorter_nested_budget_resets_without_extending_parent(clock):
 
 
 def test_metadata_probe_deadline_still_emits_failed_bundle(prepared, monkeypatch, tmp_path):
-    from runner import budget, probes
-
     def slow_version(env_extra=None):
         probes.capture([sys.executable, "-c", "import time; time.sleep(2)"], timeout=30)
         pytest.fail("the metadata probe must exhaust the overall budget")

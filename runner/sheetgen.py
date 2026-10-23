@@ -51,7 +51,8 @@ SHEET_SUFFIXES = (".csv", ".tsv", ".txt", ".json", ".yaml", ".yml")
 GENERATED_STEM = "samplesheet"
 # A column "names a file type" when its pattern requires an extension that no plain name has.
 _PROBE = "nfclaw_probe"
-_FASTQ_PROBES = ("nfclaw_probe.fastq.gz", "nfclaw_probe.fq.gz", "nfclaw_probe.fastq", "nfclaw_probe.fq")
+_FASTQ_PROBES = ("nfclaw_probe.fastq.gz", "nfclaw_probe.fq.gz", "nfclaw_probe.fastq",
+                 "nfclaw_probe.fq")
 # A read column takes FastQ only: pairgenomealign's `fasta` takes FastQ or FASTA genomes, and
 # longraredisease's `file_path` FastQ or BAM — one file per sample, not read pairs.
 _NOT_READS_PROBES = ("nfclaw_probe.bam", "nfclaw_probe.fa", "nfclaw_probe.fasta")
@@ -119,13 +120,15 @@ def _typed(col: Column) -> bool:
 
 
 def file_columns(sheet: InputSchema) -> tuple[str, ...]:
-    """The columns whose patterns name a file type: data files, whatever format the schema declares."""
+    """The columns whose patterns name a file type: data files, whatever format the
+    schema declares."""
     return tuple(c.name for c in sheet.columns if c.name and _typed(c))
 
 
 def _matches(col: Column, path: Path) -> bool:
     """A file fits a column when one of its patterns accepts both the absolute path (the value
-    nf-schema checks) and the bare file name — so a pattern matching a directory name is no match."""
+    nf-schema checks) and the bare file name — so a pattern matching a directory name is
+    no match."""
     return any(_search(p, str(path)) and _search(p, path.name) for p in _patterns(col))
 
 
@@ -155,7 +158,7 @@ def _read_groups(names: list[str]) -> list[tuple[str, ...]]:
 class Plan:
     """What generation can fill for one samplesheet schema (shared with the generated skill.md)."""
     id_column: str | None
-    reads: tuple[str, ...]                     # the read group filled: (read 1,) or (read 1, read 2)
+    reads: tuple[str, ...]  # the read group filled: (read 1,) or (read 1, read 2)
     read_groups: tuple[tuple[str, ...], ...]   # every read group the schema declares
     data_columns: tuple[str, ...]              # other columns filled from files, by their patterns
     lane_column: str | None
@@ -359,7 +362,8 @@ def detect(raw: Any, repo: Path) -> Source | None:
             # One file is taken for data only when a column accepts it; anything else keeps the
             # samplesheet check, which explains e.g. an .xlsx handed in by mistake.
             sheet = schema_mod.load_input_schema(repo, resolved.samplesheet_schema)
-            p = plan(sheet, schema_mod.load_param_schema(repo).params.get("input")) if sheet else None
+            p = (plan(sheet, schema_mod.load_param_schema(repo).params.get("input")) if sheet
+                 else None)
             accepting = [n for group in p.read_groups for n in group] if p else []
             if p is None or not any(_matches(p.columns[n], path)
                                     for n in (*accepting, *p.data_columns)):
@@ -483,7 +487,8 @@ def discover(source: Source, *, outdir: Path, work_dir: Path) -> list[tuple[Path
     return list(found.values())
 
 
-# --- FastQ: samples, lanes and mates ---------------------------------------------------------------
+# --- FastQ: samples, lanes
+# and mates ---------------------------------------------------------------
 
 @dataclass(frozen=True)
 class _Read:
@@ -523,8 +528,8 @@ def _first_read_identity(path: Path) -> tuple[str | None, int | None]:
     suffix = path.suffix.lower()
     opener = {".gz": gzip.open, ".bz2": bz2.open, ".xz": lzma.open}.get(suffix, open)
     if not _names_readable(path):
-        raise _bad(f"cannot read the read names of zstd-compressed {path.name} (the Python standard "
-                   "library has no zstd reader)",
+        raise _bad(f"cannot read the read names of zstd-compressed {path.name} (the Python "
+                   "standard library has no zstd reader)",
                    fix="Name mates _R1/_R2 (their names alone then pair them, with a note), or "
                        "write the samplesheet yourself.")
     try:
@@ -549,10 +554,6 @@ def _first_read_identity(path: Path) -> tuple[str | None, int | None]:
     if len(words) > 1 and re.match(r"^[12]:", words[1]):
         roles.add(int(words[1][0]))
     return name, next(iter(roles)) if len(roles) == 1 else -1 if roles else None
-
-
-def _first_read_name(path: Path) -> str | None:
-    return _first_read_identity(path)[0]
 
 
 def _compatible_roles(first: int | None, second: int | None) -> bool:
@@ -595,7 +596,8 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
     undetermined = [r for r in reads if r.sample == "Undetermined" and r.number == "0"]
     if undetermined:
         notes.append("Ignored the demultiplexer's unassigned reads "
-                     f"({_shown([r.path.name for r in undetermined])}): `Undetermined` is no sample.")
+                     f"({_shown([r.path.name for r in undetermined])}): `Undetermined` "
+                     "is no sample.")
     reads = [r for r in reads if r.kind != "I" and r not in undetermined]
     if beyond := [r for r in reads if r.kind == "R" and r.read not in (1, 2)]:
         raise _bad(f"read {beyond[0].read} files are not taken by any read column: "
@@ -639,8 +641,9 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
                                "reads of one library: an empty file has no read names to compare",
                                fix="Name them _R1/_R2, or write the samplesheet yourself.")
                 if _mates(first, second) and not _compatible_roles(first_role, second_role):
-                    raise _bad(f"cannot infer mate orientation for {slot[1].name} and {slot[2].name}: "
-                               "their explicit read-header mate labels contradict the proposed pairing",
+                    raise _bad(f"cannot infer mate orientation for {slot[1].name} and "
+                               f"{slot[2].name}: their explicit read-header mate labels contradict "
+                               "the proposed pairing",
                                fix="Check the original data and write an explicit samplesheet.")
                 if _mates(first, second) and not _strong(first, second):
                     raise _bad(f"cannot tell whether {slot[1].name} and {slot[2].name} are the two "
@@ -666,8 +669,8 @@ def _read_units(files: list[Path], notes: list[str], paired_ok: bool) -> list[_U
         key = (unit.sample, unit.lane, unit.chunk)
         if key in seen:
             raise _bad(f"{seen[key].reads[0].name} and {unit.reads[0].name} both give sample "
-                       f"{unit.sample!r} a read set, with no lane or chunk number to tell them apart "
-                       "(a copy, or a concatenated file?)",
+                       f"{unit.sample!r} a read set, with no lane or chunk number to tell them "
+                       "apart (a copy, or a concatenated file?)",
                        fix="Pass each library once; name several runs of one sample with Illumina "
                            "lane numbers, or write the samplesheet yourself.")
         seen[key] = unit
@@ -715,14 +718,14 @@ def _refuse_unnamed_mates(units: list[_Unit], notes: list[str]) -> None:
                                "contradict the proposed pairing",
                                fix="Check the original data and write an explicit samplesheet.")
                 if a and b and _mates(a, b) and not _strong(a, b):
-                    notes.append(f"{marks[first].name} and {marks[second].name} start with the same "
-                                 f"generic read name ({a!r}); they are taken for two single-end "
-                                 "samples. If they are the two reads of one library, name them "
-                                 "<sample>_R1 / <sample>_R2.")
+                    notes.append(f"{marks[first].name} and {marks[second].name} start with the "
+                                 f"same generic read name ({a!r}); they are taken for two "
+                                 "single-end samples. If they are the two reads of one library, "
+                                 "name them <sample>_R1 / <sample>_R2.")
                 elif a and b and _mates(a, b):
-                    raise _bad(f"{marks[first].name} and {marks[second].name} hold the two reads of "
-                               "one library (their read names pair), but their names carry no read "
-                               "number nfclaw recognises",
+                    raise _bad(f"{marks[first].name} and {marks[second].name} hold the two reads "
+                               "of one library (their read names pair), but their names carry no "
+                               "read number nfclaw recognises",
                                fix="Name (or link) them <sample>_R1 / <sample>_R2 so they are "
                                    "analysed as one paired-end library.")
 
@@ -739,8 +742,8 @@ def _confirm(first: Path, second: Path, notes: list[str]) -> None:
     elif not _mates(a, b):
         # The names state the pairing; desynchronised mates are what some pipelines repair
         # (fastqrepair). Said before launch, never silently, and never undone by guessing.
-        notes.append(f"{first.name} and {second.name} are paired as their names say, but their first "
-                     f"read names differ ({a!r}, {b!r}): check that they belong together (a "
+        notes.append(f"{first.name} and {second.name} are paired as their names say, but their "
+                     f"first read names differ ({a!r}, {b!r}): check that they belong together (a "
                      "swapped, truncated or desynchronised mate).")
     elif not _compatible_roles(a_role, b_role):
         notes.append(f"Paired {first.name} with {second.name} as their filenames declare, but "
@@ -767,7 +770,8 @@ def _stem(name: str) -> str:
     return root
 
 
-# --- assignments ------------------------------------------------------------------------------------
+# --- assignments
+# ------------------------------------------------------------------------------------
 
 def parse_assignments(items: list[str]) -> dict[str, str]:
     """`--sheet-set COLUMN=VALUE` (repeatable) as {column: value}; an empty value is kept."""
@@ -835,7 +839,8 @@ def _value_issues(col: Column, value: str) -> list[str]:
     return samplesheet.value_problems(col, value)
 
 
-# --- building the sheet -----------------------------------------------------------------------------
+# --- building the sheet
+# -----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class Generated:
@@ -906,7 +911,8 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
                           if optional else " with --sheet-set COLUMN=")
                        + ", or pass only the files of one kind.")
     if not reads and not data:
-        kinds = ", ".join(f"{n} ({_patterns(p.columns[n])[0]})" for n in (*p.reads, *p.data_columns))
+        kinds = ", ".join(f"{n} ({_patterns(p.columns[n])[0]})"
+                          for n in (*p.reads, *p.data_columns))
         raise _bad(f"No input file fits a column of the {pipeline} samplesheet (it takes {kinds}).",
                    fix="Check --input, and the file names and extensions the columns accept.")
     notes: list[str] = []
@@ -941,7 +947,7 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
             rows.append(row)
             row_sample.append((sample, (unit.lane or 1) if unit is not None else 1))
     for column, value in assignments.items():
-        for row, (sample, lane) in zip(rows, row_sample):
+        for row, (sample, lane) in zip(rows, row_sample, strict=True):
             row[column] = value.replace("{sample}", sample).replace("{lane}", str(lane))
     # Whatever filled it — the files or an assignment — the lane column must still tell apart the
     # read sets of one sample.
@@ -990,7 +996,8 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
     if implicit:
         record["implicit_defaults"] = implicit
     where = source.values[0] if len(source.values) == 1 else f"{len(source.values)} --input values"
-    layout = (f" ({paired} paired-end, {len(units) - paired} single-end read sets)" if units else "")
+    layout = (f" ({paired} paired-end, {len(units) - paired} single-end read sets)"
+              if units else "")
     summary = (f"Generated the {pipeline} samplesheet from {len(files)} files in {where}: "
                f"{len(samples)} sample(s){layout}, {len(rows)} row(s); columns from the files: "
                f"{', '.join(record['from_files'])}"
@@ -1073,7 +1080,7 @@ def _check_lanes(rows: list[dict[str, str]], row_sample: list[tuple[str, int]],
                  lane_column: str) -> None:
     """The lane column tells the read sets of one sample apart (sarek names read groups by it)."""
     seen: dict[tuple[str, str], dict[str, str]] = {}
-    for row, (sample, _) in zip(rows, row_sample):
+    for row, (sample, _) in zip(rows, row_sample, strict=True):
         key = (sample, row.get(lane_column, ""))
         if key in seen:
             reads = [Path(r[c]).name for r in (seen[key], row) for c in r
@@ -1128,8 +1135,9 @@ def _check_unique(rows: list[dict[str, str]], sheet: InputSchema, p: Plan) -> No
                 other = [c for c in combo if c != p.id_column]
                 raise _bad(f"rows {seen[key]} and {number} would repeat the values of {cols}, "
                            "which the samplesheet requires to be unique",
-                           fix=(f"Make them differ, e.g. --sheet-set {other[0]}={{sample}}_{{lane}} "
-                                f"or {other[0]}={{lane}}" if other else
+                           fix=("Make them differ, e.g. --sheet-set "
+                                f"{other[0]}={{sample}}_{{lane}} or "
+                                f"{other[0]}={{lane}}" if other else
                                 "This pipeline takes one row per sample: merge each sample's "
                                 "read files first, or write the samplesheet yourself."))
             seen[key] = number

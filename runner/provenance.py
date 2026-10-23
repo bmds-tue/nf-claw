@@ -10,17 +10,17 @@ import shlex
 import subprocess
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
+from runner import budget, environment_record, outputs, sheetgen
 from runner import exact_json as json
-from runner.inputs import is_remote_url
-
-from runner.outputs import result_files
-from runner import budget, environment_record, outputs
-from runner.errors import ErrorCode, NfclawError
 from runner.engine_version import version_text
+from runner.errors import ErrorCode, NfclawError
+from runner.inputs import is_remote_url
+from runner.outputs import result_files
 from runner.probes import capture
+# Re-exported (`X as X`): callers read the bundle's checksum helpers from this module.
 from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
                                  MissingInputSource as MissingInputSource,
                                  checksum_text as checksum_text,
@@ -58,11 +58,13 @@ def _sha256(path: Path) -> str:
 def samplesheet_input_paths(path: Path, schema: InputSchema) -> list[Path]:
     """Local data sources in schema-declared CSV/TSV or flat JSON/YAML path fields.
 
-    Remote URLs and nested or pipeline-specific inputs need separate identity handling and are not guessed.
-    The sheet has already been validated by the runner, including its absolute-path requirement.
+    Remote URLs and nested or pipeline-specific inputs need separate identity handling and are not
+    guessed. The sheet has already been validated by the runner, including its
+    absolute-path requirement.
     """
     columns = [column for column in schema.columns
-               if column.path_format() and column.name not in {*schema.destination_columns, *schema.metadata_columns}]
+               if column.path_format()
+               and column.name not in {*schema.destination_columns, *schema.metadata_columns}]
     paths: set[Path] = set()
     if path.suffix.lower() not in (".csv", ".tsv"):
         for row in serialized_rows(path) or []:
@@ -91,8 +93,6 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
     column (file or directory) and an existing absolute regular file in any other column. Relative
     and remote values are not guessed at, and a missing file stays the pipeline's own error.
     """
-    from runner import sheetgen
-
     declared = {column.name for column in schema.columns if column.path_format()}
     declared.update(schema.destination_columns)
     declared.update(schema.metadata_columns)
@@ -122,14 +122,16 @@ def samplesheet_dependencies(path: Path, schema: InputSchema) -> list[Path]:
     Effective path roles and conservative existing-file capture are combined after
     source-guarded metadata/destination exclusions; neither side may omit a member.
     """
-    return sorted(set(samplesheet_input_paths(path, schema)) | set(samplesheet_file_paths(path, schema)))
+    return sorted(set(samplesheet_input_paths(path, schema))
+                  | set(samplesheet_file_paths(path, schema)))
 
 
 def _atomic_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:
     """Replace one bundle file without exposing a truncated write."""
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as fh:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.",
+                                         delete=False) as fh:
             temporary = Path(fh.name)
             fh.write(content)
         if mode is not None:
@@ -166,7 +168,8 @@ def _nextflow_version(env_extra: dict[str, str] | None = None) -> str:
     # actually ran, not the launcher default.
     env = {**os.environ, **env_extra} if env_extra else None
     try:
-        r = capture(["nextflow", "-version"], timeout=seconds("NFCLAW_VERSION_TIMEOUT", 30), env=env)
+        r = capture(["nextflow", "-version"],
+                    timeout=seconds("NFCLAW_VERSION_TIMEOUT", 30), env=env)
         return version_text(r) or ""
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return ""
@@ -269,7 +272,8 @@ def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
     from runner import runlog
 
     try:
-        previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+        previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME)
+                              .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         previous = None
     # An opt-in --timeout bounds this recording too; the bundle notes what it did not reach.
@@ -293,7 +297,8 @@ def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
 
 def recorded_environment_issues(outdir: Path) -> list[str]:
     try:
-        environment = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+        environment = json.loads((outdir / "provenance" / environment_record.RECORD_NAME)
+                                 .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     issues = environment.get("issues") if isinstance(environment, dict) else None
@@ -308,7 +313,8 @@ def environment_summary(environment: dict) -> dict:
         "container_engine": engine.get("name"),
         "container_engine_version": engine.get("version"),
         "images": len(images),
-        "images_with_identity": sum(1 for image in images.values() if image.get("kind") != "unresolved"),
+        "images_with_identity": sum(1 for image in images.values()
+                                    if image.get("kind") != "unresolved"),
         "pinned_processes": len(environment.get("pinned_containers") or {}),
         "remote_inputs": len(environment.get("remote_inputs") or {}),
         "nextflow_plugins": list(environment.get("nextflow_plugins") or []),
@@ -320,8 +326,8 @@ def environment_summary(environment: dict) -> dict:
 def output_checksums(outdir: Path) -> dict[str, str]:
     """The run's result files as {path relative to outdir: sha256}, in sorted order.
 
-    The single definition of "what this run produced": the provenance bundle records it, and
-    `nfclaw verify` measures a directory with it. Nextflow's own state (`.nextflow*`) and nfclaw's
+    The file checksums of `outputs.snapshot`, which records a bundle's `outputs.sha256` and which
+    `nfclaw verify` measures a replay with. Nextflow's own state (`.nextflow*`) and nfclaw's
     provenance bundle are excluded — they describe the run, they are not its results, and a replay
     would never reproduce them byte-for-byte anyway.
     """
@@ -333,8 +339,8 @@ def output_checksums(outdir: Path) -> dict[str, str]:
 
 
 # The replay logs itself exactly as `nfclaw run` does: everything it prints, in order, in
-# <target>/provenance/logs/run.log, ending with its outcome — so it needs no redirect of its own, and
-# `nfclaw status <target>` reads it. `provenance/` is not a result, so the log never shows up in
+# <target>/provenance/logs/run.log, ending with its outcome — so it needs no redirect of its own,
+# and `nfclaw status <target>` reads it. `provenance/` is not a result, so the log never shows up in
 # `nfclaw verify`. Nextflow runs in the background while the script waits for it: a trap set on a
 # command running in the foreground only fires once that command has finished, so `kill <replay>`
 # used to leave Nextflow running and the log without an outcome. Its output reaches the terminal
@@ -441,7 +447,7 @@ fi
 echo "==> nfclaw replay finished $(date -u +%Y-%m-%dT%H:%M:%S+00:00): $outcome" >>"$log"
 echo "nfclaw replay: $outcome (log: $log)" >&2
 exit "$status"
-"""
+"""  # noqa: E501 -- shell, written into commands.sh byte for byte
 
 
 def write(*, outdir: Path, pipeline: str, command_str: str,
@@ -500,7 +506,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "outcome": outcome,
         "shutdown_grace_seconds": grace,
         "outdir": str(outdir.absolute()),
-        "ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "nextflow": observed_version,
         "nextflow_env": recorded_env,
         "redacted_nextflow_env": redacted_env,
@@ -513,7 +519,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", nxf_env["NXF_VER"]))
     if not manifest["nextflow"] and not concrete_pin:
         manifest["unverified_engine"] = True
-    if invalid_names := [key for key in nxf_env if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)]:
+    if invalid_names := [key for key in nxf_env
+                         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)]:
         manifest["unreplayable_environment_names"] = sorted(invalid_names)
     # A stage of a chain records which chain it belongs to and which run (and handoff) fed it, so
     # the whole chain can be reconstructed from any one stage. A plain run's manifest is unchanged.
@@ -533,17 +540,19 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # Selected profiles that run every task as a stub; a replay (replay_guard) reports it too.
     if stub_profiles:
         manifest["stub_profiles"] = list(stub_profiles)
-    # The nf-core/configs revision the run's institutional config include read (runner.institutional).
+    # The nf-core/configs revision the run's institutional config include
+    # read (runner.institutional).
     if institutional_configs:
         manifest["institutional_configs"] = dict(institutional_configs)
     if pipeline_checksums is not None or submodule.path.is_dir():
         manifest["pipeline_path"] = str(submodule.path.absolute())
         manifest["pipeline_git_head"] = (
             submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
-        pipeline_hashes = hash_pipeline(submodule.path) if pipeline_checksums is None else pipeline_checksums
+        pipeline_hashes = (hash_pipeline(submodule.path) if pipeline_checksums is None
+                           else pipeline_checksums)
         _atomic_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
-        # The source itself, not only its checksums: a replay runs this archive, so it reproduces the
-        # run after the checkout has moved to another release, been edited or been deleted.
+        # The source itself, not only its checksums: a replay runs this archive, so it reproduces
+        # the run after the checkout has moved to another release, been edited or been deleted.
         archive = prov / PIPELINE_ARCHIVE
         if submodule.path.is_dir():
             try:
@@ -583,14 +592,16 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         _atomic_text(prov / f"{kind}.sha256", checksum_text(hashes))
         _atomic_text(prov / f"{kind}.sources.json", json.dumps(
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
-        _atomic_text(prov / f"{kind}.inventory.json", json.dumps(inventory, indent=2, sort_keys=True) + "\n")
+        _atomic_text(prov / f"{kind}.inventory.json",
+                     json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     for name, script in _BUNDLED_SCRIPTS.items():
         _atomic_bytes(prov / name, script)
     bundled_configs = _bundle_configs(prov, command_str, config_checksums)
     if bundled_configs:
         manifest["bundled_configs"] = bundled_configs
 
-    # What the engine fetched while it ran: container images by digest, plugins, staged remote files.
+    # What the engine fetched while it ran: container images by digest, plugins, staged
+    # remote files.
     environment = record_environment(
         outdir, env_extra=env_extra, history_offset=history_offset, profile=_profile(command_str),
         nextflow_log=nextflow_log, observed=observed_images)
@@ -615,8 +626,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # names across template generations: the older `software_versions.yml` and the newer
     # `nf_core_<pipeline>_software_mqc_versions.yml` (used by rnaseq, chipseq, fetchngs, crisprseq,
     # nascent, callingcards, metaboigniter, …). Match whatever the run actually wrote into
-    # pipeline_info — both forms contain "software" then "version" — instead of assuming one name, and
-    # keep each file's own name so the bundle records exactly what was produced. A hardcoded
+    # pipeline_info — both forms contain "software" then "version" — instead of assuming one name,
+    # and keep each file's own name so the bundle records exactly what was produced. A hardcoded
     # `software_versions.yml` silently copied nothing for every pipeline on the newer template.
     pinfo = outdir / "pipeline_info"
     if pinfo.is_dir():
@@ -632,18 +643,20 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     #    BCO `pipeline_info/manifest_*.bco.json` — collide outright. Replaying in place therefore
     #    failed on contact, which is also what made the bundle unusable as a *check*: a reproduction
     #    you can compare against `outputs.sha256` has to land somewhere clean. `--outdir` on the
-    #    command line overrides the value in the params file, so one argument redirects the whole run.
+    #    command line overrides the value in the params file, so one argument redirects
+    #    the whole run.
     #  - `cd` into that directory first: nfclaw launches Nextflow from the outdir, so the engine
     #    state (`.nextflow/`) lands beside the results it belongs to and never touches the original.
     #  - re-export every NXF_* variable the run actually saw: the overlay nfclaw applied (--nxf-ver,
     #    --nxf-env) *and* whatever the shell already exported (NXF_OFFLINE, NXF_VER, …). Nextflow
-    #    reads all of them, so a run that only succeeds with a pinned engine, an IPv6 flag or offline
-    #    mode would not reproduce unless the script carries them — the manifest alone is not enough.
+    #    reads all of them, so a run that only succeeds with a pinned engine, an IPv6 flag or
+    #    offline mode would not reproduce unless the script carries them — the manifest alone
+    #    is not enough.
     #  - run the recorded pipeline checkout while it holds exactly the recorded source (paths that
-    #    embed the pipeline directory then keep their values), otherwise the bundle's source archive,
-    #    extracted into the replay's provenance/ directory and checked file by file; the bundle's
-    #    copies of external `--config` files; and a config pinning every process to the container
-    #    image digest it ran.
+    #    embed the pipeline directory then keep their values), otherwise the bundle's source
+    #    archive, extracted into the replay's provenance/ directory and checked file by file; the
+    #    bundle's copies of external `--config` files; and a config pinning every process to the
+    #    container image digest it ran.
     env_exports = "".join(
         f"export {shlex.quote(key)}={shlex.quote(value)}\n"
         for key, value in sorted(nxf_env.items())
@@ -652,7 +665,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # Preserve the original effective environment in the manifest, but remove the launcher's
     # moving default from the replay: its actual observed version is an explicit replay pin.
     if isinstance(manifest["nextflow"], str):
-        if match := re.search(r"\bversion\s+(\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)", manifest["nextflow"]):
+        if match := re.search(r"\bversion\s+(\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)",
+                              manifest["nextflow"]):
             env_exports += f"export NXF_VER={shlex.quote(match[1])}\n"
     if redacted_env:
         names = " ".join(name.encode("unicode_escape").decode("ascii") for name in redacted_env)
@@ -676,8 +690,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
             if (index == 2 and command_args[1] == "run" and "pipeline_archive" in manifest
                     and str(Path(arg).absolute()) == manifest.get("pipeline_path")):
                 rendered.append('"$pipeline"')
-                replay_setup = ('pipeline="$(python3 "$_script_dir/replay_guard.py" --pipeline-source '
-                                '"$_script_dir" "$target")" || exit 1\n')
+                replay_setup = ('pipeline="$(python3 "$_script_dir/replay_guard.py" '
+                                '--pipeline-source "$_script_dir" "$target")" || exit 1\n')
             elif config is not None and config["replay"]:
                 rendered.append('"$_script_dir"/' + shlex.quote(config["file"]))
             elif arg.startswith(bundle_prefix):
@@ -697,7 +711,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "set -euo pipefail\n"
         '_script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
         "# Replay of this run. Reproduces it into a FRESH output directory — an nf-core pipeline\n"
-        "# publishes into --outdir and cannot re-publish over a previous run's files, so replaying\n"
+        "# publishes into --outdir and cannot re-publish over a previous run's files, so replaying\n"  # noqa: E501
         "# into the original one fails immediately. Pass a directory to choose the target:\n"
         "#     ./commands.sh /path/to/fresh-dir\n"
         # The default is assigned on its own line, not inlined into ${1:-...}: inside the parameter
@@ -705,7 +719,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         f"default_target={default_target}\n"
         "target=\"${1:-$default_target}\"\n"
         'if ! python3 "$_script_dir/replay_guard.py" --check-lock "$target" "$$"; then\n'
-        '  exec python3 "$_script_dir/replay_guard.py" --lock "$target" "$_script_dir/commands.sh"\n'
+        '  exec python3 "$_script_dir/replay_guard.py" --lock "$target" "$_script_dir/commands.sh"\n'  # noqa: E501
         'fi\n'
         "mkdir -p -- \"$target\"\n"
         # Absolute before the `cd` below: Nextflow resolves a relative --outdir against its launch
@@ -730,7 +744,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         except NfclawError as exc:
             deadline_failure = exc
     if deadline_failure is not None:
-        manifest.update(outcome="failed", timeout_seconds=deadline_failure.details["timeout_seconds"])
+        manifest.update(outcome="failed",
+                        timeout_seconds=deadline_failure.details["timeout_seconds"])
     _atomic_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     if outcome == "success" and deadline_failure is None:
         try:

@@ -1,10 +1,15 @@
+import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 import pytest
+
+from runner import institutional, outputs, provenance, runlog
 
 
 @pytest.fixture(autouse=True)
@@ -24,8 +29,6 @@ def _no_institutional_config_lookup(monkeypatch):
 
     tests/test_institutional.py exercises the pinning with its own resolver.
     """
-    from runner import institutional
-
     monkeypatch.setattr(institutional, "_ls_remote", lambda repository, ref: (None, None))
 
 
@@ -41,7 +44,15 @@ def _isolate_nextflow_env(monkeypatch):
         monkeypatch.delenv(key, raising=False)
 
 
-_FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
+@pytest.fixture
+def no_engine_probe(monkeypatch):
+    """Record "test engine" as the Nextflow version instead of probing (and maybe downloading) one.
+    Bundle tests opt in with `pytestmark = pytest.mark.usefixtures("no_engine_probe")`; real probe
+    cleanup is exercised separately."""
+    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+
+
+_FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -49,15 +60,11 @@ def library(tmp_path):
     """A tiny nf-claw checkout: fixture pipelines under pipelines/, handoff rules under handoffs/.
 
     `make("mini_up", "mini", rules={("mini_up", "mini"): {...}})` returns the checkout root."""
-    import json
-    import shutil
-    from pathlib import Path
-
     def make(*names: str, rules: dict | None = None) -> Path:
         for name in names:
             up = tmp_path / "pipelines" / name / "upstream"
             if not up.exists():
-                shutil.copytree(Path(_FIXTURES) / name, up)
+                shutil.copytree(_FIXTURES / name, up)
                 for f in ("main.nf", "nextflow.config"):
                     (up / f).write_text("x")
                 (tmp_path / "pipelines" / name / "skill.md").write_text(f"---\nname: {name}\n---\n")
@@ -72,14 +79,8 @@ def library(tmp_path):
 @pytest.fixture
 def finished_run():
     """Lay out a completed nfclaw run — result files, provenance/params.json, outputs.sha256 and a
-    success manifest — what a real stage leaves behind. `{outdir}` in a file's text becomes the run's
-    absolute outdir (fetchngs writes absolute FastQ paths into its samplesheet)."""
-    import json
-    from pathlib import Path
-
-    from runner import provenance
-    from runner import outputs
-
+    success manifest — what a real stage leaves behind. `{outdir}` in a file's text becomes the
+    run's absolute outdir (fetchngs writes absolute FastQ paths into its samplesheet)."""
     def make(outdir: Path, files: dict, params: dict | None = None) -> Path:
         for rel, text in files.items():
             p = outdir / rel
@@ -114,8 +115,6 @@ def named_process():
     Right after `Popen` returns, a Linux child can still be in the middle of `exec`: its
     /proc/<pid>/cmdline is not yet the new program's (about 1 in 5 starts on the de.NBI host), so a
     test that checked it at once saw an unknown process and failed at random."""
-    from runner import runlog
-
     procs = []
 
     def start(*markers: str) -> subprocess.Popen:

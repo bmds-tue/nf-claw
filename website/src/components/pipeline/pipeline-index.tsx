@@ -5,14 +5,13 @@ import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Search, SlidersHorizontal } from "lucide-react";
 import type { PipelineSummary } from "@/lib/derive";
-import { CATEGORIES, OTHER_CATEGORY, categoryRank, colorForCategory } from "@/lib/derive";
+import { DOMAIN_ORDER, categoryRank, colorForCategory, domainCounts } from "@/lib/derive";
 import { Highlight } from "@/components/ui/highlight";
 import { SearchField, DomainChips } from "@/components/ui/filters";
 import { formatDate } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
 type SortKey = "name" | "domain" | "parameters" | "modules" | "newest";
-const ORDER = [...CATEGORIES.map((c) => c.name), OTHER_CATEGORY.name];
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
   const reduce = useReducedMotion();
@@ -24,7 +23,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     const d = sp.get("domain");
-    if (d && ORDER.includes(d)) setDomain(d);
+    if (d && DOMAIN_ORDER.includes(d)) setDomain(d);
     const q = sp.get("q");
     if (q) setQuery(q);
   }, []);
@@ -36,12 +35,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
     history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
   }, [domain, query]);
 
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of pipelines) m.set(p.category, (m.get(p.category) ?? 0) + 1);
-    return m;
-  }, [pipelines]);
-  const domains = ORDER.filter((d) => counts.has(d));
+  const domains = useMemo(() => domainCounts(pipelines), [pipelines]);
 
   const q = query.trim().toLowerCase();
   const shown = useMemo(() => {
@@ -93,7 +87,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
 
       <div className="mt-4">
         <DomainChips
-          domains={domains.map((d) => ({ name: d, count: counts.get(d) ?? 0 }))}
+          domains={domains}
           total={pipelines.length}
           value={domain}
           onChange={setDomain}

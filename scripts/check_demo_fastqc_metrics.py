@@ -120,8 +120,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--against", type=Path, help="compare inputs and full FastQC data tables with prior evidence")
-    parser.add_argument("--work-root", type=Path, help="retained work directory from a downloaded CI artifact")
+    parser.add_argument("--against", type=Path, help="compare inputs and full FastQC data tables "
+                                                     "with prior evidence")
+    parser.add_argument("--work-root", type=Path, help="retained work directory from a "
+                                                       "downloaded CI artifact")
     args = parser.parse_args()
     reports = collect_reports(args.run, work_root=args.work_root)
     results = [check_report(report) for report in reports]
@@ -130,7 +132,8 @@ def main() -> None:
     args.output.write_text(json.dumps({"scope": "FastQC 0.12.1 basic statistics for bundled demo",
                                       "reports_checked": len(results), "results": results},
                                      indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"All {len(results)} reports match independently counted reads, lengths and GC percentages.")
+    print(f"All {len(results)} reports match independently counted reads, lengths "
+          "and GC percentages.")
 
 
 if __name__ == "__main__":

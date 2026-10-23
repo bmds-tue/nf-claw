@@ -1,10 +1,11 @@
-# librarian/write_catalog.py
+"""Generate catalog.md and catalog.json from every pipeline's skill.md frontmatter."""
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
 
+from librarian.write_skill import _cell
 from runner import discovery
 
 
@@ -35,23 +36,21 @@ def generate(*, pipelines_dir: Path, out_md: Path, out_json: Path) -> None:
             for p in discovery.discover(pipelines_dir)]
     out_json.write_text(json.dumps(rows, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    def _safe(text: object) -> str:  # keep free text safe inside a markdown table cell
-        return " ".join(str(text).split()).replace("|", "\\|")
-
     lines = ["# Pipeline catalog", "",
              f"{len(rows)} nf-core pipelines. Grep this file (or `catalog.json`) for a keyword, "
              "then read `pipelines/<name>/skill.md`. `input` is derived from each pipeline's "
              "samplesheet schema; `output` names output locations and potential reports "
              "(the selected workflow and parameters determine the actual files; per-release detail "
-             "is in the pipeline's upstream `docs/output.md`, linked from its skill). `catalog.json` "
-             "and each `skill.md` also carry a `summary` (the authors' own one-paragraph description "
-             "from the pipeline README, a richer signal for matching a request than the terse "
-             "`description` below) and the `tools` it runs (from the pipeline's own `CITATIONS.md`).",
+             "is in the pipeline's upstream `docs/output.md`, linked from its skill). "
+             "`catalog.json` and each `skill.md` also carry a `summary` (the authors' own "
+             "one-paragraph description from the pipeline README, a richer signal for matching a "
+             "request than the terse `description` below) and the `tools` it runs (from the "
+             "pipeline's own `CITATIONS.md`).",
              "",
              "| pipeline | version | input | output | description |",
              "|---|---|---|---|---|"]
-    lines += [f"| `{r['name']}` | {r['version']} | {_safe(r['input'])} | {_safe(r['output'])} "
-              f"| {_safe(r['description'])} |" for r in rows]
+    lines += [f"| `{r['name']}` | {r['version']} | {_cell(r['input'])} | {_cell(r['output'])} "
+              f"| {_cell(r['description'])} |" for r in rows]
     chains = [r for r in rows if r["feeds"]]
     if chains:
         lines += ["", "## Chains", "",

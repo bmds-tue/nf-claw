@@ -53,7 +53,8 @@ def _read(path: Path) -> str:
 
 
 def _sourmash_runs(upstream: Path, params: Mapping[str, Any], demo: bool) -> bool:
-    """Whether a sourmash database is built: an explicit switch, else the `--demo` test profile's."""
+    """Whether a sourmash database is built: an explicit switch, else the `--demo`
+    test profile's."""
     test_profile = _read(upstream / "conf" / "test.config") if demo else ""
     return any(params.get(name) is True
                or (params.get(name) is None

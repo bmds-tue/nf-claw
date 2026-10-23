@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     SUBMODULE_INCOMPLETE = "submodule_incomplete"
     PIPELINE_NOT_FOUND = "pipeline_not_found"
     VERSION_NOT_FOUND = "version_not_found"

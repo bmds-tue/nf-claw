@@ -9,8 +9,7 @@ import { logoSrc } from "@/components/ui/logo";
 import { InlineMarkdown } from "@/components/ui/inline-markdown";
 import type { RepoMeta } from "@/lib/types";
 import { asset, formatDate } from "@/lib/utils";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
+import { EASE } from "@/lib/motion";
 
 export function Hero({
   meta,

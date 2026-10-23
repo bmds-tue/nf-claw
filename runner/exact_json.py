@@ -28,7 +28,8 @@ def number(token: str):
         raise ValueError(f"invalid number {token!r}") from exc
     if not exact.is_finite():
         raise ValueError(f"non-finite number {token!r}")
-    return approximate if math.isfinite(approximate) and Decimal(str(approximate)) == exact else exact
+    return (approximate if math.isfinite(approximate) and Decimal(str(approximate)) == exact
+            else exact)
 
 
 def decimal(value):
@@ -73,7 +74,8 @@ def _needs_exact_encoding(value, nextflow_compatible):
     while pending:
         item = pending.pop()
         if (isinstance(item, Decimal)
-                or nextflow_compatible and isinstance(item, int) and not _LONG_MIN <= item <= _LONG_MAX):
+                or nextflow_compatible and isinstance(item, int)
+            and not _LONG_MIN <= item <= _LONG_MAX):
             return True
         if isinstance(item, (list, tuple, dict)) and id(item) not in seen:
             seen.add(id(item))
@@ -92,7 +94,8 @@ def dumps(value, *, indent=None, sort_keys=False, separators=None, default=None,
                    ensure_ascii=ensure_ascii, allow_nan=allow_nan)
     if not _needs_exact_encoding(value, nextflow_compatible):
         return _json.dumps(value, **options)
-    unit = indent if isinstance(indent, str) else " " * max(0, indent) if indent is not None else None
+    unit = (indent if isinstance(indent, str)
+            else " " * max(0, indent) if indent is not None else None)
     item_sep, key_sep = separators or ((",", ": ") if unit is not None else (", ", ": "))
     active = set()
 
@@ -137,7 +140,8 @@ def dumps(value, *, indent=None, sort_keys=False, separators=None, default=None,
                 if unit is None:
                     return opening + item_sep.join(pieces) + closing
                 prefix = "\n" + unit * (depth + 1)
-                return opening + prefix + (item_sep + prefix).join(pieces) + "\n" + unit * depth + closing
+                return (opening + prefix + (item_sep + prefix).join(pieces)
+                        + "\n" + unit * depth + closing)
             if default is None:
                 raise TypeError(f"Object of type {type(item).__name__} is not JSON serializable")
             return encode(default(item), depth)

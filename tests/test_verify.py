@@ -4,7 +4,7 @@ import json
 import pytest
 
 from runner import outputs, verify
-from runner.errors import NfclawError
+from runner.errors import ErrorCode, NfclawError
 
 
 def _bundle(root, name, entries):
@@ -72,7 +72,7 @@ def test_the_replay_side_needs_no_bundle_of_its_own(tmp_path):
     orig = _bundle(tmp_path, "orig", {})
     (orig / "results.txt").write_text("same bytes")
     (orig / "provenance" / "outputs.sha256").write_text(
-        __import__("hashlib").sha256(b"same bytes").hexdigest() + "  results.txt\n")
+        hashlib.sha256(b"same bytes").hexdigest() + "  results.txt\n")
     (orig / "provenance/outputs.inventory.json").write_text(json.dumps(
         {"version": 1, "entries": outputs.snapshot(orig)[1]}))
     replay = tmp_path / "replay"                       # a plain results directory
@@ -134,8 +134,6 @@ def test_dated_scientific_results_preserve_their_exact_paths(tmp_path):
 
 def test_unreadable_run_is_a_clean_error(tmp_path, monkeypatch):
     # verify hashes a replay directory it did not write; one unreadable file raised a raw OSError.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     orig, replay = tmp_path / "orig", tmp_path / "replay"
     (orig / "provenance").mkdir(parents=True)
     (orig / "provenance" / "outputs.sha256").write_text(
@@ -157,13 +155,14 @@ def test_a_file_named_by_its_launch_time_is_paired_not_missing(tmp_path):
     # The nf-core template names pipeline_info/params_<launch time>.json by the clock, so every
     # faithful replay "lost" the original's file and "gained" its own. They are one logical
     # result: report the pair explicitly and compare its bytes like any other file.
-    orig = _bundle(tmp_path, "orig", {"data.txt": "same",
-                                      "pipeline_info/params_2026-10-12_04-22-27.json": '{"outdir": "a"}'})
-    replay = _bundle(tmp_path, "replay", {"data.txt": "same",
-                                          "pipeline_info/params_2026-10-12_04-23-14.json": '{"outdir": "b"}'})
+    orig = _bundle(tmp_path, "orig", {
+        "data.txt": "same", "pipeline_info/params_2026-10-12_04-22-27.json": '{"outdir": "a"}'})
+    replay = _bundle(tmp_path, "replay", {
+        "data.txt": "same", "pipeline_info/params_2026-10-12_04-23-14.json": '{"outdir": "b"}'})
     cmp = verify.compare(orig, replay)
     assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
-    pair = "pipeline_info/params_2026-10-12_04-22-27.json -> pipeline_info/params_2026-10-12_04-23-14.json"
+    pair = ("pipeline_info/params_2026-10-12_04-22-27.json -> "
+            "pipeline_info/params_2026-10-12_04-23-14.json")
     assert cmp.renamed == [pair]
     assert cmp.changed == [pair] and not cmp.byte_identical       # outdir differs inside
     text = verify.report(cmp)
@@ -189,7 +188,8 @@ def test_identical_launch_stamped_files_count_as_identical(tmp_path):
     # A dated file that is not nf-core run metadata may be a result: its exact path counts.
     ({"pipeline_info/sample_2026-10-08_10-00-00.json": "{}"},
      {"pipeline_info/sample_2026-10-09_10-00-00.json": "{}"}),
-    ({"results/calls_2026-10-08_10-00-00.vcf": "x"}, {"results/calls_2026-10-09_10-00-00.vcf": "x"}),
+    ({"results/calls_2026-10-08_10-00-00.vcf": "x"},
+     {"results/calls_2026-10-09_10-00-00.vcf": "x"}),
     # Digits that are not an nf-core launch time are sample identities, never paired.
     ({"sample_1.txt": "x"}, {"sample_2.txt": "x"}),
 ])

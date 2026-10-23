@@ -54,14 +54,16 @@ def test_check_warns_when_too_old(tmp_path, monkeypatch):
 def test_check_judges_the_pinned_version_when_given(tmp_path, monkeypatch):
     # With --nxf-ver, the engine that runs is the pin, not the installed launcher: judge that.
     (tmp_path / "nextflow.config").write_text("manifest { nextflowVersion = '!>=26.04.0' }\n")
-    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 26.10.0 build 1")  # launcher is fine...
-    out = ev.check(tmp_path, nxf_ver="25.10.2")                                    # ...but the pin is too old
+    # launcher is fine...
+    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 26.10.0 build 1")
+    out = ev.check(tmp_path, nxf_ver="25.10.2")  # ...but the pin is too old
     assert len(out) == 1 and "26.04.0" in out[0] and "25.10.2" in out[0]
 
 
 def test_check_silent_when_pinned_version_satisfies(tmp_path, monkeypatch):
     (tmp_path / "nextflow.config").write_text("manifest { nextflowVersion = '!>=25.04.0' }\n")
-    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 20.0.0 build 1")    # would warn, but the pin is newer
+    # would warn, but the pin is newer
+    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 20.0.0 build 1")
     assert ev.check(tmp_path, nxf_ver="25.10.2") == []
 
 
@@ -95,7 +97,7 @@ def test_engines_before_21_10_cannot_run_on_java_17():
     assert ev.runs_on_java("24.10.5", 21)
 
 
-def test_the_java_nextflow_runs_on_follows_its_launcher(tmp_path):
+def test_the_java_nextflow_runs_on_follows_its_launcher():
     assert ev.java_command({"NXF_JAVA_HOME": "/a", "JAVA_HOME": "/b"}) == "/a/bin/java"
     assert ev.java_command({"JAVA_HOME": "/b"}) == "/b/bin/java"
     assert ev.java_command({}) == "java"

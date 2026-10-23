@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { BASE_PATH } from "@/lib/site";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * does not add the base path to unoptimized image sources, so do it here.
  */
 export function asset(path: string): string {
-  return `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${path}`;
+  return `${BASE_PATH}${path}`;
 }
 
 /** Title-case a snake_case or kebab-case identifier. */
@@ -66,10 +67,6 @@ export function timeAgo(date: string | null, now: number = Date.now()): string {
     if (v >= 1) return `${v}${label} ago`;
   }
   return "just now";
-}
-
-export function compactNumber(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
 }
 
 /** Strip the quotes some git configs wrap a name in (user.name = "“jane”"). */

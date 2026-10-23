@@ -1,5 +1,8 @@
 """Fresh cache sessions preserve old evidence and cannot retain stale publications."""
+import os
+import select
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -10,8 +13,8 @@ from runner.submodule import SubmoduleStatus
 
 
 @pytest.mark.parametrize("aliased_outdir", [False, True])
-def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, monkeypatch, aliased_outdir):
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, aliased_outdir,
+                                                                 no_engine_probe):
     physical = tmp_path / "analysis"
     physical.mkdir()
     out = physical
@@ -51,7 +54,8 @@ def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, monkey
     assert "REPLAY_RAN" in replay.stdout
 
 
-@pytest.mark.parametrize("dependency", ["inside_input", "ancestor_input", "inside_config", "inside_pipeline"])
+@pytest.mark.parametrize("dependency",
+                         ["inside_input", "ancestor_input", "inside_config", "inside_pipeline"])
 def test_archiving_cannot_move_or_modify_dependencies_of_the_new_launch(tmp_path, dependency):
     out = tmp_path / "analysis"
     out.mkdir()
@@ -79,8 +83,6 @@ def test_archiving_cannot_move_or_modify_dependencies_of_the_new_launch(tmp_path
 
 
 def test_archive_cannot_bypass_an_active_nextflow_database_lock(tmp_path):
-    import select
-    import sys
     out = tmp_path / "analysis"
     lock = out / ".nextflow/cache/session/db/LOCK"
     lock.parent.mkdir(parents=True)
@@ -136,8 +138,8 @@ def test_archive_keeps_publications_addressed_through_old_directory_names(tmp_pa
 
 
 @pytest.mark.parametrize("error", [OSError, KeyboardInterrupt])
-def test_failed_archive_replacement_restores_the_complete_original_tree(tmp_path, monkeypatch, error):
-    import os
+def test_failed_archive_replacement_restores_the_complete_original_tree(tmp_path,
+                                                                        monkeypatch, error):
     out = tmp_path / "analysis"
     out.mkdir()
     data = out / "reads.txt"
@@ -214,7 +216,7 @@ def test_archiving_preserves_links_through_internal_external_publications(
     assert (archive / "indirect.txt").read_bytes() == b"external scientific reads"
 
 
-@pytest.mark.skipif(__import__("os").geteuid() == 0, reason="requires non-root permissions")
+@pytest.mark.skipif(os.geteuid() == 0, reason="requires non-root permissions")
 def test_unwritable_publication_directory_leaves_original_results_readable(tmp_path):
     out = tmp_path / "analysis"
     out.mkdir()
@@ -236,8 +238,6 @@ def test_unwritable_publication_directory_leaves_original_results_readable(tmp_p
 
 @pytest.mark.parametrize("stop_signal", ["SIGTERM", "SIGHUP"])
 def test_real_stop_signal_restores_the_original_archive_tree(tmp_path, stop_signal):
-    import sys
-
     result = subprocess.run([sys.executable, "-c", r'''
 import os, signal, sys
 from pathlib import Path

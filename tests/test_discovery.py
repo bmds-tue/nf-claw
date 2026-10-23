@@ -36,3 +36,13 @@ def test_hidden_entries_beside_the_pipelines_are_not_pipelines(tmp_path):
     (tmp_path / ".nextflow" / "plr").mkdir(parents=True)
     assert [p.name for p in discovery.discover(tmp_path)] == ["rnaseq"]
     assert [p.name for p in discovery.pipeline_dirs(tmp_path)] == ["rnaseq"]
+
+
+@pytest.mark.parametrize("name", ["../outside", "rnaseq/../outside", ".nextflow", "", "rnaseq/"])
+def test_find_only_names_a_listed_pipeline_directory(tmp_path, name):
+    pipelines = tmp_path / "pipelines"
+    _make(pipelines, "rnaseq", "name: rnaseq")
+    _make(tmp_path, "outside", "name: outside")
+    (pipelines / ".nextflow").mkdir()
+    with pytest.raises(NfclawError):
+        discovery.find(name, pipelines)

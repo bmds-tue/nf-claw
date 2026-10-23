@@ -137,9 +137,8 @@ git submodule update --init
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 4. Install in editable mode with test dependencies and lint tooling
+# 4. Install in editable mode with test dependencies and lint tooling (pytest, ruff)
 pip install -e ".[dev,yaml]"
-pip install ruff
 ```
 
 ### 2. Branching & Commit Conventions
@@ -184,7 +183,7 @@ When submitting the PR on GitHub:
 - **Path Handling:** Always use `pathlib.Path` for filesystem operations. Do not concatenate strings for paths.
 - **Subprocess Execution:** Never invoke bare shell strings (`shell=True`). Use `subprocess.Popen` or `subprocess.run` with discrete argument lists (`list[str]`) to prevent word splitting and shell injection vulnerabilities.
 - **Process Signals:** Ensure background processes cleanly trap `SIGINT` and `SIGTERM` and shut down child tasks.
-- **Space-Free Path Invariant:** Use `runner/preflight.py` checks for repository, output and work paths. `--allow-spaces` bypasses the space check; LF/CR remain forbidden. Input filename and route checks live in `runner/input_safety.py`.
+- **Space-Free Path Invariant:** Use `runner/preflight.py` checks for repository, output and work paths. `--allow-spaces` bypasses the space check; LF/CR remain forbidden. Input filename and route checks live in `runner/inputs.py`; the separation of execution writes from consumed inputs lives in `runner/input_safety.py`.
 
 ### Code Style & Linting
 We enforce Ruff configuration defined in `pyproject.toml`:

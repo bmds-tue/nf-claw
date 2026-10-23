@@ -1,10 +1,13 @@
+import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
-from runner import versions
 from runner import submodule as submod
+from runner import versions
 from runner.errors import ErrorCode, NfclawError
+from runner.submodule import SubmoduleStatus
 
 
 @pytest.fixture(autouse=True)
@@ -103,7 +106,6 @@ def test_ensure_none_uses_pinned_submodule(tmp_path, monkeypatch):
 
 
 def test_ensure_requested_equals_pin_skips_cache(tmp_path, monkeypatch):
-    from runner.submodule import SubmoduleStatus
     pin = SubmoduleStatus("p", tmp_path / "up", True, True, "2.0.0", "abc", ())
     monkeypatch.setattr(versions.submod, "ensure_initialized", lambda *a, **k: pin)
     monkeypatch.setattr(versions, "resolve", lambda *a, **k: "2.0.0")
@@ -115,7 +117,6 @@ def test_ensure_requested_equals_pin_skips_cache(tmp_path, monkeypatch):
 
 
 def test_ensure_other_version_materializes(tmp_path, monkeypatch):
-    from runner.submodule import SubmoduleStatus
     pin = SubmoduleStatus("p", tmp_path / "up", True, True, "2.0.0", "abc", ())
     cached = SubmoduleStatus("p", tmp_path / "cache", True, True, "1.2.0", "def", ())
     monkeypatch.setattr(versions.submod, "ensure_initialized", lambda *a, **k: pin)
@@ -135,6 +136,9 @@ def test_available_flags_the_pin(tmp_path, monkeypatch):
 
 
 # --- materialize: a real git worktree pinned to the tag (the robustness core) ---
+_GIT_ID = ("-c", "user.email=t@t", "-c", "user.name=t")
+
+
 def _git(path, *args, **kw):
     subprocess.run(["git", "-C", str(path), *args], check=True,
                    capture_output=True, text=True, **kw)
@@ -147,8 +151,8 @@ def _upstream_repo_with_tag(pipelines_dir, name, tag):
     (up / "nextflow.config").write_text("manifest {}\n")
     (up / "nextflow_schema.json").write_text("{}\n")
     _git(up, "init", "-q", "-b", "main")
-    _git(up, "-c", "user.email=t@t", "-c", "user.name=t", "add", ".")
-    _git(up, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "init")
+    _git(up, *_GIT_ID, "add", ".")
+    _git(up, *_GIT_ID, "commit", "-q", "-m", "init")
     _git(up, "tag", tag)
     return up
 
@@ -215,7 +219,6 @@ def test_materialize_rebuilds_a_partial_cache(tmp_path):
 
 
 def test_materialize_failure_is_a_structured_error(tmp_path, monkeypatch):
-    from runner.submodule import SubmoduleStatus
     upstream = tmp_path / "pipelines" / "p" / "upstream"
     upstream.mkdir(parents=True)
     incomplete = SubmoduleStatus("p", upstream, False, False, "", "", ("main.nf",))
@@ -235,9 +238,6 @@ def test_materialize_failure_is_a_structured_error(tmp_path, monkeypatch):
 
 # --- generate_docs: reuse the librarian renderer for an arbitrary version's tree ---
 def test_generate_docs_writes_version_markdowns(tmp_path):
-    import shutil
-    from pathlib import Path
-    from runner.submodule import SubmoduleStatus
     fix = Path(__file__).parent / "fixtures" / "mini"
     dest = tmp_path / ".versions" / "1.2.0" / "upstream"
     dest.mkdir(parents=True)
@@ -255,9 +255,6 @@ def test_generate_docs_writes_version_markdowns(tmp_path):
 # --- dev: the unreleased development branch, resolved to an immutable per-commit tree ---------
 # A real nf-core-like remote (release on `main`, development on `dev`) and a shallow clone of the
 # release as the "submodule", exactly as `git submodule update --init --depth 1` leaves it.
-
-_GIT_ID = ("-c", "user.email=t@t", "-c", "user.name=t")
-
 
 def _commit_tree(repo, msg, files):
     for rel, text in files.items():
@@ -339,7 +336,7 @@ def test_materialize_dev_checks_out_the_dev_head(tmp_path):
     assert st.version == "dev" and st.commit == dev and st.complete
     assert st.path == pdir / "p" / versions.CACHE_DIRNAME / versions.dev_label(dev) / "upstream"
     assert (st.path / "main.nf").read_text() == "workflow { /* dev */ }\n"
-    assert versions.is_cached(st) and versions.is_dev(st)
+    assert versions.is_cached(st)
     # it is announced as unreleased code, naming the exact commit
     assert any("unreleased" in n and dev in n for n in st.notes)
     # the pinned release tree is untouched
@@ -491,7 +488,6 @@ def test_dev_head_reports_freshness(tmp_path):
 
 
 def test_ensure_dev_routes_to_materialize_dev(tmp_path, monkeypatch):
-    from runner.submodule import SubmoduleStatus
     pin = SubmoduleStatus("p", tmp_path / "up", True, True, "2.0.0", "abc", ())
     dev = SubmoduleStatus("p", tmp_path / ".versions" / "dev-x" / "upstream", True, True,
                           "dev", "f" * 40, ())
@@ -509,7 +505,7 @@ def test_ensure_dev_end_to_end_with_real_git(tmp_path):
     # the pinned skill.md lets submodule.resolve report the release, as in the real library
     (pdir / "p" / "skill.md").write_text(f"---\nname: p\nversion: 1.0.0\ncommit: {release}\n---\n")
     st = versions.ensure("p", "dev", pipelines_dir=pdir, repo_root=root)
-    assert st.version == "dev" and st.commit == dev and versions.is_dev(st)
+    assert st.version == "dev" and st.commit == dev and versions.is_cached(st)
 
 
 def test_unknown_version_error_mentions_dev(tmp_path, monkeypatch):
@@ -520,9 +516,6 @@ def test_unknown_version_error_mentions_dev(tmp_path, monkeypatch):
 
 
 def test_generate_docs_for_dev_commit(tmp_path):
-    import shutil
-    from pathlib import Path
-    from runner.submodule import SubmoduleStatus
     fix = Path(__file__).parent / "fixtures" / "mini"
     sha = "f754e0a247b03f169782dbb5c688e055044a5988"
     dest = tmp_path / ".versions" / versions.dev_label(sha) / "upstream"
@@ -542,8 +535,7 @@ def _outer_repo_with_tag(root, tag):
     """The nf-claw checkout itself, carrying a semver tag of its own."""
     root.mkdir(parents=True, exist_ok=True)
     _git(root, "init", "-q", "-b", "main")
-    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty",
-         "-m", "init")
+    _git(root, *_GIT_ID, "commit", "-q", "--allow-empty", "-m", "init")
     _git(root, "tag", tag)
 
 
@@ -554,7 +546,8 @@ def test_uninitialised_submodule_never_lists_nf_claws_own_tags(tmp_path):
     up = tmp_path / "pipelines" / "p" / "upstream"
     up.mkdir(parents=True)
     assert versions._local_tags(up) == []
-    assert versions.release_tags("p", pipelines_dir=tmp_path / "pipelines", repo_root=tmp_path) == []
+    assert versions.release_tags("p", pipelines_dir=tmp_path / "pipelines",
+                                 repo_root=tmp_path) == []
 
 
 def test_materialize_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
@@ -567,10 +560,11 @@ def test_materialize_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
         (up / f).write_text("x")
     with pytest.raises(NfclawError) as exc:
         versions.materialize("p", "1.2.0", pipelines_dir=tmp_path / "pipelines", repo_root=tmp_path)
-    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE and "not a git checkout" in str(exc.value)
+    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE
+    assert "not a git checkout" in str(exc.value)
     out = subprocess.run(["git", "-C", str(tmp_path), "worktree", "list"], capture_output=True,
                          text=True, check=True).stdout
-    assert len(out.splitlines()) == 1                        # no worktree registered against nf-claw
+    assert len(out.splitlines()) == 1  # no worktree registered against nf-claw
 
 
 def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
@@ -589,7 +583,8 @@ def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
         (up / f).write_text("x")
     with pytest.raises(NfclawError) as exc:
         versions.materialize_dev("p", pipelines_dir=root / "pipelines", repo_root=root)
-    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE and "not a git checkout" in str(exc.value)
+    assert exc.value.code == ErrorCode.SUBMODULE_INCOMPLETE
+    assert "not a git checkout" in str(exc.value)
     assert "git submodule update --init pipelines/p/upstream" in exc.value.fix
     worktrees = subprocess.run(["git", "-C", str(root), "worktree", "list"], capture_output=True,
                                text=True, check=True).stdout
@@ -602,7 +597,8 @@ def test_materialize_dev_refuses_a_tree_that_is_not_its_own_clone(tmp_path):
 
 def test_release_git_calls_never_wait_on_a_credential_prompt(tmp_path, monkeypatch):
     # A wrong or renamed remote makes git ask for a username on the terminal; `nfclaw versions` and
-    # a release fetch must fail instead of hanging until their timeout — as the `dev` calls already do.
+    # a release fetch must fail instead of hanging until their timeout — as the `dev` calls
+    # already do.
     seen = []
 
     def fake_run(cmd, **kw):

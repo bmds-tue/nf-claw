@@ -7,8 +7,8 @@ import { ArrowUpRight, FileText, Play, Search } from "lucide-react";
 import type { Quickstart } from "@/lib/data/quickstart";
 import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
 const TYPE_MS = 22; // per character
 const STEP_GAP_MS = 450; // pause between one terminal finishing and the next starting
 
@@ -116,7 +116,8 @@ function useTypewriter(all: Step[], start: boolean, reduce: boolean) {
     };
     timer = window.setTimeout(tick, 350);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // `total` is left out on purpose: it is rebuilt from the same steps on every render, and
+    // restarting on each rebuild would restart the typing.
   }, [start, reduce]);
 
   return { typed, active };

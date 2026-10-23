@@ -1,10 +1,11 @@
-import os as _os
-import socket as _socket
+import json
+import os
+import socket
 from pathlib import Path
 
 import pytest
 
-from runner import runlog
+from runner import cli, replay_guard, runlog
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nextflow_console"
 
@@ -23,7 +24,7 @@ def test_child_console_cannot_forge_status_controls(tmp_path, monkeypatch, paylo
         state = runlog.read_state(log.path)
         assert state.state == "running"
         assert state.kind == "run"
-        assert state.pid == _os.getpid()
+        assert state.pid == os.getpid()
         assert state.outcome is None
         assert payload.decode().strip() in state.console
     finally:
@@ -54,12 +55,13 @@ def test_multiline_failure_still_ends_with_one_physical_status_line(tmp_path):
 
 def test_multiline_header_value_cannot_forge_a_new_attempt(tmp_path):
     log = runlog.RunLog.open(tmp_path, command=["nextflow", "--label",
-        "sample\n==> nfclaw replay started 2026-10-09T00:00:00+00:00\n    pid: 1"], launch_dir=tmp_path)
+        "sample\n==> nfclaw replay started 2026-10-09T00:00:00+00:00\n    pid: 1"],
+                             launch_dir=tmp_path)
     log.outcome = "success"
     log.finish()
     state = runlog.read_state(log.path)
     assert state.kind == "run"
-    assert state.pid == _os.getpid()
+    assert state.pid == os.getpid()
 
 
 def test_relaunch_after_an_unterminated_console_line_keeps_its_own_header(tmp_path):
@@ -68,7 +70,7 @@ def test_relaunch_after_an_unterminated_console_line_keeps_its_own_header(tmp_pa
     log.outcome = "success"
     log.finish()
     state = runlog.read_state(log.path)
-    assert state.pid == _os.getpid()
+    assert state.pid == os.getpid()
     assert state.state == "success"
 
 
@@ -104,8 +106,8 @@ def _console(name: str) -> str:
 
 def test_nextflow_log_defaults_to_the_launch_dir(monkeypatch):
     # nfclaw launches Nextflow from --outdir, and Nextflow writes `.nextflow.log` into its launch
-    # directory — not into the caller's cwd, which is where its relative "Check '.nextflow.log'" hint
-    # sends an agent looking.
+    # directory — not into the caller's cwd, which is where its relative "Check '.nextflow.log'"
+    # hint sends an agent looking.
     monkeypatch.delenv("NXF_LOG_FILE", raising=False)
     assert runlog.nextflow_log_path(Path("/runs/out")) == Path("/runs/out/.nextflow.log")
 
@@ -213,7 +215,8 @@ def test_log_causes_quote_the_exception_chain_of_the_last_error():
 
 
 def test_log_causes_are_empty_for_a_task_failure_report(tmp_path):
-    # A failed task's entry repeats the console report; its bare "Caused by:" heading is not a cause.
+    # A failed task's entry repeats the console report; its bare "Caused by:" heading is not
+    # a cause.
     log = tmp_path / ".nextflow.log"
     log.write_text(
         "Oct-05 21:42:15.651 [TaskFinalizer-1] ERROR nextflow.processor.TaskProcessor - "
@@ -249,7 +252,8 @@ def test_log_causes_keep_a_multi_line_exception_message(tmp_path):
         "Oct-05 22:03:47.926 [main] ERROR nextflow.cli.Launcher - Config parsing failed\n"
         "nextflow.exception.ConfigParseException: Config parsing failed\n"
         "\tat nextflow.config.ConfigBuilder.build(ConfigBuilder.groovy:821)\n"
-        "Caused by: org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed:\n"
+        "Caused by: org.codehaus.groovy.control.MultipleCompilationErrorsException: "
+        "startup failed:\n"
         "_nf_config_ffa03b8917b73ec2: 3: Unexpected input: '}' @ line 3, column 1.\n"
         "   }\n"
         "   ^\n"
@@ -259,7 +263,8 @@ def test_log_causes_keep_a_multi_line_exception_message(tmp_path):
         "\tat org.codehaus.groovy.control.ErrorCollector.failIfErrors(ErrorCollector.java:292)\n"
         "\t... 9 common frames omitted\n")
     assert runlog.nextflow_log_causes(log) == [
-        "Caused by: org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed:",
+        "Caused by: org.codehaus.groovy.control.MultipleCompilationErrorsException: "
+        "startup failed:",
         "  _nf_config_ffa03b8917b73ec2: 3: Unexpected input: '}' @ line 3, column 1.",
         "     }",
         "     ^",
@@ -326,7 +331,8 @@ def test_without_a_report_the_quote_is_the_last_paragraph_not_the_parameter_summ
 def test_last_paragraph_fallback_reaches_above_a_trailing_check_line():
     console = (" N E X T F L O W   ~  version 26.04.3\n\nparams summary\n\n"
                "* --genome (GRCh99): not a known genome\n\n"
-               " -- Check script 'main.nf' at line: 68 or see '.nextflow.log' file for more details\n")
+               " -- Check script 'main.nf' at line: 68 or see '.nextflow.log' file "
+               "for more details\n")
     excerpt = runlog.error_excerpt(console)
     assert excerpt[0] == "* --genome (GRCh99): not a known genome"
     assert excerpt[-1].startswith(" -- Check script 'main.nf'")
@@ -336,7 +342,7 @@ def test_last_paragraph_fallback_reaches_above_a_trailing_check_line():
 
 def _block(*, pid, host=None, body="", end=None, kind="run", nextflow_pid=None):
     if host is None:
-        host = _socket.gethostname()
+        host = socket.gethostname()
     lines = [f"==> nfclaw {kind} started 2026-10-06T10:00:00+00:00", "    command: nextflow run x",
              f"    host: {host}", f"    pid: {pid}"]
     if nextflow_pid is not None:
@@ -396,7 +402,7 @@ def test_a_run_whose_nfclaw_is_gone_stopped_without_an_outcome(tmp_path, named_p
 
 def test_a_reused_pid_is_not_mistaken_for_the_run(tmp_path):
     # After a restart the recorded pid can belong to an unrelated process: that is not the run.
-    st = runlog.read_state(_log(tmp_path, _block(pid=_os.getpid())))
+    st = runlog.read_state(_log(tmp_path, _block(pid=os.getpid())))
     assert st.state == "dead"
 
 
@@ -415,14 +421,14 @@ def test_a_dead_run_reports_a_nextflow_still_running(tmp_path, named_process):
 
 def test_dead_replay_reports_its_supervisor_without_claiming_its_pid_is_nextflow(
         tmp_path, named_process):
-    from runner import cli
     gone = named_process("commands.sh")
     gone.kill()
     gone.wait()
     supervisor = named_process("replay_guard.py")
     try:
         text = _block(pid=gone.pid, kind="replay").replace(
-            f"    pid: {gone.pid}\n", f"    pid: {gone.pid}\n    replay supervisor pid: {supervisor.pid}\n")
+            f"    pid: {gone.pid}\n",
+            f"    pid: {gone.pid}\n    replay supervisor pid: {supervisor.pid}\n")
         state = runlog.read_state(_log(tmp_path, text))
         assert state.state == "dead" and state.supervisor_alive
         assert state.supervisor_pid == supervisor.pid
@@ -453,7 +459,8 @@ def test_matching_host_identity_survives_a_hostname_change(tmp_path, monkeypatch
 def test_matching_hostname_does_not_override_a_different_host_identity(tmp_path, monkeypatch):
     monkeypatch.setattr(runlog, "host_identity", lambda: "a" * 64, raising=False)
     monkeypatch.setattr(runlog, "_is_process", lambda pid, names: True)
-    text = _block(pid=123).replace("    pid: 123\n", "    host id: " + "b" * 64 + "\n    pid: 123\n")
+    text = _block(pid=123).replace("    pid: 123\n",
+                                   "    host id: " + "b" * 64 + "\n    pid: 123\n")
     assert runlog.read_state(_log(tmp_path, text)).state == "elsewhere"
 
 
@@ -493,10 +500,13 @@ def test_causes_are_read_from_a_log_in_any_jvm_locale(tmp_path):
     # `oct-12 …`, not `Oct-12 …`. The English-only pattern found no entry, so the `Caused by:` chain
     # — here the only place the reason is written — was silently dropped from the error.
     log = Path(__file__).parent / "fixtures" / "nextflow_logs" / "config-include-refused.es.log"
-    assert runlog.nextflow_log_causes(log) == ["Caused by: java.net.ConnectException: Connection refused"]
+    assert runlog.nextflow_log_causes(log) == ["Caused by: java.net.ConnectException: "
+                                               "Connection refused"]
     german = tmp_path / "de.log"
-    german.write_text(log.read_text(encoding="utf-8").replace("oct-12 ", "Okt.-12 "), encoding="utf-8")
-    assert runlog.nextflow_log_causes(german) == ["Caused by: java.net.ConnectException: Connection refused"]
+    german.write_text(log.read_text(encoding="utf-8").replace("oct-12 ", "Okt.-12 "),
+                      encoding="utf-8")
+    assert runlog.nextflow_log_causes(german) == ["Caused by: java.net.ConnectException: "
+                                                  "Connection refused"]
 
 
 # What nf-core/rnaseq 3.27.0 printed at the end of a real run that dropped a sample (with colours).
@@ -510,7 +520,7 @@ _RNASEQ_SKIPPED = (
     "strandedness check.\x1b[0m-\n")
 
 
-def test_completion_caveats_quote_what_a_successful_pipeline_left_out(tmp_path):
+def test_completion_caveats_quote_what_a_successful_pipeline_left_out():
     assert runlog.completion_caveats(_RNASEQ_SKIPPED) == [
         "[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)",
         "[nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped since they failed "
@@ -530,8 +540,9 @@ def test_completion_caveats_quote_what_a_successful_pipeline_left_out(tmp_path):
 
 def test_completion_caveats_count_ignored_task_failures_from_the_nextflow_log(tmp_path):
     log = tmp_path / ".nextflow.log"
-    stats = ("Oct-13 12:15:14.586 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > "
-             "WorkflowStats[succeededCount=85; failedCount={f}; ignoredCount={i}; cachedCount=0]\n")
+    stats = ("Oct-13 12:15:14.586 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed "
+             "> WorkflowStats[succeededCount=85; failedCount={f}; "
+             "ignoredCount={i}; cachedCount=0]\n")
     log.write_text(stats.format(f=0, i=0))
     assert runlog.completion_caveats("", log) == []
     log.write_text(stats.format(f=2, i=2))
@@ -541,8 +552,6 @@ def test_completion_caveats_count_ignored_task_failures_from_the_nextflow_log(tm
 
 
 def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
-    import json
-    from runner import replay_guard
     original = tmp_path / "orig"
     (original / "provenance").mkdir(parents=True)
     (original / "provenance/run_manifest.json").write_text(json.dumps({"stub_profiles": ["test"]}))
@@ -554,7 +563,8 @@ def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
                  "==> nfclaw replay finished 2026-10-14T00:00:00+00:00: success\n")
     state = runlog.read_state(log)
     assert state.state == "success"
-    assert [c for c in state.caveats if c.startswith("stub run:")] == [replay_guard.stub_caveat(["test"])]
+    assert [c for c in state.caveats if c.startswith("stub run:")] == [
+        replay_guard.stub_caveat(["test"])]
 
 
 # nf-co2footprint (epitopeprediction, multiplesequencealign, phaseimpute) relays Nextflow's console
@@ -572,17 +582,19 @@ _RELAYED_FAILURE = (
     "  ValueError: Length mismatch: Expected axis has 1 elements, new values have 3 elements\n"
     "\n"
     "Tip: you can try to figure out what's wrong by changing to the process work dir"
-    "\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] Execution cancelled -- Finishing pending tasks before exit"
-    "\x1b[0;39m\x1b[31mERROR - [nf-co2footprint] Pipeline failed. Please refer to troubleshooting docs"
-    "\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] -\x1b[0;35m[nf-core/epitopeprediction]\x1b[0;31m "
-    "Pipeline completed with errors\x1b[0m-\x1b[0;39m")
+    "\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] Execution cancelled -- Finishing pending tasks "
+    "before exit\x1b[0;39m\x1b[31mERROR - [nf-co2footprint] Pipeline failed. Please refer to "
+    "troubleshooting docs\x1b[0;39m\x1b[37mINFO - [nf-co2footprint] "
+    "-\x1b[0;35m[nf-core/epitopeprediction]\x1b[0;31m Pipeline completed "
+    "with errors\x1b[0m-\x1b[0;39m")
 
 
 def test_error_excerpt_quotes_a_report_relayed_by_a_plugin_logger():
     excerpt = runlog.error_excerpt(_RELAYED_FAILURE)
     assert any(line.endswith("Error executing process > 'EPYTOPE (26)'") for line in excerpt)
     assert any("ValueError: Length mismatch" in line for line in excerpt)
-    assert not any("Submitted process > EPYTOPE (20)" in line and "ERROR" in line for line in excerpt)
+    assert not any("Submitted process > EPYTOPE (20)" in line and "ERROR" in line
+                   for line in excerpt)
 
 
 def test_completion_caveats_read_a_summary_relayed_by_a_plugin_logger():

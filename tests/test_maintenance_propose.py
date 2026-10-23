@@ -72,8 +72,10 @@ def run_propose(tmp_path, *, tip=None, parent=BASE, parents=1, create="refused",
         env.pop("BASE_SHA", None)
     result = subprocess.run(["bash", str(ROOT / "scripts/propose_validated_update.sh")],
                             cwd=repo, env=env, text=True, capture_output=True)
-    calls = [json.loads(line) for line in commands.read_text().splitlines()] if commands.exists() else []
-    outputs = dict(line.split("=", 1) for line in output.read_text().splitlines()) if output.exists() else {}
+    calls = ([json.loads(line) for line in commands.read_text().splitlines()]
+             if commands.exists() else [])
+    outputs = (dict(line.split("=", 1) for line in output.read_text().splitlines())
+               if output.exists() else {})
     return result, calls, outputs, summary.read_text() if summary.exists() else "", local
 
 
@@ -140,10 +142,10 @@ def test_the_validated_base_is_the_commit_the_job_checked_out(tmp_path):
     assert _patches(calls)
 
 
-@pytest.mark.parametrize("branch", [{"tip": "c" * 40},                # not what this job pushed
-                                    {"parent": "d" * 40},             # not on the validated commit
-                                    {"parents": 2},                   # a merge, not one update commit
-                                    {"BASE_SHA": "e" * 40}])          # validated another base
+@pytest.mark.parametrize("branch", [{"tip": "c" * 40},              # not what this job pushed
+                                    {"parent": "d" * 40},           # not on the validated commit
+                                    {"parents": 2},                 # a merge, not one update commit
+                                    {"BASE_SHA": "e" * 40}])        # validated another base
 def test_a_branch_without_this_runs_update_is_never_proposed(tmp_path, branch):
     result, calls, outputs, summary, _ = run_propose(tmp_path, **branch)
     assert result.returncode != 0
