@@ -90,3 +90,6 @@ funcprofiler	https://github.com/nf-core/funcprofiler.git	latest-release
 datasync	https://github.com/nf-core/datasync.git	latest-release
 hadge	https://github.com/nf-core/hadge.git	latest-release
 tumourevo	https://github.com/nf-core/tumourevo.git	latest-release
+bacmodel	https://github.com/nf-core/bacmodel.git	latest-release
+plasmodiumdrugres	https://github.com/nf-core/plasmodiumdrugres.git	latest-release
+provenancereport	https://github.com/nf-core/provenancereport.git	latest-release

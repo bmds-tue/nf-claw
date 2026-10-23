@@ -19,6 +19,12 @@ permissions:
   actions: write             # to dispatch the deploy after merge
   checks: write              # report completed in-job validation on the generated PR commit
 
+# Both maintenance bots publish to main: one at a time, so the second validates what the first
+# published instead of a main that no longer exists.
+concurrency:
+  group: nfclaw-maintenance
+  cancel-in-progress: false
+
 jobs:
   discover:
     runs-on: ubuntu-latest
@@ -28,11 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # main as it is when the job starts (a queued run's event commit can be stale).
+          ref: main
           submodules: recursive     # existing pipelines, so the drift gate can regenerate them
           fetch-depth: 0
           # This job runs upstream pipeline code (Nextflow parses each new release's Groovy config).
           # Keep the write token out of .git/config; create-pull-request authenticates on its own.
           persist-credentials: false
+      - name: Record the validated base
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       # Existing submodules need their tags present so `git describe --tags` resolves each
       # pinned version deterministically (the drift gate compares regenerated context).
       - name: Fetch submodule tags
@@ -117,6 +128,9 @@ jobs:
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: success() && steps.disc.outputs.kept != '0'
         id: cpr
+        # An organization can forbid GitHub Actions from opening pull requests. The action pushes
+        # the validated branch first; the next step tells that refusal from a real failure.
+        continue-on-error: true
         with:
           # Least privilege: stage only what discovery generates. This list must name EVERY file
           # the job writes — anything missing is silently dropped from the PR, and the in-job drift
@@ -137,12 +151,26 @@ jobs:
             release) that pass the unit tests, the drift gate and Nextflow acceptance
             (`nextflow -preview`). Pipelines Nextflow rejected were dropped. Auto-merged
             because all checks passed.
+      - name: Propose the validated branch
+        if: success() && steps.cpr.outcome == 'failure'
+        id: propose
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ steps.base.outputs.sha }}
+          BRANCH: auto-discover-pipelines
+          TITLE: "feat: add newly discovered nf-core pipelines"
+          BODY: |
+            Automated discovery: added nf-core pipelines (each pinned to its latest stable
+            release) that pass the unit tests, the drift gate and Nextflow acceptance
+            (`nextflow -preview`). Pipelines Nextflow rejected were dropped. Auto-merged
+            because all checks passed.
+        run: bash scripts/propose_validated_update.sh
       # Report the completed core checks on the exact generated commit, merge under
       # the normal branch rules, then explicitly deploy after the merge completes.
       - name: Auto-merge and redeploy
-        if: success() && steps.cpr.outputs.pull-request-number
+        if: success() && (steps.cpr.outputs.pull-request-number || steps.propose.outputs.number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
-          PR_HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number || steps.propose.outputs.number }}
+          PR_HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha || steps.propose.outputs.head_sha }}
         run: bash scripts/merge_validated_update.sh
