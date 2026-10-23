@@ -1,5 +1,6 @@
 """nf-core institutional configs are read at one recorded nf-core/configs commit."""
 import json
+import subprocess
 
 import pytest
 
@@ -91,8 +92,6 @@ def test_a_resumed_run_keeps_the_commit_its_first_attempt_read(upstream, resolve
             "fatal: unable to access: Could not resolve host")),
 ])
 def test_ls_remote_reads_the_branch_head(monkeypatch, returncode, stdout, stderr, expected):
-    import subprocess
-
     seen = {}
 
     def run(command, **kwargs):

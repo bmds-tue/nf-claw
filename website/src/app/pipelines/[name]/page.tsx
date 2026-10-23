@@ -362,7 +362,7 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
 
       {/* chaining */}
       {(pipeline.feeds.length > 0 || pipeline.fedBy.length > 0) && (
-        <section id="chaining" className="mt-16 scroll-mt-14">
+        <section id="chaining" data-progress="Chaining" className="mt-16 scroll-mt-14">
           <SectionTitle icon={Link2}>Chaining</SectionTitle>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fog-muted">
             Run {pipeline.name} as one stage of a chain: <code className="font-mono text-fog">nfclaw chain run</code> starts

@@ -7,14 +7,22 @@ Nextflow-acceptance step) resets the working tree off the tag, so `git describe 
 returns `<tag>-N-g<hash>` and the drift gate flags the freshly generated context as stale.
 This bit pipelines whose default branch had commits after the release. `add_one` and
 `bump` (auto-update) share the same pin-to-tag contract, so both are covered here."""
-import subprocess
+import os
 import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
 import pytest
 
 from librarian import discover_pipelines as dp
 from librarian import update_pipelines as up_mod
 from librarian import write_skill
+from test_version_probe_cleanup import _alive
 
 _SCHEMA = Path(__file__).parent / "fixtures" / "mini" / "nextflow_schema.json"
 
@@ -198,8 +206,6 @@ def test_discovery_refuses_preexisting_git_ownership_without_mutation(tmp_path, 
 
 
 def test_discovery_serializes_ownership_across_concurrent_additions(tmp_path, monkeypatch):
-    from concurrent.futures import ThreadPoolExecutor
-    import threading
     _allow_file_submodules(monkeypatch)
     commits = _make_origin(tmp_path / "origin")
     repo = tmp_path / "repo"
@@ -271,10 +277,6 @@ def test_interrupted_discovery_restores_metadata_before_propagating_interrupt(tm
 
 
 def test_timed_out_discovery_git_command_stops_its_helper_children(tmp_path, monkeypatch):
-    import os
-    import signal
-    import time
-    from test_version_probe_cleanup import _alive
     if not hasattr(os, "killpg"):
         pytest.skip("requires POSIX process groups")
     launcher = tmp_path / "git-helper"
@@ -307,11 +309,6 @@ def test_timed_out_discovery_git_command_stops_its_helper_children(tmp_path, mon
 
 
 def test_sigterm_discovery_stops_helpers_and_restores_git_state(tmp_path, monkeypatch):
-    import os
-    import signal
-    import sys
-    import time
-    from test_version_probe_cleanup import _alive
     if not hasattr(os, "killpg"):
         pytest.skip("requires POSIX process groups")
     _allow_file_submodules(monkeypatch)

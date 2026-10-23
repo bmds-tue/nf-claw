@@ -138,7 +138,6 @@ def test_acceptance_uses_private_scratch_and_preserves_unrelated_temp_files(tmp_
     assert not list(tmp_path.glob("nfclaw-accept.*"))
 
 
-
 HANG = "barrier arrives \\(monitor: local\\)"
 
 
@@ -277,6 +276,7 @@ def test_committed_exceptions_are_well_formed_and_documented():
         assert outcome in {"rejected", "staging-unverified", "timeout"}
         re.compile(evidence)
         assert f"`{name}`" in known_issues, f"{name} needs its investigation in known-issues.md"
+
 
 def _discovery_step(tmp_path, verdict):
     raw = (ROOT / ".github" / "workflows" / "discover-pipelines.yml").read_text()

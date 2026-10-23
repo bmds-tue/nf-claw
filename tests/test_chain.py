@@ -3,13 +3,23 @@
 Nextflow never runs here: `run_pipeline` is replaced by a fake that lays out what a finished run
 leaves behind (results, provenance bundle). `mini_up` writes a samplesheet for `mini`.
 """
+import fcntl
+import hashlib
 import json
+import os
+import shutil
 import signal
+import subprocess
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from runner import chain, execution, orchestration
+import sheetgen_schemas as S
+from runner import (budget, chain, execution, inputs, orchestration, provenance, runlog, schema,
+                    sheetgen)
 from runner.errors import ErrorCode, NfclawError
+from test_sheetgen import pair
 
 RULE = {"description": "mini_up writes a mini sheet",
         "upstream_params": {"nf_core_pipeline": "mini"},
@@ -43,7 +53,6 @@ def _last_log_line(out):
 def fake_runs(monkeypatch, finished_run):
     """Replace run_pipeline: record each call, lay out a finished run, or fail on cue.
     `calls` are real launches; `checks` the check-only validations a chain does first."""
-    from types import SimpleNamespace
     runs = SimpleNamespace(calls=[], checks=[], failures={}, check_failures={})
 
     def fake(name, **kw):
@@ -63,8 +72,6 @@ def fake_runs(monkeypatch, finished_run):
         manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
                                         "dependency_inventory_version": 1,
                                         "chain": kw.get("chain_link")}))
-        from runner import inputs, provenance, schema
-        from pathlib import Path
         path_params = schema.load_param_schema(kw["repo_root"] / "pipelines" / name / "upstream").reference_path_params()
         given = kw["input_path"] if isinstance(kw["input_path"], list) else [kw["input_path"]]
         candidates = given + [value for key, value in kw["cli_overrides"].items()
@@ -257,7 +264,6 @@ def test_the_probe_parses_each_stage_config_with_its_own_engine(library, monkeyp
 
     def fake_run(cmd, **kw):
         seen.append((cmd, kw["env"]))
-        import subprocess
         bad = "mini/upstream" in cmd[2]
         return subprocess.CompletedProcess(cmd, 1 if bad else 0, stdout=(
             "Error nextflow.config:298:14: Unexpected input: '('\n\nERROR ~ Config parsing failed\n"
@@ -277,7 +283,6 @@ def test_the_probe_parses_each_stage_config_with_its_own_engine(library, monkeyp
 
 def test_the_probe_passes_extra_configs_to_the_launcher(library, monkeypatch, tmp_path):
     # `nextflow config` takes -c only as the launcher's option: `nextflow -c x config <pipeline>`.
-    import subprocess
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     cfg = tmp_path / "extra.config"
     cfg.write_text("process {}\n")
@@ -292,7 +297,6 @@ def test_the_probe_passes_extra_configs_to_the_launcher(library, monkeypatch, tm
 
 
 def test_the_probe_suggests_the_engine_the_release_declares(library, monkeypatch):
-    import subprocess
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     (root / "pipelines" / "mini" / "upstream" / "nextflow.config").write_text(
         "manifest {\n    nextflowVersion = '!>=23.04.0'\n}\n")
@@ -308,7 +312,6 @@ def test_the_probe_tells_an_engine_that_cannot_start_from_a_config_it_rejects(li
                                                                              monkeypatch):
     # Nextflow 23.04's launcher fetches its jars on first use; on a host where that fails the stage
     # could not start either — said as what it is, not as a config the engine rejects.
-    import subprocess
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     spec = chain.parse_spec({"stages": [{"pipeline": "mini_up"},
                                         {"pipeline": "mini", "nxf_ver": "23.04.0"}]})
@@ -323,7 +326,6 @@ def test_the_probe_tells_an_engine_that_cannot_start_from_a_config_it_rejects(li
 
 
 def test_a_probe_that_cannot_run_reports_unverified_configuration(library, monkeypatch):
-    import subprocess
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     planned = chain.plan(_spec(), repo_root=root)
     monkeypatch.setattr(chain.shutil, "which", lambda name: None)
@@ -343,7 +345,6 @@ def test_a_probe_that_cannot_run_reports_unverified_configuration(library, monke
 @pytest.mark.parametrize("failure", ["timeout", "oserror"])
 def test_an_inconclusive_config_probe_cannot_certify_or_start_a_chain(
         library, monkeypatch, tmp_path, check_only, failure):
-    import subprocess
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     spec = _spec()
     planned = chain.plan(spec, repo_root=root)
@@ -510,7 +511,6 @@ def test_timeout_is_a_budget_for_the_whole_chain(library, fake_runs, tmp_path):
 
 
 def test_a_spent_budget_stops_before_the_next_stage(library, fake_runs, tmp_path, monkeypatch):
-    from runner import budget
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     clock = 0.0
     run = chain.orchestration.run_pipeline
@@ -542,8 +542,6 @@ def test_a_non_empty_outdir_needs_resume(library, fake_runs, tmp_path):
 
 
 def test_one_chain_per_outdir(library, fake_runs, tmp_path):
-    import fcntl
-    import os
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     out = tmp_path / "c"
     (out / "chain").mkdir(parents=True)
@@ -634,7 +632,6 @@ def test_resume_extends_a_finished_chain_with_an_appended_stage(library, fake_ru
 
 
 def test_resume_refuses_a_succeeded_stage_whose_bundle_is_gone(library, fake_runs, tmp_path):
-    import shutil
     fake_runs.failures["mini"] = [_boom()]
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     out = tmp_path / "c"
@@ -680,13 +677,12 @@ def test_status_needs_a_chain(tmp_path):
 # --- the chain's log speaks for itself (runlog.read_state, as `nfclaw status` reads a run) ------
 
 def test_the_chain_log_is_read_like_a_run_log(library, fake_runs, tmp_path):
-    from runner import runlog
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     out = tmp_path / "c"
     chain.run_chain(_spec(), repo_root=root, outdir=out)
     st = runlog.read_state(out / "chain" / "logs" / "chain.log")
     assert (st.state, st.kind, st.outcome) == ("success", "chain", "success")
-    assert st.pid == __import__("os").getpid() and st.host
+    assert st.pid == os.getpid() and st.host
     assert st.host_id == runlog.host_identity()
 
 
@@ -697,7 +693,7 @@ def test_status_tells_a_chain_whose_nfclaw_was_killed(library, fake_runs, tmp_pa
     chain.run_chain(_spec(), repo_root=root, outdir=out)
     log = out / "chain" / "logs" / "chain.log"
     lines = log.read_text().splitlines()
-    log.write_text("\n".join(lines[:-1]).replace(f"pid: {__import__('os').getpid()}",
+    log.write_text("\n".join(lines[:-1]).replace(f"pid: {os.getpid()}",
                                                  "pid: 999999") + "\n")
     state_file = out / "chain" / "state.json"
     state_file.write_text(state_file.read_text().replace('"outcome": "success"',
@@ -737,7 +733,6 @@ def test_spec_sheet_set_and_input_lists_are_validated():
 def test_fingerprints_without_sheet_set_are_those_of_earlier_chains(library):
     # A succeeded stage is frozen by its fingerprint: adding a spec key must not change the
     # fingerprint of a stage that does not use it, or every recorded chain would refuse to resume.
-    import hashlib
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
     spec = _spec()
     p = chain.plan(spec, repo_root=root)[1]
@@ -758,8 +753,6 @@ def test_fingerprints_without_sheet_set_are_those_of_earlier_chains(library):
 
 
 def test_a_first_stage_takes_data_files_and_sheet_columns(library, fake_runs, tmp_path):
-    import sheetgen_schemas as S
-    from test_sheetgen import pair
     root = library("mini")
     S.make_pipeline(root, S.RNASEQ, "rna")
     data = tmp_path / "reads"
@@ -780,8 +773,6 @@ def test_a_first_stage_takes_data_files_and_sheet_columns(library, fake_runs, tm
 def test_a_chain_check_generates_the_first_stages_samplesheet(library, tmp_path, monkeypatch):
     # Not faked: the real check-only run generates and validates the sheet, and a missing column
     # stops the chain before any stage launches.
-    import sheetgen_schemas as S
-    from test_sheetgen import pair
     monkeypatch.setattr(chain, "_probe_config", lambda spec, p, **kw: [])
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     root = library("mini")
@@ -815,8 +806,6 @@ def test_sheet_set_on_a_handed_over_stage_is_refused_before_anything_runs(librar
 def _generated_stage(library, tmp_path, fake_runs, data_input):
     """A one-stage chain whose samplesheet is generated from `data_input`, run to success with a
     bundle that records the generated sheet as a real run would."""
-    import sheetgen_schemas as S
-    from runner import sheetgen
     root = library("mini")
     up = S.make_pipeline(root, S.RNASEQ, "rna")
     spec = chain.parse_spec({"stages": [{"pipeline": "rna", "input": data_input,
@@ -846,7 +835,6 @@ def _generated_stage(library, tmp_path, fake_runs, data_input):
 
 def test_resume_refuses_a_succeeded_stage_whose_data_now_yields_another_sheet(
         library, fake_runs, tmp_path):
-    from test_sheetgen import pair
     data = tmp_path / "reads"
     pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     root, spec, out = _generated_stage(library, tmp_path, fake_runs, str(data))
@@ -859,7 +847,6 @@ def test_resume_refuses_a_succeeded_stage_whose_data_now_yields_another_sheet(
 
 
 def test_resume_tolerates_the_deleted_data_of_a_succeeded_stage(library, fake_runs, tmp_path):
-    from test_sheetgen import pair
     data = tmp_path / "reads"
     a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     root, spec, out = _generated_stage(library, tmp_path, fake_runs, [str(a1), str(a2)])
@@ -869,7 +856,6 @@ def test_resume_tolerates_the_deleted_data_of_a_succeeded_stage(library, fake_ru
 
 
 def test_resume_tolerates_data_removed_from_a_kept_directory(library, fake_runs, tmp_path):
-    from test_sheetgen import pair
     data = tmp_path / "reads"
     pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     pair(data, "B_R1.fastq.gz", "B_R2.fastq.gz")
@@ -884,7 +870,6 @@ def test_resume_tolerates_data_removed_from_a_kept_directory(library, fake_runs,
 
 def test_chain_status_names_each_stages_completion_caveats(tmp_path):
     # A stage that succeeded without some samples says so beside its success.
-    import json
     stage = tmp_path / "01-rnaseq"
     (stage / "provenance").mkdir(parents=True)
     (stage / "provenance/run_manifest.json").write_text(json.dumps(

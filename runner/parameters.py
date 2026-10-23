@@ -112,7 +112,7 @@ def _json_equal(left: Any, right: Any) -> bool:
             else:
                 if len(a) != len(b):
                     return False
-                pending.extend(zip(a, b))
+                pending.extend(zip(a, b, strict=True))
         elif a != b:
             return False
     return True
@@ -378,7 +378,7 @@ def load_params_file(path: Path, *, label: str = "--params-file") -> dict:
     return data
 
 
-def merge(*, cli_overrides: dict[str, Any], params_file: "Path | Mapping[str, Any] | None",
+def merge(*, cli_overrides: dict[str, Any], params_file: Path | Mapping[str, Any] | None,
           input_path: Any, outdir: Path) -> dict[str, Any]:
     """Build the full parameter map (params-file < --input/--outdir < CLI) without touching
     disk, so the merged result can be validated before anything is written or executed.

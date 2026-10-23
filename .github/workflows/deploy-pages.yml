@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # The data layer reads the pinned submodules (release dates, module
-          # counts) and full git history (commit count, tags) at build time.
+          # counts) and the git history (commit feed, release tags) at build time.
           submodules: recursive
           fetch-depth: 0
       - name: Configure Pages
@@ -48,8 +48,8 @@ jobs:
           # project site, empty for a user/org apex site).
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
           NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.origin }}
-          # Build-time only: lets src/lib/data/github.ts bake live Actions runs
-          # and releases into the Activity panel. Never shipped to the client.
+          # Build-time only: lets src/lib/data/github.ts bake the latest Actions
+          # runs into the Activity panel. Never shipped to the client.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm run build

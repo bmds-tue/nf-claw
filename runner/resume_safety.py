@@ -158,7 +158,8 @@ def _move_previous_run(original: Path, archive: Path) -> Path:
                 temp = rel.with_name(f".nfclaw-inventory-{uuid.uuid4().hex}")
                 staged_record = (rel, temp, original_bytes, stat.S_IMODE(record.stat().st_mode))
                 (original / temp).write_text(json.dumps({"version": 1, "entries": inventory},
-                                                       indent=2, sort_keys=True) + "\n")
+                                                       indent=2, sort_keys=True) + "\n",
+                                             encoding="utf-8")
                 (original / temp).chmod(staged_record[3])
         # Prepare every replacement while the complete original tree still exists. Permission
         # or copy failures therefore cannot strand historical publications after the rename.

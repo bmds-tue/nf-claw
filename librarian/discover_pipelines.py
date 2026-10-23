@@ -1,4 +1,3 @@
-# librarian/discover_pipelines.py
 """Discover nf-core pipelines not yet in the library and scaffold them.
 
 Reads the public nf-core pipeline index (no token required), finds pipelines
@@ -11,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 import stat
@@ -43,7 +41,7 @@ def latest_stable(releases: list[dict]) -> str | None:
 def fetch_catalog(url: str = NFCORE_PIPELINES_JSON) -> list[dict]:
     """Fetch the public nf-core pipeline index (no token required)."""
     req = urllib.request.Request(url, headers={"User-Agent": "nf-claw-discover"})
-    with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 (fixed https URL)
+    with urllib.request.urlopen(req, timeout=60) as resp:  # a fixed https URL
         return json.load(resp).get("remote_workflows", [])
 
 
@@ -80,7 +78,7 @@ def new_pipelines(
 
 
 def _run(args: list[str], *, check: bool = False, timeout: float = 60) -> subprocess.CompletedProcess:
-    result = capture(args, timeout=timeout, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    result = capture(args, timeout=timeout, env=submodule._git_env())
     if check and result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, args,
                                             output=result.stdout, stderr=result.stderr)
@@ -129,13 +127,12 @@ def _gitmodules_snapshot(repo_root: Path) -> _GitmodulesSnapshot:
     entries = [entry for entry in result.stdout.split("\0") if entry]
     if not entries:
         return _GitmodulesSnapshot(content, permissions, None)
-    else:
-        if len(entries) != 1:
-            raise ValueError(".gitmodules has unresolved index entries")
-        mode, digest, stage = entries[0].partition("\t")[0].split()
-        if stage != "0" or mode not in {"100644", "100755"}:
-            raise ValueError(".gitmodules has an unsupported index entry")
-        indexed = mode, digest
+    if len(entries) != 1:
+        raise ValueError(".gitmodules has unresolved index entries")
+    mode, digest, stage = entries[0].partition("\t")[0].split()
+    if stage != "0" or mode not in {"100644", "100755"}:
+        raise ValueError(".gitmodules has an unsupported index entry")
+    indexed = mode, digest
     flags = _run(["git", "-C", str(repo_root), "ls-files", "-v", "-z", "--", ".gitmodules"],
                  check=True).stdout
     if flags not in {f"{tag} .gitmodules\0" for tag in "HhSs"}:

@@ -8,9 +8,9 @@ import pytest
 from runner import chain, consumption, handoff, provenance
 from runner.errors import NfclawError
 from runner.inputs import absolute_local_path
+from test_chain import RULE, _spec, fake_runs  # noqa: F401
 from test_handoff import _rule, _trees
 from test_output_namespace import record
-from test_chain import RULE, _spec, fake_runs  # noqa: F401
 
 
 def _database_schema(tree):

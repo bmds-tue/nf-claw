@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import sys
 import textwrap
-import time
 from pathlib import Path
 
 import pytest
@@ -82,18 +81,9 @@ def text(result) -> str:
     return result["content"][0]["text"]
 
 
-def _until(predicate, timeout=30.0):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        if predicate():
-            return True
-        time.sleep(0.05)
-    return False
-
-
 # --- arguments -> the nfclaw command line ---------------------------------------------------------
 
-def test_run_arguments_become_one_token_per_cli_option(tools, tmp_path):
+def test_run_arguments_become_one_token_per_cli_option(tools):
     argv = tools.run_argv({
         "pipeline": "rnaseq", "outdir": "/data/out", "input": ["/data/a.fq.gz", "/data/b.fq.gz"],
         "sheet_set": {"strandedness": "auto"}, "params": {"genome": "GRCh38", "skip_qc": True,

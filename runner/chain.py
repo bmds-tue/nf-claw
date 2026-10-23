@@ -486,8 +486,7 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
         try:
             input_safety.check_write_boundaries(res.local_dependencies,
                 [("chain --outdir", outdir, True),
-                 ("Nextflow work directory", Path(res.env.get("NXF_WORK")
-                  or os.environ.get("NXF_WORK") or repo_root / "work").expanduser().resolve(), False),
+                 ("Nextflow work directory", orchestration.work_directory(res.env, repo_root), False),
                  *input_safety.engine_write_paths(res.outdir, res.env)])
         except BaseException:
             if res.staging is not None:
@@ -644,8 +643,8 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
             raise NfclawError(ErrorCode.PARAMS_INVALID, "a chain spec is required",
                               fix="Pass the spec file, or --resume an existing chain.")
         spec = parse_spec(_read_json(record / "chain.json") or {})
-    if not resume and (issue := preflight._outdir_issue(outdir, resume=False,
-                                                        check_only=check_only)):
+    if not resume and (issue := preflight.outdir_issue(outdir, resume=False,
+                                                       check_only=check_only)):
         raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
                           details={"issues": [issue.replace("to continue that run",
                                                             "to continue that chain")]})
@@ -827,13 +826,9 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 _say(log, f"{stage.dirname}: {len(dropped)} row(s) of the {name} samplesheet "
                           f"{stage.pipeline} does not accept were dropped (recorded in "
                           f"{hand_path})")
+        # `materialize` left out the parameters the stage sets itself (`explicit`, warned above).
         for name, value in hand.params.items():
-            explicit = p.input if name == "input" else p.stage.params.get(name)
-            if explicit not in (None, ""):
-                if warn:
-                    warn(f"--{name} is set by this stage itself; the value handed over from "
-                         f"'{prev.stage.id}' ({value}) is not used")
-            elif name == "input":
+            if name == "input":
                 input_path = value
             else:
                 overrides[name] = value
@@ -936,6 +931,24 @@ def _valid_entry(entry: Any) -> bool:
             and entry["index"] > 0)
 
 
+def _consumed_reference_root(down: Path, recorded_params: Any, reference: Path, name: str) -> Path:
+    """The root under which stage `down` consumed the handed-over reference directory `reference`
+    (its parameter `name`): the reference as passed today, or the value its bundle recorded."""
+    root = inputs.absolute_local_path(reference)
+    value = recorded_params.get(name) if isinstance(recorded_params, dict) else None
+    # Older bundles passed the fully resolved target. Read their actual parameters;
+    # do not rewrite the historical consumption record to today's alias behavior.
+    if value is not None:
+        params_path = down / "provenance/params.json"
+        configs = _digests(down / "provenance/configs.sha256", relative=False)
+        if configs.get(str(params_path)) != _sha(params_path):
+            raise ValueError("recorded reference parameters differ from their config checksum")
+        if not isinstance(value, str) or value not in {str(root), str(reference.resolve())}:
+            raise ValueError("recorded reference parameter differs from its handoff")
+        root = Path(value)
+    return root
+
+
 def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[str]:
     """Verify recorded stage outcomes and the current bytes behind every completed link."""
     problems: list[str] = []
@@ -1016,21 +1029,6 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
         down = Path(entry["outdir"])
         manifest = manifests.get(sid, {})
         recorded_params = _read_json(down / "provenance/params.json") or {}
-
-        def consumed_reference_root(reference: Path, name: str) -> Path:
-            root = inputs.absolute_local_path(reference)
-            value = recorded_params.get(name) if isinstance(recorded_params, dict) else None
-            # Older bundles passed the fully resolved target. Read their actual parameters;
-            # do not rewrite the historical consumption record to today's alias behavior.
-            if value is not None:
-                params_path = down / "provenance/params.json"
-                configs = _digests(down / "provenance/configs.sha256", relative=False)
-                if configs.get(str(params_path)) != _sha(params_path):
-                    raise ValueError("recorded reference parameters differ from their config checksum")
-                if not isinstance(value, str) or value not in {str(root), str(reference.resolve())}:
-                    raise ValueError("recorded reference parameter differs from its handoff")
-                root = Path(value)
-            return root
         chain_link = manifest.get("chain")
         link = chain_link.get("upstream") if isinstance(chain_link, dict) else None
         if succeeded and (not isinstance(link, dict)
@@ -1117,7 +1115,7 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                     if any(item.get(key) != value for key, value in evidence.items()):
                         raise ValueError("directory handoff has no matching complete namespace record")
                     if succeeded:
-                        root = consumed_reference_root(Path(reference), name)
+                        root = _consumed_reference_root(down, recorded_params, Path(reference), name)
                         normalized = handoff.normalize_reference_inventory(evidence["directory_inventory"],
                                                                            Path(reference), destination=root)
                         consumed = {path: entry for path, entry in down_nodes.items()
@@ -1159,7 +1157,7 @@ def _integrity_problems(state: dict, *, only_succeeded: bool = False) -> list[st
                                             "or has no matching complete upstream input record")
                             continue
                         if succeeded:
-                            root = consumed_reference_root(path, name)
+                            root = _consumed_reference_root(down, recorded_params, path, name)
                             canonical = str(root)
                             normalized = handoff.normalize_reference_inventory(expected_nodes, path, destination=root)
                             if down_in.get(canonical) != digest or down_nodes.get(canonical) != normalized[canonical]:

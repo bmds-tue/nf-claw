@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -52,8 +53,6 @@ def test_enum_comparison_handles_shared_nested_values_without_expansion(tmp_path
 
 
 def test_number_cli_integer_digit_limit_reports_validation_error(tmp_path):
-    import sys
-
     limit = sys.get_int_max_str_digits()
     if not limit:
         pytest.skip('Python integer digit limit is disabled')

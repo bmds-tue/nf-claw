@@ -15,7 +15,6 @@ code change under it, and provenance records exactly which commit ran.
 """
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
@@ -63,17 +62,11 @@ def _url_for(name: str, repo_root: Path) -> str | None:
     return None
 
 
-def _git_env() -> dict[str, str]:
-    """Never let git block on a credential prompt: nfclaw only reads public nf-core remotes, so a
-    prompt means the remote is wrong or unreachable, and that must fail rather than hang."""
-    return {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
-
-
 def remote_tags(url: str) -> list[str]:
     """Tag names published by the upstream remote (empty on any failure — caller falls back)."""
     try:
         r = capture(["git", "ls-remote", "--tags", "--refs", "--", url],
-                    timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=_git_env())
+                    timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=submod._git_env())
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return []
     if r.returncode != 0:
@@ -163,18 +156,13 @@ def dev_label(commit: str) -> str:
     return f"{DEV_BRANCH}-{commit[:12]}"
 
 
-def is_dev(st: SubmoduleStatus) -> bool:
-    """True when the status points at a materialized `dev` commit (unreleased code)."""
-    return is_cached(st) and st.version == DEV_BRANCH
-
-
 def remote_branch_head(url: str, branch: str) -> str | None:
     """The commit `branch` points at on the remote, or None when the remote has no such branch.
     Raises RemoteUnavailable when the remote cannot be queried — distinct from "no branch", so a
     network failure is never reported as a missing `dev` branch (or the reverse)."""
     try:
         r = capture(["git", "ls-remote", "--heads", "--", url, f"refs/heads/{branch}"],
-                    timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=_git_env())
+                    timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=submod._git_env())
     except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
         raise RemoteUnavailable(str(exc)) from exc
     if r.returncode != 0:
@@ -222,7 +210,7 @@ def _fetch_dev(upstream: Path) -> None:
     result = capture(
         ["git", "-C", str(upstream), "fetch", "--depth", "1", "origin",
          f"+refs/heads/{DEV_BRANCH}:{_DEV_TRACKING_REF}"],
-        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=_git_env())
+        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=submod._git_env())
     result.check_returncode()
 
 
@@ -230,7 +218,7 @@ def _record_dev_head(upstream: Path, sha: str) -> None:
     """Remember `sha` as the last-resolved `dev` head (the offline fallback). Best effort: the
     tree is already materialized, so failing to record it must not fail the run."""
     capture(["git", "-C", str(upstream), "update-ref", _DEV_TRACKING_REF, sha],
-            timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=_git_env())
+            timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=submod._git_env())
 
 
 def _dev_advisory(name: str, commit: str) -> str:
@@ -334,7 +322,7 @@ def _fetch_tag(upstream: Path, tag: str) -> None:
     result = capture(
         ["git", "-C", str(upstream), "fetch", "--depth", "1", "origin",
          f"refs/tags/{tag}:refs/tags/{tag}"],
-        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=_git_env())
+        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=submod._git_env())
     result.check_returncode()
 
 
@@ -342,13 +330,13 @@ def _add_worktree(upstream: Path, dest: Path, rev: str) -> None:
     """Check `rev` (a `tags/<tag>` or a commit) out at `dest` as a detached worktree."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     capture(["git", "-C", str(upstream), "worktree", "prune"],
-            timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=_git_env())
+            timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=submod._git_env())
     if dest.exists():                                          # stale/partial — start clean
         shutil.rmtree(dest)
     result = capture(
         ["git", "-C", str(upstream), "worktree", "add", "--force", "--detach",
          str(dest), rev],
-        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=_git_env())
+        timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=submod._git_env())
     result.check_returncode()
 
 

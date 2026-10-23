@@ -71,7 +71,7 @@ class ContainerWatch:
         self._threads: list[threading.Thread] = []
         self._lock = threading.Lock()
 
-    def start(self) -> "ContainerWatch":
+    def start(self) -> ContainerWatch:
         try:
             self._process = subprocess.Popen(
                 [self.engine, "events", "--filter", "type=container", "--filter", "event=start",

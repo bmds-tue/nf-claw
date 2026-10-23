@@ -75,7 +75,7 @@ def _completed_demo(tmp_path, *, duplicate=False):
     work = tmp_path / "archived-work"
     lines = []
     for index in range(3):
-        relative = Path(f"{index:02x}") / (f"{index:030x}")
+        relative = Path(f"{index:02x}") / f"{index:030x}"
         folder = work / relative
         folder.mkdir(parents=True)
         for mate in range(2):

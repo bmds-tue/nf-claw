@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
 import type { PipelineSummary } from "@/lib/derive";
 import { colorForCategory } from "@/lib/derive";
+import { EASE } from "@/lib/motion";
 
 const PRINCIPLES = [
   {
@@ -65,7 +66,7 @@ export function Manifesto({ pipelines }: { pipelines: PipelineSummary[] }) {
             initial={reduce ? false : { opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
             className="flex gap-4"
           >
             <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-claw-400">

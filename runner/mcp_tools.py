@@ -22,7 +22,7 @@ from pathlib import Path
 
 from runner import chain, cli, jobs, settings
 from runner.errors import NfclawError
-from runner.mcp_server import RESOURCE_NOT_FOUND, Context, RpcError, tool_result
+from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
 
 INSTRUCTIONS = """\
 nf-claw runs pinned nf-core pipelines through its own CLI (nfclaw), with validation before launch and \
@@ -129,7 +129,7 @@ def _tool(name: str, title: str, description: str, properties: dict, required: l
 
 TOOLS = [
     _tool("list_pipelines", "Find a pipeline",
-          "Search the nf-claw library (91 pinned nf-core pipelines) by keyword: assay, data type, "
+          "Search the nf-claw library of pinned nf-core pipelines by keyword: assay, data type, "
           "method or tool (e.g. 'rna-seq', 'variant calling', 'nanopore', 'kraken'). Returns each "
           "match's pinned version, description, expected input and the pipelines it can feed in a "
           "chain. An empty query lists the library.",
@@ -410,10 +410,10 @@ class NfclawTools:
 
     def get_prompt(self, name: str, arguments: dict, ctx: Context) -> dict:
         if name != "use_pipeline":
-            raise RpcError(-32602, f"unknown prompt: {name}")
+            raise RpcError(INVALID_PARAMS, f"unknown prompt: {name}")
         pipeline = str(arguments.get("pipeline") or "")
         if pipeline not in self._pipelines():
-            raise RpcError(-32602, f"unknown pipeline: {pipeline!r} (see list_pipelines)")
+            raise RpcError(INVALID_PARAMS, f"unknown pipeline: {pipeline!r} (see list_pipelines)")
         goal = str(arguments.get("goal") or "").strip()
         skill = (self.pipelines_dir / pipeline / "skill.md").read_text(encoding="utf-8")
         text = (f"Run nf-core/{pipeline} with the nf-claw tools"

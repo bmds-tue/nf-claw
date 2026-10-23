@@ -1,14 +1,14 @@
 """Real pinned legacy schemas must protect the files their pipelines consume."""
-import json
+import csv
 import hashlib
+import json
 import subprocess
 import sys
-import csv
 from pathlib import Path
 
 import pytest
 
-from runner import handoff, provenance, replay_guard, samplesheet, schema
+from runner import handoff, provenance, replay_guard, samplesheet, schema, sheetgen
 from runner.errors import NfclawError
 from test_handoff import _rule
 from test_output_namespace import record
@@ -24,6 +24,14 @@ def _pinned(name):
     if not (tree / "assets/schema_input.json").exists():
         pytest.skip("requires initialized pinned pipeline source")
     return tree, schema.load_input_schema(tree)
+
+
+def _write_row(sheet, row):
+    """Write `row` as a one-row CSV samplesheet, quoting values as csv does."""
+    with sheet.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
 
 
 def _sheet(tmp_path, name="atacseq", *, relative=False, missing=False):
@@ -122,10 +130,7 @@ def test_nanostring_existing_absolute_filename_metadata_is_not_a_data_dependency
     if suffix == "json":
         sheet.write_text(json.dumps([row]))
     else:
-        with sheet.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(row))
-            writer.writeheader()
-            writer.writerow(row)
+        _write_row(sheet, row)
     assert samplesheet.validate(sheet, contract) == []
     assert provenance.samplesheet_input_paths(sheet, contract) == [data]
     assert provenance.samplesheet_file_paths(sheet, contract) == []
@@ -234,7 +239,6 @@ def test_stale_templates_use_the_pinned_consumers_actual_sheet_contract(tmp_path
 
 @pytest.mark.parametrize("name", ["hgtseq", "nanoseq"])
 def test_stale_templates_cannot_generate_a_sheet_that_the_consumer_rejects(name):
-    from runner import sheetgen
     tree, contract = _pinned(name)
     assert sheetgen.plan(contract, schema.load_param_schema(tree).params["input"]).problem
 
@@ -315,7 +319,6 @@ def test_corrected_nanoseq_sheet_is_accepted_by_the_actual_pinned_checker(tmp_pa
 
 
 def test_generated_isoseq_sheet_keeps_none_literal_out_of_data_snapshot(tmp_path):
-    from runner import sheetgen
     tree, _ = _pinned("isoseq")
     data = tmp_path / "A.bam"
     data.write_bytes(b"known BAM identity; sheet generation does not interpret alignments")
@@ -338,10 +341,7 @@ def _onco_sheet(tmp_path, *, value=None, filetype="fastq", info="library_id:LIB;
     row = {"group_id": "G", "subject_id": "P", "sample_id": "A", "sample_type": "tumor",
            "sequence_type": "dna", "info": info, "filetype": filetype,
            "filepath": value or ";".join(map(str, reads))}
-    with sheet.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(row))
-        writer.writeheader()
-        writer.writerow(row)
+    _write_row(sheet, row)
     return tree, contract, sheet, reads, row
 
 
@@ -422,10 +422,7 @@ def test_oncoanalyser_handoffs_normalize_and_trace_each_fastq_member(tmp_path, k
     up.mkdir()
     _, _, sheet, reads, row = _onco_sheet(up)
     row["filepath"] = ";".join(data.name for data in reads)
-    with sheet.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(row))
-        writer.writeheader()
-        writer.writerow(row)
+    _write_row(sheet, row)
     record(up)
     if kind == "direct":
         spec = {"samplesheet": sheet.name, "provides": list(row)}
@@ -503,10 +500,7 @@ def test_datasync_destination_must_survive_the_consumers_double_quoted_argument(
     if suffix == "json":
         sheet.write_text(json.dumps([row]))
     else:
-        with sheet.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(row))
-            writer.writeheader()
-            writer.writerow(row)
+        _write_row(sheet, row)
     assert any("double-quoted" in issue for issue in samplesheet.validate(sheet, contract))
 
 

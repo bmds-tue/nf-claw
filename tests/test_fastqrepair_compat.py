@@ -1,16 +1,20 @@
 """Preserve complete original reads and record exact runtime corrections."""
 import gzip
+import json
+import os
+import random
+import re
 import subprocess
+import sys
 
 import pytest
 
 import fastqwiper_oracle as oracle
-
 from runner import fastqrepair_compat as compat
 
 
 def _decode(path):
-    return gzip.open(path, "rb").read() if path.suffix == ".gz" else path.read_bytes()
+    return gzip.decompress(path.read_bytes()) if path.suffix == ".gz" else path.read_bytes()
 
 
 def _write(path, content):
@@ -84,7 +88,6 @@ DAMAGE = [
 
 
 def _fuzz(seed, records=40):
-    import random
     rng = random.Random(seed)
     lines = []
     for i in range(records):
@@ -158,7 +161,6 @@ def test_repair_quality_offset_and_log_redirection_reach_the_actual_command(tmp_
     script = tmp_path / ".command.sh"
     script.write_text('#!/bin/bash -eu\nrepair.sh \\\n    threads=1\n    qin=64 \\\n    &> repair.log\n')
     compat.patch_task("repair", script)
-    import os
     result = subprocess.run(["bash", str(script)], cwd=tmp_path,
                             env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"},
                             capture_output=True, text=True)
@@ -176,7 +178,6 @@ def test_unrecognized_task_is_refused_without_modifying_its_recipe(tmp_path):
 
 
 def test_recorded_helper_executes_without_installed_runner_modules(tmp_path):
-    import json
     source = tmp_path / "reads.fastq"
     source.write_bytes(b"@A\nACGT\n+\nIIII\n@B\nTGCA\n+\nHHHH\n@C\nAAAA\n+\n@@@@\n")
     script = tmp_path / ".command.sh"
@@ -200,7 +201,6 @@ WIPER_RECIPE = ('#!/usr/bin/env bash -C -e -u -o pipefail\nwipertools \\\n    fa
 
 
 def _fake_wipertools(tmp_path):
-    import os
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "wipertools"
@@ -218,13 +218,26 @@ def test_placeholder_chunk_yields_an_empty_output_and_zero_report(tmp_path):
     compat.patch_task("wiper", script)
     result = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert gzip.open(tmp_path / "source_001.fastq.gz_wiped.fastq.gz").read() == b""
+    assert gzip.decompress((tmp_path / "source_001.fastq.gz_wiped.fastq.gz").read_bytes()) == b""
     report = (tmp_path / "source_001.fastq.gz_wiped.report").read_text()
     assert report == compat._zero_report()
     assert compat._parse_report(tmp_path / "source_001.fastq.gz_wiped.report") == dict.fromkeys(
         (*compat._FIELDS, "fixed"), 0)
     # The real tool never ran for the placeholder; its version is still recorded.
     assert (tmp_path / "wipertools.args").read_text() == "fastqwiper\n--version\n"
+
+
+def test_task_corrections_keep_non_ascii_names_under_a_strict_c_locale(tmp_path):
+    # Sample and file names may hold any Unicode letter, and a task container can run Python under
+    # a bare C locale (no UTF-8 coercion), where the default text encoding is ASCII.
+    script = tmp_path / ".command.sh"
+    script.write_text(WIPER_RECIPE.format(chunk="muestra_ñu_001.fastq.gz"), encoding="utf-8")
+    env = {"PATH": os.environ["PATH"], "LC_ALL": "C", "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0"}
+    result = subprocess.run([sys.executable, compat.__file__, "patch", "wiper", str(script)],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    patched = script.read_text(encoding="utf-8")
+    assert "muestra_ñu_001.fastq.gz" in patched and " wipe \\\n" in patched
 
 
 def test_placeholder_report_does_not_claim_defined_percentages_with_zero_denominator(tmp_path):
@@ -338,8 +351,6 @@ def test_multiple_rows_cannot_overwrite_a_single_end_sample_publication(tmp_path
 @pytest.mark.parametrize("sample", ["WIPE_HOOK", "WIPER_HOOK", "REPORTGATHER_HOOK", "MATE_ORDERS",
                                     "REPAIR_HOOK", "SCATTER_HOOK", "RECIPE"])
 def test_configuration_preserves_literal_template_words_in_scientific_identifiers(tmp_path, sample):
-    import json
-    import re
     sheet = tmp_path / "samples.csv"
     sheet.write_text(f"sample,fastq_1,fastq_2\n{sample},/data/left.fastq,/data/right.fastq\n")
     config = compat.write_config(tmp_path / "recorded.config", input_path=sheet).read_text()
@@ -355,7 +366,7 @@ def test_configuration_preserves_literal_template_words_in_scientific_identifier
 def test_profile_fallback_cannot_infer_all_mates_from_the_first_header(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     names = ["left.fastq.gz", "right.fastq.gz"]
-    for name, mate in zip(names, (1, 2)):
+    for name, mate in zip(names, (1, 2), strict=True):
         with gzip.open(name, "wt") as stream:
             stream.write(f"@first/{mate}\nACGT\n+\nIIII\n@second\nTGCA\n+\nHHHH\n")
     script = 'in=left.fastq.gz in2=right.fastq.gz out=S__nfclaw_0123456789abcdef_1_repaired.fastq.gz'

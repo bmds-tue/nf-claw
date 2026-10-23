@@ -1,4 +1,8 @@
+import os
+import pathlib
+import subprocess
 from pathlib import Path
+
 import pytest
 
 from runner import preflight
@@ -22,7 +26,6 @@ def test_outdir_inside_repo_flagged(tmp_path, monkeypatch):
 
 def test_outdir_gitignored_in_repo_allowed(tmp_path, monkeypatch):
     # A gitignored outdir (the documented `--outdir results`) is allowed inside the repo.
-    import subprocess
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     (tmp_path / ".gitignore").write_text("results/\n")
@@ -101,7 +104,6 @@ def test_nonempty_outdir_blocks_run_but_not_check(tmp_path, monkeypatch):
                    for i in preflight.check_environment(**common, check_only=True))
 
 
-
 def test_nonempty_outdir_hint_names_nfclaws_resume_flag(tmp_path, monkeypatch):
     # The hint said "use -resume", but `nfclaw run ... -resume` is rejected as an unexpected extra
     # argument — nfclaw's flag is `--resume`.
@@ -115,6 +117,7 @@ def test_nonempty_outdir_hint_names_nfclaws_resume_flag(tmp_path, monkeypatch):
                                          repo_root=repo, resume=False, output_dir=out)
     hint = next(i for i in issues if "not empty" in i)
     assert "--resume" in hint and " -resume" not in hint
+
 
 def test_outdir_that_is_a_file_is_flagged_cleanly(tmp_path, monkeypatch):
     # An --outdir pointing at an existing file must be reported clearly, not blow up later in
@@ -139,7 +142,6 @@ def test_no_spaces_no_block(tmp_path, monkeypatch):
 def test_outdir_that_cannot_be_written_is_flagged(tmp_path, monkeypatch):
     # `--outdir /data/results` under a directory the caller cannot write failed with a raw
     # PermissionError once nfclaw tried to create it. (os.access is stubbed: tests may run as root.)
-    import os
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     locked = tmp_path / "data"
     locked.mkdir()
@@ -172,7 +174,6 @@ def test_outdir_under_a_file_is_flagged(tmp_path, monkeypatch):
 def test_outdir_under_an_unsearchable_directory_is_flagged_not_crashed(tmp_path, monkeypatch):
     # `--outdir /root/x` as another user: Path.exists()/is_dir() raise PermissionError there rather
     # than answer, which escaped preflight as a traceback.
-    import pathlib
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     locked = tmp_path / "locked"
     real_stat = pathlib.Path.stat
@@ -192,7 +193,6 @@ def test_outdir_under_an_unsearchable_directory_is_flagged_not_crashed(tmp_path,
 def test_unwritable_work_dir_is_flagged_with_the_nxf_work_fix(tmp_path, monkeypatch):
     # The default work dir, <repo>/work, belongs to whoever ran first: on a shared clone the next
     # user's run failed inside Nextflow. (os.access is stubbed: tests may run as root.)
-    import os
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     work = tmp_path / "repo" / "work"
     work.mkdir(parents=True)
@@ -207,6 +207,8 @@ def test_unwritable_work_dir_is_flagged_with_the_nxf_work_fix(tmp_path, monkeypa
                                        submodule=_st(tmp_path / "up"), repo_root=tmp_path / "repo",
                                        resume=False, work_dir=tmp_path / "elsewhere" / "work")
     assert not any("work directory" in i for i in fine), fine
+
+
 # LF and CR can become separate shell lines in generated Nextflow scripts. The space override
 # must not authorize them in launch paths.
 @pytest.mark.parametrize("separator", ["\n", "\r"])

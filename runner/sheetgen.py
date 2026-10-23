@@ -551,10 +551,6 @@ def _first_read_identity(path: Path) -> tuple[str | None, int | None]:
     return name, next(iter(roles)) if len(roles) == 1 else -1 if roles else None
 
 
-def _first_read_name(path: Path) -> str | None:
-    return _first_read_identity(path)[0]
-
-
 def _compatible_roles(first: int | None, second: int | None) -> bool:
     return first in (None, 1) and second in (None, 2)
 
@@ -941,7 +937,7 @@ def generate(source: Source, repo: Path, *, pipeline: str, assignments: Mapping[
             rows.append(row)
             row_sample.append((sample, (unit.lane or 1) if unit is not None else 1))
     for column, value in assignments.items():
-        for row, (sample, lane) in zip(rows, row_sample):
+        for row, (sample, lane) in zip(rows, row_sample, strict=True):
             row[column] = value.replace("{sample}", sample).replace("{lane}", str(lane))
     # Whatever filled it — the files or an assignment — the lane column must still tell apart the
     # read sets of one sample.
@@ -1073,7 +1069,7 @@ def _check_lanes(rows: list[dict[str, str]], row_sample: list[tuple[str, int]],
                  lane_column: str) -> None:
     """The lane column tells the read sets of one sample apart (sarek names read groups by it)."""
     seen: dict[tuple[str, str], dict[str, str]] = {}
-    for row, (sample, _) in zip(rows, row_sample):
+    for row, (sample, _) in zip(rows, row_sample, strict=True):
         key = (sample, row.get(lane_column, ""))
         if key in seen:
             reads = [Path(r[c]).name for r in (seen[key], row) for c in r

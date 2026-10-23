@@ -10,7 +10,6 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class OutputsReport:
-    pipeline_info: Path | None
     multiqc_report: Path | None
     files: tuple[str, ...]
 
@@ -180,7 +179,7 @@ def namespace_difference(expected: dict, current: dict) -> str:
 def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
     """Older file-only chains keep their checksum checks; declared new records stay mandatory."""
     path = outdir / "provenance/outputs.inventory.json"
-    manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+    manifest = json.loads((outdir / "provenance/run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("invalid run manifest")
     if "output_inventory_version" in manifest and (
@@ -192,9 +191,7 @@ def recorded_inventory(outdir: Path, checksums: dict[str, str]) -> dict | None:
 
 
 def collect(outdir: Path) -> OutputsReport:
-    pinfo = outdir / "pipeline_info"
     paths = sorted(result_files(outdir))
     mqc = next((p for p in paths if p.name == "multiqc_report.html"), None)
-    files = tuple(p.relative_to(outdir).as_posix() for p in paths)
-    return OutputsReport(pipeline_info=pinfo if pinfo.is_dir() else None,
-                         multiqc_report=mqc, files=files)
+    return OutputsReport(multiqc_report=mqc,
+                         files=tuple(p.relative_to(outdir).as_posix() for p in paths))

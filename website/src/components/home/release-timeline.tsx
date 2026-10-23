@@ -3,21 +3,14 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, Rocket, Sparkles, Tag } from "lucide-react";
+import { ChevronDown, Rocket, Tag } from "lucide-react";
+import type { TimelineEntry } from "@/lib/types";
 import { cn, formatDate, formatMonth } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
-export interface TimelineItem {
-  id: string;
-  kind: "release" | "tag" | "milestone";
-  title: string;
-  subtitle: string;
-  date: string | null;
-  version?: string;
-  pipeline?: string;
-  accent: string;
-}
+/** A timeline entry with the colour of its research domain. */
+export type TimelineItem = TimelineEntry & { accent: string };
 
-const EASE = [0.16, 1, 0.3, 1] as const;
 /** How many entries show before "full history" — whole months are kept together. */
 const INITIAL = 10;
 
@@ -171,7 +164,7 @@ export function ReleaseTimeline({ items }: { items: TimelineItem[] }) {
 }
 
 function Entry({ item }: { item: TimelineItem }) {
-  const Icon = item.kind === "release" ? Rocket : item.kind === "tag" ? Tag : Sparkles;
+  const Icon = item.kind === "release" ? Rocket : Tag;
   const body = (
     <>
       <span

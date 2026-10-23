@@ -4,7 +4,7 @@ import json
 import pytest
 
 from runner import outputs, verify
-from runner.errors import NfclawError
+from runner.errors import ErrorCode, NfclawError
 
 
 def _bundle(root, name, entries):
@@ -72,7 +72,7 @@ def test_the_replay_side_needs_no_bundle_of_its_own(tmp_path):
     orig = _bundle(tmp_path, "orig", {})
     (orig / "results.txt").write_text("same bytes")
     (orig / "provenance" / "outputs.sha256").write_text(
-        __import__("hashlib").sha256(b"same bytes").hexdigest() + "  results.txt\n")
+        hashlib.sha256(b"same bytes").hexdigest() + "  results.txt\n")
     (orig / "provenance/outputs.inventory.json").write_text(json.dumps(
         {"version": 1, "entries": outputs.snapshot(orig)[1]}))
     replay = tmp_path / "replay"                       # a plain results directory
@@ -134,8 +134,6 @@ def test_dated_scientific_results_preserve_their_exact_paths(tmp_path):
 
 def test_unreadable_run_is_a_clean_error(tmp_path, monkeypatch):
     # verify hashes a replay directory it did not write; one unreadable file raised a raw OSError.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     orig, replay = tmp_path / "orig", tmp_path / "replay"
     (orig / "provenance").mkdir(parents=True)
     (orig / "provenance" / "outputs.sha256").write_text(

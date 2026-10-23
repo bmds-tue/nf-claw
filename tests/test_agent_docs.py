@@ -50,4 +50,3 @@ def test_llms_txt_conforms_to_spec():
     for line in lines[first_h2_idx:]:
         if line.startswith("- ["):
             assert "](https://" in line, f"Link must be an absolute HTTPS URL: {line}"
-

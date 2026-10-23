@@ -686,9 +686,9 @@ def verify_replay(bundle: Path, target: Path) -> int:
     print(f"nfclaw replay: execution environment {result['status']} "
           f"({len(replay.get('processes') or {})} processes, {len(replay.get('images') or {})} images, "
           f"{len(replay.get('remote_inputs') or {})} remote inputs compared with the recording)")
-    for kind in ("mismatches", "unverified", "notes"):
+    for kind, label in (("mismatches", "mismatch"), ("unverified", "unverified"), ("notes", "note")):
         for line in result[kind]:
-            print(f"nfclaw replay: {kind[:-1] if kind != 'unverified' else 'unverified'}: {line}")
+            print(f"nfclaw replay: {label}: {line}")
     for issue in replay.get("issues") or []:
         print(f"nfclaw replay: note: {issue}")
     return 3 if result["status"] == "differs" else 0

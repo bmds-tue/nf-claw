@@ -8,15 +8,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (budget, dependency_stability, discovery, engine_version, execution, fastqrepair_compat, inputs, nextflow_command,
-                    input_safety, outputs, parameters, path_roles, plugin_compat, preflight, provenance,
-                    reproducibility, resources, resume_safety, runlog, samplesheet, sheetgen,
-                    submodule, versions)
-from runner import container_watch, environment_record, institutional
+from runner import (budget, container_watch, dependency_stability, discovery, engine_version,
+                    environment_record, execution, fastqrepair_compat, input_safety, inputs,
+                    institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
+                    preflight, provenance, reproducibility, resources, resume_safety, runlog,
+                    samplesheet, sheetgen, submodule, versions)
 from runner import schema as schema_mod
-from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
+from runner.replay_guard import _capture_input_inventory, pipeline_head, stub_caveat
 from runner.submodule import SubmoduleStatus
 
 
@@ -49,7 +49,7 @@ def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str
 
 
 def _input_file_digests(inventory: dict[str, dict[str, str]],
-                            known: dict[str, str] | None) -> dict[str, str]:
+                        known: dict[str, str] | None) -> dict[str, str]:
     """SHA-256 of every local input file (from `known` when already hashed)."""
     digests = {}
     physical_digests = {}
@@ -66,7 +66,7 @@ def _input_file_digests(inventory: dict[str, dict[str, str]],
 
 
 def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
-                              current_digests: dict[str, str]) -> str | None:
+                          current_digests: dict[str, str]) -> str | None:
     """Guard resume against metadata-preserving input changes, including directory members.
 
     Ordinary file and directory cache keys omit file content. A changed local input's bytes
@@ -77,7 +77,7 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
     after a sample was removed would leave its earlier publications beside the new results.
     """
     current_nodes = _directory_nodes(current)
-    previous_state = runlog.read_state(outdir / "provenance/logs/run.log")
+    previous_state = runlog.read_state(outdir / "provenance" / "logs" / runlog.RUN_LOG_NAME)
     if previous_state.outcome in {dependency_stability.FAILED_OUTCOME,
                                   dependency_stability.FAILED_EXECUTION_OUTCOME}:
         return ("--resume starts a fresh Nextflow cache session because local dependencies changed "
@@ -86,7 +86,7 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                 "will be preserved in a sibling archive.")
     try:
         previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
-        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text())
+        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text(encoding="utf-8"))
         if (not isinstance(manifest, dict)
                 or type(manifest.get("dependency_inventory_version")) is not int
                 or manifest["dependency_inventory_version"] != 1
@@ -149,7 +149,7 @@ class RunResult:
     command: str
     outdir: Path
     checked_only: bool
-    outputs_report: "outputs.OutputsReport | None"
+    outputs_report: outputs.OutputsReport | None
     warnings: list[str] = field(default_factory=list)
     log_path: Path | None = None            # the run log; None for --check, which launches nothing
     # The NXF_* overlay `command` runs under (--nxf-ver, --nxf-env): part of the command as shown.
@@ -203,7 +203,7 @@ def _check_samplesheet_snapshots(expected: dict, current=None) -> None:
 
 
 @budget.bounded
-def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
+def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[str] | None,
                  outdir: Path, profile: str, params_file: Path | None,
                  cli_overrides: dict, resume: bool, demo: bool,
                  check_only: bool, write_provenance: bool,
@@ -212,7 +212,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
                  nxf_env: dict[str, str] | None = None,
                  allow_spaces: bool = False,
                  configs: tuple[str, ...] | list[str] = (),
-                 limits: "resources.ResourceLimits | None" = None,
+                 limits: resources.ResourceLimits | None = None,
                  on_warning: Callable[[str], None] | None = None,
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
@@ -585,7 +585,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: "Path | str | None",
 
     with output_writer(outdir, check_only=check_only):
         # A competing writer may have completed between validation and lock acquisition.
-        if issue := preflight._outdir_issue(outdir, resume=resume, check_only=check_only):
+        if issue := preflight.outdir_issue(outdir, resume=resume, check_only=check_only):
             raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",
                               details={"issues": [issue]})
         # Capture the local dependency content the launch sees, before a long analysis can change it.

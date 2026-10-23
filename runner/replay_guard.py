@@ -5,8 +5,8 @@ whatever version of nfclaw happens to be installed later.
 """
 from __future__ import annotations
 
-import glob
 import errno
+import glob
 import hashlib
 import json
 import math
@@ -22,6 +22,7 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 
 
@@ -44,7 +45,8 @@ def stub_caveat(profiles: list[str]) -> str:
 
 def _recorded_stub_profiles(original: str) -> list[str]:
     try:
-        manifest = json.loads((Path(original) / "provenance" / "run_manifest.json").read_text())
+        manifest = json.loads((Path(original) / "provenance" / "run_manifest.json")
+                              .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     names = manifest.get("stub_profiles") if isinstance(manifest, dict) else None
@@ -440,7 +442,7 @@ def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | Non
                 target.parent.mkdir(parents=True, exist_ok=True)
                 output = open(target, "xb")
             try:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                for chunk in iter(partial(stream.read, 1024 * 1024), b""):
                     digest.update(chunk)
                     if output is not None:
                         output.write(chunk)

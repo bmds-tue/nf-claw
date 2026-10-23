@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from runner.errors import ErrorCode, NfclawError
+from runner.replay_guard import MissingInputSource, inspect_input_paths
 from runner.schema import PATH_FORMATS, iter_param_groups, read_param_schema
 
 DEFAULT_SAMPLESHEET_SCHEMA = "assets/schema_input.json"
@@ -170,7 +172,6 @@ def local_name_issues(value: str, fmt: str, *, resolve_parent: bool = False,
     """
     if value.strip().lower().startswith("file:"):
         return [_FILE_URI_ISSUE]
-    from runner.replay_guard import MissingInputSource, inspect_input_paths
 
     def safe_name(name: str, *, pattern=False) -> bool:
         extra = "._-+@%=,:~" + ("*?[]{}" if pattern else "")
@@ -331,7 +332,6 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
         return ResolvedInput(raw, None, None)
     text = str(raw)
     if text.strip().lower().startswith("file:"):
-        from runner.errors import ErrorCode, NfclawError
         raise NfclawError(ErrorCode.PARAMS_INVALID, _FILE_URI_ISSUE)
     if not text.strip():
         return ResolvedInput(text, None, None)           # "not set": never the caller's directory
@@ -341,7 +341,6 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
         fmt = next((part["format"] for part in parts if part.get("format") in PATH_FORMATS),
                    "file-path")
         if issues := local_name_issues(text, fmt):
-            from runner.errors import ErrorCode, NfclawError
             raise NfclawError(ErrorCode.PARAMS_INVALID, "Input filename failed validation.",
                               details={"issues": issues})
         return ResolvedInput(text, None, None)
@@ -359,13 +358,11 @@ def resolve(raw: Any, repo: Path, *, param_name: str = "input") -> ResolvedInput
     if not (isinstance(raw, Path) or path_like or Path(text).expanduser().exists()):
         return ResolvedInput(text, None, None)
     if "\x00" in text:
-        from runner.errors import ErrorCode, NfclawError
         raise NfclawError(ErrorCode.PARAMS_INVALID, "Local input path contains a NUL character.")
     # Parent resolution cannot interpret a wildcard followed by '..': refuse before it
     # can silently remove the selection pattern, even when the schema leaves format implicit.
     if any(part == ".." and any(glob.has_magic(p) or "{" in p for p in Path(text).parts[:index])
            for index, part in enumerate(Path(text).parts)):
-        from runner.errors import ErrorCode, NfclawError
         raise NfclawError(ErrorCode.PARAMS_INVALID,
                           "Input pattern traverses '..' after a wildcard.",
                           fix="Supply an explicit absolute parent directory for the input pattern.")

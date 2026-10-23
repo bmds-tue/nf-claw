@@ -22,11 +22,6 @@ def _repo_root() -> Path:
     return root
 
 
-def _parse_nxf_env(items: list[str]) -> dict[str, str]:
-    """Repeatable `--nxf-env KEY=VALUE` into a dict of `NXF_*` variables (see resources)."""
-    return resources.parse_nxf_env(items)
-
-
 def _positive_int(raw: str) -> int:
     value = int(raw)
     if value <= 0:
@@ -479,9 +474,6 @@ def _main(argv: list[str] | None = None) -> int:
                                      outcome=outcome, error=error)
 
         try:
-            # `kill` (SIGTERM) or a closing terminal (SIGHUP) stop the run the way Ctrl-C does —
-            # Nextflow shut down, the run log closed with the outcome — instead of killing nfclaw on
-            # the spot and leaving Nextflow running orphaned.
             if not args.input:
                 raw_input = None
             elif len(args.input) == 1:
@@ -489,6 +481,9 @@ def _main(argv: list[str] | None = None) -> int:
             else:
                 raw_input = list(args.input)
             sheet_set = sheetgen.parse_assignments(args.sheet_set)
+            # `kill` (SIGTERM) or a closing terminal (SIGHUP) stop the run the way Ctrl-C does —
+            # Nextflow shut down, the run log closed with the outcome — instead of killing nfclaw on
+            # the spot and leaving Nextflow running orphaned.
             with execution.stop_on_signals():
                 res = orchestration.run_pipeline(
                     args.name, repo_root=root,
@@ -500,7 +495,7 @@ def _main(argv: list[str] | None = None) -> int:
                     resume=args.resume, demo=args.demo, check_only=args.check,
                     write_provenance=not args.no_provenance, timeout_seconds=args.timeout,
                     pipeline_version=args.pipeline_version,
-                    nxf_ver=args.nxf_ver, nxf_env=_parse_nxf_env(args.nxf_env),
+                    nxf_ver=args.nxf_ver, nxf_env=resources.parse_nxf_env(args.nxf_env),
                     allow_spaces=args.allow_spaces, configs=args.config,
                     limits=resources.parse(args.limit_cpus, args.limit_memory, args.limit_time),
                     on_warning=warn, sheet_set=sheet_set)

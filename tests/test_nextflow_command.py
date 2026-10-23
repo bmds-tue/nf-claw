@@ -1,19 +1,24 @@
+import subprocess
+
 from runner import nextflow_command as nc
+from runner.nextflow_command import may_set_params
 
 
 def test_displayed_environment_names_cannot_become_shell_instructions():
-    import subprocess
     line = nc.shell_line("echo COMMAND_RAN", {"NXF_X; printf ENV_NAME_INJECTION;#": "value"})
     result = subprocess.run(["bash", "-c", line], capture_output=True, text=True)
     assert "ENV_NAME_INJECTION" not in result.stdout
     assert "COMMAND_RAN" not in result.stdout
     assert result.returncode != 0
 
+
 def test_compose_profile_orders_test_first_modifiers_last():
     assert nc.compose_profile("docker", demo=True, modifiers=("arm64",)) == "test,docker,arm64"
 
+
 def test_compose_profile_dedups():
     assert nc.compose_profile("docker,docker") == "docker"
+
 
 def test_build_command_shape(tmp_path):
     up = tmp_path / "upstream"
@@ -48,7 +53,6 @@ def test_command_never_carries_a_positional_argument(tmp_path):
 
 
 def test_only_engine_profiles_are_known_not_to_set_params():
-    from runner.nextflow_command import may_set_params
     assert not may_set_params("docker")
     assert not may_set_params("singularity, arm64,debug")
     assert may_set_params("test,docker")

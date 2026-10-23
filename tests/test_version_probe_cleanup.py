@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from runner import engine_version, provenance
+from runner import chain, engine_version, provenance
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])
@@ -91,7 +91,6 @@ def test_stopped_version_probe_cleans_up_download_children(tmp_path, monkeypatch
 
 def test_timed_out_chain_config_probe_stops_children_before_scratch_cleanup(
         tmp_path, monkeypatch, library):
-    from runner import chain
     root = library("mini_up")
     spec = chain.parse_spec({"stages": [{"pipeline": "mini_up"}]})
     planned = chain.plan(spec, repo_root=root)

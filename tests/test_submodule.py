@@ -1,4 +1,11 @@
+import os
+import subprocess
+import threading
+
+import pytest
+
 from runner import submodule
+from runner.errors import ErrorCode, NfclawError
 
 
 def test_uninitialized_when_empty(tmp_path):
@@ -22,8 +29,6 @@ def test_complete_when_required_files_present(tmp_path):
 def test_ensure_initialized_serializes_parallel_init(tmp_path, monkeypatch):
     # Several processes/threads initialising the same submodule at once must not race on
     # .git/config: the lock + re-check means `git submodule update` runs exactly once.
-    import threading
-    import subprocess
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)                                        # exists but empty → not initialised
     calls = []
@@ -117,10 +122,6 @@ def test_incomplete_when_files_missing(tmp_path):
 
 
 def test_init_failure_is_reported_as_structured_nfclaw_error(tmp_path, monkeypatch):
-    import subprocess
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
-
     up = tmp_path / "pipelines" / "mini" / "upstream"
     up.mkdir(parents=True)
 
@@ -139,7 +140,6 @@ def test_init_failure_is_reported_as_structured_nfclaw_error(tmp_path, monkeypat
 
 
 def _git_repo(path):
-    import subprocess
     subprocess.run(["git", "init", "-q", str(path)], check=True)
     return path
 
@@ -153,8 +153,6 @@ def test_init_lock_lives_in_the_repositorys_git_dir(tmp_path):
 
 
 def test_unusable_lock_file_is_a_clean_error_not_a_traceback(tmp_path):
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     repo = _git_repo(tmp_path / "repo")
     (repo / ".git" / "nfclaw-submodule.lock").mkdir()           # cannot be opened as a lock file
     with pytest.raises(NfclawError) as exc:
@@ -166,10 +164,6 @@ def test_unusable_lock_file_is_a_clean_error_not_a_traceback(tmp_path):
 
 def test_lock_never_follows_a_planted_symlink(tmp_path):
     # Opening the lock with "w" followed a symlink and truncated whatever it pointed at.
-    import os
-
-    import pytest
-    from runner.errors import NfclawError
     repo = _git_repo(tmp_path / "repo")
     victim = tmp_path / "victim.txt"
     victim.write_text("precious")
@@ -181,7 +175,6 @@ def test_lock_never_follows_a_planted_symlink(tmp_path):
 
 
 def _committed_repo(path):
-    import subprocess
     path.mkdir(parents=True, exist_ok=True)
     for args in (["init", "-q"], ["-c", "user.email=t@t", "-c", "user.name=t",
                                   "commit", "-q", "--allow-empty", "-m", "init"]):

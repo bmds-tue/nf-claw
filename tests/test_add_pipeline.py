@@ -1,6 +1,7 @@
 import pytest
 
 from librarian import add_pipeline
+from librarian.add_pipeline import Source
 
 
 def test_read_sources_tsv(tmp_path):
@@ -32,7 +33,6 @@ def test_pipeline_name_accepts_safe_slugs(name):
 
 
 def test_gitmodules_text():
-    from librarian.add_pipeline import Source
     text = add_pipeline.gitmodules_text([Source("sarek", "https://x/sarek.git", "latest-release")])
     assert 'path = pipelines/sarek/upstream' in text
     assert 'url = https://x/sarek.git' in text

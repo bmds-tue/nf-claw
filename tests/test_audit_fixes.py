@@ -1,10 +1,12 @@
-"""Regression tests for the exhaustive audit (F6-F13) and the schema-surfacing pass.
+"""Regression tests for the library's maintenance gates and generated docs, and for the
+schema-surfacing pass.
 
 The surfacing pass guarantees every fact the loader captures is rendered downstream:
 `hidden`, column `pattern`, the path-format marker and the schema `title`. It also makes
 `Column.fmt` symmetric with `Param.fmt` (both carry file-path/directory-path), so a
 samplesheet directory column is no longer silently flattened to a plain string.
 """
+import inspect
 import json
 import os
 import re
@@ -14,8 +16,10 @@ from pathlib import Path
 
 import pytest
 
-from librarian import check_drift, write_catalog, write_skill
+from librarian import check_drift, update_pipelines, write_catalog, write_skill
+from runner import inputs, preflight, schema
 from runner.schema import Column, InputSchema, Param, ParamSchema
+from runner.submodule import SubmoduleStatus
 
 FIX = Path(__file__).parent / "fixtures"
 REPO = Path(__file__).resolve().parents[1]
@@ -138,8 +142,6 @@ def test_every_pipeline_is_registered_in_sources_tsv():
     # matter which mechanism breaks it next: pipelines/, .gitmodules and sources.tsv describe one
     # and the same set of pipelines. (check_drift enforces this too, but it only runs in the
     # workflows a bot merge does not trigger — this runs on every PR.)
-    import re
-
     sources = (REPO / "sources.tsv").read_text(encoding="utf-8")
     registered = {line.split("\t")[0] for line in sources.splitlines()
                   if line.strip() and not line.startswith("#")}
@@ -149,9 +151,8 @@ def test_every_pipeline_is_registered_in_sources_tsv():
     assert registered - submodules == set(), "sources.tsv rows with no pipeline"
 
 
-# --- F10 (revised): skill.md is deterministic — ONLY schema-required params + a group map.
-#     The earlier heuristic (required-or-no-default, schema order, cap 20) was removed: for
-#     scientific use the agent must not rely on a guessed "importance" subset. ---
+# --- skill.md is deterministic: ONLY schema-required params + a group map. For scientific use
+#     an agent must not rely on a guessed "importance" subset of the parameters. ---
 def test_required_params_lists_only_required_in_schema_order():
     ps = ParamSchema(title="t", description="d", params={
         "input": Param("input", "string", None, None, "ss", None, True, "io"),
@@ -191,7 +192,7 @@ def test_param_groups_maps_every_group_with_counts():
     assert "include any parameter already listed above" in out
 
 
-# --- F6: catalog.md escapes pipes in the description cell ---
+# --- catalog.md escapes pipes in the description cell ---
 def test_catalog_md_escapes_pipes(tmp_path):
     d = tmp_path / "pX"
     (d / "upstream").mkdir(parents=True)
@@ -206,7 +207,7 @@ def test_catalog_md_escapes_pipes(tmp_path):
     assert row.count("|") - row.count("\\|") == 6
 
 
-# --- F7: the drift gate now covers catalog.{md,json} ---
+# --- the drift gate covers catalog.{md,json} ---
 def test_check_drift_detects_stale_catalog(tmp_path):
     repo = tmp_path
     pdir = repo / "pipelines"
@@ -221,7 +222,7 @@ def test_check_drift_detects_stale_catalog(tmp_path):
     assert not any("pY/skill.md" in d for d in drift)        # skill.md itself is in sync
 
 
-# --- F11: unnamed-column input schema (e.g. fetchngs id list) renders cleanly ---
+# --- an unnamed-column input schema (e.g. fetchngs id list) renders cleanly ---
 def test_inputs_section_handles_unnamed_single_column():
     insch = InputSchema(columns=(Column("", "string", False, "^SRR", None),))
     out = write_skill._inputs_section(insch)
@@ -238,9 +239,8 @@ def test_inputs_section_named_columns_still_render_table():
     assert "| `sample` |" in out and "| `fastq_1` |" in out
 
 
-# --- F12: update_pipelines honours the sources.tsv policy column ---
+# --- update_pipelines honours the sources.tsv policy column ---
 def test_update_pipelines_respects_policy(tmp_path, monkeypatch):
-    from librarian import update_pipelines
     src = tmp_path / "sources.tsv"
     src.write_text("a\thttps://x/a.git\tlatest-release\nb\thttps://x/b.git\tpinned\n")
     bumped: list[str] = []
@@ -250,7 +250,7 @@ def test_update_pipelines_respects_policy(tmp_path, monkeypatch):
     assert bumped == ["a"]   # only the latest-release pipeline is bumped; pinned 'b' is skipped
 
 
-# --- F13: samplesheet inputs are schema-faithful — allowed values shown, NO fabricated values ---
+# --- samplesheet inputs are schema-faithful — allowed values shown, NO fabricated values ---
 def test_inputs_section_shows_enum_and_no_fabricated_values():
     insch = InputSchema(columns=(
         Column("sample", "string", True, None, None),
@@ -296,7 +296,6 @@ def test_user_facing_commands_do_not_assume_bare_python():
 
 
 def test_load_input_schema_captures_column_enum(tmp_path):
-    from runner import schema
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {"status": {"type": "integer", "enum": [0, 1]}}, '
@@ -320,7 +319,6 @@ def test_type_with_fmt_marks_only_path_formats():
 
 
 def test_column_fmt_is_symmetric_with_param_and_drives_is_path(tmp_path):
-    from runner import schema
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {'
@@ -347,7 +345,6 @@ def test_inputs_section_surfaces_constraints_and_directory_path():
 
 
 def test_load_param_schema_captures_hidden(tmp_path):
-    from runner import schema
     (tmp_path / "nextflow_schema.json").write_text(
         '{"title": "t", "definitions": {"g": {"properties": {'
         '"email": {"type": "string", "hidden": true}, '
@@ -358,7 +355,6 @@ def test_load_param_schema_captures_hidden(tmp_path):
 
 
 def test_reference_surfaces_hidden_fmt_and_title():
-    from runner.submodule import SubmoduleStatus
     st = SubmoduleStatus(name="pZ", path=Path("/x"), initialized=True, complete=True,
                          version="1.0.0", commit="abc1234", missing_files=())
     ps = ParamSchema(title="nf-core/pZ parameters", description="d", params={
@@ -422,7 +418,6 @@ def test_run_invocation_shows_required_without_default_only():
 
 def test_reference_renders_boolean_default_as_json_literal():
     # JSON booleans must render as true/false (schema-faithful), never Python True/False.
-    from runner.submodule import SubmoduleStatus
     st = SubmoduleStatus(name="p", path=Path("/x"), initialized=True, complete=True,
                          version="1.0.0", commit="abc", missing_files=())
     ps = ParamSchema(title="t", description="d", params={
@@ -460,7 +455,6 @@ def test_constraints_minimum_zero_is_rendered():
 
 
 def test_load_param_schema_captures_value_constraints(tmp_path):
-    from runner import schema
     (tmp_path / "nextflow_schema.json").write_text(
         '{"title": "t", "definitions": {"g": {"properties": {'
         '"reads": {"type": "string", "pattern": "^\\\\S+\\\\.csv$"}, '
@@ -475,7 +469,6 @@ def test_load_param_schema_captures_value_constraints(tmp_path):
 
 
 def test_load_input_schema_captures_column_constraints(tmp_path):
-    from runner import schema
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {'
@@ -487,7 +480,6 @@ def test_load_input_schema_captures_column_constraints(tmp_path):
 
 
 def test_reference_has_constraints_column_with_real_pattern():
-    from runner.submodule import SubmoduleStatus
     st = SubmoduleStatus(name="pZ", path=Path("/x"), initialized=True, complete=True,
                          version="1.0.0", commit="abc1234", missing_files=())
     ps = ParamSchema(title="t", description="d", params={
@@ -503,10 +495,10 @@ def test_reference_has_constraints_column_with_real_pattern():
     assert "≥ 1" in n_row
 
 
-# --- Run-audit follow-up: two gaps were verified against the pinned releases when running
-#     pipelines — detaxizer's high-memory BBMAP_BBDUK step (80 GB) and circdna's schema-required
-#     run parameters. The symptom→fix map must document both, the run command must not be
-#     mistaken for a preview, and each documented fact must agree with its source of truth. ---
+# --- Two gaps verified against the pinned releases when running pipelines — detaxizer's
+#     high-memory BBMAP_BBDUK step (80 GB) and circdna's schema-required run parameters. The
+#     symptom→fix map must document both, the run command must not be mistaken for a preview,
+#     and each documented fact must agree with its source of truth. ---
 KNOWN_ISSUES = (REPO / "docs" / "known-issues.md").read_text(encoding="utf-8")
 
 
@@ -545,13 +537,12 @@ def test_circdna_required_params_match_committed_reference():
     assert required("--circle-identifier") == "yes"
 
 
-# --- Run-audit batch 2: input-schema faithfulness. Two generator gaps surfaced when running
+# --- Input-schema faithfulness. Two generator gaps surfaced when running
 #     pipelines: (a) a samplesheet's mutually-exclusive column groups (items.oneOf — bam/cram,
 #     ampliseq legacy/standardized, drop's RNA inputs) were flattened into one table with the
 #     choice hidden; (b) a parameter-driven pipeline that ships schema_input.json but declares no
 #     `input` param (drugresponseeval) was told to pass `--input`, which the runner rejects. ---
 def test_load_input_schema_captures_oneof_groups(tmp_path):
-    from runner import schema
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {"sample": {"type": "string"}, '
@@ -563,7 +554,6 @@ def test_load_input_schema_captures_oneof_groups(tmp_path):
 
 
 def test_load_input_schema_oneof_empty_when_absent(tmp_path):
-    from runner import schema
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {"sample": {"type": "string"}}, "required": ["sample"]}}')
@@ -650,7 +640,6 @@ def test_render_skips_input_when_pipeline_has_no_input_param(tmp_path):
     # A parameter-driven pipeline (e.g. drugresponseeval) ships assets/schema_input.json but
     # declares no `input` param. The skill must NOT tell the agent to pass --input, and must show
     # the schema-required parameters instead.
-    from runner.submodule import SubmoduleStatus
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {"col": {"type": "string"}}, "required": ["col"]}}')
@@ -668,7 +657,6 @@ def test_render_skips_input_when_pipeline_has_no_input_param(tmp_path):
 
 
 def test_render_shows_input_when_pipeline_has_input_param(tmp_path):
-    from runner.submodule import SubmoduleStatus
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {"sample": {"type": "string"}}, "required": ["sample"]}}')
@@ -708,8 +696,6 @@ def test_known_issues_documents_coproid_genome_sheet_and_required_dbs():
 
 
 def _assert_input_choices_documented(name, tree, skill):
-    from runner import inputs
-
     # Read the selected release's raw schema independently of the column-group loader.
     # A release may add or remove groups (ampliseq 3.0.0 removed its legacy input format).
     ref = inputs.samplesheet_schema(tree)
@@ -796,7 +782,6 @@ def test_drugresponseeval_skill_has_no_input_flag():
 def test_coproid_genome_sheet_oneof_matches_pinned_upstream():
     # Source-of-truth check (skips without the submodule): the documented igenome-xor-fasta choice
     # is the real schema_genomes.json oneOf.
-    import json
     sg = REPO / "pipelines" / "coproid" / "upstream" / "assets" / "schema_genomes.json"
     if not sg.exists():
         pytest.skip("coproid submodule not initialised")
@@ -805,7 +790,7 @@ def test_coproid_genome_sheet_oneof_matches_pinned_upstream():
     assert ("igenome",) in groups and ("fasta",) in groups
 
 
-# --- Run-audit batch 3: demo-run failures. Three verified additions to the symptom→fix map —
+# --- Demo-run failures: three verified additions to the symptom→fix map —
 #     marsseq (NF 26 parser → --nxf-ver 25.10.2), lsmquant (declares !>=25.10.4 → --nxf-ver
 #     25.10.4) and metapep (demo's DOWNLOAD_PROTEINS fetches from NCBI Entrez via a secret). Each
 #     is checked against the doc and the pinned upstream (source-of-truth tests skip without it). ---
@@ -847,7 +832,7 @@ def test_lsmquant_requires_newer_engine_in_pinned_schema():
     assert "!>=25.10.4" in cfg.read_text(encoding="utf-8")
 
 
-# --- Run-audit batch 4: setup/flow fixes. (1) The `nfclaw` console script fails with
+# --- Setup and flow. (1) The `nfclaw` console script fails with
 #     ModuleNotFoundError when the editable install can't be found (a space in the install path
 #     breaks site's path hook, or a wrong-Python install) — documented with the `python -m runner`
 #     fallback. (2) `--check` must not be blocked by a non-empty outdir (a real-run-only guard). ---
@@ -860,9 +845,6 @@ def test_known_issues_documents_module_not_found_and_python_m_fallback():
 def test_preflight_check_only_signature_skips_empty_outdir_guard(tmp_path, monkeypatch):
     # The guard is threaded through check_only, not hard-coded, so --check can validate over an
     # existing results dir. (Behaviour is covered end-to-end in tests/test_orchestration.py.)
-    import inspect
-    from runner import preflight
-    from runner.submodule import SubmoduleStatus
     assert "check_only" in inspect.signature(preflight.check_environment).parameters
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)
     out = tmp_path / "out"

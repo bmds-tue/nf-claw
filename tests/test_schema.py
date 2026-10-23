@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from runner import schema
@@ -28,7 +29,6 @@ def test_input_schema_columns():
 
 
 def test_input_schema_captures_dependent_required_rules(tmp_path):
-    import json
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(json.dumps({
         "items": {
@@ -58,7 +58,6 @@ def test_no_input_schema_returns_none():
 
 
 def test_anyof_type_unioned(tmp_path):
-    import json
     s = {"definitions": {"g": {"properties": {
         "lane": {"anyOf": [{"type": "integer"}, {"type": "string"}], "description": "lane"},
         "plain": {"type": "string"},
@@ -70,7 +69,6 @@ def test_anyof_type_unioned(tmp_path):
 
 
 def test_type_array_is_unioned(tmp_path):
-    import json
     s = {"definitions": {"g": {"properties": {
         "help": {"type": ["boolean", "string"], "description": "h"}}}}}
     (tmp_path / "nextflow_schema.json").write_text(json.dumps(s))
@@ -79,7 +77,6 @@ def test_type_array_is_unioned(tmp_path):
 
 
 def test_boolean_enum_default_are_json_literals(tmp_path):
-    import json
     s = {"definitions": {"g": {"properties": {
         "flag": {"type": "boolean", "enum": [False], "default": True}}}}}
     (tmp_path / "nextflow_schema.json").write_text(json.dumps(s))
@@ -118,7 +115,6 @@ def test_input_schema_captures_what_samplesheet_generation_needs(tmp_path):
     # Generating a samplesheet from data files needs more of the schema than validating one: the
     # patterns a column accepts inside anyOf/oneOf branches (atacseq declares fastq_2's FastQ pattern
     # only there), defaults, required column alternatives and nf-schema's uniqueEntries.
-    import json
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(json.dumps({
         "uniqueEntries": ["sample"],

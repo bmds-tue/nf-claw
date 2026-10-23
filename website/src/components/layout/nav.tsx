@@ -6,10 +6,11 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Github, Menu, Search, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { OPEN_PALETTE_EVENT } from "@/components/layout/command-palette";
+import { openPalette } from "@/components/layout/command-palette";
 import { ReadingProgress } from "@/components/layout/reading-progress";
 import { lockScroll } from "@/lib/scroll-lock";
 import { cn } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
 const LINKS = [
   { href: "/pipelines/", label: "Pipelines", section: "pipelines", route: "/pipelines" },
@@ -55,7 +56,6 @@ export function Nav({ repo }: { repo: string | null }) {
   const reduce = useReducedMotion();
   const section = useActiveSection(isHome);
 
-
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
     onScroll();
@@ -84,7 +84,6 @@ export function Nav({ repo }: { repo: string | null }) {
     isHome ? section === l.section : Boolean(l.route && pathname.startsWith(l.route));
 
   const githubUrl = repo ? `https://github.com/${repo}` : "https://github.com";
-  const openPalette = () => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -211,7 +210,7 @@ export function Nav({ repo }: { repo: string | null }) {
                 key={l.href}
                 variants={{
                   hidden: reduce ? {} : { opacity: 0, x: -12 },
-                  show: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
+                  show: { opacity: 1, x: 0, transition: { duration: 0.35, ease: EASE } },
                 }}
               >
                 <Link

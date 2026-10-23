@@ -2,28 +2,40 @@
 
 This exercises nfclaw's execution contract; it makes no claim about biological algorithms.
 """
+import base64
+import csv
+import ctypes
+import gzip
 import hashlib
+import http.server
 import json
 import os
+import re
 import shlex
 import shutil
+import signal
 import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 
 import pytest
 
-from runner import chain, orchestration, resources, runlog, verify
+from runner import (chain, fastqrepair_compat, orchestration, replay_guard, resources,
+                    resume_safety, runlog, verify)
+from runner.errors import ErrorCode, NfclawError
+from runner.inputs import local_name_issues
+from test_input_output_separation import run, tree
+
+pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
+                                reason="requires a real Nextflow engine")
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("kind,provenance", [("data", True), ("data", False), ("config", True),
                                            ("source", True), ("unchanged", True)])
 def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine, kind, provenance):
-    import time
-    from concurrent.futures import ThreadPoolExecutor
-    from runner.errors import ErrorCode, NfclawError
-    from runner import replay_guard
-
     root = tmp_path / "library"
     tree = root / "pipelines/fixture/upstream"
     tree.mkdir(parents=True)
@@ -159,12 +171,9 @@ workflow { OBSERVE(file(params.input)) }
         assert not (out / "provenance/run_manifest.json").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("source_kind", ["cli", "json", "yaml"])
 def test_exact_numeric_parameters_reach_native_tasks_and_standalone_replay(tmp_path, engine, source_kind):
-    from decimal import Decimal
-
     if source_kind == "yaml":
         pytest.importorskip("yaml")
     root = tmp_path / "library"
@@ -218,7 +227,6 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
         observe(raw)
         # Plain integer literals beyond signed-long range wrap in these engines. The decimal
         # notation above is a separate direct control; the wrapper must avoid this corruption.
-        import ctypes
         overflowing = tmp_path / "overflowing.json"
         overflowing.write_text(params_path.read_text().replace('"count":1e23',
                                                                '"count":100000000000000000000000'))
@@ -293,11 +301,9 @@ workflow {
     return root
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("mode", ["line_break", "symlink_traversal"])
 def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engine, mode):
-    from runner.errors import ErrorCode, NfclawError
     root = _path_route_fixture(tmp_path)
     payload = b"@R1\nACGT\n+\nIIII\n"
     if mode == "line_break":
@@ -344,7 +350,6 @@ def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engi
     assert source.read_bytes() == payload
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("parent_kind", ["escaped", "colon_separator"])
 def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renaming(tmp_path, engine, parent_kind):
@@ -381,11 +386,8 @@ def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renamin
     assert not (tmp_path / "refused/.nextflow").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
-    from runner.errors import NfclawError
-    from test_input_output_separation import run, tree
     root = tree(tmp_path)
     data = tmp_path / "data"
     (data / "sample_A").mkdir(parents=True)
@@ -413,7 +415,6 @@ def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
     assert data.stat().st_mtime_ns == before
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_staged_file_alias_names_survive_run_replay_and_reference_handoff(tmp_path, engine):
     root = tmp_path / "library"
@@ -486,7 +487,6 @@ workflow { OBSERVE(Channel.fromPath(params.input)) }
     assert problems and chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 def test_real_run_relocated_replay_and_mutated_input_guard(tmp_path, tmp_path_factory):
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
@@ -556,11 +556,9 @@ workflow {
     (chain_out / "01-fixture/result/digest.txt").write_bytes(b"changed upstream result\n")
     state, problems = chain.status(chain_out)
     assert problems and chain.status_exit_code(state, problems) == 1
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
-def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path):
-    import os
-    from runner import fastqrepair_compat
 
+
+def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path):
     fastqrepair_compat.write_config(tmp_path / "compat.config")
     (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\nparams.outdir = 'wrong'\n")
     report = (fastqrepair_compat._zero_report().replace("(not applicable)", "(0.0%)")
@@ -605,16 +603,9 @@ workflow {
     assert not (tmp_path / "wrong").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_remote_staging_names_match_preflight_without_decoding(engine, tmp_path):
     """A local HTTP oracle checks actual staged bytes/names, with no unsafe interpolation."""
-    import http.server
-    import os
-    import threading
-
-    from runner.inputs import local_name_issues
-
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
@@ -666,12 +657,8 @@ workflow {
     assert local_name_issues("s3://bucket/reads.txt?x=1&y=2", "file-path")
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_directory_children_become_individual_staged_inputs(engine, tmp_path):
-    import os
-    from runner.inputs import local_name_issues
-
     source = tmp_path / "safe_directory"
     source.mkdir()
     names = ["reads$(id).txt", "safe_é.txt"]
@@ -704,11 +691,8 @@ workflow { INVENTORY(channel.fromPath(params.input + '/*.txt')) }
     assert local_name_issues(str(source), "directory-path") == []
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_empty_directory_namespace_is_guarded_and_resume_is_current(engine, tmp_path):
-    import csv
-    import os
     root = tmp_path / "library"
     tree = root / "pipelines/fixture/upstream"
     tree.mkdir(parents=True)
@@ -793,14 +777,8 @@ workflow { NAMESPACE(file(params.input)) }
     assert counter.read_text().splitlines() == ["executed"] * 3
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_archiving_respects_the_real_engines_active_session_lock(engine, tmp_path):
-    import os
-    import signal
-    import time
-    from runner import resume_safety
-    from runner.errors import NfclawError
     tree = tmp_path / "pipeline"
     tree.mkdir()
     (tree / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
@@ -843,10 +821,8 @@ workflow { WAIT() }
             process.communicate(timeout=10)
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("source", ["external", "external_alias", "published", "bundle"])
 def test_real_chain_refuses_changed_reference_namespace_and_resumes_after_restoration(tmp_path, monkeypatch, source):
-    from runner.errors import ErrorCode, NfclawError
     root = tmp_path / "library"
     for name in ("producer", "consumer"):
         tree = root / "pipelines" / name / "upstream"
@@ -939,7 +915,6 @@ workflow { CONSUME(file(params.input)) }
     assert problems and chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_resume_recomputes_when_a_file_inside_an_input_directory_changes(engine, tmp_path):
     # Nextflow's cache key for a directory input is its path, size and mtime; editing a file in a
@@ -983,7 +958,7 @@ workflow { READ(file(params.input)) }
     assert (out / "value.txt").read_text() == "AAAA\n"
     stamp = data.stat(), (data / "nested").stat()
     value.write_text("BBBB\n")                                   # same size, same names
-    for path, before in zip((data, data / "nested"), stamp):
+    for path, before in zip((data, data / "nested"), stamp, strict=True):
         os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
     changed = run(True)
     assert "-resume" not in changed.command
@@ -994,13 +969,10 @@ workflow { READ(file(params.input)) }
     assert (out / "value.txt").read_text() == "BBBB\n"
 
 
-@pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
 @pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
 @pytest.mark.parametrize('write_provenance', [True, False])
 def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
         tmp_path, engine, write_provenance):
-    import shlex
-
     root = _path_route_fixture(tmp_path)
     counter = tmp_path / 'executions.txt'
     script = root / 'pipelines/fixture/upstream/main.nf'
@@ -1040,13 +1012,11 @@ def test_resume_recomputes_same_metadata_file_bytes_and_reuses_unchanged_inputs(
     assert (outdir / 'digest.txt').read_text().split()[0] == hashlib.sha256(modified).hexdigest()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_generated_samplesheet_runs_relocates_and_replays_as_recorded(engine, tmp_path):
     """--input names a directory of FastQ files: the generated sheet drives a real run, its moved
     bundle replays its own copy, files added later are not rescanned, and a changed read file is
     refused. The oracle digests are computed here, independently of the run."""
-    import gzip
     root = tmp_path / "library"
     upstream = root / "pipelines/sheetfixture/upstream"
     (upstream / "assets").mkdir(parents=True)
@@ -1128,10 +1098,8 @@ workflow {
     assert not (relocated.parent / "refused/B.txt").exists()
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_chain_refuses_success_when_a_real_consumer_hashes_different_producer_data(tmp_path, monkeypatch, engine):
-    from runner.errors import NfclawError
     root = tmp_path / "library"
     upstream = root / "pipelines/fixture/upstream"
     upstream.mkdir(parents=True)
@@ -1184,10 +1152,8 @@ workflow { DIGEST(Channel.fromPath(params.input)) }
     assert chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.skipif(shutil.which("nextflow") is None, reason="requires a real Nextflow engine")
 @pytest.mark.parametrize("engine", ["25.10.4"])
 def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(tmp_path, engine):
-    from runner import fastqrepair_compat
     sheet = tmp_path / "cohort.csv"
     sheet.write_text("sample,fastq_1,fastq_2\n" + "".join(
         f"S{index},/data/left.fastq,/data/right.fastq\n" for index in range(10000)))
@@ -1240,8 +1206,6 @@ workflow {
                               cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
                               capture_output=True, text=True, timeout=120)
     assert executed.returncode == 0, executed.stdout + executed.stderr
-    import base64
-    import re
     selections = []
     for wrapper in work.rglob(".command.run"):
         payloads = re.findall(r"--mate-orders ([A-Za-z0-9+/=]+)", wrapper.read_text())

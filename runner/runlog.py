@@ -24,11 +24,12 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from runner.errors import NfclawError
 
 from runner import nextflow_command
+from runner.errors import NfclawError
+from runner.locking import output_writer
 from runner.replay_guard import host_identity, quote_console
 
 RUN_LOG_NAME = "run.log"
@@ -74,7 +75,7 @@ _REPORT_START = re.compile(r"^ERROR (?:~|- \[[\w.@-]+\] )")
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def nextflow_log_path(launch_dir: Path, env_extra: dict[str, str] | None = None) -> Path:
@@ -330,7 +331,7 @@ class RunLog:
     def open(cls, logs_dir: Path, *, command: list[str], launch_dir: Path,
              nextflow_log: Path | None = None, notes: list[str] | tuple[str, ...] = (),
              env: dict[str, str] | None = None,
-             caveats: list[str] | tuple[str, ...] = ()) -> "RunLog":
+             caveats: list[str] | tuple[str, ...] = ()) -> RunLog:
         """Start the record of a launch: its header, and one line on the terminal saying where it
         is — before anything else prints, since a long run's own output soon buries it. `env` is
         the overlay the command runs under (NXF_VER, …); the header's command line carries it."""
@@ -446,7 +447,6 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
              *host_header(), f"    pid: {os.getpid()}",
              ERROR_MARK, error, f"==> nfclaw run finished {now()}: {outcome}"]
     try:
-        from runner.locking import output_writer
         # Validation precedes the main writer lock. A refused attempt must not append status
         # markers to a live writer's log; use that same lock around this separate append.
         with output_writer(log.parent.parent.parent):
@@ -460,6 +460,7 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
 
 # --- reading a run's state back (`nfclaw status`) -------------------------------------------------
 
+_CONTROL_PREFIX = b"==> nfclaw "                 # every status control line, and only those
 _STARTED = re.compile(r"^==> nfclaw (run|replay|chain) started (\S+)")
 _FINISHED = re.compile(r"^==> nfclaw (run|replay|chain) finished (\S+): (.*)$")
 _HEADER = re.compile(r"^    (command|launch dir|nextflow log|replay of|host|host id|pid|nextflow pid|"
@@ -554,15 +555,17 @@ def _physical_lines(data: bytes) -> list[str]:
 
 def read_state(log: Path) -> RunState:
     """The state of the last launch in `log`, deterministically: its last line if it has one,
-    otherwise whether the nfclaw that wrote it is still running. Reads the launch's header and the
-    tail of the file only, so a days-long run's log is cheap to check."""
+    otherwise whether the nfclaw that wrote it is still running. One pass finds where the last
+    launch starts; only that launch's header and the tail of the file are then parsed, so a
+    days-long run's log stays cheap to check."""
     if not log.is_file():
         return RunState(log, "missing")
     start = None
     offset = 0
     with log.open("rb") as fh:
         for raw in fh:
-            if _STARTED.match(raw[:64].decode("utf-8", errors="replace")):
+            if (raw.startswith(_CONTROL_PREFIX)
+                    and _STARTED.match(raw[:64].decode("utf-8", errors="replace"))):
                 start = offset
             offset += len(raw)
         if start is None:

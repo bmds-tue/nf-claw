@@ -61,8 +61,8 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
             ignored = False
         if not ignored:
             issues.append(f"--outdir must be outside the repo or a gitignored path (got {output_dir})")
-    if (outdir_issue := _outdir_issue(output_dir, resume=resume, check_only=check_only)):
-        issues.append(outdir_issue)
+    if issue := outdir_issue(output_dir, resume=resume, check_only=check_only):
+        issues.append(issue)
     if work_dir is not None and (work_issue := _work_dir_issue(work_dir)):
         issues.append(work_issue)
     issues += _space_issues(repo_root=repo_root, output_dir=output_dir,
@@ -70,7 +70,7 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
     return issues
 
 
-def _outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | None:
+def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | None:
     """Why `--outdir` cannot take this run, or None.
 
     Every probe here can meet a directory the caller may not search (`--outdir /root/x` as another

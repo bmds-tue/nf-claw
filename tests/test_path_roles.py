@@ -1,9 +1,9 @@
 """Only audited output directories avoid consumed-input inspection and snapshots."""
-from dataclasses import replace
 import hashlib
 import json
-from pathlib import Path
 import subprocess
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
 

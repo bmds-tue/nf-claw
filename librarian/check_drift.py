@@ -1,4 +1,5 @@
-# librarian/check_drift.py
+"""The drift gate: committed context (skill.md, reference.md, catalog, manifests) must match
+what the pinned pipeline trees generate."""
 from __future__ import annotations
 
 import argparse

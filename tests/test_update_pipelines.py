@@ -1,3 +1,7 @@
+import subprocess
+
+import pytest
+
 from librarian import update_pipelines as up
 
 
@@ -61,9 +65,6 @@ def test_report_distinguishes_a_bump_from_an_unchanged_pin(monkeypatch, tmp_path
 def test_bump_refuses_an_uninitialised_submodule(monkeypatch, tmp_path):
     # Run in an uninitialised submodule's directory, `git -C <it> fetch/checkout` acts on the nf-claw
     # repository itself; bump must stop before touching git there.
-    import subprocess
-
-    import pytest
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     (tmp_path / "pipelines" / "p" / "upstream").mkdir(parents=True)
     monkeypatch.setattr(up, "remote_tags", lambda url: ["1.0.0"])

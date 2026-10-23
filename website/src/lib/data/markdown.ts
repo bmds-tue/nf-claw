@@ -143,7 +143,7 @@ export function codeBlockUnder(md: string, heading: string): string | null {
   return block && block.code ? block.code : null;
 }
 
-/** Plain prose under a "## Heading" (collapsed whitespace). */
+/** The text under a "## Heading", without its code-fence marker lines. */
 export function proseUnder(md: string, heading: string): string {
   return sectionLines(md, heading)
     .filter((l) => !l.trim().startsWith("```"))

@@ -1,10 +1,11 @@
-import os as _os
-import socket as _socket
+import json
+import os
+import socket
 from pathlib import Path
 
 import pytest
 
-from runner import runlog
+from runner import cli, replay_guard, runlog
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nextflow_console"
 
@@ -23,7 +24,7 @@ def test_child_console_cannot_forge_status_controls(tmp_path, monkeypatch, paylo
         state = runlog.read_state(log.path)
         assert state.state == "running"
         assert state.kind == "run"
-        assert state.pid == _os.getpid()
+        assert state.pid == os.getpid()
         assert state.outcome is None
         assert payload.decode().strip() in state.console
     finally:
@@ -59,7 +60,7 @@ def test_multiline_header_value_cannot_forge_a_new_attempt(tmp_path):
     log.finish()
     state = runlog.read_state(log.path)
     assert state.kind == "run"
-    assert state.pid == _os.getpid()
+    assert state.pid == os.getpid()
 
 
 def test_relaunch_after_an_unterminated_console_line_keeps_its_own_header(tmp_path):
@@ -68,7 +69,7 @@ def test_relaunch_after_an_unterminated_console_line_keeps_its_own_header(tmp_pa
     log.outcome = "success"
     log.finish()
     state = runlog.read_state(log.path)
-    assert state.pid == _os.getpid()
+    assert state.pid == os.getpid()
     assert state.state == "success"
 
 
@@ -336,7 +337,7 @@ def test_last_paragraph_fallback_reaches_above_a_trailing_check_line():
 
 def _block(*, pid, host=None, body="", end=None, kind="run", nextflow_pid=None):
     if host is None:
-        host = _socket.gethostname()
+        host = socket.gethostname()
     lines = [f"==> nfclaw {kind} started 2026-10-06T10:00:00+00:00", "    command: nextflow run x",
              f"    host: {host}", f"    pid: {pid}"]
     if nextflow_pid is not None:
@@ -396,7 +397,7 @@ def test_a_run_whose_nfclaw_is_gone_stopped_without_an_outcome(tmp_path, named_p
 
 def test_a_reused_pid_is_not_mistaken_for_the_run(tmp_path):
     # After a restart the recorded pid can belong to an unrelated process: that is not the run.
-    st = runlog.read_state(_log(tmp_path, _block(pid=_os.getpid())))
+    st = runlog.read_state(_log(tmp_path, _block(pid=os.getpid())))
     assert st.state == "dead"
 
 
@@ -415,7 +416,6 @@ def test_a_dead_run_reports_a_nextflow_still_running(tmp_path, named_process):
 
 def test_dead_replay_reports_its_supervisor_without_claiming_its_pid_is_nextflow(
         tmp_path, named_process):
-    from runner import cli
     gone = named_process("commands.sh")
     gone.kill()
     gone.wait()
@@ -510,7 +510,7 @@ _RNASEQ_SKIPPED = (
     "strandedness check.\x1b[0m-\n")
 
 
-def test_completion_caveats_quote_what_a_successful_pipeline_left_out(tmp_path):
+def test_completion_caveats_quote_what_a_successful_pipeline_left_out():
     assert runlog.completion_caveats(_RNASEQ_SKIPPED) == [
         "[nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)",
         "[nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped since they failed "
@@ -541,8 +541,6 @@ def test_completion_caveats_count_ignored_task_failures_from_the_nextflow_log(tm
 
 
 def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
-    import json
-    from runner import replay_guard
     original = tmp_path / "orig"
     (original / "provenance").mkdir(parents=True)
     (original / "provenance/run_manifest.json").write_text(json.dumps({"stub_profiles": ["test"]}))

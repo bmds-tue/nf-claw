@@ -1,10 +1,12 @@
 """Independent regressions for result directories and scientific handoff identities."""
 import json
+import os
 
 import pytest
 
-from runner import chain, handoff, outputs, provenance, verify
+from runner import chain, cli, handoff, outputs, provenance, verify
 from runner.errors import NfclawError
+from runner.inputs import absolute_local_path
 from runner.submodule import SubmoduleStatus
 from test_handoff import _rule, _trees
 
@@ -171,7 +173,6 @@ def test_link_retargeting_with_identical_bytes_is_reported_separately(tmp_path):
 @pytest.mark.parametrize("strict", [False, True])
 def test_strict_cli_verification_fails_on_changed_link_identity(tmp_path, capsys, strict):
     """`--strict` promises identical bytes AND recorded link identities; the default does not."""
-    from runner import cli
     out = tmp_path / "out"
     out.mkdir()
     a, b = tmp_path / "a.txt", tmp_path / "b.txt"
@@ -226,7 +227,6 @@ def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(
         upstream_outdir=up, downstream_tree=down_tree, dest=tmp_path / "handoff")
     hand_path = tmp_path / "handoff.json"
     hand_path.write_text(json.dumps(hand.record))
-    from runner.inputs import absolute_local_path
     canonical = reference.resolve() if legacy_resolution else absolute_local_path(reference)
     record(down, inputs=[canonical], params={"fasta": str(canonical)})
     down_manifest = down / "provenance/run_manifest.json"
@@ -302,7 +302,6 @@ def test_external_file_alias_retargeting_is_refused_even_with_identical_data(lib
 
 
 def test_nonregular_external_reference_is_refused_without_opening_a_fifo(library, tmp_path):
-    import os
     _, down = _trees(library("mini_up", "mini"))
     source = tmp_path / "annotation.gtf"
     source.write_bytes(b"annotation")

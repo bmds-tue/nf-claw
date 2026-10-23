@@ -40,19 +40,22 @@ def pipeline_dirs(pipelines_dir: Path) -> list[Path]:
     return sorted(p for p in pipelines_dir.iterdir() if p.is_dir() and not p.name.startswith("."))
 
 
+def _pipeline(d: Path) -> Pipeline:
+    skill = d / "skill.md"
+    return Pipeline(name=d.name, path=d, upstream=d / "upstream", skill_md=skill,
+                    frontmatter=_parse_frontmatter(skill))
+
+
 def discover(pipelines_dir: Path) -> list[Pipeline]:
-    pls: list[Pipeline] = []
-    for d in pipeline_dirs(pipelines_dir):
-        skill = d / "skill.md"
-        pls.append(Pipeline(name=d.name, path=d, upstream=d / "upstream",
-                            skill_md=skill, frontmatter=_parse_frontmatter(skill)))
-    return pls
+    return [_pipeline(d) for d in pipeline_dirs(pipelines_dir)]
 
 
 def find(name: str, pipelines_dir: Path) -> Pipeline:
-    for p in discover(pipelines_dir):
-        if p.name == name:
-            return p
+    """The pipeline called `name` — matched against the directory listing, so a name can never
+    reach outside `pipelines/` — with only its own skill.md read."""
+    for d in pipeline_dirs(pipelines_dir):
+        if d.name == name:
+            return _pipeline(d)
     raise NfclawError(ErrorCode.PIPELINE_NOT_FOUND,
                       f"Pipeline '{name}' not found in {pipelines_dir}.",
                       fix="Run `nfclaw list` to see available pipelines.")

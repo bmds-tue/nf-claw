@@ -1,6 +1,7 @@
 """Filesystem and execution oracles for input data separated from execution writes."""
 import json
 import os
+import tempfile
 
 import pytest
 
@@ -49,8 +50,6 @@ def test_safe_engine_cache_permits_version_checks_without_changing_inputs(tmp_pa
 
 
 def test_relative_engine_cache_is_checked_from_the_execution_directory(tmp_path, monkeypatch):
-    import os
-
     root = tree(tmp_path)
     data = tmp_path / "data"
     data.mkdir()
@@ -346,7 +345,6 @@ def test_refusal_log_cannot_append_to_a_hardlinked_scientific_input(tmp_path):
 
 
 def test_check_staging_cannot_create_files_in_a_consumed_directory(tmp_path, monkeypatch):
-    import tempfile
     root = tree(tmp_path)
     data = tmp_path / "data"
     data.mkdir()
@@ -407,7 +405,7 @@ def test_chain_checks_its_record_directory_before_writing_it(tmp_path, monkeypat
     (source / "index.bin").write_bytes(b"fixed scientific input")
     spec = chain.parse_spec({"profile": "standard", "nxf_ver": "25.10.4", "stages": [
         {"pipeline": "fixture", "input": str(source)}]})
-    monkeypatch.setattr(chain.preflight, "_outdir_issue", lambda *_, **__: None)
+    monkeypatch.setattr(chain.preflight, "outdir_issue", lambda *_, **__: None)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **_: [])
     monkeypatch.setattr(chain, "_probe_config", lambda *_, **__: pytest.fail("engine probe before refusal"))
     before = source.stat().st_mtime_ns

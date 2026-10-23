@@ -1,11 +1,13 @@
 """Independent Git output is the oracle for source identity and tracked-file selection."""
 import hashlib
+import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
-from runner import replay_guard, submodule
+from runner import fastqrepair_compat, orchestration, provenance, replay_guard, submodule
 
 
 @pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\u0085', '\v', '\f', '\x1c', '\x1d', '\x1e', 'Å', '\n', '\r'])
@@ -34,9 +36,6 @@ def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separ
 @pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
 @pytest.mark.parametrize('separator', ['\u2028', '\u0085', '\v', '\f'])
 def test_native_git_revision_and_tracked_source_replay(tmp_path, engine, separator):
-    import json
-    from runner import orchestration, provenance
-
     root = tmp_path / ('library' + separator + 'part')
     repo = root / 'pipelines/fixture/upstream'
     repo.mkdir(parents=True)
@@ -112,9 +111,6 @@ workflow { DIGEST(file(params.input)) }
 
 
 def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_path):
-    from pathlib import Path
-    from runner import fastqrepair_compat, orchestration
-
     source = Path(__file__).resolve().parents[1] / 'pipelines/fastqrepair/upstream'
     if submodule._own_head(source) is None:
         pytest.skip('requires the pinned fastqrepair source clone')

@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from runner import budget
@@ -174,11 +174,9 @@ def resolve(name: str, pipelines_dir: Path) -> SubmoduleStatus:
     pinned = _committed_pin(pipelines_dir / name / "skill.md")
     if (pinned and st.commit and st.commit == pinned.get("commit")
             and _looks_like_commit_version(st.version, st.commit)):
-        return SubmoduleStatus(
-            name=st.name, path=st.path, initialized=st.initialized,
-            complete=st.complete, version=pinned["version"], commit=st.commit,
-            missing_files=st.missing_files,
-        )
+        # A shallow clone without its tag describes itself by commit; the committed docs name
+        # the release that commit is.
+        return replace(st, version=pinned["version"])
     return st
 
 

@@ -1,9 +1,14 @@
+import json
+import re
 import shutil
 from pathlib import Path
 
+import pytest
+
+import sheetgen_schemas as S
 from librarian import write_skill
-from runner import fastqrepair_compat, versions
-from runner.schema import Param, ParamSchema
+from runner import fastqrepair_compat, handoff, schema, submodule, versions
+from runner.schema import Column, InputSchema, Param, ParamSchema
 from runner.submodule import SubmoduleStatus
 
 FIX = Path(__file__).parent / "fixtures"
@@ -80,14 +85,18 @@ def test_skill_md_has_fixed_sections(tmp_path):
     assert "Do not edit by hand" in text
 
 
-def test_render_status_uses_status_path_and_version(tmp_path):
-    # render_status renders from an explicit status (any version's tree), reusing the same logic.
-    up = tmp_path / "anytree" / "upstream"
+def _mini_tree_at(up):
+    """The mini fixture laid out at an arbitrary tree (as a version cache is), at release 1.2.0."""
     up.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
         (up / f).write_text("x")
     shutil.copy(FIX / "mini" / "nextflow_schema.json", up / "nextflow_schema.json")
-    st = SubmoduleStatus("mini", up, True, True, "1.2.0", "deadbeef", ())
+    return SubmoduleStatus("mini", up, True, True, "1.2.0", "deadbeef", ())
+
+
+def test_render_status_uses_status_path_and_version(tmp_path):
+    # render_status renders from an explicit status (any version's tree), reusing the same logic.
+    st = _mini_tree_at(tmp_path / "anytree" / "upstream")
     skill, ref = write_skill.render_status(st)
     assert "version: 1.2.0" in skill and "commit: deadbeef" in skill
     assert "# mini" in skill and "mini" in ref
@@ -96,12 +105,7 @@ def test_render_status_uses_status_path_and_version(tmp_path):
 def test_versioned_render_threads_pipeline_version_into_commands(tmp_path):
     # A version-specific skill.md must tell the agent to run THAT version, and its raw
     # equivalent must point at the materialized version tree — not the pinned default.
-    up = tmp_path / "anytree" / "upstream"
-    up.mkdir(parents=True)
-    for f in ("main.nf", "nextflow.config"):
-        (up / f).write_text("x")
-    shutil.copy(FIX / "mini" / "nextflow_schema.json", up / "nextflow_schema.json")
-    st = SubmoduleStatus("mini", up, True, True, "1.2.0", "deadbeef", ())
+    st = _mini_tree_at(tmp_path / "anytree" / "upstream")
     versioned, _ = write_skill.render_status(st, pipeline_version="1.2.0")
     assert "--pipeline-version 1.2.0" in versioned
     assert "pipelines/mini/.versions/1.2.0/upstream" in versioned
@@ -125,12 +129,7 @@ def test_skill_surfaces_other_versions_for_discovery(tmp_path):
 
 def test_versioned_skill_omits_discovery_note(tmp_path):
     # A version-specific doc already explains the default in its Run-it comment; no extra nudge needed.
-    up = tmp_path / "anytree" / "upstream"
-    up.mkdir(parents=True)
-    for f in ("main.nf", "nextflow.config"):
-        (up / f).write_text("x")
-    shutil.copy(FIX / "mini" / "nextflow_schema.json", up / "nextflow_schema.json")
-    st = SubmoduleStatus("mini", up, True, True, "1.2.0", "deadbeef", ())
+    st = _mini_tree_at(tmp_path / "anytree" / "upstream")
     versioned, _ = write_skill.render_status(st, pipeline_version="1.2.0")
     assert "nfclaw versions" not in versioned
 
@@ -144,7 +143,6 @@ def test_deterministic_idempotent(tmp_path):
 
 
 def test_reference_covers_all_params(tmp_path):
-    from runner import schema
     pdir = _seed(tmp_path, "mini")
     _, ref = write_skill.generate("mini", pipelines_dir=pdir)
     ps = schema.load_param_schema(pdir / "mini" / "upstream")
@@ -163,7 +161,6 @@ def test_no_samplesheet_graceful(tmp_path):
 
 
 def test_input_summary_from_schema():
-    from runner.schema import Column, InputSchema
     assert write_skill._input_summary(None) == "parameters (no samplesheet)"
     cols = InputSchema(columns=(
         Column("sample", "string", True, None),
@@ -213,7 +210,7 @@ def test_skill_frontmatter_has_input_output(tmp_path):
     assert "input:" in fm and "output:" in fm
 
 
-def test_required_params_only(tmp_path):
+def test_required_params_only():
     # skill.md lists ONLY schema-required params (a fact) — no heuristic "importance" guess.
     ps = ParamSchema(title="t", description="d", params={
         "input": Param("input", "string", None, None, "samplesheet", None, True, "io"),
@@ -396,8 +393,6 @@ def test_mandatory_group_params_are_surfaced_even_though_they_have_defaults(tmp_
     # the group title. A param with a default is never in `required` (nf-schema cannot fail it), yet
     # the pipeline may still reject the default at runtime — nf-core/scrnaseq's `--protocol` aborts
     # the run on its own default for every aligner but cellranger. Reading only `required` hides it.
-    import json
-
     up = tmp_path / "mand" / "upstream"
     up.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
@@ -469,8 +464,6 @@ def test_no_engine_section_when_the_release_declares_nothing(tmp_path):
 
 
 def _seed_with_schema(tmp_path, name, schema):
-    import json
-
     up = tmp_path / name / "upstream"
     up.mkdir(parents=True)
     for f in ("main.nf", "nextflow.config"):
@@ -518,7 +511,6 @@ def test_no_reference_section_when_the_pipeline_has_no_genome_params(tmp_path):
     pdir = _seed(tmp_path, "mini")
     assert "## Reference genome" not in write_skill.generate(
         "mini", pipelines_dir=pdir)[0].read_text()
-
 
 
 # --- the reference-genome section names only flags and groups the schema actually has ---
@@ -678,7 +670,6 @@ def test_input_that_is_not_a_samplesheet_is_documented_from_its_parameter(tmp_pa
     # rangeland: --input is a directory or tarball of imagery, but the release still ships the
     # nf-core template schema_input.json (sample, fastq_1, fastq_2), which the skill presented as
     # the input — and the runner then rejected the real directory as "samplesheet not found".
-    import json
     pdir = _seed_with_schema(tmp_path, "imagery", {"definitions": {"input_output_options": {
         "required": ["input", "outdir"],
         "properties": {
@@ -712,7 +703,6 @@ def test_input_summary_names_an_input_without_a_samplesheet_schema():
 
 
 def test_cli_requires_a_pipeline_name_or_all():
-    import pytest
     with pytest.raises(SystemExit) as exc:
         write_skill.main([])                          # crashed with a TypeError
     assert exc.value.code == 2
@@ -736,8 +726,7 @@ _DEV_SHA = "f754e0a247b03f169782dbb5c688e055044a5988"
 def _dev_status(tmp_path, name="mini"):
     up = tmp_path / ".versions" / f"dev-{_DEV_SHA[:12]}" / "upstream"
     up.mkdir(parents=True)
-    for f in ("main.nf", "nextflow.config"):
-        (up / f).write_text("x")
+    (up / "main.nf").write_text("x")
     (up / "nextflow.config").write_text("manifest {\n  nextflowVersion = '!>=25.10.4'\n}\n")
     shutil.copy(FIX / name / "nextflow_schema.json", up / "nextflow_schema.json")
     (up / "docs").mkdir()
@@ -766,8 +755,6 @@ def test_dev_render_runs_and_links_the_exact_commit(tmp_path):
 def test_known_issues_link_resolves_from_where_each_skill_is_written(tmp_path):
     # The committed skill.md sits at pipelines/<name>/skill.md; a version's docs are written beside
     # its tree, at pipelines/<name>/.versions/<label>/skill.md — two directories deeper.
-    import re
-
     root = tmp_path / "repo"
     (root / "docs").mkdir(parents=True)
     (root / "docs" / "known-issues.md").write_text("# known issues\n")
@@ -815,7 +802,6 @@ def test_pinned_skill_points_agents_at_dev(tmp_path):
 
 
 def test_skill_lists_what_a_pipeline_feeds_and_is_fed_by(library):
-    from runner import handoff, submodule
     root = library("mini_up", "mini", rules={("mini_up", "mini"): {
         "description": "mini_up writes a mini sheet",
         "params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"]}}}})
@@ -840,15 +826,12 @@ def test_generate_reads_the_registry_next_to_the_pipelines(library):
 
 
 def _engine_tree(tmp_path, spec):
-    from runner.submodule import SubmoduleStatus
     (tmp_path / "nextflow.config").write_text(f"manifest {{ nextflowVersion = '{spec}' }}\n")
     return SubmoduleStatus(name="p", path=tmp_path, initialized=True, complete=True,
                            version="1.0.0", commit="c" * 40, missing_files=())
 
 
 def test_engine_pin_older_than_resource_limits_says_limit_flags_are_refused(tmp_path):
-    from runner.schema import Param, ParamSchema
-
     def param(name):
         return Param(name, "string", None, None, "", None, False, "g")
     ps = ParamSchema("p", "", {n: param(n) for n in ("max_cpus", "max_memory", "input")})
@@ -864,7 +847,6 @@ def test_engine_pin_with_resource_limits_adds_no_caveat(tmp_path):
 
 
 def _rendered(tmp_path, spec):
-    import sheetgen_schemas as S
     up = S.make_pipeline(tmp_path, spec)
     st = SubmoduleStatus("pipe", up, True, True, "1.0.0", "c" * 40, ())
     text, _ = write_skill.render_status(st)
@@ -874,7 +856,6 @@ def _rendered(tmp_path, spec):
 
 
 def test_inputs_say_what_generating_the_samplesheet_fills_and_needs(tmp_path):
-    import sheetgen_schemas as S
     inputs, paragraph = _rendered(tmp_path, S.RNASEQ)
     assert "`fastq_1`/`fastq_2` from FastQ files" in paragraph and "`sample` from file names" in paragraph
     assert "`--sheet-set COLUMN=VALUE`" in paragraph
@@ -886,7 +867,6 @@ def test_inputs_say_what_generating_the_samplesheet_fills_and_needs(tmp_path):
 
 
 def test_inputs_name_the_choice_or_the_reason_generation_needs(tmp_path):
-    import sheetgen_schemas as S
     _, mag = _rendered(tmp_path / "mag", S.MAG)
     assert "once you choose the read columns" in mag and "--sheet-set long_reads=" in mag
     _, airrflow = _rendered(tmp_path / "airrflow", S.AIRRFLOW)

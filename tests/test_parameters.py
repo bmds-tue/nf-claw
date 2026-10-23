@@ -1,9 +1,14 @@
 import json
+import math
+import pathlib
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 
-from runner import schema, parameters
+from runner import parameters, schema
+from runner.errors import ErrorCode, NfclawError
+from runner.schema import Param, ParamSchema
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -26,7 +31,6 @@ def test_validate_params_flags_value_outside_enum():
 
 
 def test_validate_params_boolean_enum_uses_json_literals(tmp_path):
-    import json
     (tmp_path / "nextflow_schema.json").write_text(json.dumps(
         {"definitions": {"g": {"properties": {"flag": {"type": "boolean", "enum": [False]}}}}}))
     ps = schema.load_param_schema(tmp_path)
@@ -83,8 +87,6 @@ def test_merge_resolve_and_write(tmp_path):
 def test_params_file_non_object_raises_clean_error(tmp_path):
     # A params file must be an object (param -> value). A top-level list/scalar is malformed and
     # must fail with a clear NfclawError, not a cryptic dict.update TypeError.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     for content in ("[1, 2, 3]", '"a string"', "42"):
         pf = tmp_path / "p.json"
         pf.write_text(content)
@@ -97,8 +99,6 @@ def test_params_file_non_object_raises_clean_error(tmp_path):
 def test_malformed_params_file_raises_clean_error(tmp_path):
     # Malformed JSON and a binary file must fail with a clear NfclawError, not a raw
     # JSONDecodeError/UnicodeDecodeError traceback.
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     bad_json = tmp_path / "bad.json"
     bad_json.write_text('{"aligner": "star"')                    # unterminated
     with pytest.raises(NfclawError) as exc:
@@ -180,8 +180,6 @@ def test_pin_report_suffix_fixes_the_runs_report_filenames(tmp_path):
     # nf-core defaults this to a fresh timestamp per launch, which is interpolated into the
     # execution report/timeline/trace/DAG filenames. Pinning it is what makes a replay reproduce
     # the original run's outputs instead of writing a second, differently-named set beside them.
-    from datetime import datetime
-
     ps = _schema_with_report_suffix(tmp_path)
     out = parameters.pin_report_suffix({}, ps, now=datetime(2026, 7, 13, 9, 5, 1))
     assert out["trace_report_suffix"] == "2026-07-13_09-05-01"   # the pipeline's own date format
@@ -243,10 +241,6 @@ def test_non_finite_numbers_never_reach_the_params_file(tmp_path):
     # `nan`/`inf` parse as floats, and json.dumps would write the non-standard NaN/Infinity literals
     # Nextflow cannot read. A CLI string is left uncoerced (and reported); a params-file value (a
     # YAML `.nan`) is reported whatever the declared type; writing one is refused as a backstop.
-    import math
-
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     ps = _schema_with_types(tmp_path)
     for text in ("nan", "inf", "-Infinity"):
         assert parameters.coerce_to_schema({"ratio": text}, ps)["ratio"] == text
@@ -271,10 +265,6 @@ def test_empty_path_param_is_left_unset_not_resolved_to_cwd(tmp_path, monkeypatc
 
 
 def test_unreadable_params_file_is_a_clean_error(tmp_path, monkeypatch):
-    import pathlib
-
-    import pytest
-    from runner.errors import ErrorCode, NfclawError
     pf = tmp_path / "p.json"
     pf.write_text("{}")
     real_open = pathlib.Path.open
@@ -292,8 +282,6 @@ def test_unreadable_params_file_is_a_clean_error(tmp_path, monkeypatch):
 
 def test_load_params_file_names_the_file_by_its_label(tmp_path):
     # A chain spec is read with the same loader; its errors must not call it a "--params-file".
-    import pytest
-    from runner.errors import NfclawError
     bad = tmp_path / "chain.json"
     bad.write_text("{nope")
     with pytest.raises(NfclawError, match="chain spec is not valid JSON"):
@@ -376,8 +364,6 @@ def test_schema_declared_local_file_uri_must_use_a_recordable_filesystem_path(tm
 
 
 def _numeric_schema():
-    from runner.schema import Param, ParamSchema
-
     def p(name, type_, enum=None):
         return Param(name, type_, None, enum, "", None, False, "g")
     return ParamSchema("t", "", {"threads": p("threads", "integer"),
@@ -390,16 +376,16 @@ def _numeric_schema():
 def test_numbers_valid_under_json_schema_are_not_rejected(given, expected):
     # JSON Schema: 4.0 is an integer, and 1.0 equals the allowed value 1. A params file writing
     # them that way is valid for nf-schema, so the preflight must not refuse it.
-    schema = _numeric_schema()
-    coerced = parameters.coerce_to_schema(given, schema)
+    ps = _numeric_schema()
+    coerced = parameters.coerce_to_schema(given, ps)
     assert coerced == expected and type(coerced[next(iter(expected))]) is type(next(iter(expected.values())))
-    assert parameters.validate_params(coerced, schema) == []
+    assert parameters.validate_params(coerced, ps) == []
 
 
 @pytest.mark.parametrize("given", [{"threads": 4.5}, {"mode": 3}, {"mode": 1.5}, {"ratio": 2}])
 def test_numbers_invalid_under_json_schema_are_still_rejected(given):
-    schema = _numeric_schema()
-    assert parameters.validate_params(parameters.coerce_to_schema(given, schema), schema)
+    ps = _numeric_schema()
+    assert parameters.validate_params(parameters.coerce_to_schema(given, ps), ps)
 
 
 @pytest.mark.parametrize("parameter", ["input", "fasta", "database"])

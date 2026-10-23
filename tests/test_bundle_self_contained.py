@@ -1,12 +1,17 @@
 """A provenance bundle carries what its replay runs: source, configs and container identities."""
+import functools
 import gzip
 import hashlib
+import http.server
 import io
 import json
 import os
 import stat
 import subprocess
 import tarfile
+import threading
+import time
+from pathlib import Path
 
 import pytest
 
@@ -59,9 +64,7 @@ esac
 """
 
 
-@pytest.fixture(autouse=True)
-def _no_engine_probe(monkeypatch):
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+pytestmark = pytest.mark.usefixtures("no_engine_probe")
 
 
 @pytest.fixture
@@ -334,6 +337,7 @@ def test_a_replay_in_another_environment_fails_after_nextflow(tmp_path, fake_too
     result = _replay(prov, tmp_path / "fresh", **drift)
     assert result.returncode == 1
     assert expected in result.stderr
+    assert "nfclaw replay: mismatch: " in result.stderr      # one label per finding, spelled out
     log = (tmp_path / "fresh" / "provenance" / "logs" / "run.log").read_text()
     assert log.rstrip().endswith("failed after Nextflow succeeded (execution environment differs "
                                  "from the recording)")
@@ -434,7 +438,7 @@ def test_pins_skip_what_a_digest_cannot_name():
     assert env_record.pins(_record(images, processes, engine="singularity")) == {}
 
 
-def test_registry_identity_uses_the_digest_of_its_own_repository(tmp_path, monkeypatch):
+def test_registry_identity_uses_the_digest_of_its_own_repository(monkeypatch):
     inspect = [{"Id": "sha256:" + "c" * 64, "Os": "linux", "Architecture": "arm64", "Variant": "v8",
                 "RepoDigests": [f"mirror.example.org/tool@{DIGEST_B}", f"quay.io/tool@{DIGEST_A}"]}]
     monkeypatch.setattr(env_record, "_run", lambda *a, **k: subprocess.CompletedProcess(
@@ -554,7 +558,7 @@ def test_pin_config_is_valid_nextflow_syntax_for_each_process():
 
 def test_bundled_scripts_need_only_the_standard_library():
     for module in (env_record, replay_guard):
-        source = open(module.__file__, encoding="utf-8").read()
+        source = Path(module.__file__).read_text(encoding="utf-8")
         assert "from runner" not in source and "import runner" not in source
 
 
@@ -614,8 +618,6 @@ def test_an_official_docker_hub_image_named_with_its_registry_gets_its_digest(mo
 
 
 def test_a_spent_deadline_leaves_the_gap_recorded_instead_of_probing(tmp_path, fake_tools):
-    import time
-
     out = tmp_path / "out"
     out.mkdir()
     st = _git_pipeline(tmp_path)
@@ -630,10 +632,6 @@ def test_a_spent_deadline_leaves_the_gap_recorded_instead_of_probing(tmp_path, f
 @pytest.fixture
 def served(tmp_path):
     """A local HTTP server for files under tmp_path/www; yields its base URL."""
-    import functools
-    import http.server
-    import threading
-
     root = tmp_path / "www"
     root.mkdir()
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))
@@ -670,13 +668,9 @@ def test_a_validated_file_that_cannot_be_read_again_is_unresolved(served, monkey
     assert "larger than" in env_record.fetch_digest(f"{base}/big.csv")["unresolved"]
 
 
-def test_log_facts_list_the_files_validation_read():
-    import tempfile
-    from pathlib import Path
-
-    with tempfile.TemporaryDirectory() as directory:
-        log = Path(directory) / ".nextflow.log"
-        log.write_text("x Validation of file 'https://e.org/sheet.csv' passed!\n"
-                       "x Validation of file 'https://e.org/sheet.csv' passed!\n"
-                       "x Validation of file '/local/sheet.csv' passed!\n")
-        assert env_record.log_facts(log, None)["validated"] == ["https://e.org/sheet.csv"]
+def test_log_facts_list_the_files_validation_read(tmp_path):
+    log = tmp_path / ".nextflow.log"
+    log.write_text("x Validation of file 'https://e.org/sheet.csv' passed!\n"
+                   "x Validation of file 'https://e.org/sheet.csv' passed!\n"
+                   "x Validation of file '/local/sheet.csv' passed!\n")
+    assert env_record.log_facts(log, None)["validated"] == ["https://e.org/sheet.csv"]

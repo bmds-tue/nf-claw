@@ -1,4 +1,5 @@
 """Explicit directory dependencies cannot hide unsafe staged child names."""
+import json
 import os
 
 import pytest
@@ -65,7 +66,6 @@ def test_directory_cycles_fail_clearly_before_launch(tmp_path):
 
 
 def test_direct_directory_parameters_and_samplesheet_paths_have_the_same_guard(tmp_path):
-    import json
     root = tmp_path / "data"
     root.mkdir()
     (root / "reads;true.txt").write_bytes(b"scientific data")

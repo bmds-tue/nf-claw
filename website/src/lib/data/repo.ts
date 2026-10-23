@@ -28,16 +28,11 @@ export function getCommits(limit = 20): Commit[] {
       author: author ?? "",
       date: date ?? "",
       subject: subject ?? "",
+      summary: m ? m[4] : subject ?? "",
       type: m ? m[1] : null,
       scope: m && m[2] ? m[2] : null,
     };
   });
-}
-
-export function getCommitCount(): number {
-  const out = git(["rev-list", "--count", "HEAD"]);
-  const n = parseInt(out, 10);
-  return Number.isNaN(n) ? 0 : n;
 }
 
 export function getTags(): { name: string; date: string | null }[] {
@@ -67,13 +62,21 @@ export function getRemote(): string | null {
   return url ? githubRepoPath(url) : null;
 }
 
+/**
+ * The branch GitHub serves the repository from, for links to its files: the remote's default branch
+ * when the clone knows it (`origin/HEAD`), else the branch being built (CI deploys `main`), else
+ * "main" — a detached checkout reports "HEAD", and a local feature branch need not exist on GitHub.
+ */
 export function getDefaultBranch(): string {
-  return git(["rev-parse", "--abbrev-ref", "HEAD"]) || "main";
+  const remoteHead = git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
+  if (remoteHead.startsWith("origin/")) return remoteHead.slice("origin/".length);
+  const current = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  return current && current !== "HEAD" ? current : "main";
 }
 
 let docsCache: DocPage[] | null = null;
 
-/** README + everything under docs/ (excluding images and ignored superpowers). Read once per build. */
+/** README, the root guides (CONTRIBUTING, AGENTS, NOTICE) and every docs/*.md. Read once per build. */
 export function getDocs(): DocPage[] {
   if (docsCache) return docsCache;
   const docs: DocPage[] = [];
@@ -187,31 +190,25 @@ function extractTagline(): { tagline: string; description: string } {
   };
 }
 
+let metaCache: RepoMeta | null = null;
+
+/** The repository's name, lead and headline numbers. Computed once per build (it runs git). */
 export function getRepoMeta(): RepoMeta {
+  if (metaCache) return metaCache;
   const pipelines = getPipelines();
-  let moduleTotal = 0;
-  for (const p of pipelines) moduleTotal += p.moduleCount;
-  // distinct module estimate isn't reconstructable from counts, so report total.
-
   const { tagline, description } = extractTagline();
-  const remote = getRemote();
-  const commits = getCommitCount();
-  const lastCommit = getCommits(1)[0];
-
-  return {
-    name: "nf-claw",
+  metaCache = {
     tagline,
     description,
-    remote,
-    defaultBranch: getDefaultBranch(),
-    live: false,
+    remote: getRemote(),
     stats: {
       pipelines: pipelines.length,
       skills: pipelines.length, // each pipeline ships one agent skill (skill.md)
       parameters: allParameters().length,
-      modules: moduleTotal,
-      commits,
-      latestUpdate: lastCommit?.date ?? null,
+      // the vendored modules of every pipeline summed (one module vendored twice counts twice)
+      modules: pipelines.reduce((n, p) => n + p.moduleCount, 0),
+      latestUpdate: getCommits(1)[0]?.date ?? null,
     },
   };
+  return metaCache;
 }

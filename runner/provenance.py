@@ -10,17 +10,17 @@ import shlex
 import subprocess
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
+from runner import budget, environment_record, outputs, sheetgen
 from runner import exact_json as json
-from runner.inputs import is_remote_url
-
-from runner.outputs import result_files
-from runner import budget, environment_record, outputs
-from runner.errors import ErrorCode, NfclawError
 from runner.engine_version import version_text
+from runner.errors import ErrorCode, NfclawError
+from runner.inputs import is_remote_url
+from runner.outputs import result_files
 from runner.probes import capture
+# Re-exported (`X as X`): callers read the bundle's checksum helpers from this module.
 from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
                                  MissingInputSource as MissingInputSource,
                                  checksum_text as checksum_text,
@@ -91,8 +91,6 @@ def samplesheet_file_paths(path: Path, schema: InputSchema) -> list[Path]:
     column (file or directory) and an existing absolute regular file in any other column. Relative
     and remote values are not guessed at, and a missing file stays the pipeline's own error.
     """
-    from runner import sheetgen
-
     declared = {column.name for column in schema.columns if column.path_format()}
     declared.update(schema.destination_columns)
     declared.update(schema.metadata_columns)
@@ -269,7 +267,8 @@ def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
     from runner import runlog
 
     try:
-        previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+        previous = json.loads((outdir / "provenance" / environment_record.RECORD_NAME)
+                              .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         previous = None
     # An opt-in --timeout bounds this recording too; the bundle notes what it did not reach.
@@ -293,7 +292,8 @@ def record_environment(outdir: Path, *, env_extra: dict[str, str] | None,
 
 def recorded_environment_issues(outdir: Path) -> list[str]:
     try:
-        environment = json.loads((outdir / "provenance" / environment_record.RECORD_NAME).read_text())
+        environment = json.loads((outdir / "provenance" / environment_record.RECORD_NAME)
+                                 .read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     issues = environment.get("issues") if isinstance(environment, dict) else None
@@ -320,8 +320,8 @@ def environment_summary(environment: dict) -> dict:
 def output_checksums(outdir: Path) -> dict[str, str]:
     """The run's result files as {path relative to outdir: sha256}, in sorted order.
 
-    The single definition of "what this run produced": the provenance bundle records it, and
-    `nfclaw verify` measures a directory with it. Nextflow's own state (`.nextflow*`) and nfclaw's
+    The file checksums of `outputs.snapshot`, which records a bundle's `outputs.sha256` and which
+    `nfclaw verify` measures a replay with. Nextflow's own state (`.nextflow*`) and nfclaw's
     provenance bundle are excluded — they describe the run, they are not its results, and a replay
     would never reproduce them byte-for-byte anyway.
     """
@@ -500,7 +500,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "outcome": outcome,
         "shutdown_grace_seconds": grace,
         "outdir": str(outdir.absolute()),
-        "ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "nextflow": observed_version,
         "nextflow_env": recorded_env,
         "redacted_nextflow_env": redacted_env,

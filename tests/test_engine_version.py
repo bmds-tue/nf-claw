@@ -95,7 +95,7 @@ def test_engines_before_21_10_cannot_run_on_java_17():
     assert ev.runs_on_java("24.10.5", 21)
 
 
-def test_the_java_nextflow_runs_on_follows_its_launcher(tmp_path):
+def test_the_java_nextflow_runs_on_follows_its_launcher():
     assert ev.java_command({"NXF_JAVA_HOME": "/a", "JAVA_HOME": "/b"}) == "/a/bin/java"
     assert ev.java_command({"JAVA_HOME": "/b"}) == "/b/bin/java"
     assert ev.java_command({}) == "java"

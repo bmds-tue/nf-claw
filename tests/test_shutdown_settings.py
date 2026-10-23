@@ -75,8 +75,7 @@ def test_historical_replay_command_retains_default_grace(tmp_path, monkeypatch):
     assert observed == [10]
 
 
-def test_bundle_records_and_replays_its_original_shutdown_grace(tmp_path, monkeypatch):
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda *args: "test engine")
+def test_bundle_records_and_replays_its_original_shutdown_grace(tmp_path, monkeypatch, no_engine_probe):
     monkeypatch.setenv("NFCLAW_SHUTDOWN_GRACE", "0.25")
     out = tmp_path / "out"
     tree = tmp_path / "tree"
@@ -95,7 +94,7 @@ def test_bundle_records_and_replays_its_original_shutdown_grace(tmp_path, monkey
     assert replay.returncode == 0, replay.stdout + replay.stderr
 
 
-def test_nohup_signal_preference_is_preserved(monkeypatch):
+def test_nohup_signal_preference_is_preserved():
     previous = signal.getsignal(signal.SIGHUP)
     try:
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -123,8 +122,7 @@ def test_execution_setup_cannot_launch_after_absolute_deadline(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize("grace", [0, -1, float("nan"), float("inf"), "1; echo unsafe"])
-def test_explicit_bundle_grace_is_validated_before_any_write(tmp_path, monkeypatch, grace):
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda *args: "test engine")
+def test_explicit_bundle_grace_is_validated_before_any_write(tmp_path, no_engine_probe, grace):
     out = tmp_path / "out"
     st = SubmoduleStatus("mini", tmp_path / "tree", False, False, "1.0.0", "deadbeef", ())
     with pytest.raises(NfclawError, match="shutdown_grace_seconds"):

@@ -26,7 +26,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import asdict, dataclass, field, fields
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -51,7 +51,7 @@ class JobError(Exception):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def state_dir() -> Path:
@@ -131,7 +131,7 @@ def _read_json(path: Path) -> dict:
 def create_dir(label: str) -> Path:
     """A fresh, private directory for a new job. `label` (a pipeline name, `chain`) goes in its id."""
     slug = re.sub(r"[^a-z0-9-]+", "-", label.lower()).strip("-")[:40] or "job"
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     root = jobs_dir()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     while True:

@@ -2,15 +2,17 @@
 sample and mate detection, assignments, integrity rules and the written sheet."""
 import csv
 import gzip
+import importlib
 import io
 import os
+import time
 from pathlib import Path
 
 import pytest
 
 import sheetgen_schemas as S
+from runner import samplesheet, sheetgen
 from runner import schema as schema_mod
-from runner import sheetgen
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -346,7 +348,7 @@ def test_empty_mates_pair_by_name_with_a_note_but_bare_numbers_need_reads(tmp_pa
 
 def test_unreadable_fastq_is_refused(tmp_path):
     data = tmp_path / "data"
-    (data).mkdir()
+    data.mkdir()
     (data / "A_R1.fastq.gz").write_bytes(b"not gzip")
     (data / "A_R2.fastq.gz").write_bytes(b"not gzip")
     assert "A_R1.fastq.gz" in str(refused(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"}))
@@ -417,7 +419,7 @@ def test_templates_constants_and_defaults(tmp_path):
     assert g.text.splitlines()[0] == "patient,sample,status,lane,fastq_1,fastq_2"
     assert g.record["sheet_set"] == {"patient": "P_{sample}", "status": "1"}
     drop = tmp_path / "drop"
-    (drop).mkdir()
+    drop.mkdir()
     (drop / "R1.bam").write_bytes(b"x")
     (drop / "R1.bam.bai").write_bytes(b"x")
     d = gen(tmp_path, S.DROP, [drop])
@@ -538,7 +540,6 @@ def test_output_does_not_depend_on_discovery_order(tmp_path):
 
 
 def test_generated_sheet_passes_the_samplesheet_check_and_lists_its_files(tmp_path):
-    from runner import samplesheet
     data = tmp_path / "data"
     a1, a2 = pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
     g = gen(tmp_path, S.ATACSEQ, [data], {"replicate": "1"})
@@ -743,7 +744,7 @@ def test_similar_names_of_different_libraries_stay_single_end(tmp_path):
     assert [r["sample"] for r in got] == ["S_read1", "S_read2"]
 
 
-# --- review findings ----------------------------------------------------------------------------
+# --- edge cases: identity templates, read names, compression, scale -----------------------------
 
 def test_an_identity_template_can_make_a_file_derived_name_acceptable(tmp_path):
     # ampliseq's `sample` must start with a letter: `S{sample}` makes `1234` acceptable, and the
@@ -771,7 +772,6 @@ def test_generic_read_names_are_no_evidence(tmp_path):
 
 @pytest.mark.parametrize("suffix, opener", [(".bz2", "bz2"), (".xz", "lzma")])
 def test_other_compressed_fastq_is_read(tmp_path, suffix, opener):
-    import importlib
     spec = {"input": S.RNASEQ["input"], "sheet": {"items": {"properties": {
         "sample": {"type": "string", "meta": ["id"]},
         "fastq_1": {"type": "string", "format": "file-path",
@@ -797,7 +797,6 @@ def test_skill_paragraph_does_not_offer_a_choice_when_generation_is_impossible(t
 
 
 def test_many_samples_stay_fast(tmp_path):
-    import time
     data = tmp_path / "data"
     data.mkdir()
     for n in range(3000):
@@ -807,7 +806,7 @@ def test_many_samples_stay_fast(tmp_path):
     assert g.record["samples"] == 3000 and time.monotonic() - started < 20
 
 
-# --- second review --------------------------------------------------------------------------------
+# --- edge cases: zstd, lone files, template paths, the work tree ----------------------------------
 
 def _zst_spec():
     pattern = "^\\S+\\.f(ast)?q(\\.gz|\\.zst)?$"

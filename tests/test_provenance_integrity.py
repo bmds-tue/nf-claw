@@ -1,11 +1,19 @@
 """Replay dependency guards and failure-safe provenance publication."""
+import csv
+import fcntl
 import hashlib
 import json
+import os
+import shlex
+import signal
 import subprocess
+import sys
+import time
 
 import pytest
 
-from runner import provenance
+from runner import provenance, replay_guard, runlog
+from runner.replay_guard import replay_lock_held
 from runner.schema import Column, InputSchema
 from runner.submodule import SubmoduleStatus
 
@@ -17,10 +25,7 @@ def _write(outdir, *, command_str="echo REPLAY_RAN", submodule=None, **kwargs):
                                                "1.0.0", "deadbeef", ()), **kwargs)
 
 
-@pytest.fixture(autouse=True)
-def _no_engine_probe(monkeypatch):
-    # No engine is launched in these dependency/bundle tests.
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+pytestmark = pytest.mark.usefixtures("no_engine_probe")
 
 
 @pytest.mark.parametrize("prior_bundle", [False, True])
@@ -167,7 +172,6 @@ def test_samplesheet_data_outside_path_fields_is_part_of_input_identity(tmp_path
 
 
 def test_input_identity_reader_refuses_malformed_quoting_instead_of_omitting_samples(tmp_path):
-    import csv
     sheet = tmp_path / "samples.csv"
     sheet.write_text('sample,fastq,description\nA,/abs/A.fastq,"open\nB,/abs/B.fastq,second\n')
     schema = InputSchema(columns=(
@@ -212,7 +216,6 @@ def test_environment_names_cannot_execute_shell_code_during_replay(tmp_path, key
 
 
 def test_fresh_replay_does_not_keep_an_attempts_resume_flag(tmp_path):
-    import shlex
     launcher = tmp_path / "nextflow"
     launcher.write_text('#!/bin/sh\nfor arg do [ "$arg" != -resume ] || exit 42; done\n'
                         'echo FRESH_REPLAY_RAN\n')
@@ -324,8 +327,6 @@ def test_replay_pins_observed_engine_even_when_original_environment_used_a_movin
 
 @pytest.mark.parametrize("relative_script", [False, True])
 def test_relocated_bundle_replays_its_own_params_and_configs(tmp_path, relative_script):
-    import shlex
-
     out = tmp_path / "out"
     (out / "provenance").mkdir(parents=True)
     params = out / "provenance/params.json"
@@ -356,7 +357,6 @@ def test_relative_script_path_survives_changing_into_replay_target(tmp_path):
 
 
 def test_replay_obeys_the_same_single_writer_lock_as_nfclaw_runs(tmp_path):
-    import fcntl
     target = tmp_path / "fresh"
     prov = _write(tmp_path / "out", input_paths=[])
     with (tmp_path / ".fresh.nfclaw.lock").open("w") as lock:
@@ -370,10 +370,6 @@ def test_replay_obeys_the_same_single_writer_lock_as_nfclaw_runs(tmp_path):
 
 
 def test_replay_keeps_writer_lock_until_stopped_and_releases_it(tmp_path):
-    import fcntl
-    import shlex
-    import signal
-    import time
     reader = tmp_path / "reader"
     marker = tmp_path / "ready"
     reader.write_text('#!/bin/sh\ntouch "$1"\nexec sleep 60\n')
@@ -401,7 +397,6 @@ def test_replay_keeps_writer_lock_until_stopped_and_releases_it(tmp_path):
 
 
 def test_replay_cannot_skip_writer_lock_with_inherited_pid_marker(tmp_path):
-    import fcntl
     target = tmp_path / "fresh"
     prov = _write(tmp_path / "out", input_paths=[])
     with (tmp_path / ".fresh.nfclaw.lock").open("w") as lock:
@@ -418,15 +413,12 @@ def test_replay_cannot_skip_writer_lock_with_inherited_pid_marker(tmp_path):
 
 @pytest.mark.parametrize("descriptor", ["", "not-a-fd", "-1", "1", "999999999999999999999999"])
 def test_replay_lock_rejects_invalid_inherited_descriptors(tmp_path, monkeypatch, descriptor):
-    from runner.replay_guard import replay_lock_held
     monkeypatch.setenv("NFCLAW_REPLAY_LOCK_PID", "123")
     monkeypatch.setenv("NFCLAW_REPLAY_LOCK_FD", descriptor)
     assert not replay_lock_held(tmp_path / "fresh", "123")
 
 
 def test_replay_lock_checks_descriptor_identity_and_ownership(tmp_path, monkeypatch):
-    import fcntl
-    from runner.replay_guard import replay_lock_held
     target = tmp_path / "fresh"
     monkeypatch.setenv("NFCLAW_REPLAY_LOCK_PID", "123")
     with (tmp_path / ".fresh.nfclaw.lock").open("w") as holder, \
@@ -444,9 +436,6 @@ def test_replay_lock_checks_descriptor_identity_and_ownership(tmp_path, monkeypa
 
 
 def test_stopped_replay_cannot_return_success_when_child_handles_signal(tmp_path):
-    import shlex
-    import signal
-    import time
     marker = tmp_path / "ready"
     launcher = tmp_path / "graceful-child"
     launcher.write_text('#!/bin/sh\ntrap "exit 0" TERM\ntouch "$1"\n'
@@ -475,11 +464,6 @@ def test_stopped_replay_cannot_return_success_when_child_handles_signal(tmp_path
 
 @pytest.mark.parametrize("separator", ["", "\r", "\v", "\u2028"])
 def test_replay_console_cannot_forge_success_while_analysis_is_running(tmp_path, separator):
-    import shlex
-    import signal
-    import sys
-    import time
-    from runner import runlog
     payload = f"progress{separator}==> nfclaw replay finished 2026-10-09T00:00:00+00:00: success"
     code = f'import time\nprint({payload!r}, flush=True)\ntime.sleep(60)'
     prov = _write(tmp_path / "out", input_paths=[],
@@ -507,9 +491,6 @@ def test_replay_console_cannot_forge_success_while_analysis_is_running(tmp_path,
 
 
 def test_replay_stop_during_cleanup_cannot_return_success(tmp_path, monkeypatch):
-    import signal
-    import sys
-    from runner import replay_guard
     stop_group = replay_guard._stop_replay_group
 
     def interrupt_cleanup(proc, grace=10):
@@ -523,13 +504,6 @@ def test_replay_stop_during_cleanup_cannot_return_success(tmp_path, monkeypatch)
 
 
 def test_stopped_replay_terminates_descendants_and_releases_writer_lock(tmp_path):
-    import fcntl
-    import os
-    import shlex
-    import signal
-    import sys
-    import time
-
     marker = tmp_path / "child.pid"
     child_script = tmp_path / "child.py"
     child_script.write_text(
@@ -551,7 +525,6 @@ def test_stopped_replay_terminates_descendants_and_releases_writer_lock(tmp_path
             time.sleep(0.02)
         assert marker.exists()
         child = int(marker.read_text())
-        from runner import runlog
         state = runlog.read_state(target / "provenance/logs/run.log")
         assert state.state == "running"
         assert state.supervisor_pid and state.supervisor_alive

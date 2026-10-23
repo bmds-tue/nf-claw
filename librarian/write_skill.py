@@ -1,4 +1,4 @@
-# librarian/write_skill.py
+"""Generate each pipeline's skill.md and reference.md from its pinned tree."""
 from __future__ import annotations
 
 import argparse
@@ -377,8 +377,8 @@ def _nextflow_store_section(st: SubmoduleStatus) -> str:
     def where(paths: list[str]) -> str:
         shown = ", ".join(f"`{p}`" for p in paths[:2])
         return f"in {shown}" + (f" and {len(paths) - 2} more files" if len(paths) > 2 else "")
-    where = "; ".join(f"`{name}` ({where(paths)})" for name, paths in found.items())
-    return (f"This release reads Nextflow secrets: {where}. Set each one a run needs with "
+    listed = "; ".join(f"`{name}` ({where(paths)})" for name, paths in found.items())
+    return (f"This release reads Nextflow secrets: {listed}. Set each one a run needs with "
             "`nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its "
             "tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), "
             "and a task that needs it then fails. Secrets are not written to nfclaw's provenance.\n")

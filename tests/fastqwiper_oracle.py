@@ -83,5 +83,6 @@ def wipe(path: Path, alphabet: str = "ACGTN") -> tuple[str, dict[str, int]]:
             else:
                 n["neq"] += 1
     counts = dict(zip(FIELDS, (n["tot"], n["clean"] * 4, n["clean"], n["bad_header"], n["fixed"],
-                               n["bad_seq"], n["bad_plus"], n["bad_qual"], n["neq"], n["blank"])))
+                               n["bad_seq"], n["bad_plus"], n["bad_qual"], n["neq"], n["blank"]),
+                      strict=True))
     return "".join(out), counts

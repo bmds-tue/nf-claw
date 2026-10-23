@@ -170,7 +170,7 @@ def wipe(argv: list[str]) -> None:
         if known.fastq_out.endswith(".gz"):
             gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0).close()
     if known.report:
-        Path(known.report).write_text(_zero_report())
+        Path(known.report).write_text(_zero_report(), encoding="utf-8")
     else:
         print(_zero_report(), end="")
 
@@ -178,7 +178,7 @@ def wipe(argv: list[str]) -> None:
 def _parse_report(path: Path) -> dict[str, int]:
     counts: dict[str, int] = {}
     undefined = False
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         for field in _FIELDS:
             if line.startswith(field + ":"):
                 rest = r" \((?:\d+(?:\.\d+)?%|not applicable)\)" if field in _PERCENT else ""
@@ -212,7 +212,7 @@ def gather_reports(reports: list[Path], final: Path) -> None:
     final.write_text("FASTQWIPER REPORT:\n\n" + "".join(
         f"{field}: {totals[field]}" + (share(field) if field in _PERCENT else "")
         + (f" of which {totals['fixed']} fixed" if field == "Bad headers or misplaced lines" else "")
-        + "\n" for field in _FIELDS))
+        + "\n" for field in _FIELDS), encoding="utf-8")
 
 
 # Each corrected task: the pinned invocation, its version line (None: the tool still runs), the
@@ -301,7 +301,7 @@ def _ordered_inputs(source: str, orders: dict[str, list[str]]) -> str:
 
 
 def patch_task(kind: str, path: Path, *, mate_orders: dict[str, list[str]] | None = None) -> None:
-    source = path.read_text()
+    source = path.read_text(encoding="utf-8")
     if kind in _TASKS:
         needle, version, subcommand, recorded = _TASKS[kind]
         if source.count(needle) != 1 or (version is not None and source.count(version) != 1):
@@ -320,7 +320,7 @@ def patch_task(kind: str, path: Path, *, mate_orders: dict[str, list[str]] | Non
         raise ValueError("unknown task correction")
     temp = path.with_name(path.name + ".nfclaw.tmp")
     try:
-        temp.write_text(corrected)
+        temp.write_text(corrected, encoding="utf-8")
         temp.chmod(path.stat().st_mode & 0o777)
         os.replace(temp, path)
     finally:
@@ -413,7 +413,7 @@ process {
     # source can contain literal marker words and must never be expanded again.
     config = re.sub("|".join(replacements), lambda match: replacements[match[0]], config)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(config)
+    target.write_text(config, encoding="utf-8")
     return target
 
 

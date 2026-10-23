@@ -10,8 +10,9 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-# `mcp` is the official MCP SDK, used only to test `nfclaw mcp` against a real client.
-dev = ["pytest>=8", "mcp>=1.9,<3"]
+# `mcp` is the official MCP SDK, used only to test `nfclaw mcp` against a real client. Ruff is held
+# to one minor series: a new release adds stable rules to the selected families (`B`, `UP`).
+dev = ["pytest>=8", "mcp>=1.9,<3", "ruff>=0.17,<0.18"]
 yaml = ["pyyaml>=6"]
 
 [project.scripts]
@@ -31,4 +32,12 @@ addopts = "-q"
 extend-exclude = ["pipelines", "website"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# These run under whatever python3 is at hand, not nfclaw's own interpreter: the replay scripts are
+# copied into every provenance bundle, and the fastqrepair corrections run inside task containers.
+# Keep them portable rather than modern.
+"runner/replay_guard.py" = ["UP"]
+"runner/environment_record.py" = ["UP"]
+"runner/fastqrepair_compat.py" = ["UP"]

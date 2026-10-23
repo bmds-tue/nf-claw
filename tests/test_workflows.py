@@ -4,8 +4,9 @@ import re
 import shlex
 import subprocess
 import tarfile
-import pytest
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 WF = ROOT / ".github" / "workflows"
@@ -232,4 +233,3 @@ def test_code_scanning_covers_every_language_in_the_repository():
     assert {lang.strip() for lang in languages.split(",")} == {"actions", "javascript-typescript", "python"}
     assert "security-events: write" in _job(text, "analyze")
     assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false")
-

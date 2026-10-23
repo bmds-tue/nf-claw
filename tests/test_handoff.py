@@ -2,10 +2,11 @@
 finished upstream run. `mini_up` and `mini` are synthetic fixture pipelines; `mini` takes a samplesheet
 (sample, fastq_1, fastq_2 — the FastQ columns are file paths)."""
 import csv
+import json
 
 import pytest
 
-from runner import handoff
+from runner import handoff, provenance
 from runner.errors import ErrorCode, NfclawError
 
 DIRECT = {"description": "mini_up writes a mini sheet",
@@ -179,7 +180,6 @@ def test_rename_set_and_relative_paths(library, finished_run, tmp_path):
 def test_relative_files_in_pattern_typed_columns_are_made_absolute(library, finished_run, tmp_path):
     # atacseq's FastQ columns carry a file pattern but no path format: a relative value names a file
     # in the upstream outdir there too, and must not reach the downstream as a relative path.
-    import json
     root = library("mini_up", "mini")
     _, down = _trees(root)
     (down / "assets/schema_input.json").write_text(json.dumps({"items": {
@@ -232,7 +232,7 @@ def test_allowed_values_refuse_rows_the_downstream_must_not_analyse(library, fin
 
 def test_allowed_values_need_their_column(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
-    up = finished_run(tmp_path / "up", {"s.csv": SHEET.replace("{outdir}", "{outdir}"), **FASTQS})
+    up = finished_run(tmp_path / "up", {"s.csv": SHEET, **FASTQS})
     with pytest.raises(NfclawError, match="has no column 'instrument_platform'"):
         handoff.materialize(_rule(SHORT_ONLY), upstream_outdir=up, downstream_tree=down,
                             dest=tmp_path / "h")
@@ -368,14 +368,12 @@ def test_lineage_follows_absolute_paths_in_any_column(library, finished_run, tmp
 def test_upstream_param_prefers_the_pipelines_own_resolved_params(library, finished_run, tmp_path):
     # A value a profile set (a --demo run's --gtf) is not in nfclaw's provenance/params.json, but the
     # nf-core template dumps every resolved parameter to pipeline_info/params_<timestamp>.json.
-    import json
     _, down = _trees(library("mini_up", "mini"))
     reference = tmp_path / "test.gtf"
     reference.write_text("annotation")
     up = finished_run(tmp_path / "up", {
         "pipeline_info/params_2026-01-01_10-00-00.json": json.dumps({"gtf": "/old.gtf"}),
         "pipeline_info/params_2026-01-02_10-00-00.json": json.dumps({"gtf": str(reference)})})
-    from runner import provenance
     (up / "provenance/inputs.inventory.json").write_text(json.dumps(
         provenance.snapshot_inputs([reference])[1]))
     (up / "provenance/inputs.sha256").write_text(
@@ -401,7 +399,6 @@ def test_file_source_takes_the_first_candidate_that_matches(library, finished_ru
 def _with_lengths(down):
     """The mini fixture with a second file parameter, as differentialabundance takes counts and
     lengths."""
-    import json
     path = down / "nextflow_schema.json"
     schema = json.loads(path.read_text())
     schema["definitions"]["reference_genome_options"]["properties"]["lengths"] = {
@@ -471,7 +468,6 @@ def test_file_source_candidates_must_be_relative_paths(bad):
 
 def _enum_sheet_library(library):
     """mini, with a samplesheet column that only allows some values (taxprofiler's `tool`)."""
-    import json
     root = library("mini_up", "mini")
     sheet = root / "pipelines" / "mini" / "upstream" / "assets" / "schema_input.json"
     data = json.loads(sheet.read_text())

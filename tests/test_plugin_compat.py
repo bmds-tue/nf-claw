@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from runner import plugin_compat
 
 REPO = Path(__file__).resolve().parent.parent
@@ -114,7 +116,7 @@ def test_the_pinned_scrnaseq_release_is_the_known_offender():
     # If a future bump fixes it upstream, this test fails and the known-issues entry comes out.
     up = REPO / "pipelines" / "scrnaseq" / "upstream"
     if not (up / "nextflow.config").exists():
-        return                                                # submodule not initialised
+        pytest.skip("submodule not initialised")
     issues = plugin_compat.check(up)
     assert issues and any("conf/test.config" in i for i in issues)
 
@@ -136,6 +138,6 @@ def test_the_pinned_sarek_release_declares_the_buggy_plugin():
     # test fails and the known-issues entry (and the _KNOWN_PLUGIN_BUGS entry) can come out.
     up = REPO / "pipelines" / "sarek" / "upstream"
     if not (up / "nextflow.config").exists():
-        return                                                # submodule not initialised
+        pytest.skip("submodule not initialised")
     warnings = plugin_compat.known_plugin_warnings(up)
     assert warnings and any("nf-core-utils@0.4.0" in w for w in warnings)

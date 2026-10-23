@@ -8,13 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from runner import inputs
+from runner import inputs, parameters, provenance, samplesheet, schema
+from runner.errors import NfclawError
 
 
 @pytest.mark.parametrize("value", ["file:///tmp/reads.fastq", "FILE:///tmp/reads.fastq",
                                    "file:/tmp/reads.fastq", "file://user:secret@host/reads.fastq"])
 def test_local_file_uri_cannot_bypass_preflight_or_dependency_recording(tmp_path, value):
-    from runner.errors import NfclawError
     repo = _pipeline(tmp_path, SAREK)
     with pytest.raises(NfclawError, match="absolute filesystem path") as error:
         inputs.resolve(value, repo)
@@ -129,7 +129,6 @@ def test_path_value_is_accepted(tmp_path):
 
 @pytest.mark.parametrize("suffix", ["csv", "tsv", "json", "yaml"])
 def test_samplesheet_alias_retains_its_declared_format(tmp_path, suffix):
-    from runner import parameters, samplesheet, schema
     if suffix == "yaml":
         pytest.importorskip("yaml")
     repo = _pipeline(tmp_path, SAREK)
@@ -157,7 +156,6 @@ def test_conditional_schema_and_staged_alias_use_the_same_filename(tmp_path):
 
 
 def test_absolute_path_preserves_final_alias_and_kernel_parent_traversal(tmp_path):
-    from runner import provenance
     (tmp_path / "real" / "nested").mkdir(parents=True)
     (tmp_path / "route").symlink_to(tmp_path / "real" / "nested", target_is_directory=True)
     target = tmp_path / "real" / "stored.data"
@@ -220,7 +218,6 @@ def test_parent_glob_matches_receive_staging_route_checks(tmp_path, fmt):
 
 def test_wildcard_parent_traversal_is_refused_before_parameter_resolution(tmp_path):
     repo = _pipeline(tmp_path, {"type": "string", "format": "file-path-pattern"})
-    from runner.errors import NfclawError
     with pytest.raises(NfclawError, match="wildcard"):
         inputs.resolve(str(tmp_path / "data*/../reads.fastq"), repo)
     assert any("wildcard" in issue for issue in inputs.local_name_issues(
@@ -228,7 +225,6 @@ def test_wildcard_parent_traversal_is_refused_before_parameter_resolution(tmp_pa
 
 
 def test_colon_and_repeated_slashes_in_an_absolute_parent_are_local_dependencies(tmp_path):
-    from runner import provenance, samplesheet, schema
     repo = _pipeline(tmp_path, SAREK)
     data = tmp_path / "data:"
     data.mkdir()
@@ -344,7 +340,6 @@ def test_scalar_sample_type_annotation_names_no_samplesheet(tmp_path):
 
 
 def test_conditional_remote_input_names_are_guarded_before_returning(tmp_path):
-    from runner.errors import NfclawError
     (tmp_path / "nextflow_schema.json").write_text(json.dumps({"properties": {
         "input": {"type": "string", "if": {"pattern": "^PRIDE"},
                   "else": {"format": "file-path"}}}}))

@@ -1,4 +1,4 @@
-# librarian/update_pipelines.py
+"""Bump every `latest-release` pipeline in sources.tsv to its newest upstream release tag."""
 from __future__ import annotations
 
 import argparse

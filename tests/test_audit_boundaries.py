@@ -1,5 +1,7 @@
 """Execution and inventory regressions for the repository audit."""
+import csv
 import json
+import os
 
 import pytest
 
@@ -24,7 +26,7 @@ def test_directory_reference_handoff_requires_historical_inventory(
     if change == "unrecorded":
         (up / "provenance/inputs.sha256").write_text("")
         (up / "provenance/inputs.inventory.json").write_text("{}")
-    if change != "unrecorded":
+    else:
         snapshot, inventory = provenance.snapshot_inputs([reference])
         (up / "provenance/inputs.sha256").write_text("".join(
             f"{digest}  {path}\n" for path, digest in snapshot.items()))
@@ -41,8 +43,6 @@ def test_directory_reference_handoff_requires_historical_inventory(
 
 
 def test_verification_cannot_certify_two_unreadable_result_trees(tmp_path, monkeypatch):
-    import os
-
     original, replay = tmp_path / "original", tmp_path / "replay"
     for root in (original, replay):
         root.mkdir()
@@ -183,7 +183,6 @@ def test_chain_run_options_reject_values_of_the_wrong_shape(options):
 
 def test_repeated_handoff_placeholder_matches_one_consistent_sample(
         library, finished_run, tmp_path):
-    import csv
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {
         "fastq/A/A_1.fastq.gz": "A reads",

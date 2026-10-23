@@ -1,15 +1,16 @@
 """Directory shape is a scientific dependency even when no data bytes change."""
+import hashlib
+import json
 import subprocess
 
 import pytest
 
-from runner import provenance
+from runner import orchestration, provenance, replay_guard
+from runner.errors import NfclawError
 from runner.submodule import SubmoduleStatus
 
 
-@pytest.fixture(autouse=True)
-def no_engine_probe(monkeypatch):
-    monkeypatch.setattr(provenance, "_nextflow_version", lambda env_extra=None: "test engine")
+pytestmark = pytest.mark.usefixtures("no_engine_probe")
 
 
 def record(tmp_path, source):
@@ -99,7 +100,6 @@ def test_symlink_retargeting_is_not_hidden_by_identical_file_bytes(tmp_path, kin
 @pytest.mark.parametrize("damage", ["missing", "invalid_type", "duplicate", "version",
                                    "unverified_shape", "checksum_mismatch"])
 def test_incomplete_or_malformed_namespace_cannot_weaken_the_replay_guard(tmp_path, damage):
-    import json
     source = tmp_path / "data"
     source.mkdir()
     (source / "reads.txt").write_bytes(b"unchanged input")
@@ -148,8 +148,6 @@ def test_file_only_prelaunch_checksums_cannot_invent_the_original_directory_layo
 
 
 def test_prelaunch_directory_shape_survives_changes_during_execution(library, tmp_path, monkeypatch):
-    import json
-    from runner import orchestration
     root = library("mini")
     tree = root / "pipelines/mini/upstream"
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
@@ -168,7 +166,6 @@ def test_prelaunch_directory_shape_survives_changes_during_execution(library, tm
 
     monkeypatch.setattr(orchestration.execution, "run", launch)
     out = tmp_path / "out"
-    from runner.errors import NfclawError
     with pytest.raises(NfclawError, match="during execution"):
         orchestration.run_pipeline("mini", repo_root=root, input_path=source, outdir=out,
             profile="docker", params_file=None, cli_overrides={}, resume=False, demo=False,
@@ -231,8 +228,6 @@ def test_relocated_bundle_configs_preserve_identity_across_parent_aliases(tmp_pa
 
 @pytest.mark.parametrize("damage", ["missing", "malformed", "old_version", "boolean_version", "unverified"])
 def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tmp_path, damage):
-    import json
-    from runner import orchestration
     source = tmp_path / "data"
     source.mkdir()
     bundle = record(tmp_path, source)
@@ -256,7 +251,6 @@ def test_resume_cannot_certify_directories_without_a_valid_previous_inventory(tm
 
 
 def test_resume_checks_complete_file_membership_to_avoid_stale_publications(tmp_path):
-    from runner import orchestration
     source = tmp_path / "data"
     source.mkdir()
     standalone = tmp_path / "table.tsv"
@@ -277,7 +271,6 @@ def test_resume_checks_complete_file_membership_to_avoid_stale_publications(tmp_
 
 def test_resume_detects_changed_bytes_beneath_an_input_directory(tmp_path):
     # Same names and types, different content: Nextflow's directory cache key cannot see it.
-    from runner import orchestration
     source = tmp_path / "data"
     (source / "nested").mkdir(parents=True)
     reads = source / "nested" / "reads.txt"
@@ -304,7 +297,6 @@ def test_resume_detects_changed_bytes_beneath_an_input_directory(tmp_path):
 
 
 def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_aliases(tmp_path, monkeypatch):
-    from runner import replay_guard
     source = tmp_path / "data"
     source.mkdir()
     reads = source / "reads.txt"
@@ -327,8 +319,6 @@ def test_snapshot_reads_shared_data_bytes_once_without_collapsing_scientific_ali
 
 
 def test_resume_without_provenance_still_recomputes_changed_directories(library, tmp_path, monkeypatch):
-    import json
-    from runner import orchestration
     root = library("mini")
     tree = root / "pipelines/mini/upstream"
     (tree / "nextflow_schema.json").write_text(json.dumps({"properties": {
@@ -376,9 +366,6 @@ def test_replay_cannot_write_into_a_retargeted_directory_alias_before_refusing_i
 
 
 def test_resume_rejects_namespace_that_disagrees_with_historical_directory_hashes(tmp_path):
-    import json
-    from runner import orchestration
-
     source = tmp_path / "data"
     source.mkdir()
     (source / "keep.txt").write_bytes(b"kept")
@@ -396,9 +383,6 @@ def test_resume_rejects_namespace_that_disagrees_with_historical_directory_hashe
 
 
 def test_resume_hashes_shared_file_targets_once_and_reuses_snapshot(tmp_path, monkeypatch):
-    import hashlib
-    from runner import orchestration, replay_guard
-
     source = tmp_path / 'reads.fastq'
     source.write_bytes(b'@R1\nACGT\n+\nIIII\n')
     alias = tmp_path / 'alias.fastq'

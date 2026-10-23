@@ -1,10 +1,11 @@
 """The scientific oracle must detect missing, duplicated or swapped fixture reads."""
 import gzip
 import json
+import shutil
 
 import pytest
 
-from scripts.check_fastqrepair_pairs import EXPECTED, READS, check_run, write_fixture
+from scripts.check_fastqrepair_pairs import EXPECTED, READS, check_run, read_fastq, write_fixture
 
 
 def _run(tmp_path, *, compressed=False, unsuffixed=False, single_record=False,
@@ -43,7 +44,6 @@ def _run(tmp_path, *, compressed=False, unsuffixed=False, single_record=False,
 
 
 def test_gzip_fixture_contains_the_exact_known_source_records(tmp_path):
-    from scripts.check_fastqrepair_pairs import read_fastq
     source = tmp_path / "source"
     write_fixture(source, compressed=True)
     recovered = {}
@@ -69,7 +69,6 @@ def test_gzip_oracle_requires_actual_successful_recovery_and_conserves_every_rea
 
 @pytest.mark.parametrize("problem", [None, "relocated", "aliased", "failed", "wrong_engine", "wrong_origin"])
 def test_replay_uses_validated_source_identity_and_its_own_observed_outcome(tmp_path, problem):
-    import shutil
     source = _run(tmp_path)
     if problem == "relocated":
         archive = tmp_path / "archive"
@@ -159,7 +158,6 @@ def test_controls_check_sequences_and_mate_roles_even_when_headers_cannot_distin
 
 @pytest.mark.parametrize("compressed", [False, True])
 def test_single_record_fixture_declares_exactly_one_unsuffixed_pair(tmp_path, compressed):
-    from scripts.check_fastqrepair_pairs import read_fastq
     source = tmp_path / "source"
     write_fixture(source, compressed=compressed, single_record=True, unsuffixed=True)
     suffix = ".fastq.gz" if compressed else ".fastq"

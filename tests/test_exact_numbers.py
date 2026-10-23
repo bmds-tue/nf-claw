@@ -4,7 +4,7 @@ from decimal import Decimal, localcontext
 
 import pytest
 
-from runner import exact_json, parameters, samplesheet, schema
+from runner import chain, exact_json, parameters, samplesheet, schema, submodule
 
 
 TOKENS = ("9007199254740993.0", "9007199254740993e0", "100000000000000000000001e0", "1e-9999", "1e9999",
@@ -142,7 +142,6 @@ def test_invalid_explicit_yaml_float_is_a_preflight_error(tmp_path):
 @pytest.mark.parametrize("token", ["0.1000000000000000000001", "100000000000000000000000",
                                    "1e23", "100000000000000000000001e0"])
 def test_chain_records_and_fingerprints_preserve_decimal_parameters(tmp_path, token):
-    from runner import chain, submodule
     path = tmp_path / "chain.json"
     path.write_text('{"stages":[{"pipeline":"fixture","params":{"choice":'+token+'}}]}')
     spec = chain.load_spec(path)

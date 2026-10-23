@@ -72,7 +72,7 @@ def write_fixture(directory: Path, *, compressed: bool = False) -> None:
         else:
             path.write_bytes(content)
         rows.append([sample, str(path.resolve())])
-    with (directory / "samples.csv").open("w", newline="") as handle:
+    with (directory / "samples.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["sample", "fastq_1"])
         writer.writerows(rows)
@@ -90,12 +90,13 @@ def whole_file_wipe(content: bytes, alphabet: str = "ACGTN") -> tuple[bytes, str
                         IMAGE, "wipertools", "fastqwiper", "-i", "whole.fastq.gz",
                         "-o", "whole_wiped.fastq.gz", "-r", "whole.report", "--alphabet", alphabet],
                        check=True, capture_output=True)
-        return gzip.open(work / "whole_wiped.fastq.gz").read(), (work / "whole.report").read_text()
+        with gzip.open(work / "whole_wiped.fastq.gz") as wiped:
+            return wiped.read(), (work / "whole.report").read_text(encoding="utf-8")
 
 
 def check_run(run: Path, *, source_run: Path | None = None, wipe=whole_file_wipe) -> dict[str, int]:
     # A commands.sh replay supervises Nextflow directly; its identity stays in the source bundle.
-    manifest = json.loads(((source_run or run) / "provenance/run_manifest.json").read_text())
+    manifest = json.loads(((source_run or run) / "provenance/run_manifest.json").read_text(encoding="utf-8"))
     if (manifest.get("pipeline"), manifest.get("commit"), manifest.get("outcome")) != (
             "fastqrepair", COMMIT, "success"):
         raise ValueError("unvalidated pipeline or run outcome")
@@ -105,9 +106,10 @@ def check_run(run: Path, *, source_run: Path | None = None, wipe=whole_file_wipe
     clean = {}
     for sample, content in SAMPLES.items():
         reads, report = wipe(content)
-        if gzip.open(outputs / f"{sample}.fastq.gz").read() != reads:
-            raise ValueError(f"{sample}: repaired reads differ from one whole-file wipe")
-        if (outputs / f"{sample}.report").read_text() != report:
+        with gzip.open(outputs / f"{sample}.fastq.gz") as repaired:
+            if repaired.read() != reads:
+                raise ValueError(f"{sample}: repaired reads differ from one whole-file wipe")
+        if (outputs / f"{sample}.report").read_text(encoding="utf-8") != report:
             raise ValueError(f"{sample}: gathered report differs from one whole-file wipe")
         clean[sample] = reads.count(b"\n") // 4
     return clean

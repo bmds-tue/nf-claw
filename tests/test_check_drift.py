@@ -1,7 +1,8 @@
 import shutil
+import subprocess
 from pathlib import Path
 
-from librarian import write_skill, write_catalog, check_drift
+from librarian import check_drift, write_catalog, write_skill
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -98,8 +99,6 @@ def test_drift_when_a_checkout_is_not_the_recorded_gitlink(tmp_path):
     # Docs are generated from the checked-out tree. CI checks out the gitlinks, but a local
     # `make check` with a submodule at another commit used to pass while the committed docs
     # described a commit the repository does not pin.
-    import subprocess
-
     def git(path, *args):
         return subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t",
                                *args], check=True, capture_output=True, text=True).stdout.strip()

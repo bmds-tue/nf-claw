@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Iterator
-from runner.errors import ErrorCode, NfclawError
+from typing import Any
 
 from runner import exact_json as json
+from runner import submodule as submod
+from runner.errors import ErrorCode, NfclawError
 
 # nf-schema's path formats: `path` is a file or a directory, `file-path-pattern` a glob.
 PATH_FORMATS = ("file-path", "directory-path", "path", "file-path-pattern")
@@ -244,8 +246,7 @@ def read_param_schema(repo: Path) -> dict:
     registry = json.loads(_PARAM_ROLES.read_text(encoding="utf-8"))
     audited = registry.get(hashlib.sha256(content).hexdigest())
     if audited:
-        from runner.submodule import _own_head
-        if _own_head(repo) in audited["releases"].values():
+        if submod._own_head(repo) in audited["releases"].values():
             for _, group in iter_param_groups(data):
                 for name, obj in (group.get("properties") or {}).items():
                     if name in audited["values"] and isinstance(obj, dict):
@@ -404,8 +405,7 @@ def _audited_input_contract(content: bytes, repo: Path) -> dict:
     if ("replacement" in audited or audited.get("destination_columns") or audited.get("metadata_columns")
             or audited.get("double_quoted_columns")
             or any(role.get("separator") for role in audited.get("columns", {}).values())):
-        from runner.submodule import _own_head
-        if _own_head(repo) != audited["commit"]:
+        if submod._own_head(repo) != audited["commit"]:
             return {}
         for name, digest in audited["source_sha256"].items():
             path = repo / name

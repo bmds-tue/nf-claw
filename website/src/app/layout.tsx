@@ -12,10 +12,6 @@ import { BASE_PATH, OG_IMAGE, SITE_ORIGIN } from "@/lib/site";
 
 const meta = getRepoMeta();
 
-// Hosting context: under a project path (e.g. GitHub Pages "/<repo>") assets
-// live under the base path, and the canonical origin comes from the deploy URL.
-const basePath = BASE_PATH;
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: {
@@ -36,10 +32,10 @@ export const metadata: Metadata = {
   // Right-sized renditions of the 3000 px source logo (public/nf-claw-logo.png, ~3 MB).
   icons: {
     icon: [
-      { url: `${basePath}/brand/logo-64.png`, sizes: "64x64", type: "image/png" },
-      { url: `${basePath}/brand/logo-192.png`, sizes: "192x192", type: "image/png" },
+      { url: `${BASE_PATH}/brand/logo-64.png`, sizes: "64x64", type: "image/png" },
+      { url: `${BASE_PATH}/brand/logo-192.png`, sizes: "192x192", type: "image/png" },
     ],
-    apple: `${basePath}/brand/apple-touch-icon.png`,
+    apple: `${BASE_PATH}/brand/apple-touch-icon.png`,
   },
 };
 
@@ -51,7 +47,6 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const repo = getRepoMeta();
   const pipelines = getPipelines();
   const palette: PaletteData = {
     pipelines: pipelines.map((p) => ({
@@ -67,11 +62,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen antialiased">
         <BackgroundFX />
-        <Nav repo={repo.remote} />
+        <Nav repo={meta.remote} />
         <main id="main" className="relative" tabIndex={-1}>
           {children}
         </main>
-        <Footer repo={repo.remote} pipelines={pipelines} />
+        <Footer repo={meta.remote} pipelines={pipelines} />
         <CommandPalette data={palette} />
         <BackToTop />
       </body>

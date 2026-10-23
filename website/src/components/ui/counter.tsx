@@ -2,17 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { animate, useInView, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 
 /** A number that counts up once it scrolls into view. Screen readers get the final value at once. */
-export function Counter({
-  value,
-  duration = 1.6,
-  className,
-}: {
-  value: number;
-  duration?: number;
-  className?: string;
-}) {
+export function Counter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduce = useReducedMotion();
@@ -25,15 +18,15 @@ export function Counter({
       return;
     }
     const controls = animate(0, value, {
-      duration,
-      ease: [0.16, 1, 0.3, 1],
+      duration: 1.6,
+      ease: EASE,
       onUpdate: (v) => setDisplay(Math.round(v)),
     });
     return () => controls.stop();
-  }, [inView, value, duration, reduce]);
+  }, [inView, value, reduce]);
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref}>
       <span aria-hidden className="tabular-nums">
         {display.toLocaleString("en-US")}
       </span>

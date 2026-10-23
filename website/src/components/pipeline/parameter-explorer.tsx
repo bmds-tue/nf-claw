@@ -9,8 +9,8 @@ import { Highlight } from "@/components/ui/highlight";
 import { InlineMarkdown } from "@/components/ui/inline-markdown";
 import { SearchField } from "@/components/ui/filters";
 import { cn, humanize } from "@/lib/utils";
+import { EASE } from "@/lib/motion";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
 const key = (p: ParamLite) => `${p.group}/${p.name}`;
 
 export function ParameterExplorer({

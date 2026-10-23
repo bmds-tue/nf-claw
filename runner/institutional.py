@@ -11,6 +11,7 @@ for pinning institutional configs: the run reads an immutable revision, `params.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -80,8 +81,6 @@ def pin(merged: dict, schema_params, upstream: Path, env: dict[str, str], *,
 
 def previous_commit(outdir: Path) -> str | None:
     """The configs commit an earlier attempt in this outdir pinned, from its params.json."""
-    import json
-
     try:
         params = json.loads((outdir / "provenance" / "params.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):

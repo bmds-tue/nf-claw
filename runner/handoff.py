@@ -22,9 +22,10 @@ import hashlib
 import os
 import re
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 
 from runner import inputs, parameters, provenance, samplesheet
 from runner import outputs as output_mod
@@ -296,8 +297,7 @@ def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Pa
     Parent directory canonicalization retains the staged root alias. Nested aliases and their
     literal targets remain namespace entries; multiple logical paths must never be collapsed.
     """
-    from runner.inputs import absolute_local_path
-    normalized = destination if destination is not None else absolute_local_path(root)
+    normalized = destination if destination is not None else inputs.absolute_local_path(root)
     resolved_root = root.resolve()
     result = {}
     for name, entry in inventory.items():
@@ -314,7 +314,7 @@ def normalize_reference_inventory(inventory: dict[str, dict[str, str]], root: Pa
 
 def recorded_input_inventory(outdir: Path, *, allow_legacy: bool = False) -> dict | None:
     bundle = outdir / "provenance"
-    manifest = json.loads((bundle / "run_manifest.json").read_text())
+    manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("invalid input manifest")
     path = bundle / "inputs.inventory.json"

@@ -7,7 +7,6 @@ export {
 } from "./pipelines";
 export {
   getCommits,
-  getCommitCount,
   getTags,
   getRemote,
   githubRepoPath,
@@ -18,5 +17,5 @@ export {
   getRepoMeta,
 } from "./repo";
 export { getWorkflows } from "./workflows";
-export { getLiveRuns, getLiveReleases, liveEnabled } from "./github";
+export { getLiveRuns } from "./github";
 export { getQuickstart, type Quickstart } from "./quickstart";
