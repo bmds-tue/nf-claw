@@ -182,6 +182,8 @@ def test_a_concurrent_main_update_is_preserved_for_the_next_scheduled_run(public
     assert outputs["published"] == "false"
     assert len([call for call in calls if "PATCH" in call]) == 1
     assert not any(call[:2] == ["workflow", "run"] for call in calls)
+    # The next run regenerates the update on the new main; no candidate branch is left behind.
+    assert not git(remote, "for-each-ref", "--format=%(refname)", "refs/heads/maintenance-*")
 
 
 def test_a_short_check_evaluation_delay_is_retried(publication):
@@ -238,16 +240,22 @@ def test_discovery_keeps_new_gitlinks_docs_and_every_generated_manifest(publicat
     assert git(repo, "diff", "--cached", "--raw") == staged
 
 
-def test_a_rerun_uses_a_new_candidate_branch_and_preserves_the_failed_attempt(publication):
+def test_a_rerun_uses_a_new_candidate_branch_and_removes_the_superseded_attempt(publication):
     repo, remote, _, run = publication
     (repo / "catalog.md").write_text("regenerated\n")
     first, _, _ = run(PATCH_ERROR="rule")
     assert first.returncode != 0
-    previous = git(remote, "rev-parse", "maintenance-update-123-1")
-    second, _, outputs = run(GITHUB_RUN_ATTEMPT="2")
+    previous = git(remote, "rev-parse", "maintenance-update-123-1")   # kept for inspection
+    git(remote, "branch", "maintenance-update-1234-1", previous)      # another run's candidate
+    second, calls, outputs = run(GITHUB_RUN_ATTEMPT="3")              # attempt 2 never pushed
     assert second.returncode == 0, second.stderr
     assert outputs["published"] == "true"
-    assert git(remote, "rev-parse", "maintenance-update-123-1") == previous
+    deleted = [next(arg for arg in call if arg.startswith("repos/")).rsplit("/", 1)[1]
+               for call in calls if "DELETE" in call]
+    assert deleted == ["maintenance-update-123-3", "maintenance-update-123-1",
+                       "maintenance-update-123-2"]
+    assert git(remote, "for-each-ref", "--format=%(refname:short)",
+               "refs/heads/maintenance-*") == "maintenance-update-1234-1"
 
 
 def test_unexpected_tracked_code_changes_cannot_authorize_generated_data(publication):
