@@ -48,7 +48,7 @@ jobs:
       - uses: ./.github/actions/setup-nextflow
       # A release bump changes a staged gitlink. Validate only those pipelines through Nextflow;
       # this keeps the daily job bounded while preventing an incompatible release from being
-      # auto-merged. Quoting the array preserves every validated pipeline slug as one argument.
+      # published. Quoting the array preserves every validated pipeline slug as one argument.
       - name: Validate updated pipelines through Nextflow
         run: |
           # GitHub runs this step as `bash -e` without pipefail: a failed staged-diff inventory
@@ -66,7 +66,7 @@ jobs:
             export NFCLAW_RESULT_FILE="$RUNNER_TEMP/update-acceptance.tsv"
             NFCLAW_KEEP_SUBMODULES=1 bash scripts/nextflow_accept.sh "${updated[@]}"
             # Nightly checks can recognize a documented defect. Automated release bumps still
-            # require a unique completed preview for every changed pipeline before auto-merge.
+            # require a unique completed preview for every changed pipeline before publication.
             for name in "${updated[@]}"; do
               verdict=$(awk -F '\t' -v pipeline="$name" '$1 == pipeline { if (NF == 2) print $2; else print "invalid" }' "$NFCLAW_RESULT_FILE")
               if [ "$verdict" != accepted ]; then

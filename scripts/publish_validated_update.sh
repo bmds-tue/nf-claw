@@ -79,13 +79,15 @@ for _ in {1..5}; do
   if grep -qi 'fast forward' "$err"; then
     # A human changed main during validation. Preserve it; the next scheduled run regenerates
     # and validates on that new base. Never rebase or force-push an unchecked combination.
+    # That regeneration supersedes this candidate, so its branch is not left behind.
+    gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" --silent || true
     echo "published=false" >> "$GITHUB_OUTPUT"
     echo "::notice::main moved during validation; the next maintenance run will revalidate the update"
     {
       echo "### Maintenance publication deferred"
       echo
       echo "main moved during validation. The next scheduled run will regenerate and validate"
-      echo "against the new main. This run's candidate remains on \`$branch\` (\`$head\`)."
+      echo "against the new main. This run's candidate (\`$head\`) was not published."
     } >> "$GITHUB_STEP_SUMMARY"
     exit 0
   fi
@@ -99,6 +101,13 @@ fi
 echo "published=true" >> "$GITHUB_OUTPUT"
 echo "head_sha=$head" >> "$GITHUB_OUTPUT"
 gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" --silent || true
+# A failed earlier attempt of this run kept its candidate for inspection. This publication
+# supersedes it; an attempt that never pushed a branch has nothing to remove.
+for ((previous = 1; previous < attempt; previous++)); do
+  gh api --method DELETE --silent \
+    "repos/$GITHUB_REPOSITORY/git/refs/heads/maintenance-$UPDATE_KIND-$GITHUB_RUN_ID-$previous" \
+    2> /dev/null || true
+done
 {
   echo "### Validated maintenance update published"
   echo
