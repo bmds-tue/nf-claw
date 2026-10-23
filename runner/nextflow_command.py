@@ -51,6 +51,19 @@ def stub_profiles(upstream: Path, profile: str) -> list[str]:
     return stubbed
 
 
+
+def stub_configs(configs) -> list[str]:
+    """The names of the given `--config` files that run every task as a stub (`stubRun = true`)."""
+    stubbed = []
+    for config in configs:
+        try:
+            text = Path(config).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _STUB_RUN.search(_COMMENTS.sub(" ", text)):
+            stubbed.append(Path(config).name)
+    return stubbed
+
 def compose_profile(profile: str, *, demo: bool = False,
                     modifiers: tuple[str, ...] = ()) -> str:
     parts = [p.strip() for p in profile.split(",") if p.strip()]

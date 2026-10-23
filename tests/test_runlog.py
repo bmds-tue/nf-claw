@@ -567,6 +567,32 @@ def test_a_replay_of_a_stub_run_carries_its_caveat(tmp_path):
         replay_guard.stub_caveat(["test"])]
 
 
+
+def test_a_replay_of_a_run_stubbed_by_a_config_carries_its_caveat(tmp_path):
+    original = tmp_path / "orig"
+    (original / "provenance").mkdir(parents=True)
+    (original / "provenance/run_manifest.json").write_text(
+        json.dumps({"stub_configs": ["stub.config"]}))
+    log = tmp_path / "replay/provenance/logs/run.log"
+    log.parent.mkdir(parents=True)
+    replay_guard.start_replay_log(log, str(original), "123")
+    with log.open("a") as fh:
+        fh.write("| -[nf-core/mini] Pipeline completed successfully-\n"
+                 "==> nfclaw replay finished 2026-10-23T00:00:00+00:00: success\n")
+    state = runlog.read_state(log)
+    assert state.state == "success"
+    assert [c for c in state.caveats if c.startswith("stub run:")] == [
+        replay_guard.stub_caveat([], ["stub.config"])]
+
+
+def test_the_stub_caveat_names_every_source_of_stubrun():
+    assert replay_guard.stub_caveat(["test"]).startswith(
+        "stub run: the `test` profile sets `stubRun = true`, so every task ran its stub block")
+    assert replay_guard.stub_caveat([], ["stub.config"]).startswith(
+        "stub run: the `stub.config` config sets `stubRun = true`")
+    assert replay_guard.stub_caveat(["test"], ["a.config", "b.config"]).startswith(
+        "stub run: the `test` profile and the `a.config`, `b.config` config set `stubRun = true`")
+
 # nf-co2footprint (epitopeprediction, multiplesequencealign, phaseimpute) relays Nextflow's console
 # through its own logger: each record is `<colour>LEVEL - [nf-co2footprint] message<reset>`, written
 # without a line break, so Nextflow's `ERROR ~` report reaches the console as `ERROR - [...]` glued
