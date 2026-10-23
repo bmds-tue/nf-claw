@@ -1,7 +1,7 @@
 ---
 name: genomeassembler
-version: 2.0.0
-commit: a72d47d9cdb50f21b97882dfb2abf4af8f4c74ad
+version: 2.0.1
+commit: c608622876dc627020e6627a5ea8cffd0d2e3f3d
 ---
 
 # genomeassembler — full parameter reference
@@ -140,4 +140,4 @@ nf-core/genomeassembler pipeline parameters. Every parameter from the pinned `ne
 | `--shortread-trim` | boolean |  |  |  |  |  | Trim short reads. |
 | `--use-short-reads` | boolean |  |  |  |  |  | Use short reads. |
 
-<!-- Generated from nf-core/genomeassembler@a72d47d9cdb50f21b97882dfb2abf4af8f4c74ad. Do not edit by hand. -->
+<!-- Generated from nf-core/genomeassembler@c608622876dc627020e6627a5ea8cffd0d2e3f3d. Do not edit by hand. -->

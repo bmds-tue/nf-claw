@@ -1,8 +1,8 @@
 ---
 name: genomeassembler
 pipeline: nf-core/genomeassembler
-version: 2.0.0
-commit: a72d47d9cdb50f21b97882dfb2abf4af8f4c74ad
+version: 2.0.1
+commit: c608622876dc627020e6627a5ea8cffd0d2e3f3d
 description: Assemble genomes from long ONT or pacbio HiFi reads
 summary: nf-core/genomeassembler is a bioinformatics pipeline that carries out genome assembly, polishing and scaffolding from long reads (ONT or pacbio). Assembly can be done via flye or hifiasm, or combinations of both, polishing can be carried out with medaka (ONT), dorado (ONT only, experimental) or pilon (requires short-reads), and scaffolding can be done using LINKS, Longstitch, both using long-reads, yahs if HiC reads are availble, or RagTag if a reference is available. Quality control includes BUSCO, QUAST and merqury (requires short-reads). Currently, this pipeline does not implement phasing of polyploid genomes.
 has_samplesheet: true
@@ -138,14 +138,14 @@ nfclaw run genomeassembler ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/genomeassembler/blob/2.0.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/genomeassembler/blob/2.0.1/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: fastp, hifiasm, flye, pilon, medaka, dorado, LINKS, longstitch, yahs, RagTag, liftoff, BUSCO, genomescope2, jellyfish, meryl, QUAST, minimap2, samtools, bwa-mem2, picard.
 
-Full list with references: https://github.com/nf-core/genomeassembler/blob/2.0.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/genomeassembler/blob/2.0.1/CITATIONS.md
 
 ## Demo
 ```bash
@@ -153,6 +153,6 @@ nfclaw run genomeassembler --demo --outdir results   # adds the upstream test pr
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/genomeassembler/blob/2.0.0/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/genomeassembler/blob/2.0.1/docs/usage.md
 
-<!-- Generated from nf-core/genomeassembler@a72d47d9cdb50f21b97882dfb2abf4af8f4c74ad. Do not edit by hand. -->
+<!-- Generated from nf-core/genomeassembler@c608622876dc627020e6627a5ea8cffd0d2e3f3d. Do not edit by hand. -->

@@ -771,7 +771,7 @@
       "bwa-mem2",
       "picard"
     ],
-    "version": "2.0.0"
+    "version": "2.0.1"
   },
   {
     "description": "A pipeline to compare multiple genomes and annotations",
