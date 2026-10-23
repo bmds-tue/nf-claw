@@ -361,8 +361,8 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
                                 └─────────────────────────────────┘
 ```
 
-- **`auto-update.yml`** (Daily): Discovers new upstream release tags via `git ls-remote --tags`, checks out new versions, regenerates context files, verifies Nextflow acceptance (`nextflow -preview`), runs the test suite and drift gate, and auto-merges the update.
-- **`discover-pipelines.yml`** (Weekly): Identifies newly published **DSL2** nf-core pipelines, scaffolds submodules, enforces strict exit code 0 acceptance, and merges validated pipelines.
+- **`auto-update.yml`** (Daily): Discovers new upstream release tags via `git ls-remote --tags`, checks out new versions, regenerates context files, verifies Nextflow acceptance (`nextflow -preview`), runs the test suite and drift gate, and publishes the validated update.
+- **`discover-pipelines.yml`** (Weekly): Identifies newly published **DSL2** nf-core pipelines, scaffolds submodules, enforces strict exit code 0 acceptance, and publishes validated pipelines.
 - **`deploy-pages.yml`** (Push to `main`): Rebuilds and publishes the interactive static portal to GitHub Pages.
 - **`smoke.yml`** (Weekly & on changes): Validates command synthesis, schema parsing, and CLI arguments across all pipelines (`nfclaw run --check --demo`), as well as registered chains.
 - **`nextflow-validate.yml`** (Nightly & on changes): Executes `nextflow -preview` under pinned minimum Nextflow versions across parallel shards to verify pipeline compilation, profile resolution, schema validation, and DAG construction.
@@ -374,11 +374,13 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 - **`codeql.yml`** (Push, PR, weekly & manual): Scans Python, JavaScript/TypeScript and GitHub Actions code.
 
 Push and PR triggers can be filtered by changed paths; each workflow file defines its
-exact scope. Maintenance merges made with `GITHUB_TOKEN` do not trigger ordinary push
-or PR workflows: those jobs run their validation gates before merging and explicitly
-dispatch the Pages deployment. Where the organization does not let GitHub Actions open
-pull requests, both jobs report their checks on the validated commit and fast-forward `main`
-to it instead ([details](docs/updating.md#2-automated-daily-updates-auto-updateyml)).
+exact scope. Both maintenance jobs publish directly through a checked fast-forward of
+`main`, so they work even when organization policy forbids Actions from creating PRs.
+They validate first, report the required checks on the exact generated commit, and
+preserve concurrent changes to `main`. Because `GITHUB_TOKEN` pushes do not trigger push
+workflows, the publisher explicitly starts tests, smoke checks, CodeQL and Pages deployment.
+No organization setting change or personal access token is needed
+([details](docs/updating.md#2-automated-daily-updates-auto-updateyml)).
 
 Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).
 
