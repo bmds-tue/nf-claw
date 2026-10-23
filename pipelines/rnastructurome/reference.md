@@ -1,7 +1,7 @@
 ---
 name: rnastructurome
-version: 1.0.0
-commit: 959113050df9426e0d4f2bc16a34a0ab22aafd5c
+version: 1.1.0
+commit: 633ab1d0d12103f9002fe6e781ae1251df2d2656
 ---
 
 # rnastructurome — full parameter reference
@@ -30,7 +30,8 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--bowtie-trim5` | integer |  |  |  | ≥ 0 | 0 | Trim this many bases from 5' read end (`--trim5`). |
 | `--bowtie-v` | integer |  |  |  | ≥ 0; ≤ 3 |  | Bowtie v1 `-v` mismatch mode value. |
 | `--count-genome` | boolean |  |  |  |  | false | Genome route (STAR) quantification method. Default (false) uses STAR --quantMode TranscriptomeSAM projected onto transcripts, tag-corrected with samtools calmd, counted with rf-count. Set true for the legacy rf-count-genome + rf-rctools extract path. |
-| `--skip-markdup` | boolean |  |  |  |  | true | Skip SAMtools markdup deduplication (default: true). Position-based duplicate removal is not valid for chemical-probing libraries without UMIs, where reads sharing a 5' start are independent RT events rather than PCR duplicates. Leave enabled; UMI libraries are still deduplicated via UMI-tools. Set false only if you have a specific reason. |
+| `--markdup` | boolean |  |  |  |  |  | Run SAMtools markdup deduplication on non-UMI libraries. Off by default: position-based duplicate removal is not valid for chemical-probing libraries without UMIs, where reads sharing a 5' start are independent RT events rather than PCR duplicates. UMI libraries are always deduplicated via UMI-tools. |
+| `--skip-markdup` | boolean |  | yes |  |  |  | Deprecated: use `--markdup` (inverted). |
 | `--star-map-sjdb-overhang` | integer |  |  |  | ≥ 1 | 200 | STAR `--sjdbOverhang` for MaP alignment. Ideally `readLength - 1`; default 200 suits 201 bp reads. |
 | `--star-multimap-nmax` | integer |  |  |  | ≥ 1 | 10 | Maximum number of loci a read is allowed to map to in STAR (`--outFilterMultimapNmax`). Reads mapping to more loci than this are discarded. Increase when studying repetitive non-coding RNAs. |
 | `--transcriptome` | boolean |  |  |  |  | false | Align against a transcript-level FASTA using Bowtie (RT-stop) / Bowtie2 (MaP). Default (false) downloads a genome FASTA and aligns with STAR. |
@@ -92,8 +93,10 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--cutadapt-5quality` | integer |  |  |  |  | 20 | Base quality threshold for 5' trimming (used for MaP; RT-stop is forced to 0). |
 | `--cutadapt-adapter-3p` | string |  |  |  |  | AGATCGGAAGAGC | Global fallback 3' adapter sequence(s), comma-separated. If omitted and no per-sample adapter is provided, the pipeline defaults to AGATCGGAAGAGC. |
 | `--cutadapt-adapter-5p` | string |  |  |  |  | AGATCGGAAGAGC | Global fallback 5' adapter sequence(s), comma-separated. If omitted and no per-sample adapter is provided, the pipeline defaults to AGATCGGAAGAGC. |
+| `--cutadapt-discard-untrimmed` | boolean |  |  |  |  | false | Discard reads in which no adapter was found. For short-insert libraries (e.g. tRNA, miRNA) where every genuine read runs into the adapter. |
 | `--cutadapt-len` | integer |  |  |  |  | 25 | Minimum read length retained after trimming. |
 | `--cutadapt-min-align` | integer |  |  |  |  | 3 | Minimum adapter overlap required for trimming. |
+| `--cutadapt-nextseq-trim` | integer |  |  |  |  |  | Enable cutadapt `--nextseq-trim` with this 3' quality cutoff, trimming high-quality poly-G tails left by 2-colour (NextSeq/NovaSeq) chemistry. Off by default. |
 | `--cutadapt-quality-only` | boolean |  |  |  |  | false | If true, skip adapter trimming and apply quality/length trimming only. |
 | `--cutadapt-trim-n` | boolean |  |  |  |  | true | Trim terminal N bases. |
 
@@ -117,6 +120,7 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--correlate-img` | boolean |  |  |  |  | false | Generate the rf-correlate correlation heatmap PDF (`-g`; requires R). |
 | `--correlate-min-values` | number |  |  |  | ≥ 0 |  | rf-correlate minimum number of values to calculate a correlation (`-m`); a value between 0 and 1 is interpreted as a fraction of transcript length. Unset uses the tool default (off). |
 | `--correlate-replicates` | boolean |  |  |  |  | true | Run rf-correlate to compute pairwise reactivity-profile correlations between replicates of each sample group (a replicate-reproducibility QC surfaced in MultiQC). Only runs for sample groups with more than one replicate; a no-op otherwise. |
+| `--four-base-dms` | boolean |  |  |  |  | true | Four-base DMS analysis (Mitchell et al., 2023) for DMS-MaP samples at pH >= 8: rf-count keeps only G->C/G->T mutations on G and drops indels (`-om H2N,G2Y -ncl`), and rf-norm normalises each base separately over the whole transcript (`-4d`). |
 | `--jackknife-reference` | string (file path) |  |  |  |  |  | Path to a reference `.db` structure file for rf-jackknife normalisation assessment. When provided, rf-jackknife runs between rf-norm and rf-fold and the output CSV reports optimal slope/intercept values. When omitted, rf-fold runs directly using whatever slope/intercept params are set. |
 | `--r2dt` | boolean |  |  |  |  | true | Generate template-based 2D RNA structure diagrams using R2DT, coloured by normalised SHAPE/chemical-probing reactivity. |
 | `--r2dt-templatable-biotypes` | string |  |  |  |  | rRNA,Mt_rRNA,tRNA,Mt_tRNA,snoRNA,scaRNA,snRNA,SRP_RNA,RNase_P_RNA,RNase_MRP_RNA,tmRNA | Comma-separated GTF biotypes sent to R2DT. R2DT only has templates for structured ncRNA classes; transcripts of other biotypes (mRNA, lncRNA, ...) are excluded so R2DT never force-fits them to the wrong template, and are drawn by ViennaRNA instead. Matched case-insensitively against transcript/gene biotype. |
@@ -131,6 +135,7 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--rfcount-map-discard-shorter` | integer |  |  |  | ≥ 1 | 1 | In mutation mode (`-m`), discard reads shorter than this value (`--discard-shorter`). |
 | `--rfcount-map-eval-surrounding` | boolean |  |  |  |  | true | MaP only: also evaluate quality of ±1 nt surrounding each mutation (`-es`). |
 | `--rfcount-map-max-collapse-distance` | integer |  |  |  | ≥ 0 | 2 | In mutation mode with collapsing enabled, max distance to collapse (`--max-collapse-distance`). |
+| `--rfcount-map-max-coverage` | integer |  |  |  | ≥ 1000 |  | In mutation mode (`-m`), downsample each transcript above this coverage in rf-count (`--max-coverage`). Unset means off. Ignored with `--count_genome true`. |
 | `--rfcount-map-median-quality` | integer |  |  |  | ≥ 0 | 20 | MaP only: discard reads with median Phred+33 base quality below this value (`-eq`). |
 | `--rfcount-map-min-quality` | integer |  |  |  | ≥ 0 | 20 | In mutation mode (`-m`), minimum Phred+33 base quality for mutations (`--min-quality`). |
 | `--rfcount-map-no-ambiguous` | boolean |  |  |  |  |  | MaP only: ignore ambiguously aligned deletion events (`-na`). Auto: off for M-MLV, on for Group II Intron (e.g. TGIRT); leave unset to use the auto default. |
@@ -153,21 +158,20 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--rfeval-terminal-as-unpaired` | boolean |  |  |  |  | false | Treat terminal base-pairs as unpaired in rf-eval (`-tu`). |
 | `--rfeval-windows` | string (file path) |  |  |  |  |  | Optional manifest of sub-region references, one per line: `ref_seq_id start end structure_id [strand]` (1-based inclusive, in the XML's own coordinate space). When set, rf-norm reactivities are sliced to each window before rf-eval, so a sub-region structure (e.g. an Rfam element on a whole chromosome) is scored against a matching windowed XML instead of the diluted full transcript. `structure_id` must match an entry in `--rfeval_reference`. |
 | `--rffold-ct` | boolean |  |  |  |  | false | Write CT format structures with rf-fold (`-ct`). Disabled by default to keep dot-bracket output. |
-| `--rffold-dotplot` | boolean |  |  |  |  | true | Generate dot plots from rf-fold (`-d`). |
-| `--rffold-fold-constraint-file` | string (file path) |  |  |  |  |  | Constraint file for allowed base-pairing positions (`-fc`). |
+| `--rffold-dotplot` | boolean |  |  |  |  | true | Generate dot plots from rf-fold (`-dp`). |
+| `--rffold-fold-constraint-file` | string (file path) |  |  |  |  |  | Constraint file for allowed base-pairing positions (`-c`). |
 | `--rffold-img` | boolean |  |  |  |  | false | Generate ViennaRNA RNAplot structure diagrams via rf-fold (`-g`). Disabled by default; slow on large transcriptomes. Use `--r2dt` for template-based diagrams instead. |
 | `--rffold-intercept` | number |  |  |  |  |  | Intercept for reactivity-to-folding-constraint conversion in rf-fold (`-in`). Auto by `chemical`: DMS -2, NAI -0.8, 2A3 -0.4, other/unset -0.6. Overridden by jackknife calibration when available. |
 | `--rffold-only-common` | integer |  |  |  | ≥ 1 |  | Only fold transcripts covered in at least this number of XML experiments (`-oc`). |
 | `--rffold-partition-window` | integer |  |  |  | ≥ 50 | 1000 | Partition-function window size in rf-fold (`-pw N`). |
 | `--rffold-shannon-entropy` | boolean |  |  |  |  | true | Compute and report Shannon entropy in rf-fold (`-sh`). |
 | `--rffold-slope` | number |  |  |  |  |  | Slope for reactivity-to-folding-constraint conversion in rf-fold (`-sl`). Auto by `chemical`: DMS 4.6, NAI 2.2, 2A3 1, other/unset 1.8. Overridden by jackknife calibration when available. |
-| `--rffold-unconstrained` | boolean |  |  |  |  | false | Fold without reactivity constraints in rf-fold (`-u`). |
-| `--rffold-unpaired-constraint-file` | string (file path) |  |  |  |  |  | Constraint file for required unpaired positions (`-uc`). |
-| `--rffold-vienna-bp-span` | integer |  |  |  | ≥ 1 |  | Minimal base-pair span for ViennaRNA in rf-fold (`-vms`). |
-| `--rffold-vienna-constrained` | boolean |  |  |  |  | false | Use ViennaRNA hard constraints with rf-fold (`-vc`). |
-| `--rffold-vienna-max-bp-span` | integer |  |  |  | ≥ 1 | 600 | Maximal base-pair span for ViennaRNA in rf-fold (`-vmd`). |
-| `--rffold-vienna-no-lonely-pairs` | boolean |  |  |  |  | false | Pass ViennaRNA no-lonely-pairs mode to rf-fold (`-vnlp`). |
-| `--rffold-vienna-rnaplot` | string |  |  |  |  | RNAplot | Path to ViennaRNA `RNAplot` binary for SVG structure plots in rf-fold (`-vrp`). |
+| `--rffold-unconstrained` | boolean |  |  |  |  | false | Fold without reactivity constraints in rf-fold (`-i`). |
+| `--rffold-use-alifold` | boolean |  |  |  |  | true | Fold a group's replicates together with RNAalifold, constrained by all their reactivity profiles at once, instead of folding each with RNAfold and aggregating base pairs (`-ua`). Applies only to groups with more than one replicate. |
+| `--rffold-vienna-constrained` | boolean |  |  |  |  | false | Use ViennaRNA hard constraints with rf-fold (`-hc`). |
+| `--rffold-vienna-max-bp-span` | integer |  |  |  | ≥ 1 | 600 | Maximal base-pair span for ViennaRNA in rf-fold (`-md`). |
+| `--rffold-vienna-no-lonely-pairs` | boolean |  |  |  |  | false | Pass ViennaRNA no-lonely-pairs mode to rf-fold (`-nlp`). |
+| `--rffold-vienna-rnaplot` | string |  |  |  |  | RNAplot | Path to ViennaRNA `RNAplot` binary for the ViennaRNA and rf-structextract SVG structure plots. |
 | `--rffold-window` | integer |  |  |  | ≥ 50 | 1000 | Enable windowed MFE folding in rf-fold with this window size (`-w -fw N`). Set null/unset to fold the whole transcript instead. |
 | `--rfjackknife-img` | boolean |  |  |  |  |  | Generate R heatmap of grid-search results in rf-jackknife (`-g`). |
 | `--rfjackknife-intercept` | string |  |  |  | matches ^-?\d+(\.\d+)?,-?\d+(\.\d+)?$ | -3,0 | Comma-separated intercept range to search in rf-jackknife (`-in`), e.g. `-3,0`. |
@@ -188,10 +192,10 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--rfnorm-median-coverage` | number |  |  |  | ≥ 0 | 0 | Discard transcripts with median coverage below this threshold (`--median-coverage`). |
 | `--rfnorm-nan` | string |  |  |  |  |  | Positions with read coverage below this threshold are reported as NaN (`--nan`). Auto: 1000 for MaP, 50 for RT-stop. Set to 0 to disable NaN masking. |
 | `--rfnorm-norm-independent` | boolean |  |  |  |  | false | Normalize each reactive base independently (`--norm-independent`). |
-| `--rfnorm-norm-method` | integer |  |  | `2`, `3`, `4` |  |  | Override rf-norm normalization method (`-nm`). 2=90% Winsorizing, 3=Box-plot, 4=Mitchell (MaP only). |
+| `--rfnorm-norm-method` | integer |  |  | `1`, `2`, `3`, `4` |  |  | Override rf-norm normalization method (`-nm`). 1=2-8%, 2=90% Winsorizing, 3=Box-plot, 4=Mitchell (MaP only). |
 | `--rfnorm-norm-window` | integer |  |  |  | ≥ 1 |  | Normalization window size (`--norm-window`). Auto: 50 for DMS or RT-stop, unset otherwise; leave unset to use the auto default. |
 | `--rfnorm-normfactor-min-coverage` | integer |  |  |  | ≥ 1 |  | rf-normfactor minimum coverage (`-mc`): bases below this coverage are excluded from the normalization factor calculation. Auto: 1000 for MaP, 50 for RT-stop; leave unset to use the auto default. |
-| `--rfnorm-prefilter-min-coverage` | integer |  |  |  | ≥ 0 | 1 | Genome route only: after rf-rctools extract, keep transcripts with at least one position at this coverage or higher before rf-norm. Set to 0 to keep the full annotation RC. |
+| `--rfnorm-prefilter-min-coverage` | integer |  |  |  | ≥ 0 | 1 | `--count_genome true` only: after rf-rctools extract, keep transcripts with at least one position at this coverage or higher before rf-norm. Set to 0 to keep the full annotation RC. |
 | `--rfnorm-pseudocount` | number |  |  |  | ≥ 0 |  | Pseudocount used by Ding scoring (`--pseudocount`). |
 | `--rfnorm-raw` | boolean |  |  |  |  | false | Score raw reactivities without applying normalization (`--raw`). |
 | `--rfnorm-reactive-bases` | string |  |  |  | matches ^[A-Za-z]+$ |  | Reactive bases used for normalization window selection (`--reactive-bases`), e.g. `AC` for DMS. |
@@ -230,7 +234,8 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 |---|---|---|---|---|---|---|---|
 | `--RT-enzyme` | string |  |  |  |  |  | Fallback reverse transcriptase enzyme for rows missing `RT_enzyme` (e.g. `M-MLV`). |
 | `--chemical` | string |  |  |  |  |  | Fallback chemical probing reagent for rows missing `chemical` (e.g. `1M7`). |
-| `--fuzzy-untreated-pairing` | boolean |  |  |  |  | true | When true (default), a treated group with no exact `sample_group`+`replicate` untreated match falls back to the untreated sample sharing the same sample_group base token (portion before the first `_`) at the same replicate — e.g. `MDA-MB-231_untreated_r1` can serve as control for `MDA-MB-231_MTX_treated_r1`. If a treated group still has no untreated after that, and exactly one untreated control exists anywhere else in the same reference, that single control is reused for it (with a warning) — e.g. one shared untreated backing several treated replicates. Set false to require exact matches; unmatched treated groups then proceed without an untreated control (scoring method 2 or 4). |
+| `--exact-untreated-pairing` | boolean |  |  |  |  |  | Require an exact `sample_group`+`replicate` match when pairing treated samples with untreated/denatured controls. By default, a treated group with no exact match falls back to the control whose `sample_group` shares the longest leading substring with it (see the usage docs). With this set, unmatched treated groups proceed without an untreated control (scoring method 2 or 4). |
+| `--fuzzy-untreated-pairing` | boolean |  | yes |  |  |  | Deprecated: use `--exact_untreated_pairing` (inverted). |
 | `--method` | string |  |  |  |  |  | Fallback probing method for rows missing `method`. |
 | `--organism` | string |  |  |  |  |  | Fallback organism for rows missing `organism`, typically a Latin binomial such as `Homo sapiens`. |
 | `--pH` | number |  |  |  |  |  | Fallback DMS reaction pH for rows missing `pH`. |
@@ -238,4 +243,4 @@ nf-core/rnastructurome pipeline parameters. Every parameter from the pinned `nex
 | `--sample-id` | string |  |  |  | matches ^\S+$ |  | Fallback sample ID for rows missing `sample_id`. |
 | `--umi-pattern` | string |  |  |  |  |  | Fallback UMI pattern for rows missing `umi_pattern`. Supplying a pattern enables umi_tools extract before cutadapt. |
 
-<!-- Generated from nf-core/rnastructurome@959113050df9426e0d4f2bc16a34a0ab22aafd5c. Do not edit by hand. -->
+<!-- Generated from nf-core/rnastructurome@633ab1d0d12103f9002fe6e781ae1251df2d2656. Do not edit by hand. -->

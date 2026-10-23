@@ -1,14 +1,14 @@
 ---
 name: rnastructurome
 pipeline: nf-core/rnastructurome
-version: 1.0.0
-commit: 959113050df9426e0d4f2bc16a34a0ab22aafd5c
+version: 1.1.0
+commit: 633ab1d0d12103f9002fe6e781ae1251df2d2656
 description: This pipeline analyses chemical-based high-throughput RNA structure probing data
 summary: nf-core/rnastructurome is a bioinformatics pipeline for analysing chemical high-throughput RNA structure-probing data. It takes a samplesheet and FASTQ files from SHAPE or DMS experiments (read out by either the RT-stop or mutational profiling (MaP) principle) then performs quality control, trimming and alignment, quantifies per-base reactivity, and predicts RNA secondary structures. Outputs include normalised reactivity, Shannon entropy and base-pair arc tracks, 2D structure diagrams, RMDB-compatible RDAT files, and an aggregated QC report. References can be supplied locally or fetched automatically from Ensembl or NCBI, so the pipeline works across a wide range of organisms, including viruses and bacteria.
 has_samplesheet: true
 input: samplesheet (sample, sample_id, fastq_1, fastq_2, method, principle, chemical, RT_enzyme, organism, pH, adapter_3p, adapter_5p, umi_pattern, condition, sample_group, replicate, group)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["FastQC", "UMI-tools", "Cutadapt", "GffRead", "STAR", "Bowtie", "Bowtie2", "SAMtools", "BEDOPS", "RSeQC", "RNAFramework", "UCSC wigToBigWig", "R2DT", "ViennaRNA", "MultiQC"]
+tools: ["FastQC", "UMI-tools", "Cutadapt", "GffRead", "STAR", "Bowtie", "Bowtie2", "SAMtools", "BEDOPS", "RSeQC", "RNAFramework", "Four-base DMS analysis", "UCSC wigToBigWig", "R2DT", "ViennaRNA", "RNAalifold", "MultiQC"]
 ---
 # rnastructurome
 
@@ -64,15 +64,15 @@ Any of the optional columns above may be appended to the header when your data n
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
-- **Alignment options** (`alignment_options`) — 22 parameters
+- **Alignment options** (`alignment_options`) — 23 parameters
 - **Executor options** (`executor_options`) — 3 parameters
 - **Generic options** (`generic_options`) — 16 parameters
 - **Input/output options** (`input_output_options`) — 4 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
-- **Read trimming options** (`read_trimming_options`) — 8 parameters
+- **Read trimming options** (`read_trimming_options`) — 10 parameters
 - **Reference genome options** (`reference_genome_options`) — 7 parameters
-- **RNAframework options** (`rnaframework_options`) — 110 parameters
-- **Sample metadata options** (`sample_metadata_options`) — 9 parameters
+- **RNAframework options** (`rnaframework_options`) — 111 parameters
+- **Sample metadata options** (`sample_metadata_options`) — 10 parameters
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -96,14 +96,14 @@ nfclaw run rnastructurome ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnastructurome/blob/1.0.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnastructurome/blob/1.1.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: FastQC, UMI-tools, Cutadapt, GffRead, STAR, Bowtie, Bowtie2, SAMtools, BEDOPS, RSeQC, RNAFramework, UCSC wigToBigWig, R2DT, ViennaRNA, MultiQC.
+The tools/methods this pipeline runs, per the authors' own list: FastQC, UMI-tools, Cutadapt, GffRead, STAR, Bowtie, Bowtie2, SAMtools, BEDOPS, RSeQC, RNAFramework, Four-base DMS analysis, UCSC wigToBigWig, R2DT, ViennaRNA, RNAalifold, MultiQC.
 
-Full list with references: https://github.com/nf-core/rnastructurome/blob/1.0.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/rnastructurome/blob/1.1.0/CITATIONS.md
 
 ## Demo
 ```bash
@@ -111,6 +111,6 @@ nfclaw run rnastructurome --demo --outdir results   # adds the upstream test pro
 ```
 
 ## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/rnastructurome/blob/1.0.0/docs/usage.md
+Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/rnastructurome/blob/1.1.0/docs/usage.md
 
-<!-- Generated from nf-core/rnastructurome@959113050df9426e0d4f2bc16a34a0ab22aafd5c. Do not edit by hand. -->
+<!-- Generated from nf-core/rnastructurome@633ab1d0d12103f9002fe6e781ae1251df2d2656. Do not edit by hand. -->
