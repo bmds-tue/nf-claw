@@ -207,7 +207,7 @@ pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
 Each release below was validated separately on the same host, in one uninterrupted `nfclaw run <name> --demo`
 on the engine its `skill.md` names: before its pin was updated or its pipeline was added, or, for a release the
-automated updater published itself (rnastructurome 1.1.0), right after. This execution evidence is additional to
+automated updater published itself (rnastructurome 1.1.0 and genomeassembler 2.0.1), right after. This execution evidence is additional to
 the automated updater's preview, test and drift gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
@@ -219,6 +219,7 @@ the automated updater's preview, test and drift gates.
 | plasmodiumdrugres | 1.0.0 | 25.10.4 | success | 6 completed | 2026-10-22, added, host network |
 | provenancereport | 1.0.0 | 25.10.4 | success | 5 completed | 2026-10-22, added, host network |
 | rnastructurome | 1.1.0 | 25.10.4 | success | 52 completed | 2026-10-23, bump from 1.0.0 published by the updater, host network |
+| genomeassembler | 2.0.1 | 25.10.4 | success | 88 completed | 2026-10-23, bump from 2.0.0 published by the updater, host network |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -247,6 +248,7 @@ identical execution environment and again matched all of those checksums.
 | plasmodiumdrugres 1.0.0 | 3 | 6/6 | 4 | 11 identical, 4 changed |
 | provenancereport 1.0.0 | 3 | 5/5 | 2 | 18 identical, 17 changed |
 | rnastructurome 1.1.0 | 15 | 38/38 | 5 | 73 identical, 15 changed |
+| genomeassembler 2.0.1 | 14 | 30/30 | 7 | 243 identical, 78 changed |
 
 - **magmap:** 48 of the changed files are MultiQC and `pipeline_info` reports, 2 are gzip files whose
   decompressed content is identical, and 3 are BBMap logs that differ only in their timings.
@@ -259,6 +261,14 @@ identical execution environment and again matched all of those checksums.
   files and every one of the 108 stable paths of its `-profile test` snapshot, and every software version but
   R2DT's, which upstream's test leaves out because R2DT runs only with containers. The 15 changed files are ones
   its `tests/.nftignore` marks as unstable: reports, FastQC archives, STAR logs and R2DT's log.
+- **genomeassembler 2.0.1** (2026-10-23) was checked the same way. Its run and its replay matched all 113 checksummed
+  files, all 427 stable paths and every software version of its `-profile test` snapshot, which also records the
+  88 succeeded tasks. Of the 78 changed files, 25 are reports and metadata and 8 are gzip files whose decompressed
+  content is identical. The other 45 are all files its `tests/.nftignore` excludes from that comparison: hifiasm's
+  binary indexes and logs, LongStitch's scaffolds, Flye's logs, read-trimming and Hi-C logs and metrics, the
+  genomeqc samplesheet (it records absolute output paths) and the `test_ont_flye` sample's assembly. Flye assembled
+  that sample's ONT test reads into 4 contigs (2,083,676 bp) in the run and 3 (2,068,682 bp) in the replay, so its
+  graph, assembly info and Liftoff annotation differ too.
 - **rnasplice:** as with 1.0.4, MISO names its logs by the clock (the 20 missing and 20 extra files, so `nfclaw verify`
   exits 1) and samples by MCMC, so 1,223 of the changed files are MISO's data. Salmon's multi-threaded
   quantification also differs slightly between runs (948 of 5,895 transcripts of ERR188383, by at most 4.4 of
