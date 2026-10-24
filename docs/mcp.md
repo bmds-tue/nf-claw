@@ -67,6 +67,11 @@ Without an install, use the checkout's interpreter: `command: python3`, `args: [
 `cwd: /abs/path/to/nf-claw`. To try the server by hand:
 `npx @modelcontextprotocol/inspector nfclaw mcp`.
 
+nf-claw on another machine: start the server over `ssh`, and its jobs run on that host —
+`claude mcp add nfclaw -- ssh -T host /abs/path/to/.venv/bin/nfclaw mcp` (or `command: ssh`,
+`args: ["-T", "host", "/abs/path/to/.venv/bin/nfclaw", "mcp"]`). The remote command gets a
+non-interactive shell's environment.
+
 ---
 
 ## Tools
@@ -198,13 +203,14 @@ protocol messages: its own stray output, and that of any process it starts, goes
 stdin ends the server, never a job.
 
 Interoperability is tested against the official Python SDK in both eras (`tests/test_mcp_interop.py`,
-run when `mcp` is installed). On 2026-10-24 each client below found, validated, ran and followed
-nf-core/demo end to end through these tools on an IPv6-only Linux server, recovering from that
-host's first network failure on its own:
+run when `mcp` is installed). On 2026-10-24, with `nfclaw mcp` and its jobs on an IPv6-only Linux
+server, an agent in each client below found nf-core/demo, read its skill, validated, ran and
+followed it to a MultiQC report through these tools alone, fixing that host's first network failure
+from nfclaw's error:
 
 | Client | Protocol it chose |
 |---|---|
-| Claude Code 2.1.300 | `initialize`, 2025-11-25 |
+| Claude Code 2.1.300 (macOS, server started over `ssh`) | `initialize`, 2025-11-25 |
 | Codex 0.144.4 | `initialize`, 2025-06-18 |
 | Antigravity CLI (`agy`) 1.4.7 | `server/discover`, 2026-07-28 |
-| MCP Python SDK 2.3.0 | both |
+| MCP Python SDK 2.3.0 (scripted: runs, a chain, cancel, resume, replay) | both |

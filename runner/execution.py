@@ -298,9 +298,8 @@ def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str]) -> Nfcla
     return NfclawError(
         ErrorCode.EXECUTION_FAILED, message,
         fix=(f"{time_limit_hint}{ipv6_hint}Fix the cause Nextflow reports, then re-run the same "
-             f"command with "
-             f"--resume.{task_hint} The whole launch is in `run_log`. Common causes and fixes: "
-             f"{runlog.known_issues_path()}."),
+             f"command with --resume.{task_hint} The whole launch is in `run_log`. Common causes "
+             f"and fixes: {runlog.known_issues_path()}."),
         details=details)
 
 
