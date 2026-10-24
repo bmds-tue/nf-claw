@@ -172,9 +172,15 @@ client's server configuration (`env` / `env_vars`). Per-run Nextflow settings ar
 On an IPv6-only host the first run fails with `Network is unreachable` (Nextflow's JVM tries IPv4
 first; see [known issues](known-issues.md#ipv6-only-host--jvm-cant-reach-github)), and nfclaw's
 error names the fix. Pass it per run as `nxf_env: {"NXF_JVM_ARGS":
-"-Djava.net.preferIPv6Addresses=true"}`, or once for every job in the server's configuration:
-`claude mcp add -e NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true …`, Codex
-`env = { NXF_JVM_ARGS = "…" }`, or Antigravity `"env": {"NXF_JVM_ARGS": "…"}`.
+"-Djava.net.preferIPv6Addresses=true"}`, or once in the server's configuration, so that every job
+has it and the first run already works. Claude Code (`-e` takes several values, so the name goes
+before it):
+```bash
+claude mcp add --scope user nfclaw -e NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true \
+  -- /abs/path/to/.venv/bin/nfclaw mcp
+```
+Codex: `env = { NXF_JVM_ARGS = "-Djava.net.preferIPv6Addresses=true" }` in its
+`[mcp_servers.nfclaw]` table; Antigravity: `"env": {"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"}`.
 
 | Variable | Default | Effect |
 |---|---|---|
