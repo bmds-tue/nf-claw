@@ -130,6 +130,7 @@ def _shape_tool(tool: dict, version: str) -> dict:
     if not at_least(version, "2025-06-18"):
         tool.pop("title", None)
         tool.pop("outputSchema", None)
+        tool.pop("_meta", None)
     if not at_least(version, "2025-03-26"):
         tool.pop("annotations", None)
     return tool

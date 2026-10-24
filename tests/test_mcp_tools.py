@@ -173,6 +173,20 @@ def test_list_pipelines_without_a_query_lists_the_library_up_to_the_limit(tools)
     result = call(tools, "list_pipelines", limit=5)
     assert result["structuredContent"]["total"] == len(catalog)
     assert len(result["structuredContent"]["pipelines"]) == 5
+    # A model that listed the library without a query read the first page as the whole of it.
+    text = result["content"][0]["text"]
+    assert f"{len(catalog) - 5} more not shown" in text and "query" in text and "limit" in text
+    narrow = call(tools, "list_pipelines", query="sarek")
+    assert "more not shown" not in narrow["content"][0]["text"]
+
+
+def test_the_workflow_tools_are_loaded_up_front_by_antigravity(tools):
+    # Antigravity defers MCP tools behind one generic call tool, and its model then called them
+    # without reading their schemas (list_pipelines with no query, a made-up `validate_only`).
+    # The four tools of the workflow in INSTRUCTIONS opt out of that; the rest stay on demand.
+    loaded = {t["name"] for t in tools.list_tools(Context())
+              if (t.get("_meta") or {}).get("antigravity/alwaysLoad") is True}
+    assert loaded == {"list_pipelines", "show_pipeline", "run_pipeline", "get_job"}
 
 
 def test_list_pipelines_reports_no_match(tools):
