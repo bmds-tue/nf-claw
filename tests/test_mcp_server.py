@@ -30,7 +30,8 @@ class FakeHandler:
     def list_tools(self, ctx):
         schema = {"type": "object", "properties": {}, "required": []}
         return [{"name": n, "title": n.title(), "description": n, "inputSchema": schema,
-                 "annotations": {"readOnlyHint": True}} for n in ("echo", "slow", "boom")]
+                 "annotations": {"readOnlyHint": True}, "_meta": {"x/alwaysLoad": True}}
+                for n in ("echo", "slow", "boom")]
 
     def call_tool(self, name, arguments, ctx):
         if name == "echo":
@@ -167,7 +168,9 @@ def test_tool_definitions_and_results_follow_the_negotiated_version():
         old_tool = old.request(1, "tools/list")["result"]["tools"][0]
         new_tool = new.request(1, "tools/list")["result"]["tools"][0]
         assert "annotations" not in old_tool and "title" not in old_tool
+        assert "_meta" not in old_tool                # a Tool's _meta came with 2025-06-18
         assert new_tool["annotations"] == {"readOnlyHint": True} and new_tool["title"] == "Echo"
+        assert new_tool["_meta"] == {"x/alwaysLoad": True}
         old_result = old.request(2, "tools/call", {"name": "echo", "arguments": {"a": 1}})["result"]
         new_result = new.request(2, "tools/call", {"name": "echo", "arguments": {"a": 1}})["result"]
         assert old_result == {"content": [{"type": "text", "text": '{"a": 1}'}]}

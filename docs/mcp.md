@@ -1,7 +1,7 @@
 # nf-claw over MCP
 
 `nfclaw mcp` serves the nf-claw library and runner to any [Model Context Protocol](https://modelcontextprotocol.io)
-client — Claude Code, Codex, Hermes, MCP Inspector, the official SDKs — on stdin/stdout. It is part
+client — Claude Code, Codex, Antigravity, Hermes, MCP Inspector, the official SDKs — on stdin/stdout. It is part
 of the `nfclaw` command and adds no dependency: the server is standard-library Python.
 
 Every tool runs a documented `nfclaw` command, so the CLI stays the single implementation. Runs and
@@ -24,7 +24,8 @@ virtualenv, by absolute path if the client does not start from your shell.
 
 **Claude Code**
 ```bash
-claude mcp add nfclaw -- /abs/path/to/.venv/bin/nfclaw mcp
+claude mcp add --scope user nfclaw -- /abs/path/to/.venv/bin/nfclaw mcp
+claude mcp list                 # nfclaw: … - ✔ Connected
 ```
 
 **Codex** (`~/.codex/config.toml`)
@@ -33,7 +34,19 @@ claude mcp add nfclaw -- /abs/path/to/.venv/bin/nfclaw mcp
 command = "/abs/path/to/.venv/bin/nfclaw"
 args = ["mcp"]
 tool_timeout_sec = 120          # a tool waits at most this long; jobs are unaffected
-env_vars = ["PATH", "HOME", "JAVA_HOME"]
+env_vars = ["PATH", "HOME", "JAVA_HOME", "NXF_OPTS"]
+```
+Codex asks before calling a tool that is not read-only (`run_pipeline`, `run_chain`, `cancel_job`).
+`codex exec` has no one to ask and cancels the call (`user cancelled MCP tool call`); to run
+pipelines from it, approve those tools in the same file:
+```toml
+[mcp_servers.nfclaw.tools.run_pipeline]
+approval_mode = "approve"       # likewise for run_chain and cancel_job
+```
+
+**Antigravity** — the app, the IDE and the `agy` CLI all read `~/.gemini/config/mcp_config.json`
+```json
+{"mcpServers": {"nfclaw": {"command": "/abs/path/to/.venv/bin/nfclaw", "args": ["mcp"]}}}
 ```
 
 **Hermes** (`~/.hermes/config.yaml`)
@@ -54,6 +67,11 @@ Without an install, use the checkout's interpreter: `command: python3`, `args: [
 `cwd: /abs/path/to/nf-claw`. To try the server by hand:
 `npx @modelcontextprotocol/inspector nfclaw mcp`.
 
+nf-claw on another machine: start the server over `ssh`, and its jobs run on that host —
+`claude mcp add nfclaw -- ssh -T host /abs/path/to/.venv/bin/nfclaw mcp` (or `command: ssh`,
+`args: ["-T", "host", "/abs/path/to/.venv/bin/nfclaw", "mcp"]`). The remote command gets a
+non-interactive shell's environment.
+
 ---
 
 ## Tools
@@ -73,7 +91,10 @@ Without an install, use the checkout's interpreter: `command: python3`, `args: [
 | `verify_replay` | `nfclaw verify` | Compare a replay with the run it reproduces. |
 
 The server's own instructions give agents the workflow: find → read the skill → `check` → run →
-follow → results. Tool failures (an invalid argument, a refused launch) come back as results with
+follow → results. The four tools of that workflow (`list_pipelines`, `show_pipeline`,
+`run_pipeline`, `get_job`) ask Antigravity to load them up front (`_meta`
+`antigravity/alwaysLoad`), since it otherwise lets its model call MCP tools without their schemas.
+Tool failures (an invalid argument, a refused launch) come back as results with
 `isError` and nfclaw's own message — `[code] message`, the issues, and `fix:` — so the model can correct
 the call. A parameter is refused if it is one of `nfclaw run`'s own options (`outdir`, `resume`, …:
 those are arguments of the tool) or is not a scalar (use `params_file` for structured values).
@@ -141,12 +162,19 @@ the steps to validate, launch and follow it; Claude Code offers it as a slash co
 
 ## Environment
 
-Jobs inherit the server's environment, and clients start servers with a reduced one: Codex and
-Hermes pass only a few variables by default, and an app launched from a desktop may not have your
-shell's `PATH`. If `nfclaw` reports `nextflow not found on PATH` or a missing `JAVA_HOME`, pass them
-in the client's server configuration (`env` / `env_vars`). Per-run Nextflow settings are tool
-arguments: `nxf_env` (e.g. `{"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"}` on an IPv6-only
-host), `nxf_ver`, `config`, `limit_*`.
+Jobs inherit the server's environment, and clients start servers with a reduced one: Codex passes
+only a few variables (on Linux `HOME`, `LANG`, `LOGNAME`, `PATH`, `SHELL`, `USER`) plus its
+`env_vars`, Hermes a few too, and an app launched from a desktop may not have your shell's `PATH`.
+If `nfclaw` reports `nextflow not found on PATH` or a missing `JAVA_HOME`, pass them in the
+client's server configuration (`env` / `env_vars`). Per-run Nextflow settings are tool arguments:
+`nxf_env`, `nxf_ver`, `config`, `limit_*`.
+
+On an IPv6-only host the first run fails with `Network is unreachable` (Nextflow's JVM tries IPv4
+first; see [known issues](known-issues.md#ipv6-only-host--jvm-cant-reach-github)), and nfclaw's
+error names the fix. Pass it per run as `nxf_env: {"NXF_JVM_ARGS":
+"-Djava.net.preferIPv6Addresses=true"}`, or once for every job in the server's configuration:
+`claude mcp add -e NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true …`, Codex
+`env = { NXF_JVM_ARGS = "…" }`, or Antigravity `"env": {"NXF_JVM_ARGS": "…"}`.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -175,4 +203,14 @@ protocol messages: its own stray output, and that of any process it starts, goes
 stdin ends the server, never a job.
 
 Interoperability is tested against the official Python SDK in both eras (`tests/test_mcp_interop.py`,
-run when `mcp` is installed).
+run when `mcp` is installed). On 2026-10-24, with `nfclaw mcp` and its jobs on an IPv6-only Linux
+server, an agent in each client below found nf-core/demo, read its skill, validated, ran and
+followed it to a MultiQC report through these tools alone, fixing that host's first network failure
+from nfclaw's error:
+
+| Client | Protocol it chose |
+|---|---|
+| Claude Code 2.1.300 (macOS, server started over `ssh`) | `initialize`, 2025-11-25 |
+| Codex 0.144.4 | `initialize`, 2025-06-18 |
+| Antigravity CLI (`agy`) 1.4.7 | `server/discover`, 2026-07-28 |
+| MCP Python SDK 2.3.0 (scripted: runs, a chain, cancel, resume, replay) | both |

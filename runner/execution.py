@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -209,7 +209,7 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
             raise
         _join(readers)
     if code != 0:
-        err = _failure(code, run_log)
+        err = _failure(code, run_log, env if env is not None else os.environ)
         run_log.fail(f"failed (exit status {code})", str(err))
         raise err
     run_log.outcome = "success"
@@ -249,11 +249,11 @@ def _log_details(run_log: runlog.RunLog) -> dict[str, str]:
     return details
 
 
-def _failure(code: int, run_log: runlog.RunLog) -> NfclawError:
+def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str]) -> NfclawError:
     """The error for a launch that exited non-zero: what Nextflow itself reported, quoted from this
     launch's console, plus where the full logs are. Nextflow prints its error reports on stdout and
     some details on stderr (nf-schema's list of invalid values), and refers to its log relative to a
-    directory the reader is not in."""
+    directory the reader is not in. `env` is the environment Nextflow ran with."""
     on_stderr = runlog.stderr_excerpt(run_log.console_tail("err"))
     # Without an `ERROR ~` report on stdout its tail is only worth quoting when stderr is silent too
     # (an `error "…"` in a workflow prints just its message there); otherwise it is the banner.
@@ -286,15 +286,28 @@ def _failure(code: int, run_log: runlog.RunLog) -> NfclawError:
                        "26.10.0 or later. "
                        if any(_TIME_LIMIT_ABORT in line for line in on_stdout + on_stderr + causes)
                        else "")
+    # Nextflow's own JVM (its log's exception chain, not a task's output) could not reach a host,
+    # and nothing told it to prefer IPv6: on a host without an IPv4 route (IPv6-only, NAT64) the
+    # JVM still tries IPv4 first, so remote configs, test data and plugins all fail this way.
+    ipv6_hint = ("`Network is unreachable` in Nextflow's own log: on a host without IPv4 "
+                 "connectivity (IPv6-only or NAT64) its JVM still tries IPv4 first; add --nxf-env "
+                 f"NXF_JVM_ARGS={_PREFER_IPV6}. "
+                 if any(_NETWORK_UNREACHABLE in line for line in causes)
+                 and not any(_PREFER_IPV6 in env.get(name, "") for name in _JVM_OPTION_VARS)
+                 else "")
     return NfclawError(
         ErrorCode.EXECUTION_FAILED, message,
-        fix=(f"{time_limit_hint}Fix the cause Nextflow reports, then re-run the same command with "
-             f"--resume.{task_hint} The whole launch is in `run_log`. Common causes and fixes: "
-             f"{runlog.known_issues_path()}."),
+        fix=(f"{time_limit_hint}{ipv6_hint}Fix the cause Nextflow reports, then re-run the same "
+             f"command with --resume.{task_hint} The whole launch is in `run_log`. Common causes "
+             f"and fixes: {runlog.known_issues_path()}."),
         details=details)
 
 
 _TIME_LIMIT_ABORT = "process hasn't exited"
+_NETWORK_UNREACHABLE = "Network is unreachable"
+_PREFER_IPV6 = "-Djava.net.preferIPv6Addresses=true"
+# Where the Nextflow launcher and the JVM read JVM options from.
+_JVM_OPTION_VARS = ("NXF_JVM_ARGS", "NXF_OPTS", "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS")
 
 
 def _quote(lines: list[str]) -> str:

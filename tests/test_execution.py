@@ -107,6 +107,47 @@ def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
     assert "nfcore_custom.config" in text
 
 
+_JVM_OPTION_VARS = ("NXF_JVM_ARGS", "NXF_OPTS", "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS")
+
+
+@pytest.mark.parametrize("env_extra, hinted", [
+    (None, True),
+    ({"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"}, False),
+    ({"NXF_OPTS": "-Xms1g -Djava.net.preferIPv6Addresses=true"}, False),
+])
+def test_an_unreachable_network_in_nextflows_own_log_gets_the_ipv6_fix(tmp_path, monkeypatch,
+                                                                       env_extra, hinted):
+    # Nextflow's JVM tries IPv4 first: on a host without an IPv4 route (IPv6-only, NAT64) its own
+    # download of nf-core/configs fails, and only its log says why. Agents driving nfclaw through
+    # MCP spent several attempts finding the flag; once the JVM already prefers IPv6 the hint
+    # would point at the wrong cause.
+    for name in _JVM_OPTION_VARS:
+        monkeypatch.delenv(name, raising=False)
+    nf_log = tmp_path / ".nextflow.log"
+    shutil.copy(Path(__file__).parent / "fixtures" / "nextflow_console" /
+                "nextflow_log_config_unreachable.log", nf_log)
+    child = "import sys; print('ERROR ~ Unable to parse config file'); sys.exit(1)"
+    with pytest.raises(NfclawError) as exc:
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30, nextflow_log=nf_log, env_extra=env_extra)
+    fix = exc.value.fix
+    assert ("--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true" in fix) is hinted
+    assert "known-issues.md" in fix
+
+
+def test_an_unreachable_network_reported_only_by_a_task_gets_no_ipv6_hint(tmp_path, monkeypatch):
+    # A task's own JVM (inside its container) is not Nextflow's: NXF_JVM_ARGS cannot fix it.
+    for name in _JVM_OPTION_VARS:
+        monkeypatch.delenv(name, raising=False)
+    child = ("import sys; print(\"ERROR ~ Error executing process > 'BBMAP_SENDSKETCH (x)'\"); "
+             "print(); print('Caused by:'); "
+             "print('  java.net.ConnectException: Network is unreachable'); sys.exit(1)")
+    with pytest.raises(NfclawError) as exc:
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
+    assert "preferIPv6Addresses" not in exc.value.fix
+
+
 def test_failure_quotes_what_nextflow_wrote_on_stderr(tmp_path):
     # nf-schema writes *which* parameter is invalid to stderr; stdout only says that
     # validation failed.

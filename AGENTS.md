@@ -163,7 +163,7 @@ Which pipeline can follow which: `nfclaw chain edges [name]`, or the `## Chainin
 
 ## Using nf-claw through MCP
 
-`nfclaw mcp` serves this library to MCP clients (Claude Code, Codex, Hermes, …) on stdio; setup per client is in [`docs/mcp.md`](docs/mcp.md). Each tool runs the `nfclaw` command it names, so everything in this guide applies unchanged:
+`nfclaw mcp` serves this library to MCP clients (Claude Code, Codex, Antigravity, Hermes, …) on stdio; setup per client is in [`docs/mcp.md`](docs/mcp.md). Each tool runs the `nfclaw` command it names, so everything in this guide applies unchanged:
 
 - **Find and read:** `list_pipelines(query)`, then `show_pipeline(pipeline)` for its `skill.md`, or `show_pipeline(pipeline, document="reference", grep="…")` for any other parameter.
 - **Run:** `run_pipeline(pipeline, outdir, input, params={…}, check=true)` validates and prints the command; without `check` it starts a detached job and returns its `job_id`. Pipeline parameters go in `params` under their schema names; nfclaw's own options (`profile`, `resume`, `nxf_env`, `limit_cpus`, …) are separate arguments.
