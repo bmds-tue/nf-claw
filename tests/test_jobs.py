@@ -77,6 +77,9 @@ def test_a_running_job_is_running_and_its_record_names_both_processes(tmp_path):
     job = _launch(tmp_path, _py("import time; print('up', flush=True); time.sleep(30)"))
     try:
         assert _until(lambda: "up" in jobs.output_tail(jobs.load(job.id), 5))
+        # The supervisor records the child's pid once Popen returns; on a busy host the child can
+        # print before that.
+        assert _until(lambda: jobs.load(job.id).child_pid is not None)
         job = jobs.load(job.id)
         assert jobs.state(job) == "running"
         assert job.supervisor_pid and job.child_pid and job.child_pid != job.supervisor_pid
