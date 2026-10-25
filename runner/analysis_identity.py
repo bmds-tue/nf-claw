@@ -33,7 +33,7 @@ def capture(*, params: dict, profile: str, environment: dict, engine: str | None
         "pipeline": {"commit": commit, "source": provenance.hash_pipeline(pipeline)},
         "configuration": {"order": [str(p) for p in configs], "hashes": hashes,
                           "inventory": inventory},
-        "resource_limits": None if limits is None else limits.config_text(),
+        "resource_limits": None if limits is None or limits.is_empty() else limits.config_text(),
         "runtime_recipes": {name: provenance._sha256(Path(__file__).with_name(name)) for name in
                             ("resources.py", "plugin_compat.py", "fastqrepair_compat.py")},
     }

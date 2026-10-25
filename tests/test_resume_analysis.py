@@ -1,5 +1,6 @@
 """Current publications must belong to the current analysis configuration."""
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -81,8 +82,13 @@ def test_changed_analysis_preserves_previous_run_in_isolated_archive(analysis, t
 
 
 @pytest.mark.parametrize("provenance", [True, False])
-def test_unchanged_analysis_reuses_cache_and_report_suffix(analysis, tmp_path, provenance):
+def test_unchanged_analysis_reuses_cache_and_report_suffix(
+        analysis, tmp_path, provenance, monkeypatch):
     run, _, launches = analysis
+    original = orchestration.parameters.pin_report_suffix
+    dates = iter([datetime(2026, 1, 1), datetime(2026, 1, 2)])
+    monkeypatch.setattr(orchestration.parameters, "pin_report_suffix",
+                        lambda merged, schema: original(merged, schema, now=next(dates)))
     run(write_provenance=provenance)
     params = (tmp_path / "results/provenance/params.json").read_bytes()
     # Report suffix generation must not turn an unchanged resume into another analysis.
@@ -90,6 +96,13 @@ def test_unchanged_analysis_reuses_cache_and_report_suffix(analysis, tmp_path, p
     assert "-resume" in launches[-1]
     assert (tmp_path / "results/provenance/params.json").read_bytes() == params
     assert not list(tmp_path.glob("results.previous-*"))
+
+
+def test_empty_resource_options_mean_the_same_analysis_as_no_options(analysis):
+    run, _, launches = analysis
+    run(limits=resources.parse(None, None, None))
+    run(resume=True, limits=None)
+    assert "-resume" in launches[-1]
 
 
 def test_check_reports_configuration_change_without_writing(analysis, tmp_path):
