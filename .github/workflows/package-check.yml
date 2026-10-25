@@ -1,0 +1,57 @@
+name: package-check
+on:
+  pull_request:
+    paths:
+      - 'runner/**'
+      - 'librarian/**'
+      - 'pyproject.toml'
+      - 'constraints/**'
+      - 'scripts/check_package_install.py'
+      - '.github/workflows/package-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - run: pip install build
+      - run: python -m build
+      - run: python scripts/check_package_install.py dist/*.whl --library .
+      - run: python scripts/check_package_install.py dist/*.tar.gz --library .
+      - name: Retain reviewable release preparation artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-distributions
+          path: dist/
+          retention-days: 14
+  dependency-bounds:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [minimum, locked, current]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install selected dependency policy
+        env:
+          DEPENDENCIES: ${{ matrix.dependencies }}
+        run: |
+          case "$DEPENDENCIES" in
+            minimum) pip install -c constraints/minimum.txt -e '.[dev,yaml]' ;;
+            locked) pip install -c constraints/dev.txt -e '.[dev,yaml]' ;;
+            current) pip install -e '.[dev,yaml]' ;;
+          esac
+      - run: pytest -q
+      - run: ruff check .
