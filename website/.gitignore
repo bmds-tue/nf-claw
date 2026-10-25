@@ -26,3 +26,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# browser verification artifacts
+/playwright-report/
+/test-results/

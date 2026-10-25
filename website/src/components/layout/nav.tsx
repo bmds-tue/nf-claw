@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Github, Menu, Search, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
@@ -52,6 +52,7 @@ export function Nav({ repo }: { repo: string | null }) {
   const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const menuToggle = useRef<HTMLButtonElement>(null);
   const [mac, setMac] = useState(true);
   const reduce = useReducedMotion();
   const section = useActiveSection(isHome);
@@ -72,7 +73,9 @@ export function Nav({ repo }: { repo: string | null }) {
   useEffect(() => {
     if (!open) return;
     const unlock = lockScroll();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setOpen(false); menuToggle.current?.focus(); }
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       unlock();
@@ -160,6 +163,7 @@ export function Nav({ repo }: { repo: string | null }) {
             </a>
             <button
               onClick={() => setOpen((v) => !v)}
+              ref={menuToggle}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-fog md:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
@@ -191,6 +195,9 @@ export function Nav({ repo }: { repo: string | null }) {
           invisible layer over the page after a navigation in production builds. */}
       <div
         id="mobile-menu"
+        role="navigation"
+        aria-label="Mobile"
+        aria-hidden={!open}
         className={cn(
           "fixed inset-x-0 bottom-0 top-16 overflow-y-auto bg-ink-950/95 backdrop-blur-xl md:hidden",
           open

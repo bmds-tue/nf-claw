@@ -10,6 +10,8 @@ import { lockScroll } from "@/lib/scroll-lock";
 import { readRecent } from "@/lib/recent";
 import { cn } from "@/lib/utils";
 import { EASE } from "@/lib/motion";
+import { searchDocs, validDocSearch, type DocSearchIndex } from "@/lib/doc-search";
+import { BASE_PATH } from "@/lib/site";
 
 export interface PaletteData {
   pipelines: { name: string; version: string; category: string; description: string }[];
@@ -32,6 +34,19 @@ const SECTIONS = [
 ];
 
 const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
+let documentIndex: Promise<DocSearchIndex> | null = null;
+
+function loadDocumentIndex(): Promise<DocSearchIndex> {
+  if (!documentIndex) {
+    documentIndex = fetch(`${BASE_PATH}/search/docs.json`).then(async (response) => {
+      if (!response.ok) throw new Error("Documentation search is unavailable");
+      const value: unknown = await response.json();
+      if (!validDocSearch(value)) throw new Error("Unsupported documentation search index");
+      return value;
+    }).catch((error) => { documentIndex = null; throw error; });
+  }
+  return documentIndex;
+}
 
 /** Open the palette from anywhere (a search button, the header). */
 export function openPalette(): void {
@@ -56,6 +71,9 @@ export function CommandPalette({ data }: { data: PaletteData }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [docIndex, setDocIndex] = useState<DocSearchIndex | null>(null);
+  const [searchIssue, setSearchIssue] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
   const router = useRouter();
@@ -63,6 +81,15 @@ export function CommandPalette({ data }: { data: PaletteData }) {
   const reduce = useReducedMotion();
   // pipelines opened lately (this browser only), offered first while the query is empty
   const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open || docIndex) return;
+    let disposed = false;
+    loadDocumentIndex().then((index) => {
+      if (!disposed) { setDocIndex(index); setSearchIssue(null); }
+    }).catch(() => { if (!disposed) setSearchIssue("Documentation search is unavailable. Pipeline search still works."); });
+    return () => { disposed = true; };
+  }, [open, docIndex]);
 
   const all = useMemo<Item[]>(
     () => [
@@ -85,12 +112,22 @@ export function CommandPalette({ data }: { data: PaletteData }) {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return all;
-    return all
+    const ranked = all
       .map((item) => ({ item, s: score(item, q) }))
-      .filter((r) => r.s > 0)
+      .filter((r) => r.s > 0);
+    if (docIndex) {
+      for (const section of searchDocs(docIndex, q)) {
+        ranked.push({ item: { kind: "doc", id: `d-section-${section.id}`,
+          label: section.heading ? `${section.title} › ${section.heading}` : section.title,
+          hint: section.snippet, href: section.href }, s: section.score });
+      }
+    }
+    const seen = new Set<string>();
+    return ranked
       .sort((a, b) => b.s - a.s)
-      .map((r) => r.item);
-  }, [all, query]);
+      .map((r) => r.item)
+      .filter((item) => { const key = `${item.kind}:${item.href}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  }, [all, query, docIndex]);
 
   const groups = useMemo(() => {
     const order: Item["kind"][] = query.trim() ? ["pipeline", "doc", "section"] : ["section", "pipeline", "doc"];
@@ -111,6 +148,11 @@ export function CommandPalette({ data }: { data: PaletteData }) {
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
   const close = useCallback(() => setOpen(false), []);
+  const show = useCallback(() => {
+    // Capture before React mounts the auto-focused input.
+    restoreFocus.current = document.activeElement as HTMLElement | null;
+    setOpen(true);
+  }, []);
 
   // Global shortcuts: ⌘K / Ctrl+K anywhere, "/" when not typing.
   useEffect(() => {
@@ -118,24 +160,23 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       const typing = (e.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable=true]");
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((v) => !v);
+        if (open) close(); else show();
       } else if (e.key === "/" && !typing && !open) {
         e.preventDefault();
-        setOpen(true);
+        show();
       }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = show;
     window.addEventListener("keydown", onKey);
     window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
     };
-  }, [open]);
+  }, [open, close, show]);
 
   useEffect(() => {
     if (!open) return;
-    restoreFocus.current = document.activeElement as HTMLElement | null;
     setRecent(readRecent());
     setQuery("");
     setActive(0);
@@ -165,7 +206,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       if (item.kind === "section" && pathname === "/") {
         const id = item.href.slice(2);
         document.getElementById(id)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-        history.replaceState(null, "", `#${id}`);
+        history.replaceState(history.state, "", `#${id}`);
         return;
       }
       router.push(item.href);
@@ -174,6 +215,17 @@ export function CommandPalette({ data }: { data: PaletteData }) {
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault(); close(); return;
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const controls = [inputRef.current, closeRef.current].filter((control) => control !== null);
+      const current = controls.indexOf(document.activeElement as HTMLInputElement | HTMLButtonElement);
+      controls[(current + (e.shiftKey ? -1 : 1) + controls.length) % controls.length]?.focus();
+      return;
+    }
+    if (e.target !== inputRef.current) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((i) => (flat.length ? (i + 1) % flat.length : 0));
@@ -187,12 +239,6 @@ export function CommandPalette({ data }: { data: PaletteData }) {
     } else if (e.key === "Enter") {
       e.preventDefault();
       go(flat[active]);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      close();
-    } else if (e.key === "Tab") {
-      // keep focus inside the dialog: the input is its only control
-      e.preventDefault();
     }
   };
 
@@ -233,6 +279,8 @@ export function CommandPalette({ data }: { data: PaletteData }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search pipelines, docs and sections…"
+              aria-label="Search pipelines and documentation"
+              maxLength={200}
               className="h-14 w-full bg-transparent text-[15px] text-fog outline-none placeholder:text-fog-dim focus-visible:outline-none"
               role="combobox"
               aria-expanded="true"
@@ -242,6 +290,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
               spellCheck={false}
             />
             <button
+              ref={closeRef}
               onClick={close}
               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-fog-dim transition hover:bg-white/5 hover:text-fog"
               aria-label="Close search"
@@ -250,7 +299,8 @@ export function CommandPalette({ data }: { data: PaletteData }) {
             </button>
           </div>
 
-          <div ref={listRef} id="palette-results" role="listbox" className="max-h-[min(60vh,440px)] overflow-y-auto p-2">
+          {searchIssue && <p role="status" className="px-4 py-2 text-xs text-fog-muted">{searchIssue}</p>}
+          <div ref={listRef} id="palette-results" role="listbox" aria-label="Search results" className="max-h-[min(60vh,440px)] overflow-y-auto p-2">
             {flat.length === 0 && (
               <div className="px-4 py-12 text-center">
                 <p className="text-sm text-fog-muted">No results for “{query}”.</p>
@@ -272,6 +322,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
                       key={item.id}
                       id={`palette-${item.id}`}
                       role="option"
+                      tabIndex={-1}
                       aria-selected={isActive}
                       data-index={i}
                       onMouseMove={() => active !== i && setActive(i)}
@@ -293,8 +344,8 @@ export function CommandPalette({ data }: { data: PaletteData }) {
                         <span className={cn("block truncate text-sm", item.kind === "pipeline" ? "font-mono font-medium text-fog" : "text-fog")}>
                           <Highlight text={item.label} query={query} />
                         </span>
-                        <span className="block truncate text-xs text-fog-dim">
-                          {item.kind === "pipeline" ? item.description : item.hint}
+                        <span className={cn("block text-xs text-fog-dim", item.kind === "doc" && query.trim() ? "line-clamp-2" : "truncate")}>
+                          <Highlight text={item.kind === "pipeline" ? item.description : item.hint} query={query} />
                         </span>
                       </span>
                       {item.kind === "pipeline" && (

@@ -38,7 +38,18 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=low
       - run: npm run typecheck
-      - run: npm run build
+      - run: npm run build:test
+      - run: npx playwright install --with-deps chromium --only-shell
+      - run: npm run test:browser
+      - name: Retain browser failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-evidence
+          path: |
+            website/playwright-report/
+            website/test-results/
+          retention-days: 14
       # The site's markdown parser reads every generated skill.md. Its tests need node and the
       # site's own TypeScript, so they are skipped in the Python matrix and run here instead.
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0

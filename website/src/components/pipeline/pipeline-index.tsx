@@ -18,22 +18,35 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
   const [query, setQuery] = useState("");
   const [domain, setDomain] = useState("All");
   const [sort, setSort] = useState<SortKey>("name");
+  const [urlReady, setUrlReady] = useState(false);
+
+  const filterUrl = (nextDomain: string, nextQuery: string) => {
+    const sp = new URLSearchParams();
+    if (nextDomain !== "All") sp.set("domain", nextDomain);
+    if (nextQuery.trim()) sp.set("q", nextQuery.trim());
+    return `${window.location.pathname}${sp.size ? `?${sp}` : ""}`;
+  };
+  const selectDomain = (value: string) => {
+    if (value !== domain) history.pushState(history.state, "", filterUrl(value, query));
+    setDomain(value);
+  };
 
   // Shareable state: /pipelines/?domain=Epigenomics&q=chip
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const d = sp.get("domain");
-    if (d && DOMAIN_ORDER.includes(d)) setDomain(d);
-    const q = sp.get("q");
-    if (q) setQuery(q);
+    const read = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const d = sp.get("domain");
+      setDomain(d && DOMAIN_ORDER.includes(d) ? d : "All");
+      setQuery(sp.get("q") || "");
+      setUrlReady(true);
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
   }, []);
   useEffect(() => {
-    const sp = new URLSearchParams();
-    if (domain !== "All") sp.set("domain", domain);
-    if (query.trim()) sp.set("q", query.trim());
-    const qs = sp.toString();
-    history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  }, [domain, query]);
+    if (urlReady) history.replaceState(history.state, "", filterUrl(domain, query));
+  }, [domain, query, urlReady]);
 
   const domains = useMemo(() => domainCounts(pipelines), [pipelines]);
 
@@ -90,7 +103,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
           domains={domains}
           total={pipelines.length}
           value={domain}
-          onChange={setDomain}
+          onChange={selectDomain}
         />
       </div>
 
