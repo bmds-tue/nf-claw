@@ -404,3 +404,12 @@ def test_profile_fallback_requires_consistent_labels_on_every_complete_record(tm
     else:
         with pytest.raises(ValueError, match="mate order|explicit local"):
             compat._ordered_inputs(script, {})
+
+
+def test_corrections_select_the_legacy_config_parser():
+    # The recorded config resolves the publication mode per task through a lazy string, which
+    # Nextflow's strict config parser (the default from 26.04) rejects; it must run under v1.
+    assert compat.nextflow_env({}) == {"NXF_SYNTAX_PARSER": "v1"}
+    assert compat.nextflow_env({"NXF_SYNTAX_PARSER": "v1"}) == {"NXF_SYNTAX_PARSER": "v1"}
+    with pytest.raises(ValueError, match="legacy config parser"):
+        compat.nextflow_env({"NXF_SYNTAX_PARSER": "v2"})

@@ -478,6 +478,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 ErrorCode.SAMPLESHEET_INVALID, f"Cannot preserve paired-read identities: {exc}",
                 fix="Use one row per sample, distinct staged mate names, and "
                     "matching compression formats.") from exc
+        # Recorded with the rest of the overlay, so --check shows it and a replay keeps it.
+        try:
+            nxf_overlay.update(fastqrepair_compat.nextflow_env(nxf_overlay))
+        except ValueError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT, str(exc),
+                              fix="Leave NXF_SYNTAX_PARSER out of --nxf-env: nfclaw selects the "
+                                  "legacy parser for this release.") from exc
     writes = [("--outdir", outdir, True),
               ("output writer lock", outdir.parent / f".{outdir.name}.nfclaw.lock", True),
               ("Nextflow work directory", work_dir, False),
@@ -584,7 +591,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                         "offset to BBMap, and keep singleton reads, logs and mate reports in "
                         "distinct publications. Pinned source stays unchanged; generated task "
                         "recipes and the complete splitter implementation are recorded in "
-                        "the compatibility config.")
+                        "the compatibility config, which runs under Nextflow's legacy config "
+                        "parser (NXF_SYNTAX_PARSER=v1).")
     # Say them now, before Nextflow starts: a run can take hours, and one that fails never returns
     # its RunResult — an advisory that only arrives with the result arrives too late, or not at all.
     if on_warning is not None:

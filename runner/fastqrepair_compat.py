@@ -53,6 +53,22 @@ def recipe_digest() -> str:
     return hashlib.sha256(_source()).hexdigest()
 
 
+def nextflow_env(overlay: dict[str, str]) -> dict[str, str]:
+    """The NXF_* settings a run with the recorded corrections needs.
+
+    The recorded config resolves each publication mode per task with a lazy string
+    (`"${-> params.publish_dir_mode}"`): a `-c` config sees no pipeline parameter while it is
+    parsed, and Nextflow evaluates a publishDir option per task only as a string. Nextflow's strict
+    config parser, the default from 26.04, rejects that string and the config's shared mate-role
+    variable, so these runs use the legacy parser, which every supported engine still provides.
+    """
+    parser = overlay.get("NXF_SYNTAX_PARSER", "v1")
+    if parser != "v1":
+        raise ValueError("fastqrepair 1.1.1's recorded corrections need Nextflow's legacy config "
+                         f"parser, not NXF_SYNTAX_PARSER={parser}")
+    return {"NXF_SYNTAX_PARSER": "v1"}
+
+
 def _command() -> str:
     encoded = base64.b64encode(_source()).decode("ascii")
     bootstrap = (f"import base64; _NFCLAW_COMPAT_SOURCE=base64.b64decode('{encoded}'); "

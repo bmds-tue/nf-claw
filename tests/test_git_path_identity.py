@@ -140,6 +140,7 @@ def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_
         assert resolved.commit == fastqrepair_compat.SUPPORTED_COMMIT
         assert any('recorded corrections for fastqrepair' in warning for warning in result.warnings)
         assert 'fastqrepair_compat.config' in result.command
+        assert result.env['NXF_SYNTAX_PARSER'] == 'v1'
         assert not out.exists()
     finally:
         if result.staging:
