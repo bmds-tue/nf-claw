@@ -577,7 +577,10 @@ workflow {
     assert problems and chain.status_exit_code(state, problems) == 1
 
 
-def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path):
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+def test_recorded_repair_publishers_preserve_mates_and_honor_runtime_mode(tmp_path, engine):
+    # 26.04 made the strict config parser the default; the recorded corrections run under the
+    # legacy parser nfclaw selects for them (fastqrepair_compat.nextflow_env).
     fastqrepair_compat.write_config(tmp_path / "compat.config")
     (tmp_path / "nextflow.config").write_text("params.publish_dir_mode = 'copy'\n"
                                               "params.outdir = 'wrong'\n")
@@ -615,7 +618,7 @@ workflow {
     result = subprocess.run(
         ["nextflow", "run", "main.nf", "-c", "compat.config", "-ansi-log", "false",
          "--outdir", "results", "--publish_dir_mode", "symlink"],
-        cwd=tmp_path, env={**os.environ, "NXF_VER": "25.10.4"},
+        cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **fastqrepair_compat.nextflow_env({})},
         capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
     published = tmp_path / "results/repaired/reports/paired_probe"
@@ -1181,20 +1184,21 @@ workflow { DIGEST(Channel.fromPath(params.input)) }
     assert chain.status_exit_code(state, problems) == 1
 
 
-@pytest.mark.parametrize("engine", ["25.10.4"])
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overflow(
         tmp_path, engine):
     sheet = tmp_path / "cohort.csv"
     sheet.write_text("sample,fastq_1,fastq_2\n" + "".join(
         f"S{index},/data/left.fastq,/data/right.fastq\n" for index in range(10000)))
     config = fastqrepair_compat.write_config(tmp_path / "recorded.config", input_path=sheet)
+    compat_env = fastqrepair_compat.nextflow_env({})
     pipeline = tmp_path / "pipeline"
     pipeline.mkdir()
     (pipeline / "nextflow.config").write_text("nextflow.enable.dsl=2\n")
     # Nextflow stringifies meta-dependent closures; embedding even fragmented
     # cohort data inside such a closure overflows one JVM string constant.
     result = subprocess.run(["nextflow", "-c", str(config), "config", str(pipeline), "-flat"],
-                            cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                            cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **compat_env},
                             capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -1233,7 +1237,7 @@ workflow {
     executed = subprocess.run(["nextflow", "run", str(pipeline), "-c", str(config),
                                "--left", str(left), "--right", str(right),
                                "--outdir", str(out), "-work-dir", str(work)],
-                              cwd=tmp_path, env={**os.environ, "NXF_VER": engine},
+                              cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **compat_env},
                               capture_output=True, text=True, timeout=120)
     assert executed.returncode == 0, executed.stdout + executed.stderr
     selections = []
