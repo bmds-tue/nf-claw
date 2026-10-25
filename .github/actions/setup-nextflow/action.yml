@@ -1,12 +1,16 @@
 name: Setup Nextflow
 description: >-
-  Install the pinned Nextflow launcher on the runner. Downloads to the runner temp
-  directory, never into the checked-out repository, so no build artifact can be picked
-  up by a workflow that commits its working tree.
+  Install Java 17 and the pinned Nextflow launcher on the runner. The launcher downloads to
+  the runner temp directory, never into the checked-out repository, so no build artifact
+  can be picked up by a workflow that commits its working tree.
 
 runs:
   using: composite
   steps:
+    - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+      with:
+        distribution: temurin
+        java-version: "17"
     - name: Install Nextflow
       shell: bash
       # Pinned to a commit of the launcher script and verified by checksum: the launcher is

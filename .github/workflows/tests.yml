@@ -65,9 +65,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev,yaml]"
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - run: pytest -q tests/test_nextflow_integration.py tests/test_git_path_identity.py tests/test_timeout_integration.py

@@ -25,10 +25,6 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e .
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - run: git submodule update --init --depth 1 pipelines/demo/upstream
       - name: Execute the pinned demo on native amd64
@@ -221,10 +217,6 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e .
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - run: git submodule update --init --depth 1 pipelines/demo/upstream
       - name: Install Apptainer
