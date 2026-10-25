@@ -271,14 +271,6 @@ class _NoMatch(_Unresolved):
     """Nothing in the upstream outdir matches a pattern (as opposed to several files matching)."""
 
 
-def sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _bundle_text(outdir: Path, name: str) -> str:
     try:
         return (outdir / "provenance" / name).read_text(encoding="utf-8")
@@ -374,7 +366,8 @@ def directory_reference_evidence(path: Path, upstream: Path, boundary: dict | No
                                           / "provenance/outputs.inventory.json", historical)
         expected_nodes = {name: entry for name, entry in nodes.items()
                           if Path(name).is_relative_to(internal)}
-        hashes, current_nodes, raw_nodes = output_mod.snapshot(upstream, sha256_file, only=path)
+        hashes, current_nodes, raw_nodes = output_mod.snapshot(upstream, provenance.sha256_file,
+                                                               only=path)
         current = {str(upstream / name): digest for name, digest in hashes.items()}
         root_key = internal
         expected_file_nodes = {Path(name).relative_to(upstream).as_posix() for name in expected}
@@ -749,7 +742,7 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                 details={"issues": issues, "snapshot": str(path)})
         consumption = consumption_evidence(provenance.samplesheet_dependencies(path, sheet_schema),
                                            upstream_outdir)
-        return str(path), derived, {"sha256": sha256_file(path), **extra, **consumption}
+        return str(path), derived, {"sha256": provenance.sha256_file(path), **extra, **consumption}
     if src.kind == "file":
         chosen = {} if chosen is None else chosen
         if (partner := src.spec.get("paired_with")) is not None:
@@ -878,7 +871,7 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
             if digest is not None and extra.get("output_dependencies", {}).get(rel) == digest:
                 continue  # The directory evidence already verified these bytes and namespace.
             try:
-                actual = sha256_file(upstream_outdir / rel)
+                actual = provenance.sha256_file(upstream_outdir / rel)
             except OSError as exc:
                 raise NfclawError(
                     ErrorCode.HANDOFF_FAILED,

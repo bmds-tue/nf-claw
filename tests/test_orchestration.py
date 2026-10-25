@@ -1194,7 +1194,7 @@ def test_samplesheet_data_without_a_path_format_is_hashed_into_provenance(tmp_pa
     hashed = orchestration.provenance.read_checksums(
         tmp_path / "out/provenance/inputs.sha256", relative=False)
     for path in files.values():
-        assert hashed[str(path)] == orchestration.provenance._sha256(path)
+        assert hashed[str(path)] == orchestration.provenance.sha256_file(path)
 
 
 # --- dev: running unreleased development code -------------------------------------------------
@@ -1456,7 +1456,7 @@ def test_provenance_failure_after_a_successful_run_is_a_clear_error(tmp_path, mo
     def disk_full(path):
         raise OSError(28, "No space left on device", str(path))
 
-    monkeypatch.setattr(orchestration.provenance, "_sha256", disk_full)
+    monkeypatch.setattr(orchestration.provenance, "sha256_file", disk_full)
     with pytest.raises(NfclawError) as exc:
         orchestration.run_pipeline(
             "mini", repo_root=root, input_path=None, outdir=out,

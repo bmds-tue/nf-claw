@@ -32,7 +32,7 @@ def _linked_state(up, down, evidence, destination, sources):
         sid = f"stage{index}"
         manifest["chain"] = {"id": "audit", "stage": sid, "index": index,
                              "upstream": None if index == 1 else
-                             {"handoff_sha256": provenance._sha256(path)}}
+                             {"handoff_sha256": provenance.sha256_file(path)}}
         manifest_path.write_text(json.dumps(manifest))
         stages.append({"id": sid, "pipeline": "fixture", "index": index, "outdir": str(out),
                        "status": "success", "version": manifest["version"],

@@ -331,7 +331,7 @@ def plan(spec: ChainSpec, *, repo_root: Path) -> list[Planned]:
 
 
 def _file_sha256(path: Path | None) -> str | None:
-    return handoff.sha256_file(path) if path is not None and path.is_file() else None
+    return provenance.sha256_file(path) if path is not None and path.is_file() else None
 
 
 def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
@@ -863,7 +863,7 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 overrides[name] = value
         link["upstream"] = {"stage": prev.stage.id, "pipeline": prev.stage.pipeline,
                             "outdir": str(outdir / prev.stage.dirname), "handoff": str(hand_path),
-                            "handoff_sha256": handoff.sha256_file(hand_path)}
+                            "handoff_sha256": provenance.sha256_file(hand_path)}
     # A previous attempt of this stage left its run here: continue it with Nextflow's cache.
     resume = stage_dir.is_dir() and any(stage_dir.iterdir())
     attempt = 0
@@ -953,7 +953,7 @@ def _digests(path: Path, *, relative: bool = True) -> dict[str, str]:
 
 def _sha(path: Path) -> str | None:
     try:
-        return handoff.sha256_file(path)
+        return provenance.sha256_file(path)
     except OSError:
         return None
 

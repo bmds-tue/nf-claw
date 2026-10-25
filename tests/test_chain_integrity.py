@@ -487,7 +487,7 @@ def test_status_checks_downstream_input_inventory_for_internal_directory_handoff
                     reference.mkdir()
                 (reference / "index.bin").write_bytes(b"original index")
                 (prov / "params.json").write_text(json.dumps({"gtf": str(reference)}))
-                hashes, nodes, _ = outputs.snapshot(kw["outdir"], provenance._sha256)
+                hashes, nodes, _ = outputs.snapshot(kw["outdir"], provenance.sha256_file)
                 (prov / "outputs.inventory.json").write_text(
                     json.dumps({"version": 1, "entries": nodes}))
                 (prov / "outputs.sha256").write_text("".join(
@@ -550,6 +550,6 @@ def test_resuming_with_fixed_input_preserves_the_failed_attempt_handoff(
                            "params": {"aligner": "hisat2"}}])
     chain.run_chain(fixed, repo_root=root, outdir=out, resume=True)
     assert previous_record.read_bytes() == original
-    assert handoff.sha256_file(previous_record) == previous_link["handoff_sha256"]
+    assert provenance.sha256_file(previous_record) == previous_link["handoff_sha256"]
     assert previous_input.read_bytes() == original_input
     assert fake_runs.calls[-1]["chain_link"]["upstream"]["handoff"] != str(previous_record)

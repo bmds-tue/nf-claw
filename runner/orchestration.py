@@ -66,7 +66,7 @@ def _input_file_digests(inventory: dict[str, dict[str, str]],
             else:
                 physical = Path(entry.get("resolved_path", name))
                 if physical not in physical_digests:
-                    physical_digests[physical] = provenance._sha256(physical)
+                    physical_digests[physical] = provenance.sha256_file(physical)
                 digests[name] = physical_digests[physical]
     return digests
 
@@ -756,7 +756,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         generation_record = None
         if sheet is not None:
             generation_record = {**sheet.record, "file": sheet.filename,
-                                 "sha256": provenance._sha256(sheet_path)}
+                                 "sha256": provenance.sha256_file(sheet_path)}
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
         caveats: list[str] = []                 # what a successful pipeline said its results lack
