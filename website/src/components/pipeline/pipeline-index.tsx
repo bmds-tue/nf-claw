@@ -4,14 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Search, SlidersHorizontal } from "lucide-react";
-import type { PipelineSummary } from "@/lib/derive";
-import { DOMAIN_ORDER, categoryRank, colorForCategory, domainCounts } from "@/lib/derive";
+import type { PipelineSummary, SortKey } from "@/lib/derive";
+import { DOMAIN_ORDER, colorForCategory, comparePipelines, domainCounts } from "@/lib/derive";
 import { Highlight } from "@/components/ui/highlight";
 import { SearchField, DomainChips } from "@/components/ui/filters";
 import { formatDate } from "@/lib/utils";
 import { EASE } from "@/lib/motion";
-
-type SortKey = "name" | "domain" | "parameters" | "modules" | "newest";
 
 export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
   const reduce = useReducedMotion();
@@ -48,20 +46,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
         p.tools.some((t) => t.toLowerCase().includes(q))
       );
     });
-    return list.sort((a, b) => {
-      switch (sort) {
-        case "domain":
-          return categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name);
-        case "parameters":
-          return b.parameterCount - a.parameterCount;
-        case "modules":
-          return b.moduleCount - a.moduleCount;
-        case "newest":
-          return (b.releaseDate ? +new Date(b.releaseDate) : 0) - (a.releaseDate ? +new Date(a.releaseDate) : 0);
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
+    return list.sort(comparePipelines(sort));
   }, [pipelines, domain, q, sort]);
 
   return (

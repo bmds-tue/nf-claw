@@ -97,6 +97,26 @@ export function categoryRank(cat: string): number {
   return i === -1 ? CATEGORIES.length : i;
 }
 
+/** The orders a pipeline list can be sorted in (the home universe and the /pipelines index). */
+export type SortKey = "name" | "domain" | "parameters" | "modules" | "newest";
+
+export function comparePipelines(sort: SortKey): (a: PipelineSummary, b: PipelineSummary) => number {
+  return (a, b) => {
+    switch (sort) {
+      case "domain":
+        return categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name);
+      case "parameters":
+        return b.parameterCount - a.parameterCount;
+      case "modules":
+        return b.moduleCount - a.moduleCount;
+      case "newest":
+        return (b.releaseDate ? +new Date(b.releaseDate) : 0) - (a.releaseDate ? +new Date(a.releaseDate) : 0);
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  };
+}
+
 /** Derive a pipeline's research domain from its name + description. */
 export function categorize(p: { name: string; description: string }): string {
   const t = `${p.name} ${p.description}`.toLowerCase();
