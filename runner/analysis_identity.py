@@ -21,7 +21,8 @@ def _digest(value) -> str:
 
 
 def capture(*, params: dict, profile: str, environment: dict, engine: str | None,
-            pipeline: Path, commit: str, configurations: list[Path], limits) -> dict:
+            pipeline: Path, commit: str, configurations: list[Path], limits,
+            generated_samplesheet: str | None = None) -> dict:
     configs = list(configurations)
     # Nextflow reads the user's global config in addition to the pipeline and explicit configs.
     nextflow_home = Path(environment.get("NXF_HOME") or Path.home() / ".nextflow").expanduser()
@@ -38,6 +39,8 @@ def capture(*, params: dict, profile: str, environment: dict, engine: str | None
         "runtime_recipes": {name: provenance._sha256(Path(__file__).with_name(name)) for name in
                             ("resources.py", "plugin_compat.py", "fastqrepair_compat.py")},
     }
+    if generated_samplesheet is not None:
+        components["generated_samplesheet"] = generated_samplesheet
     return {"version": 1, "components": {key: _digest(value)
                                           for key, value in components.items()}}
 

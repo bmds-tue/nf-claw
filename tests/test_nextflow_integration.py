@@ -52,7 +52,7 @@ def test_real_stub_acceptance_blocks_consumers_and_keeps_original_caveat(
  output:
  path 'result.txt'
  script:
- "cp ${data} result.txt"
+ "cat ${data} > produced.tmp; mv produced.tmp result.txt"
  stub:
  "touch result.txt"
 }

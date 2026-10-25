@@ -50,3 +50,16 @@ def test_generated_selection_change_archives_prior_results_before_resume(tmp_pat
     assert len(archives) == 1
     assert (archives[0] / "A.txt").read_text() == "previous sample A result\n"
     assert Path(resumed.generated_samplesheet).exists()
+
+
+def test_generated_sample_annotations_change_the_analysis_identity(tmp_path, run):  # noqa: F811
+    data = tmp_path / "data"
+    fq(data / "A.fastq.gz", "SRR390728.1")
+    run(S.RNASEQ, str(data), sheet_set={"strandedness": "forward"})
+    (tmp_path / "results/first.txt").write_text("old annotations\n")
+    resumed = run(S.RNASEQ, str(data), sheet_set={"strandedness": "reverse"}, resume=True)
+    assert "-resume" not in resumed.launched[-1]
+    assert not (tmp_path / "results/first.txt").exists()
+    archive, = tmp_path.glob("results.previous-*")
+    assert "forward" in (archive / "provenance/samplesheet.csv").read_text()
+    assert "reverse" in Path(resumed.generated_samplesheet).read_text()

@@ -645,7 +645,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 environment=provenance.effective_nxf_env(nxf_overlay),
                 engine=engine_version.effective(nxf_overlay.get("NXF_VER")),
                 pipeline=st.path, commit=st.commit, configurations=list(extra_configs),
-                limits=limits)
+                limits=limits, generated_samplesheet=sheet.text if sheet is not None else None)
             analysis = analysis_identity.capture(**identity_options)
         except OSError as exc:
             raise NfclawError(ErrorCode.ENVIRONMENT,
