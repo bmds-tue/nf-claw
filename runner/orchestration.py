@@ -8,7 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (budget, container_watch, dependency_stability, discovery, engine_version,
+from runner import (analysis_identity, budget, container_watch, dependency_stability, discovery,
+                    engine_version,
                     environment_record, execution, fastqrepair_compat, input_safety, inputs,
                     institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
                     preflight, provenance, reproducibility, resources, resume_safety, runlog,
@@ -30,10 +31,8 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
 
     Resuming re-launches whatever the request resolves to *now*. For a release that is the code the
     earlier run used, but `dev` moves: the run being resumed may have executed an older commit.
-    Nextflow's cache stays correct either way (it reuses only tasks whose code and inputs are
-    unchanged), so this is advisory — it explains why some tasks re-run and that the results now
-    mix two commits. The earlier commit comes from that run's provenance manifest, if it
-    wrote one."""
+    The analysis identity guard below preserves that earlier run and starts fresh.
+    The earlier commit comes from its provenance manifest, if it wrote one."""
     try:
         prev = json.loads((outdir / "provenance" / "run_manifest.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -43,8 +42,8 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
         return []
     return [f"--resume continues a run that executed {prev.get('version') or '?'} "
             f"(commit {prev_commit[:12]}); this launch executes {st.version} (commit "
-            f"{st.commit[:12]}). Nextflow reuses only tasks whose code and inputs are unchanged, "
-            "so tasks touched by the change re-run and the results combine both commits."]
+            f"{st.commit[:12]}). The analysis configuration guard preserves earlier publications "
+            "and starts a fresh cache session when pipeline source changes."]
 
 
 def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
@@ -367,6 +366,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # Fix the report/timeline/trace/DAG filenames for this run instead of letting the pipeline
     # re-evaluate `now()` on every launch, so replaying the bundle reproduces the run's outputs
     # rather than writing a second, differently-named set of reports beside them.
+    if resume and "trace_report_suffix" in param_schema.params:
+        merged = analysis_identity.retain_report_suffix(outdir, merged)
     merged = parameters.pin_report_suffix(merged, param_schema)
     # The same for the institutional configs every nf-core release includes from nf-core/configs'
     # moving `master` at launch: read one commit, recorded in params.json, so the replay reads
@@ -636,6 +637,16 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 if on_warning is not None:
                     on_warning(warning)
 
+        try:
+            identity_options = dict(params=resolved, profile=composed_profile,
+                environment=provenance.effective_nxf_env(nxf_overlay),
+                engine=engine_version.effective(nxf_overlay.get("NXF_VER")),
+                pipeline=st.path, commit=st.commit, configurations=list(extra_configs),
+                limits=limits)
+            analysis = analysis_identity.capture(**identity_options)
+        except OSError as exc:
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"cannot snapshot analysis configuration: {exc}") from exc
         effective_resume = resume
         if resume:
             try:
@@ -649,7 +660,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot read local inputs before resume: {exc}") from exc
-            if warning := _input_resume_warning(outdir, resume_inventory, resume_digests):
+            warning = (_input_resume_warning(outdir, resume_inventory, resume_digests)
+                       or analysis_identity.resume_warning(outdir, analysis))
+            if warning:
                 effective_resume = False
                 warnings.append(warning)
                 if on_warning is not None:
@@ -744,6 +757,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
 
         _check_pipeline_identity(st, pin_doc)
         _check_samplesheet_snapshots(sheet_snapshots)
+
+        if not check_only:
+            # Recheck what was compared before archiving: a source or config changed
+            # during preparation must not certify a different analysis identity.
+            if analysis_identity.capture(**identity_options) != analysis:
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  "The analysis configuration changed during preparation.",
+                                  fix="Keep pipeline source and configuration stable, then retry.")
+            analysis_identity.write(outdir, analysis)
 
         if check_only:
             budget.check()

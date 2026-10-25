@@ -33,6 +33,107 @@ pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
 
 
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("change", ["parameters", "disabled-output", "configuration", "revision"])
+def test_changed_analysis_resume_has_only_current_publications_and_replays(
+        engine, tmp_path, change):
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True},
+        "outdir": {"type": "string"}, "label": {"type": "string"},
+        "publish_optional": {"type": "boolean"}}}))
+    (upstream / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nparams.label='first'\nparams.publish_optional=true\n")
+    counter = tmp_path / "executions.txt"
+    script = upstream / "main.nf"
+    script.write_text('''process RESULT {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ val label
+ output:
+ path "${label}.txt"
+ script:
+ """
+ cat ${data} > ${label}.txt
+ echo executed >> COUNTER
+ """
+}
+process OPTIONAL {
+ publishDir params.outdir, mode: 'copy'
+ output:
+ path 'optional.txt'
+ script:
+ "echo optional > optional.txt"
+}
+workflow {
+ RESULT(file(params.input), params.label)
+ if (params.publish_optional) OPTIONAL()
+}
+'''.replace("COUNTER", shlex.quote(str(counter))))
+    for args in (["init", "-q"], ["add", "."],
+                 ["-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                  "commit", "-qm", "fixture"]):
+        subprocess.run(["git", "-C", str(upstream), *args], check=True, capture_output=True)
+    first_commit = subprocess.check_output(
+        ["git", "-C", str(upstream), "rev-parse", "HEAD"], text=True).strip()
+    data = tmp_path / "input.txt"
+    data.write_text("known input bytes\n")
+    config = tmp_path / "settings.config"
+    config.write_text("params.label='first'\n")
+    out = tmp_path / "analysis"
+
+    def run(resume=False, **kw):
+        return orchestration.run_pipeline("fixture", repo_root=root, input_path=data, outdir=out,
+            profile="", params_file=None, cli_overrides=kw, resume=resume, demo=False,
+            check_only=False, write_provenance=True, timeout_seconds=90, nxf_ver=engine,
+            configs=[str(config)], limits=resources.parse(1, None, None))
+
+    run()
+    run(resume=True)
+    assert counter.read_text().splitlines() == ["executed"]  # actual cached task reuse
+    options = {}
+    if change == "parameters":
+        options["label"] = "second"
+    elif change == "disabled-output":
+        options["publish_optional"] = False
+    elif change == "configuration":
+        config.write_text("params.label='second'\n")
+    else:
+        script.write_text(script.read_text() + "\n// new pipeline revision\n")
+        subprocess.run(["git", "-C", str(upstream), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(upstream), "-c", "user.name=Test", "-c",
+                        "user.email=test@example.invalid", "commit", "-qm", "new revision"],
+                       check=True)
+    result = run(resume=True, **options)
+    assert "-resume" not in result.command
+    assert counter.read_text().splitlines() == ["executed", "executed"]
+    archives = list(tmp_path.glob("analysis.previous-*"))
+    assert len(archives) == 1
+    old = archives[0]
+    assert (old / "first.txt").read_bytes() == data.read_bytes()
+    assert (old / "optional.txt").read_text() == "optional\n"
+    old_manifest = json.loads((old / "provenance/run_manifest.json").read_text())
+    assert old_manifest["commit"] == first_commit
+    if change in ("parameters", "configuration"):
+        assert not (out / "first.txt").exists()
+        assert (out / "second.txt").read_bytes() == data.read_bytes()
+    elif change == "disabled-output":
+        assert not (out / "optional.txt").exists()
+    replay = tmp_path / "replay"
+    completed = subprocess.run([str(out / "provenance/commands.sh"), str(replay)],
+                                capture_output=True, text=True, timeout=90)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    compared = verify.compare(out, replay)
+    assert compared.byte_identical, compared
+    current = run(resume=True, **options)
+    assert "-resume" in current.command
+    assert counter.read_text().splitlines() == ["executed"] * 3  # replay ran once
+
+
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("kind,provenance", [("data", True), ("data", False), ("config", True),
                                            ("source", True), ("unchanged", True)])
 def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine,

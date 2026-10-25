@@ -1453,8 +1453,13 @@ def test_provenance_failure_after_a_successful_run_is_a_clear_error(tmp_path, mo
                         lambda *a, **k: (out / "result.txt").write_text("r"))
     monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda *a, **k: "")
 
+    original_sha256 = orchestration.provenance._sha256
+
     def disk_full(path):
-        raise OSError(28, "No space left on device", str(path))
+        # Fail when completed outputs are recorded, after successful launch snapshots.
+        if path == out / "result.txt":
+            raise OSError(28, "No space left on device", str(path))
+        return original_sha256(path)
 
     monkeypatch.setattr(orchestration.provenance, "_sha256", disk_full)
     with pytest.raises(NfclawError) as exc:
