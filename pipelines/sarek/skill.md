@@ -74,7 +74,7 @@ Any of the optional columns above may be appended to the header when your data n
 This release reads Nextflow secrets: `SENTIEON_LICENSE_BASE64` (in `modules/nf-core/sentieon/applyvarcal/main.nf`, `modules/nf-core/sentieon/bwamem/main.nf` and 7 more files). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Annotation** (`annotation`) — 33 parameters
 - **FASTQ Preprocessing** (`fastq_preprocessing`) — 9 parameters
 - **General reference genome options** (`general_reference_genome_options`) — 5 parameters
@@ -87,6 +87,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Reference genome options** (`reference_genome_options`) — 36 parameters
 - **Unique Molecular Identifiers** (`umi_processing`) — 10 parameters
 - **Variant Calling** (`variant_calling`) — 25 parameters
+
+Upstream usage: https://github.com/nf-core/sarek/blob/3.10.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -130,8 +132,5 @@ Full list with references: https://github.com/nf-core/sarek/blob/3.10.0/CITATION
 ```bash
 nfclaw run sarek --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/sarek/blob/3.10.0/docs/usage.md
 
 <!-- Generated from nf-core/sarek@8ccac7ad37b05dd792447763bf9671b719824587. Do not edit by hand. -->

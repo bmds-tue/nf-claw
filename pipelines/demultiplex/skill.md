@@ -52,7 +52,7 @@ Any of the optional columns above may be appended to the header when your data n
 | `--demultiplexer` | string | bclconvert | `bases2fastq`, `bcl2fastq`, `bclconvert`, `fqtk`, `sgdemux`, `mkfastq`, `mgikit` |  | Demultiplexer to use. |
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **CheckQC options** (`checkqc_options`) — 1 parameter
 - **Demultiplexing options** (`demultiplex_options`) — 1 parameter
 - **Downstream CSV options** (`downstream_csv_options`) — 1 parameter
@@ -60,6 +60,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Input/output options** (`input_output_options`) — 10 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 - **Workflow options** (`workflow_options`) — 9 parameters
+
+Upstream usage: https://github.com/nf-core/demultiplex/blob/1.8.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -107,8 +109,5 @@ Full list with references: https://github.com/nf-core/demultiplex/blob/1.8.0/CIT
 ```bash
 nfclaw run demultiplex --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/demultiplex/blob/1.8.0/docs/usage.md
 
 <!-- Generated from nf-core/demultiplex@daade37c4a75a4c1709ccf12434deb3424141319. Do not edit by hand. -->

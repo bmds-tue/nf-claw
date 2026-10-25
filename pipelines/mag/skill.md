@@ -59,7 +59,7 @@ Any of the optional columns above may be appended to the header when your data n
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Ancient DNA assembly** (`ancient_dna_assembly`) — 9 parameters
 - **Assembly options** (`assembly_options`) — 13 parameters
 - **Bin quality check options** (`bin_quality_check_options`) — 23 parameters
@@ -74,6 +74,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Reproducibility options** (`reproducibility_options`) — 4 parameters
 - **Taxonomic profiling options** (`taxonomic_profiling_options`) — 18 parameters
 - **Virus identification options** (`virus_identification_options`) — 4 parameters
+
+Upstream usage: https://github.com/nf-core/mag/blob/5.5.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -117,8 +119,5 @@ Full list with references: https://github.com/nf-core/mag/blob/5.5.0/CITATIONS.m
 ```bash
 nfclaw run mag --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/mag/blob/5.5.0/docs/usage.md
 
 <!-- Generated from nf-core/mag@56abab5b023ce953c9c43fe21090d156ad0e18af. Do not edit by hand. -->

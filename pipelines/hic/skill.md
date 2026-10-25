@@ -52,7 +52,7 @@ Any of the optional columns above may be appended to the header when your data n
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Alignments** (`alignments`) — 6 parameters
 - **Contact maps** (`contact_maps`) — 8 parameters
 - **Digestion Hi-C** (`digestion_hi_c`) — 6 parameters
@@ -65,6 +65,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Reference genome options** (`reference_genome_options`) — 5 parameters
 - **Skip options** (`skip_options`) — 7 parameters
 - **Valid Pairs Detection** (`valid_pairs_detection`) — 8 parameters
+
+Upstream usage: https://github.com/nf-core/hic/blob/2.1.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -103,8 +105,5 @@ Full list with references: https://github.com/nf-core/hic/blob/2.1.0/CITATIONS.m
 ```bash
 nfclaw run hic --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/hic/blob/2.1.0/docs/usage.md
 
 <!-- Generated from nf-core/hic@fe4ac656317d24c37e81e7940a526ed9ea812f8e. Do not edit by hand. -->

@@ -61,11 +61,13 @@ sample_id,name,description,path,path_2,ncbi_accession,ncbi_query,ncbi_query_max,
 This release reads Nextflow secrets: `NCBI_API_KEY` (in `conf/modules.config`, `modules/local/initial_classification/main.nf` and 1 more files). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Analysis parameters** (`analysis_parameters`) — 19 parameters
 - **Generic options** (`generic_options`) — 17 parameters
 - **Input/output options** (`input_output_options`) — 11 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
+
+Upstream usage: https://github.com/nf-core/pathogensurveillance/blob/1.1.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -102,8 +104,5 @@ Full list with references: https://github.com/nf-core/pathogensurveillance/blob/
 ```bash
 nfclaw run pathogensurveillance --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/pathogensurveillance/blob/1.1.0/docs/usage.md
 
 <!-- Generated from nf-core/pathogensurveillance@13547eaa7345dab4ac97db49775ae8284af4113d. Do not edit by hand. -->

@@ -62,7 +62,7 @@ No reference genome is set by default: supply your own reference. The schema dec
 This release reads Nextflow secrets: `SENTIEON_LICENSE_BASE64` (in `modules/nf-core/sentieon/rsemcalculateexpression/main.nf`, `modules/nf-core/sentieon/staralign/main.nf`). Set each one a run needs with `nextflow secrets set NAME VALUE` before launching; a secret that is not set reaches its tasks as an empty value (Nextflow warns that the variable evaluates to an empty value), and a task that needs it then fails. Secrets are not written to nfclaw's provenance.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Alignment options** (`alignment_options`) — 23 parameters
 - **Generic options** (`generic_options`) — 15 parameters
 - **Input/output options** (`input_output_options`) — 4 parameters
@@ -74,6 +74,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Read trimming options** (`read_trimming_options`) — 4 parameters
 - **Reference genome options** (`reference_genome_options`) — 25 parameters
 - **UMI options** (`umi_options`) — 10 parameters
+
+Upstream usage: https://github.com/nf-core/rnaseq/blob/3.27.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -121,8 +123,5 @@ Full list with references: https://github.com/nf-core/rnaseq/blob/3.27.0/CITATIO
 ```bash
 nfclaw run rnaseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/rnaseq/blob/3.27.0/docs/usage.md
 
 <!-- Generated from nf-core/rnaseq@a1fcdddd3b826fe46eb46f0479f2ff8a7815af05. Do not edit by hand. -->

@@ -52,7 +52,7 @@ sample,short_reads_fastq_1,short_reads_fastq_2,long_reads_fastq_1
 **This release resolves a reference genome remotely by default.** `--genome` defaults to `GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. The pinned configuration gives that key the FASTA `${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/genome.fa`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (the `reference_genome_options` group in [reference.md](reference.md) lists the reference options). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **bbduk** (`bbduk`) — 2 parameters
 - **blastn** (`blastn`) — 4 parameters
 - **fastp options** (`fastp_options`) — 6 parameters
@@ -63,6 +63,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 - **kraken2** (`kraken2`) — 11 parameters
 - **Reference genome options** (`reference_genome_options`) — 4 parameters
+
+Upstream usage: https://github.com/nf-core/detaxizer/blob/1.3.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -106,8 +108,5 @@ Full list with references: https://github.com/nf-core/detaxizer/blob/1.3.0/CITAT
 ```bash
 nfclaw run detaxizer --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/detaxizer/blob/1.3.0/docs/usage.md
 
 <!-- Generated from nf-core/detaxizer@3586921aa3a4c49271f1b2082309bdc33c819749. Do not edit by hand. -->

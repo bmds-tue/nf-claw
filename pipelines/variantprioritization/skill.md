@@ -54,7 +54,7 @@ Any of the optional columns above may be appended to the header when your data n
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use the `reference_options` group in [reference.md](reference.md) lists the reference options. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **CPSR options** (`cpsr_options`) — 13 parameters
 - **Generic options** (`generic_options`) — 17 parameters
 - **Input/output options** (`input_output_options`) — 4 parameters
@@ -64,6 +64,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Reference options** (`reference_options`) — 9 parameters
 - **Variant filtering options** (`variantfiltering_options`) — 8 parameters
 - **VEP options** (`vep_params_options`) — 5 parameters
+
+Upstream usage: https://github.com/nf-core/variantprioritization/blob/1.0.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -100,8 +102,5 @@ Full list with references: https://github.com/nf-core/variantprioritization/blob
 ```bash
 nfclaw run variantprioritization --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/variantprioritization/blob/1.0.0/docs/usage.md
 
 <!-- Generated from nf-core/variantprioritization@8ba629c53dbdb65057c85a3b0a76a7eb2e8688ef. Do not edit by hand. -->
