@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from runner import chain, cli, jobs, settings
+from runner import acceptance, chain, cli, jobs, settings
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
 
@@ -200,6 +200,8 @@ TOOLS = [
            "check": _b("Validate and print the command only; launch nothing, write nothing."),
            "allow_spaces": _b("Run even if a path contains spaces (they break many tools)."),
            "no_provenance": _b("Skip the replay bundle and checksum records."),
+           "reject_caveats": _a("Reject selected completion categories: "
+                                + ", ".join(acceptance.POLICIES) + ". Default: permissive."),
            "wait_seconds": {**_WAIT, "description": _WAIT["description"]
                             + f" Default {_DEFAULT_RUN_WAIT}: a refused launch "
                               "is reported inline."}},
@@ -576,6 +578,11 @@ class NfclawTools:
             argv.append(f"--nxf-env={key}={val}")
         for cfg in _strings(args.get("config")):
             argv.append(f"--config={self._path(cfg)}")
+        try:
+            categories = acceptance.validate(_strings(args.get("reject_caveats")))
+        except NfclawError as exc:
+            raise ToolError(str(exc)) from exc
+        argv.extend(f"--reject-caveat={category}" for category in categories)
         if args.get("limit_cpus"):
             argv.append(f"--limit-cpus={args['limit_cpus']}")
         if args.get("timeout_seconds"):

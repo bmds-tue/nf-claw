@@ -25,7 +25,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (budget, consumption, discovery, engine_version, execution, handoff, inputs,
+from runner import (acceptance, budget, consumption, discovery, engine_version, execution,
+                    handoff, inputs,
                     input_safety, nextflow_command, orchestration, parameters, preflight,
                     provenance, resources, runlog, sheetgen, versions)
 from runner import schema as schema_mod
@@ -45,7 +46,7 @@ RECORD_DIRNAME = "chain"
 LOG_NAME = "chain.log"
 FINGERPRINT_VERSION = 2
 _ID = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
-_OPTION_KEYS = {"profile", "nxf_ver", "nxf_env", "config", "limits"}
+_OPTION_KEYS = {"profile", "nxf_ver", "nxf_env", "config", "limits", "reject_caveats"}
 _CHAIN_KEYS = {"stages", "allow_spaces"} | _OPTION_KEYS
 _STAGE_KEYS = {"id", "pipeline", "input", "params", "params_file", "pipeline_version",
                "retries", "demo", "handoff", "sheet_set"} | _OPTION_KEYS
@@ -92,6 +93,7 @@ class RunOptions:
     nxf_env: dict[str, str] = field(default_factory=dict)
     configs: tuple[str, ...] = ()
     limits: resources.ResourceLimits | None = None
+    reject_caveats: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -103,6 +105,7 @@ class ChainSpec:
     configs: tuple[str, ...] = ()
     limits: resources.ResourceLimits | None = None
     allow_spaces: bool = False
+    reject_caveats: tuple[str, ...] = ()
 
 
 def _bad(message: str) -> NfclawError:
@@ -123,7 +126,8 @@ def options(spec: ChainSpec, stage: Stage) -> RunOptions:
                       nxf_env=provenance.effective_nxf_env(
                           {**spec.nxf_env, **o.get("nxf_env", {})}),
                       configs=o.get("configs", spec.configs),
-                      limits=o.get("limits", spec.limits))
+                      limits=o.get("limits", spec.limits),
+                      reject_caveats=o.get("reject_caveats", spec.reject_caveats))
 
 
 def _parse_options(raw: dict, where: str) -> dict:
@@ -147,6 +151,8 @@ def _parse_options(raw: dict, where: str) -> dict:
             raise _bad(f"{where}: 'config' must list Nextflow config file paths")
         out["configs"] = tuple(_abs(c) for c in configs)
     try:
+        if "reject_caveats" in raw:
+            out["reject_caveats"] = acceptance.validate(raw["reject_caveats"])
         if "nxf_env" in raw:
             out["nxf_env"] = resources.parse_nxf_env(raw["nxf_env"] or {})
         if raw.get("nxf_ver"):
@@ -168,6 +174,8 @@ def _options_json(opts: dict) -> dict:
             out[key] = opts[key]
     if "configs" in opts:
         out["config"] = list(opts["configs"])
+    if "reject_caveats" in opts:
+        out["reject_caveats"] = list(opts["reject_caveats"])
     if "limits" in opts:
         lim = opts["limits"]
         out["limits"] = ({k: v for k, v in (("cpus", lim.cpus), ("memory", lim.memory),
@@ -255,7 +263,7 @@ def parse_spec(data: dict) -> ChainSpec:
     return ChainSpec(stages=tuple(stages), profile=chain_opts.get("profile", "docker"),
                      nxf_ver=chain_opts.get("nxf_ver"), nxf_env=chain_opts.get("nxf_env", {}),
                      configs=chain_opts.get("configs", ()), limits=chain_opts.get("limits"),
-                     allow_spaces=allow_spaces)
+                     allow_spaces=allow_spaces, reject_caveats=chain_opts.get("reject_caveats", ()))
 
 
 # --- the plan: every stage and handoff resolved and checked before anything runs ------------
@@ -351,6 +359,8 @@ def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
             "config_sha256": {c: _file_sha256(Path(c)) for c in opts.configs}}
     if s.sheet_set:                   # absent when unset: earlier chains keep their fingerprints
         body["sheet_set"] = dict(s.sheet_set)
+    if opts.reject_caveats:
+        body["reject_caveats"] = list(opts.reject_caveats)
     text = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -362,6 +372,7 @@ def normalized(spec: ChainSpec, planned: list[Planned]) -> dict:
     return {
         "profile": spec.profile, "nxf_ver": spec.nxf_ver, "nxf_env": dict(spec.nxf_env),
         "config": list(spec.configs), "allow_spaces": spec.allow_spaces,
+        "reject_caveats": list(spec.reject_caveats),
         "limits": ({k: v for k, v in (("cpus", lim.cpus), ("memory", lim.memory),
                                       ("time", lim.time)) if v is not None} if lim else {}),
         "stages": [{"id": p.stage.id, "pipeline": p.stage.pipeline, "input": p.input,
@@ -506,7 +517,8 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
             demo=p.stage.demo, check_only=True, write_provenance=False, timeout_seconds=None,
             pipeline_version=p.stage.pipeline_version, nxf_ver=opts.nxf_ver,
             nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces, configs=opts.configs,
-            limits=opts.limits, on_warning=_warner(on_warning, p.stage),
+            limits=opts.limits, reject_caveats=opts.reject_caveats,
+            on_warning=_warner(on_warning, p.stage),
             deferred_params=_deferred(p), resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
         try:
             input_safety.check_write_boundaries(res.local_dependencies,
@@ -891,7 +903,11 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
                 timeout_seconds=budget.remaining(), pipeline_version=stage.pipeline_version,
                 nxf_ver=opts.nxf_ver, nxf_env=opts.nxf_env, allow_spaces=spec.allow_spaces,
                 configs=opts.configs, limits=opts.limits, on_warning=warn, chain_link=link,
-                resolved_tree=p.tree, sheet_set=p.stage.sheet_set)
+                resolved_tree=p.tree, sheet_set=p.stage.sheet_set,
+                reject_caveats=opts.reject_caveats)
+            manifest = _read_json(stage_dir / "provenance/run_manifest.json") or {}
+            acceptance.require_accepted(acceptance.evaluate(_caveats(manifest),
+                                                           reject=opts.reject_caveats))
             budget.check()
         except NfclawError as exc:
             entry["attempts"][-1].update(finished=runlog.now(), outcome=_short(exc))

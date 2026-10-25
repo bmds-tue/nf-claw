@@ -8,7 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (analysis_identity, budget, container_watch, dependency_stability, discovery,
+from runner import (acceptance, analysis_identity, budget, container_watch, dependency_stability,
+                    discovery,
                     engine_version,
                     environment_record, execution, fastqrepair_compat, input_safety, inputs,
                     institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
@@ -224,7 +225,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
                  resolved_tree: SubmoduleStatus | None = None,
-                 sheet_set: dict[str, str] | None = None) -> RunResult:
+                 sheet_set: dict[str, str] | None = None,
+                 reject_caveats: tuple[str, ...] | list[str] = ()) -> RunResult:
     """Validate, launch and record one pipeline run.
 
     Two arguments exist for a chain (runner.chain) and change nothing otherwise: `chain_link` is
@@ -235,6 +237,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     When the input names data files where the pipeline takes a samplesheet, the samplesheet is
     generated first (runner.sheetgen); `sheet_set` holds the column values the caller assigned."""
     outdir = outdir.expanduser().resolve()
+    reject_caveats = acceptance.validate(reject_caveats)
     if deferred_params and not check_only:
         raise ValueError("deferred_params is only meaningful with check_only")
     pipelines_dir = repo_root / "pipelines"
@@ -782,6 +785,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
 
         stability = {"version": 1, "status": "not_checked", "issues": []}
         caveats: list[str] = []                 # what a successful pipeline said its results lack
+        acceptance_record = None
         # The runs Nextflow already knows in this directory (a resumed one has earlier attempts):
         # the bundle records the execution environment of the session this launch adds after them.
         history_offset = len(environment_record.history(outdir))
@@ -804,7 +808,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              nextflow_log=run_log.nextflow_log,
                              history_offset=history_offset,
                              institutional_configs=institutional_configs,
-                             observed_images=observed_images)
+                             observed_images=observed_images, acceptance_record=acceptance_record)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -869,6 +873,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
             # what the pipeline itself reported missing (skipped samples, ignored task failures).
             caveats = stub_caveats + runlog.completion_caveats(run_log.console_tail("out"),
                                                                 run_log.nextflow_log)
+            acceptance_record = acceptance.evaluate(caveats, reject=reject_caveats)
             for caveat in caveats:
                 message = f"the pipeline completed but reported: {caveat}"
                 warnings.append(message)
@@ -906,7 +911,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 budget.check()
                 if write_provenance:
                     recording_started = True
-                    record("success")
+                    record("success" if acceptance_record["accepted"] else "rejected")
                     # Gaps in the recorded execution environment (an image without a digest, a
                     # process a replay cannot pin) do not fail the run, but its replay is weaker.
                     for issue in provenance.recorded_environment_issues(outdir):
@@ -915,6 +920,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                         if on_warning is not None:
                             on_warning(message)
                 budget.check()
+                acceptance.require_accepted(acceptance_record)
                 run_log.outcome = "success"
             except BaseException as exc:
                 # Nextflow succeeded but nfclaw could not finish (a full disk while hashing outputs,
@@ -937,6 +943,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                             provenance.mark_timed_out(outdir, exc.details["timeout_seconds"])
                         except Exception:
                             pass  # preserve cancellation if the small metadata rewrite fails
+                if isinstance(exc, NfclawError) and exc.code == ErrorCode.ACCEPTANCE_REJECTED:
+                    outcome = "rejected by acceptance policy"
                 run_log.fail(outcome,
                              f"nfclaw: {type(exc).__name__}: {exc}")
                 if isinstance(exc, OSError):

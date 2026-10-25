@@ -102,6 +102,13 @@ def test_run_arguments_become_one_token_per_cli_option(tools):
         "--genome=GRCh38", "--skip_qc=true", "--min_reads=1000", "--ratio=0.1"]
 
 
+def test_result_acceptance_policy_reaches_the_cli_and_unknown_categories_are_rejected(tools):
+    argv = tools.run_argv({"pipeline": "demo", "outdir": "/o", "reject_caveats": ["stub_only"]})
+    assert "--reject-caveat=stub_only" in argv
+    with pytest.raises(mcp_tools.ToolError, match="completion categories"):
+        tools.run_argv({"pipeline": "demo", "outdir": "/o", "reject_caveats": ["unknown"]})
+
+
 def test_paths_resolve_against_the_servers_directory_and_input_is_left_as_given(tools, tmp_path):
     argv = tools.run_argv({"pipeline": "fetchngs", "outdir": "out", "input": "ids.csv",
                            "params_file": "p.json"})

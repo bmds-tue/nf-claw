@@ -471,7 +471,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           nextflow_log: Path | None = None,
           history_offset: int | None = None,
           institutional_configs: dict | None = None,
-          observed_images: dict[str, list[dict]] | None = None) -> Path:
+          observed_images: dict[str, list[dict]] | None = None,
+          acceptance_record: dict | None = None) -> Path:
     try:
         grace = (seconds("NFCLAW_SHUTDOWN_GRACE", 10)
                  if shutdown_grace_seconds is None else float(shutdown_grace_seconds))
@@ -538,6 +539,11 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # What the pipeline reported missing from a successful run, in its own words (runner.runlog).
     if completion_caveats:
         manifest["completion_caveats"] = list(completion_caveats)
+    if acceptance_record is not None:
+        manifest["acceptance"] = acceptance_record
+        manifest["completion_categories"] = sorted({item["category"]
+                                                    for item in acceptance_record["conditions"]})
+        manifest["nextflow_outcome"] = "success"
     # Selected profiles that run every task as a stub; a replay (replay_guard) reports it too.
     if stub_profiles:
         manifest["stub_profiles"] = list(stub_profiles)

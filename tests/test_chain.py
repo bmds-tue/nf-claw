@@ -926,3 +926,38 @@ def test_chain_status_names_each_stages_completion_caveats(tmp_path):
     assert ("      caveat: [nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)"
             in text)
     assert chain._caveats({"completion_caveats": "not a list"}) == []
+
+
+@pytest.mark.parametrize("reject", [[], ["skipped_samples"], ["any"]])
+def test_acceptance_rejection_blocks_downstream_and_does_not_retry(
+        library, fake_runs, tmp_path, monkeypatch, reject):
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    original = chain.orchestration.run_pipeline
+
+    def caveated(name, **kw):
+        result = original(name, **kw)
+        if name == "mini_up" and not kw["check_only"]:
+            path = kw["outdir"] / "provenance/run_manifest.json"
+            record = json.loads(path.read_text())
+            record["completion_caveats"] = [
+                "[nf-core/mini_up] Pipeline completed successfully with skipped sampl(es)"]
+            path.write_text(json.dumps(record))
+        return result
+
+    monkeypatch.setattr(chain.orchestration, "run_pipeline", caveated)
+    spec = _spec(reject_caveats=reject)
+    out = tmp_path / "acceptance-chain"
+    if reject:
+        with pytest.raises(NfclawError) as error:
+            chain.run_chain(spec, repo_root=root, outdir=out)
+        assert error.value.code == ErrorCode.ACCEPTANCE_REJECTED
+        assert [call["name"] for call in fake_runs.calls] == ["mini_up"]
+        state = _state(out)
+        assert [stage["status"] for stage in state["stages"]] == ["failed", "pending"]
+        assert "acceptance_rejected" in state["outcome"]
+        assert not (out / "02-mini").exists()
+    else:
+        assert chain.run_chain(spec, repo_root=root, outdir=out).outcome == "success"
+        strict = _spec(reject_caveats=["any"])
+        with pytest.raises(NfclawError, match="succeeded|frozen|changed"):
+            chain.run_chain(strict, repo_root=root, outdir=out, resume=True)

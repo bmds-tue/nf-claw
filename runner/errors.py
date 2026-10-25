@@ -14,6 +14,7 @@ class ErrorCode(StrEnum):
     PARAMS_INVALID = "params_invalid"
     EXECUTION_FAILED = "execution_failed"
     HANDOFF_FAILED = "handoff_failed"
+    ACCEPTANCE_REJECTED = "acceptance_rejected"
 
 
 @dataclass

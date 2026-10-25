@@ -6,8 +6,8 @@ import shlex
 import sys
 from pathlib import Path
 
-from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    resources, runlog, sheetgen, verify, versions)
+from runner import (acceptance, chain, discovery, execution, handoff, nextflow_command,
+                    orchestration, resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -318,6 +318,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--demo", action="store_true")
     p_run.add_argument("--resume", action="store_true")
     p_run.add_argument("--no-provenance", action="store_true")
+    p_run.add_argument("--reject-caveat", action="append", default=[], choices=acceptance.POLICIES,
+                       help="reject a reported completion category (repeatable); 'any' rejects "
+                            "all caveats, including unclassified upstream conditions")
     # No wall-clock limit by default: a real nf-core run (a sarek WGS, a large rnaseq) can take
     # days, and Nextflow already bounds each task with its own `time` directive.
     p_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
@@ -502,7 +505,7 @@ def _main(argv: list[str] | None = None) -> int:
                     nxf_ver=args.nxf_ver, nxf_env=resources.parse_nxf_env(args.nxf_env),
                     allow_spaces=args.allow_spaces, configs=args.config,
                     limits=resources.parse(args.limit_cpus, args.limit_memory, args.limit_time),
-                    on_warning=warn, sheet_set=sheet_set)
+                    on_warning=warn, sheet_set=sheet_set, reject_caveats=args.reject_caveat)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             if not exc.details.get("active_run") and not exc.details.get("unsafe_write_boundary"):
