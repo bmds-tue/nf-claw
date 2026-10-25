@@ -109,15 +109,16 @@ def _a(description: str) -> dict:
 
 
 _WAIT = _i("Seconds to wait for the job before returning (0-600). Keep it below your client's tool "
-           "timeout; the job is unaffected when the call returns.", minimum=0, maximum=_MAX_WAIT)
+           "timeout (Antigravity stops a call after 180 s, Codex after its tool_timeout_sec); the "
+           "job is unaffected when the call returns.", minimum=0, maximum=_MAX_WAIT)
 _JOB_ID = _s("A job id returned by run_pipeline or run_chain (see list_jobs).")
 _PIPELINE = _s("Pipeline name exactly as list_pipelines returns it, e.g. rnaseq.")
 
 
 def _tool(name: str, title: str, description: str, properties: dict, required: list[str],
           *, read_only: bool, destructive: bool = False, idempotent: bool = False,
-          open_world: bool = False, always_load: bool = False) -> dict:
-    tool = {
+          open_world: bool = False) -> dict:
+    return {
         "name": name,
         "title": title,
         "description": description,
@@ -125,12 +126,11 @@ def _tool(name: str, title: str, description: str, properties: dict, required: l
         "annotations": {"title": title, "readOnlyHint": read_only,
                         "destructiveHint": destructive, "idempotentHint": idempotent,
                         "openWorldHint": open_world},
+        # Antigravity hides MCP tools behind one generic call tool unless a tool asks to be loaded
+        # up front, and its model then guessed their arguments or passed the call tool's own
+        # `toolSummary` among them. All eleven together cost it about 2.7k tokens.
+        "_meta": {"antigravity/alwaysLoad": True},
     }
-    if always_load:
-        # Antigravity hides MCP tools behind one generic call tool unless a tool asks to be
-        # loaded up front; its model then guessed their arguments instead of reading the schema.
-        tool["_meta"] = {"antigravity/alwaysLoad": True}
-    return tool
 
 
 TOOLS = [
@@ -141,7 +141,7 @@ TOOLS = [
           "chain. An empty query lists the library.",
           {"query": _s("Words to match; a pipeline matching more of them ranks higher."),
            "limit": _i("Maximum results (1-100, default 25).", minimum=1, maximum=100)},
-          [], read_only=True, idempotent=True, always_load=True),
+          [], read_only=True, idempotent=True),
     _tool("show_pipeline", "Read a pipeline's skill",
           "Return a pipeline's skill.md — how to run it: inputs and samplesheet columns, required "
           "parameters with allowed values, reference genome handling, outputs and chaining — or "
@@ -154,7 +154,7 @@ TOOLS = [
                       "section heading and table header."),
            "version": _s("Another release (e.g. 3.14.0) or 'dev': its docs are generated from that "
                          "release's schema (fetched on first use). Default: the pinned release.")},
-          ["pipeline"], read_only=True, idempotent=True, open_world=True, always_load=True),
+          ["pipeline"], read_only=True, idempotent=True, open_world=True),
     _tool("list_versions", "List a pipeline's releases",
           "List the published releases of a pipeline, newest first, marking the pinned one, plus "
           "its unreleased development branch (dev).",
@@ -203,7 +203,7 @@ TOOLS = [
            "wait_seconds": {**_WAIT, "description": _WAIT["description"]
                             + f" Default {_DEFAULT_RUN_WAIT}: a refused launch "
                               "is reported inline."}},
-          ["pipeline", "outdir"], read_only=False, open_world=True, always_load=True),
+          ["pipeline", "outdir"], read_only=False, open_world=True),
     _tool("run_chain", "Run a chain of pipelines",
           "Run several pipelines in sequence with `nfclaw chain run`, as one detached job: each "
           "stage starts only after the previous one succeeded, and its input is prepared from that "
@@ -232,7 +232,7 @@ TOOLS = [
            "log_lines": _i("How many of the job's last output lines to include "
                            "(0-500, default 20).",
                            minimum=0, maximum=500)},
-          ["job_id"], read_only=True, idempotent=True, always_load=True),
+          ["job_id"], read_only=True, idempotent=True),
     _tool("list_jobs", "List jobs",
           "Jobs started through this server, newest first, with their state. Jobs persist across "
           "sessions and server restarts.",
