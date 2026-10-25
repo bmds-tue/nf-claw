@@ -591,19 +591,23 @@ def _mandatory_params(ps: ParamSchema) -> str:
 
 
 def _param_groups(ps: ParamSchema) -> str:
-    """The schema's own parameter groups (titles + full counts) — a deterministic map,
-    no curation."""
-    groups = sorted(ps.groups().items())
-    if not groups:
-        return "_No additional parameters._\n"
+    """Where every parameter is documented, and the schema's own parameter groups (titles + full
+    counts) — a deterministic map, no curation."""
     lines = []
-    for g, params in groups:
+    for g, params in sorted(ps.groups().items()):
         title = next((p.group_title for p in params if p.group_title), "")
         label = f"**{title}** (`{g or 'general'}`)" if title else f"`{g or 'general'}`"
         lines.append(f"- {label} — {len(params)} parameter{'' if len(params) == 1 else 's'}")
-    return ("Every parameter not listed above is optional as far as the schema is concerned. "
-            "[reference.md](reference.md) documents them all — type, default, allowed values and "
-            "constraints — organised into these groups (counts are full group sizes, so they "
+    text = ("Every parameter not listed above is optional as far as the schema is concerned. "
+            "[reference.md](reference.md) documents them all — type, required, hidden, allowed "
+            "values, constraints, default and description. Use it as the source of truth; do not "
+            "guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact "
+            "schema spelling (usually underscores). nfclaw checks explicit parameters before "
+            "launch; the pinned pipeline's validation handles conditional and complex constraints "
+            "at runtime.")
+    if not lines:
+        return text + "\n"
+    return (text + " It is organised into these groups (counts are full group sizes, so they "
             "include any parameter already listed above):\n" + "\n".join(lines) + "\n")
 
 
@@ -792,6 +796,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{reference_block}"
         f"{store_block}"
         f"## Other parameters\n{_param_groups(ps)}\n"
+        f"Upstream usage: https://github.com/nf-core/{name}/blob/{ref}/docs/usage.md\n\n"
         f"## Resources\n{_resources_section(name, ps, insch, pipeline_version)}\n"
         f"{engine_block}"
         f"## Outputs\n{_outputs_section(name, st, ref, what, ps=ps)}\n"
@@ -800,14 +805,6 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         "## Demo\n```bash\n"
         f"{demo_line}\n```\n\n"
         f"{demo_note}"
-        "## Full reference\n"
-        "Every parameter — name, type, required, hidden, allowed values, constraints, default and "
-        "description — is in [reference.md](reference.md). Use it as the source of truth; do not "
-        "guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's "
-        "validation handles conditional and complex constraints at runtime. The reference uses "
-        "nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually "
-        "underscores). Upstream usage: "
-        f"https://github.com/nf-core/{name}/blob/{ref}/docs/usage.md\n\n"
         f"<!-- Generated from nf-core/{name}@{st.commit}. Do not edit by hand. -->\n"
     )
     return fm + body
