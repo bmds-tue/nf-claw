@@ -24,7 +24,8 @@ def capture(*, params: dict, profile: str, environment: dict, engine: str | None
             pipeline: Path, commit: str, configurations: list[Path], limits) -> dict:
     configs = list(configurations)
     # Nextflow reads the user's global config in addition to the pipeline and explicit configs.
-    global_config = Path.home() / ".nextflow/config"
+    nextflow_home = Path(environment.get("NXF_HOME") or Path.home() / ".nextflow").expanduser()
+    global_config = nextflow_home / "config"
     if global_config.exists():
         configs.insert(0, global_config)
     hashes, inventory = provenance.snapshot_inputs(configs)

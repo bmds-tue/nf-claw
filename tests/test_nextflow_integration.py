@@ -33,6 +33,58 @@ pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
 
 
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
+@pytest.mark.parametrize("reject", [[], ["stub_only"]])
+def test_real_stub_acceptance_blocks_consumers_and_keeps_original_caveat(
+        engine, reject, tmp_path):
+    root = tmp_path / "library"
+    upstream = root / "pipelines/fixture/upstream"
+    upstream.mkdir(parents=True)
+    (upstream.parent / "skill.md").write_text("---\nname: fixture\n---\n")
+    (upstream / "nextflow_schema.json").write_text(json.dumps({"properties": {
+        "input": {"type": "string", "format": "file-path", "exists": True},
+        "outdir": {"type": "string"}}}))
+    (upstream / "nextflow.config").write_text(
+        "nextflow.enable.dsl=2\nprofiles { standard { process.executor='local' } }\n")
+    (upstream / "main.nf").write_text('''process COPY {
+ publishDir params.outdir, mode: 'copy'
+ input:
+ path data
+ output:
+ path 'result.txt'
+ script:
+ "cp ${data} result.txt"
+ stub:
+ "touch result.txt"
+}
+workflow { COPY(file(params.input)) }
+''')
+    data = tmp_path / "input.txt"
+    data.write_text("analysis data\n")
+    stub_config = tmp_path / "stub.config"
+    stub_config.write_text("stubRun=true\n")
+    spec = chain.parse_spec({"profile": "standard", "nxf_ver": engine,
+        "limits": {"cpus": 1}, "reject_caveats": reject, "stages": [
+            {"pipeline": "fixture", "id": "producer", "input": str(data),
+             "config": [str(stub_config)]},
+            {"pipeline": "fixture", "id": "consumer", "handoff": {
+                "params": {"input": {"file": "result.txt"}}}}]})
+    out = tmp_path / "chain"
+    if reject:
+        with pytest.raises(NfclawError) as err:
+            chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=120)
+        assert err.value.code == ErrorCode.ACCEPTANCE_REJECTED
+        assert not (out / "02-consumer").exists()
+    else:
+        result = chain.run_chain(spec, repo_root=root, outdir=out, timeout_seconds=120)
+        assert result.outcome == "success"
+        assert (out / "02-consumer/result.txt").read_bytes() == b""
+    manifest = json.loads((out / "01-producer/provenance/run_manifest.json").read_text())
+    assert manifest["outcome"] == ("rejected" if reject else "success")
+    assert manifest["completion_categories"] == ["stub_only"]
+    assert any("placeholder files" in text for text in manifest["completion_caveats"])
+
+
+@pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("change", ["parameters", "disabled-output", "configuration", "revision"])
 def test_changed_analysis_resume_has_only_current_publications_and_replays(
         engine, tmp_path, change):

@@ -33,7 +33,7 @@ def _no_institutional_config_lookup(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _isolate_nextflow_env(monkeypatch):
+def _isolate_nextflow_env(monkeypatch, request):
     """Run every test with a clean NXF_* environment.
 
     Provenance records the NXF_* variables a run inherited from the shell, so without this a
@@ -42,6 +42,12 @@ def _isolate_nextflow_env(monkeypatch):
     """
     for key in [k for k in os.environ if k.startswith("NXF_")]:
         monkeypatch.delenv(key, raising=False)
+    # Server acceptance uses a dedicated engine cache. Ordinary unit tests still
+    # start with no NXF_* variables; native suites explicitly opt into this cache.
+    native = {"test_nextflow_integration.py", "test_git_path_identity.py",
+              "test_timeout_integration.py"}
+    if request.node.path.name in native and (home := os.environ.get("NFCLAW_TEST_NXF_HOME")):
+        monkeypatch.setenv("NXF_HOME", home)
 
 
 @pytest.fixture(autouse=True)
