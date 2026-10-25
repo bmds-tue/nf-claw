@@ -91,9 +91,9 @@ non-interactive shell's environment.
 | `verify_replay` | `nfclaw verify` | Compare a replay with the run it reproduces. |
 
 The server's own instructions give agents the workflow: find → read the skill → `check` → run →
-follow → results. The four tools of that workflow (`list_pipelines`, `show_pipeline`,
-`run_pipeline`, `get_job`) ask Antigravity to load them up front (`_meta`
-`antigravity/alwaysLoad`), since it otherwise lets its model call MCP tools without their schemas.
+follow → results. Every tool asks Antigravity to load it up front (`_meta`
+`antigravity/alwaysLoad`, about 2.7k tokens for all eleven): deferred, its model called them
+without their schemas, guessing arguments or passing its call tool's `toolSummary` among them.
 Tool failures (an invalid argument, a refused launch) come back as results with
 `isError` and nfclaw's own message — `[code] message`, the issues, and `fix:` — so the model can correct
 the call. A parameter is refused if it is one of `nfclaw run`'s own options (`outdir`, `resume`, …:

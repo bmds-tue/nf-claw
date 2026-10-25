@@ -180,13 +180,14 @@ def test_list_pipelines_without_a_query_lists_the_library_up_to_the_limit(tools)
     assert "more not shown" not in narrow["content"][0]["text"]
 
 
-def test_the_workflow_tools_are_loaded_up_front_by_antigravity(tools):
+def test_every_tool_is_loaded_up_front_by_antigravity(tools):
     # Antigravity defers MCP tools behind one generic call tool, and its model then called them
-    # without reading their schemas (list_pipelines with no query, a made-up `validate_only`).
-    # The four tools of the workflow in INSTRUCTIONS opt out of that; the rest stay on demand.
-    loaded = {t["name"] for t in tools.list_tools(Context())
-              if (t.get("_meta") or {}).get("antigravity/alwaysLoad") is True}
-    assert loaded == {"list_pipelines", "show_pipeline", "run_pipeline", "get_job"}
+    # without reading their schemas (list_pipelines with no query, a made-up `validate_only`) or
+    # with the call tool's own `toolSummary` inside their arguments — every deferred call, in
+    # every session. Loaded up front, a tool is called with its own schema.
+    tools_listed = tools.list_tools(Context())
+    assert all((t.get("_meta") or {}).get("antigravity/alwaysLoad") is True for t in tools_listed)
+    assert len(tools_listed) == 11
 
 
 def test_list_pipelines_reports_no_match(tools):
