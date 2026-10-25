@@ -27,18 +27,18 @@ server checks pass. Preview and stub execution never count as scientific executi
 
 | Area | Reproduced defect or scope | Implementation | Validation / blockers |
 | --- | --- | --- | --- |
-| 1 Resume attribution | Scalar/config/source changes evade input-only resume guard | Pending | Audit real-engine reproduction retained; add candidate regressions |
-| 2 createtaxdb | Nightly `40181265673`, shard 4 timed out | Investigating | Retained engine log and server reproduction pending |
-| 3 Container identity | Mutable reference inspection deduplicated for 600 seconds | Pending | Deterministic race and live isolated Docker probe pending |
+| 1 Resume attribution | Scalar/config/source changes evade input-only resume guard | `865a3b9`, `b054477`; analysis identity and whole-run preservation | 8 native resume/cache/replay cases passed remotely on `865a3b9`, both 25.10.4 and 26.04.0; final candidate rerun pending |
+| 2 createtaxdb | Nightly `40181265673`, shard 4 timed out | Investigating retained logs; no exception added | Exact preview passed on server and GitHub rerun attempt 2; original stalled call remains unidentifiable without a thread dump |
+| 3 Container identity | Mutable reference inspection deduplicated for 600 seconds | `a3ede23`; inspect container then immutable image, retain cached-task identities | 68 focused local cases and 13 server cases passed, including isolated live retag-before-inspection experiment |
 | 4 Execution gates | Preview does not execute tasks | Pending | Selected-pin policy and rotating sweep needed |
 | 5 Complete evidence / offline | Historical strict mode permits missing evidence | Pending | Preserve compatibility; new opt-in contract and offline run needed |
-| 6 Acceptance policy | Caveated successful stages feed consumers | Pending | CLI/chain/MCP rejection policy and integration coverage needed |
+| 6 Acceptance policy | Caveated successful stages feed consumers | `05c98e7`; structured categories and repeatable reject policy in CLI/chain/MCP | Focused local suites passed; strict native cases rejected correctly; permissive native fixture exposed a same-name copy error, corrected locally pending rerun |
 | 7 Composition / handoffs | Sequential controller; re-count registry | Pending | DAG scheduling, lineage, examples and real handoff checks needed |
-| 8 Packaging / release | Installed library assumes adjacent source content | Pending | Wheel/sdist, external data root, constraints and release preparation needed |
-| 9 Browser regressions | No committed browser suite | Pending | Production export, base path, keyboard/mobile/accessibility needed |
-| 10 Full-text search | Document title/filename search only | Pending | Build-time section index and snippets needed |
-| 11 Agent context | Both entry points about 42.6 KB | Pending | Preserve content in focused docs and byte-identical entry points |
-| 12 Diagnostics / jobs | Prose parsing; unbounded list; no retention policy | Pending | Structured contract, diagnostics, progress, preview-only prune default needed |
+| 8 Packaging / release | Installed library assumes adjacent source content | `05dac65`, `fefb9a7`; external library root, independent installs, preparation workflow and constraints | Clean local wheel and sdist installations discover all 94 pipelines; minimum-dependency focused checks passed (older SDK cannot run its modern-client test); server/final gates pending |
+| 9 Browser regressions | No committed browser suite | Implemented production-export Playwright/axe suite and CI gate | Local desktop/mobile browser checks passed, including global parameter-index handoff; typecheck, production base-path build, parser checks and dependency audit passed; server/final CI pending |
+| 10 Full-text search | Document title/filename search only | Build-time, lazily fetched section index with renderer IDs, snippets and literal query handling | Error-remedy navigation, duplicate heading IDs, code examples, unsafe queries, lazy loading and existing parameter search tested successfully |
+| 11 Agent context | Both entry points were 42,587 bytes | `4a7b48e`; moved full content into five focused guides | Both entry points now 4,851 bytes (88.6% smaller); synchronization and guidance regressions passed |
+| 12 Diagnostics / jobs | Prose parsing; unbounded list; no retention policy | `05dac65`; doctor, JSON status/verify, observed trace progress, bounded pages and lease-protected metadata pruning | Focused CLI/MCP/job tests and current-SDK interoperability passed locally; broader server suite running |
 
 ## Final acceptance gates
 
@@ -61,3 +61,40 @@ seven shards passed. Current GitHub main is two documentation commits past the
 audit baseline; neither changes these runtime defects. No open PR existed at
 initial inspection. New implementation and validation evidence will be appended
 here and linked to the final server report and pipeline matrix.
+
+## Durable session state
+
+- Server task root: `/home/ubuntu/volume/nfclaw-acceptance-20261025`, with separate
+  `repo`, `venv`, `inputs`, `results`, `work`, `engine` and `evidence` directories.
+- Latest server candidate is `4d727dd`. All 94 pinned source checkouts have been
+  initialized there. Do not update that checkout while its full suite is running.
+- Full suite PID initially `621326`; log `evidence/full-4d727dd.log`, JUnit
+  `evidence/full-4d727dd.xml`, retained fixtures `results/full-4d727dd`.
+- Prior native resume log `evidence/resume-native-865a3b9.log`: 8 passed.
+- Container log `evidence/container-a3ede23.log`: 13 passed, including live Docker.
+- Passing server preview logs: `evidence/createtaxdb-reproduction/`. The earlier
+  bootstrap attempt in `createtaxdb-preview*` lacked the IPv6 JVM setting and is
+  separate failed environmental evidence, not a pipeline acceptance.
+- Dedicated engine cache was seeded by copying existing framework jars and plugin
+  files; shared engine caches and active installations were not pruned or replaced.
+- GitHub connector can read Actions evidence but cannot rerun jobs (403). Existing
+  GitHub CLI authorization successfully reran only shard 4; attempt 2 is green.
+- Original nightly artifacts are retained locally under this chat's visualization
+  directory in `nightly-acceptance-4/`; inspect engine log before attributing the
+  timeout to a particular network call or upstream race.
+- Current local browser work has installed Playwright/axe, a production static
+  server, full-text search and browser tests. Browser cache is
+  `~/.codex/workspaces/nf-claw-browser-cache`; ignore test result/report directories.
+- Two resource-bounded preview shards are running for every registered pipeline
+  at server revision `4d727dd`: controller PID initially `662606`; logs and unique
+  TSV classifications under `evidence/previews-4d727dd/`. These are previews only.
+- Generated samplesheet annotation changes were independently reproduced as an
+  additional resume edge case; their exact generated bytes now join the analysis
+  identity, and focused regressions pass. Ordinary input-only identities retain
+  their existing components.
+- Remaining major implementation: execution-gated maintenance/rotation (4), complete
+  evidence and offline preparation (5), DAG composition/new handoffs (7), and
+  stronger preview timeout diagnostics (2). Browser/server/final CI still need
+  validation on the final revision.
+- No PR has been created and nothing has been merged. The final revision still
+  needs the complete server matrix and actual registered pipeline executions.
