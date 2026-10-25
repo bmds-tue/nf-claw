@@ -296,7 +296,7 @@ does not embed scientific input data, container images or plugins. Local inputs 
 their recorded paths. Configs using `includeConfig` still need their original files
 and include targets. Inspect `pipeline_archive`, `bundled_configs`, `container_pins`
 and `execution_environment.issues` in the manifest for the evidence actually captured.
-See [the replay guide](AGENTS.md#replaying-a-run) for relocation and comparison limits.
+See [the replay guide](docs/replay-guide.md#replaying-a-run) for relocation and comparison limits.
 
 > [!IMPORTANT]
 > **Run Isolation & Sibling File Locking:** On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) across the execution lifecycle. Overlapping or concurrent runs targeting the same output directory fail fast with `ErrorCode.ENVIRONMENT`, eliminating race conditions and cache corruption.
