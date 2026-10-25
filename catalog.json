@@ -2205,6 +2205,24 @@
     "version": "1.0.1"
   },
   {
+    "description": "This pipeline is dedicated to identifying the most stable genes within a single or multiple expression dataset(s). This is particularly useful for identifying the most suitable RT-qPCR reference genes for a specific species.",
+    "feeds": [],
+    "input": "parameters (no samplesheet)",
+    "name": "stableexpression",
+    "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
+    "summary": "nf-core/stableexpression is a bioinformatics pipeline that aims to identify the most stable genes in one or more expression datasets. These datasets can be downloaded from public databases such as EBI Expression Atlas and NCBI GEO Datasets, or provided directly by the user. Both RNA-seq and microarray count datasets can be used. The pipeline is ideally suited to determining the most suitable RT-qPCR reference genes for a given species.",
+    "tools": [
+      "EBI Expression Atlas",
+      "NCBI GEO",
+      "g:Profiler",
+      "Scikit-learn",
+      "Normfinder",
+      "GeNorm",
+      "MultiQC"
+    ],
+    "version": "1.1.0"
+  },
+  {
     "description": "Taxonomic classification and profiling of shotgun short- and long-read metagenomic data",
     "feeds": [],
     "input": "samplesheet (sample, run_accession, instrument_platform, fastq_1, fastq_2, fasta)",

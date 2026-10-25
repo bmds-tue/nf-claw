@@ -220,6 +220,7 @@ the automated updater's preview, test and drift gates.
 | provenancereport | 1.0.0 | 25.10.4 | success | 5 completed | 2026-10-22, added, host network |
 | rnastructurome | 1.1.0 | 25.10.4 | success | 52 completed | 2026-10-23, bump from 1.0.0 published by the updater, host network |
 | genomeassembler | 2.0.1 | 25.10.4 | success | 88 completed | 2026-10-23, bump from 2.0.0 published by the updater, host network |
+| stableexpression | 1.1.0 | 26.04.4 | success | 246 completed | 2026-10-25, added, host network |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -249,6 +250,7 @@ identical execution environment and again matched all of those checksums.
 | provenancereport 1.0.0 | 3 | 5/5 | 2 | 18 identical, 17 changed |
 | rnastructurome 1.1.0 | 15 | 38/38 | 5 | 73 identical, 15 changed |
 | genomeassembler 2.0.1 | 14 | 30/30 | 7 | 243 identical, 78 changed |
+| stableexpression 1.1.0 | 13 | 31/31 | 1 | 45 identical, 5 changed |
 
 - **magmap:** 48 of the changed files are MultiQC and `pipeline_info` reports, 2 are gzip files whose
   decompressed content is identical, and 3 are BBMap logs that differ only in their timings.
@@ -269,6 +271,12 @@ identical execution environment and again matched all of those checksums.
   genomeqc samplesheet (it records absolute output paths) and the `test_ont_flye` sample's assembly. Flye assembled
   that sample's ONT test reads into 4 contigs (2,083,676 bp) in the run and 3 (2,068,682 bp) in the replay, so its
   graph, assembly info and Liftoff annotation differ too.
+- **stableexpression 1.1.0** (2026-10-25) was added by hand: the weekly discovery rejects it because its default
+  preview never exits ([known issues](known-issues.md#upstream-pipeline-bugs-documented-not-patched)). Its run and
+  its replay matched all 27 checksummed files and all 72 stable paths of its `-profile test` snapshot, and the
+  known answers that test asserts: `reporting/all_genes_summary.csv` holds 27,849 genes in 35 columns, with the
+  expected stability scores for `ENSRNA050004025`, `PRUPE_1G169400` and `PRUPE_1G195800`. The 5 changed files are
+  the launch-time `pipeline_info` reports and the MultiQC report, which its `tests/.nftignore` excludes.
 - **rnasplice:** as with 1.0.4, MISO names its logs by the clock (the 20 missing and 20 extra files, so `nfclaw verify`
   exits 1) and samples by MCMC, so 1,223 of the changed files are MISO's data. Salmon's multi-threaded
   quantification also differs slightly between runs (948 of 5,895 transcripts of ERR188383, by at most 4.4 of

@@ -280,3 +280,6 @@
 [submodule "pipelines/provenancereport/upstream"]
 	path = pipelines/provenancereport/upstream
 	url = https://github.com/nf-core/provenancereport.git
+[submodule "pipelines/stableexpression/upstream"]
+	path = pipelines/stableexpression/upstream
+	url = https://github.com/nf-core/stableexpression.git
