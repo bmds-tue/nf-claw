@@ -54,6 +54,8 @@ jobs:
             echo "::error::website parsing tests were skipped instead of run"
             exit 1
           fi
+      - name: The site serves the repository's own llms.txt
+        run: cmp ../llms.txt out/llms.txt
 
   nextflow-integration:
     runs-on: ubuntu-latest

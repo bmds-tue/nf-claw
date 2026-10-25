@@ -257,7 +257,7 @@ def test_samplesheet_docs_follow_schema_input_extension():
 def test_user_facing_commands_do_not_assume_bare_python():
     # Some macOS/Linux environments have python3 but no python. User-facing commands and Make
     # targets must not require a bare `python` executable to exist.
-    for rel in ("README.md", "AGENTS.md", "CLAUDE.md", "Makefile"):
+    for rel in ("README.md", "AGENTS.md", "Makefile"):
         text = (REPO / rel).read_text(encoding="utf-8")
         assert "python -m " not in text
 
@@ -488,10 +488,10 @@ def test_known_issues_documents_circdna_required_run_params():
     assert "--input_format" in KNOWN_ISSUES and "--circle_identifier" in KNOWN_ISSUES
 
 
-def test_claude_md_states_run_is_real_with_check_for_dry_run():
+def test_agent_guide_states_run_is_real_with_check_for_dry_run():
     # Pre-empt the "runner defaults to -preview" confusion: nfclaw run is a real run; --check is
     # the dry run. Both facts must be stated where an agent decides how to run a pipeline.
-    text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     assert "no preview/dry-run default" in text
     assert "--check" in text
 
