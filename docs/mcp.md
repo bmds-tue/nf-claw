@@ -48,6 +48,8 @@ approval_mode = "approve"       # likewise for run_chain and cancel_job
 ```json
 {"mcpServers": {"nfclaw": {"command": "/abs/path/to/.venv/bin/nfclaw", "args": ["mcp"]}}}
 ```
+Antigravity stops a tool call after 3 minutes, whatever progress it reports, so `get_job` waits
+there should stay below 180 seconds (the job itself is unaffected).
 
 **Hermes** (`~/.hermes/config.yaml`)
 ```yaml

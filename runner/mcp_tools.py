@@ -109,7 +109,8 @@ def _a(description: str) -> dict:
 
 
 _WAIT = _i("Seconds to wait for the job before returning (0-600). Keep it below your client's tool "
-           "timeout; the job is unaffected when the call returns.", minimum=0, maximum=_MAX_WAIT)
+           "timeout (Antigravity stops a call after 180 s, Codex after its tool_timeout_sec); the "
+           "job is unaffected when the call returns.", minimum=0, maximum=_MAX_WAIT)
 _JOB_ID = _s("A job id returned by run_pipeline or run_chain (see list_jobs).")
 _PIPELINE = _s("Pipeline name exactly as list_pipelines returns it, e.g. rnaseq.")
 
