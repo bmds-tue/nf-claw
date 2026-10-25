@@ -81,7 +81,7 @@ def test_skill_md_has_fixed_sections(tmp_path):
     skill, ref = write_skill.generate("mini", pipelines_dir=pdir)
     text = skill.read_text()
     for header in ("# mini", "## Run it", "## Inputs", "## Required parameters",
-                   "## Other parameters", "## Outputs", "## Demo", "## Full reference"):
+                   "## Other parameters", "## Outputs", "## Demo"):
         assert header in text
     assert "Do not edit by hand" in text
 

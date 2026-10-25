@@ -28,13 +28,6 @@ The repository is structured into four distinct, decoupled functional zones:
 └───────────────┘     └───────────────┘     └───────────────┘     └───────────────┘
 ```
 
-| Architectural Zone | Primary Responsibility | Key Files & Directories |
-|---|---|---|
-| **`pipelines/`** | Pinned upstream code, agent skills, and parameter reference manuals. | `pipelines/<name>/upstream/`, `skill.md`, `reference.md` |
-| **`runner/`** | The `nfclaw` CLI runtime: preflight validation, process isolation, locking, and provenance; `nfclaw mcp` serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)). | `runner/cli.py`, `runner/schema.py`, `runner/execution.py`, `runner/chain.py`, `runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py` |
-| **`handoffs/`** | Declarative mapping specifications connecting sequential pipeline stages. | `handoffs/<upstream>/<downstream>.json` |
-| **`librarian/`** | Maintenance generators, submodule release trackers, and schema drift checkers. | `librarian/check_drift.py`, `write_skill.py`, `update_pipelines.py` |
-
 ---
 
 ## 1. `pipelines/` — The Library Content
@@ -54,7 +47,7 @@ The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas
 
 ## 2. `runner/` — The Runtime Engine (`nfclaw`)
 
-The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains.
+The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)).
 
 ### 2.1 Schema Preflight & Fast-Fail Parameter Validation
 Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight checks (`runner/preflight.py`, `runner/schema.py`, `runner/parameters.py`, `runner/inputs.py`):
@@ -102,7 +95,10 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 
 | Manifest / File | Description & Verification Function |
 |---|---|
-| `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. |
+| `logs/run.log` | The whole launch in order, ending with its outcome line (§2.4); `stdout.txt` and `stderr.txt` beside it keep Nextflow's raw streams. |
+| `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. `pipeline_archive`, `bundled_configs`, `container_pins` and `execution_environment.issues` show the evidence actually captured. |
+| `params.json` | Resolved wrapper parameters passed to Nextflow, including the pinned `trace_report_suffix` where the upstream schema supports it and the nf-core/configs commit (`custom_config_version`) when automatic pinning applies. The upstream pipeline can record further defaults or profile values itself, and other independently timestamped metadata can still change filenames. |
+| `commands.sh`, `replay_guard.py`, `environment_record.py` | The replay script and its two zero-dependency helpers (§2.6). |
 | `inputs.sha256` | Prelaunch digests of declared local input files, schema path parameters, existing absolute local files supplied to parameters without a path format, and local data paths inside CSV/TSV or flat JSON/YAML records, including auxiliary tables. |
 | `outputs.sha256` | Snapshot of published result files, excluding provenance and Nextflow state. |
 | `pipeline.sha256` | Prelaunch digest snapshot of tracked pipeline source files. |
@@ -115,7 +111,9 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 | `outputs.inventory.json` | Published output namespace used by replay verification and handoff checks. |
 | `resource_limits.config` | Generated resource ceiling configuration when `--limit-*` flags are used. |
 | `nf_schema_compat.config` / `fastqrepair_compat.config` | Conditional plugin adjustments and recorded task corrections. |
-| `trace_report_suffix` | A pinned parameter in `params.json` when supported by the upstream schema; other independently timestamped metadata can still change filenames. |
+
+Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode
+separators without losing file identities.
 
 Missing local path parameters without an upstream `exists: true` constraint are delegated to Nextflow: they may be output/cache destinations. They produce a warning and an `unverified_local_paths` manifest entry rather than a false input checksum. Required missing inputs are refused. Remote data recovered from Nextflow's staging logs is hashed after the run and compared after a replay; files tasks download themselves, profile-only references, a user config's own `includeConfig` targets, Conda environments and data referenced by non-tabular input formats are not comprehensively frozen. Supported validation-only table URLs are fetched again after the run, up to 100 MiB; that hash describes the refetched bytes, not an immutable copy of what validation originally read. Unavailable identities remain unresolved.
 

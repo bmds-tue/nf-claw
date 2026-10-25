@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [OG_IMAGE],
   },
-  // Right-sized renditions of the 3000 px source logo (public/nf-claw-logo.png, ~3 MB).
+  // Right-sized renditions of the 3000 px source logo (docs/images/nf-claw-logo.png, ~3 MB).
   icons: {
     icon: [
       { url: `${BASE_PATH}/brand/logo-64.png`, sizes: "64x64", type: "image/png" },

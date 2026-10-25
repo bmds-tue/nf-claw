@@ -67,10 +67,6 @@ jobs:
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"NXF_VER={version}\n")
           PY
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - name: Execute the bundled analysis on native amd64
         run: |

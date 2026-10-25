@@ -19,7 +19,7 @@ Key conventions for AI agents navigating this repository:
 ## Agent Guidance
 
 - [Agent Operational Manual (AGENTS.md)](https://github.com/bmds-tue/nf-claw/blob/main/AGENTS.md): Authoritative operational rules for AI agents: CLI execution semantics, parameter preflight, samplesheet rules, identity safety, status inspection, locking, chaining, replay, and benign warning triage.
-- [Claude Code Entry Point (CLAUDE.md)](https://github.com/bmds-tue/nf-claw/blob/main/CLAUDE.md): Dedicated entry point for Anthropic Claude Code (maintained in identical parity with AGENTS.md).
+- [Claude Code Entry Point (CLAUDE.md)](https://github.com/bmds-tue/nf-claw/blob/main/CLAUDE.md): Entry point for Anthropic Claude Code; it imports AGENTS.md rather than repeating it.
 
 ## Essential Documentation
 

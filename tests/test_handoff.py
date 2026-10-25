@@ -124,7 +124,7 @@ def test_direct_samplesheet_is_snapshotted_validated_and_traced(library, finishe
     assert hand.params == {"input": str(snap)}
     assert _rows(snap)[0]["fastq_1"] == f"{up}/fastq/A_1.fastq.gz"
     item = hand.record["params"]["input"]
-    assert item["kind"] == "samplesheet" and item["sha256"] == handoff.sha256_file(snap)
+    assert item["kind"] == "samplesheet" and item["sha256"] == provenance.sha256_file(snap)
     # every upstream file the snapshot points into is traced to the upstream's own output digest
     assert set(item["derived_from"]) == {"samplesheet/samplesheet.csv", *FASTQS}
     assert all(d and len(d) == 64 for d in item["derived_from"].values())
@@ -320,7 +320,7 @@ def test_upstream_param_and_optional(library, finished_run, tmp_path):
     reference.write_text("annotation")
     up = finished_run(tmp_path / "up", {}, params={"gtf": str(reference)})
     (up / "provenance/inputs.sha256").write_text(
-        f"{handoff.sha256_file(reference)}  {reference}\n")
+        f"{provenance.sha256_file(reference)}  {reference}\n")
     rule = _rule({"params": {"fasta": {"upstream_param": "gtf"},
                              "aligner": {"upstream_param": "never_set", "optional": True}}})
     hand = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
@@ -382,7 +382,7 @@ def test_upstream_param_prefers_the_pipelines_own_resolved_params(library, finis
     (up / "provenance/inputs.inventory.json").write_text(json.dumps(
         provenance.snapshot_inputs([reference])[1]))
     (up / "provenance/inputs.sha256").write_text(
-        f"{handoff.sha256_file(reference)}  {reference}\n")
+        f"{provenance.sha256_file(reference)}  {reference}\n")
     hand = handoff.materialize(_rule({"params": {"fasta": {"upstream_param": "gtf"}}}),
                                upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
     assert hand.params == {"fasta": str(reference)}                  # the latest launch's

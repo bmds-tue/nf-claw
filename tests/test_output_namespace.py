@@ -150,7 +150,7 @@ def test_result_aliases_are_preserved_and_hashed_once(tmp_path):
     calls = []
     def hash_file(path):
         calls.append(path)
-        return provenance._sha256(path)
+        return provenance.sha256_file(path)
     hashes, inventory, raw = outputs.snapshot(out, hash_file)
     assert len(calls) == 1 and set(hashes) == {"data/reads.txt", "alias/reads.txt"}
     assert set(inventory) == {"data", "data/empty", "data/reads.txt", "alias", "alias/empty",
@@ -238,7 +238,7 @@ def test_chain_lineage_verifies_directory_consumption_and_detects_later_changes(
     down_manifest = down / "provenance/run_manifest.json"
     down_data = json.loads(down_manifest.read_text())
     down_data["chain"] = {"id": identifier, "stage": "consumer", "index": 2,
-                          "upstream": {"handoff_sha256": handoff.sha256_file(hand_path)}}
+                          "upstream": {"handoff_sha256": provenance.sha256_file(hand_path)}}
     down_manifest.write_text(json.dumps(down_data))
     state = {"chain_id": identifier, "outcome": "success", "stages": [
         {"id": "producer", "pipeline": "fixture", "index": 1, "outdir": str(up),

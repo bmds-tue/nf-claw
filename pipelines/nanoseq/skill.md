@@ -52,7 +52,7 @@ group,replicate,barcode,input_file,fasta,gtf
 | `--protocol` | string |  |  |  | Input sample type. Valid options: 'DNA', 'cDNA', and 'directRNA'. |
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Alignment options** (`alignment_options`) — 4 parameters
 - **Demultiplexing options** (`demultiplexing_options`) — 11 parameters
 - **Differential analysis options** (`differential_analysis_options`) — 3 parameters
@@ -65,6 +65,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **RNA fusion analysis options** (`rna_fusion_analysis_options`) — 2 parameters
 - **RNA modification analysis options** (`rna_modification_analysis_options`) — 3 parameters
 - **Variant calling options** (`variant_calling_options`) — 8 parameters
+
+Upstream usage: https://github.com/nf-core/nanoseq/blob/3.1.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -103,8 +105,5 @@ Full list with references: https://github.com/nf-core/nanoseq/blob/3.1.0/CITATIO
 ```bash
 nfclaw run nanoseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/nanoseq/blob/3.1.0/docs/usage.md
 
 <!-- Generated from nf-core/nanoseq@6e563e54362cddb8e48d15c156251708c22d0e8d. Do not edit by hand. -->

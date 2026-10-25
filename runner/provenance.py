@@ -47,7 +47,7 @@ _BUNDLED_SCRIPTS = {name: Path(__file__).with_name(name).read_bytes()
                     for name in ("replay_guard.py", "environment_record.py")}
 
 
-def _sha256(path: Path) -> str:
+def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(65536), b""):
@@ -332,7 +332,7 @@ def output_checksums(outdir: Path) -> dict[str, str]:
     would never reproduce them byte-for-byte anyway.
     """
     return {
-        rel.as_posix(): _sha256(p)
+        rel.as_posix(): sha256_file(p)
         for p in sorted(result_files(outdir))
         for rel in (p.relative_to(outdir),)
     }
@@ -611,16 +611,17 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     _atomic_text(prov / environment_record.RECORD_NAME,
                  json.dumps(environment, indent=2, sort_keys=True) + "\n")
     manifest["environment_record"] = {"file": environment_record.RECORD_NAME,
-                                      "sha256": _sha256(prov / environment_record.RECORD_NAME)}
+                                      "sha256": sha256_file(prov / environment_record.RECORD_NAME)}
     manifest["execution_environment"] = environment_summary(environment)
     pins = prov / environment_record.PINS_NAME
     if pin_text := environment_record.pin_config(environment):
         _atomic_text(pins, pin_text)
-        manifest["container_pins"] = {"file": environment_record.PINS_NAME, "sha256": _sha256(pins)}
+        manifest["container_pins"] = {"file": environment_record.PINS_NAME,
+                                      "sha256": sha256_file(pins)}
     else:
         pins.unlink(missing_ok=True)
 
-    output_hashes, output_inventory, _ = outputs.snapshot(outdir, _sha256)
+    output_hashes, output_inventory, _ = outputs.snapshot(outdir, sha256_file)
     _atomic_text(prov / "outputs.sha256", checksum_text(output_hashes))
     _atomic_text(prov / "outputs.inventory.json", json.dumps(
         {"version": 1, "entries": output_inventory}, indent=2, sort_keys=True) + "\n")

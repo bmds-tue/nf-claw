@@ -37,14 +37,14 @@ def test_checksum_failure_cannot_leave_a_success_manifest(tmp_path, monkeypatch,
     out.mkdir(exist_ok=True)
     result_file = out / "counts.tsv"
     result_file.write_text("scientific counts\n")
-    original = provenance._sha256
+    original = provenance.sha256_file
 
     def fail(path):
         if path == result_file:
             raise PermissionError("unreadable result")
         return original(path)
 
-    monkeypatch.setattr(provenance, "_sha256", fail)
+    monkeypatch.setattr(provenance, "sha256_file", fail)
     with pytest.raises(PermissionError):
         _write(out, input_paths=[])
     manifest = out / "provenance" / "run_manifest.json"

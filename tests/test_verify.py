@@ -144,7 +144,7 @@ def test_unreadable_run_is_a_clean_error(tmp_path, monkeypatch):
     def deny(path):
         raise PermissionError(13, "Permission denied", str(path))
 
-    monkeypatch.setattr(verify.provenance, "_sha256", deny)
+    monkeypatch.setattr(verify.provenance, "sha256_file", deny)
     with pytest.raises(NfclawError) as exc:
         verify.compare(orig, replay)
     assert exc.value.code == ErrorCode.ENVIRONMENT

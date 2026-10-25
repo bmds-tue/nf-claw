@@ -394,13 +394,13 @@ def test_resume_hashes_shared_file_targets_once_and_reuses_snapshot(tmp_path, mo
     alias.symlink_to(source)
     _, namespace = replay_guard._capture_input_inventory([source, alias])
     calls = []
-    original = provenance._sha256
+    original = provenance.sha256_file
 
     def observed(path):
         calls.append(path)
         return original(path)
 
-    monkeypatch.setattr(provenance, '_sha256', observed)
+    monkeypatch.setattr(provenance, 'sha256_file', observed)
     expected = hashlib.sha256(source.read_bytes()).hexdigest()
     hashes = orchestration._input_file_digests(namespace, None)
     assert hashes == {str(source): expected, str(alias): expected}

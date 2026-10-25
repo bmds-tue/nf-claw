@@ -16,16 +16,14 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import type { PipelineSummary } from "@/lib/derive";
-import { DOMAIN_ORDER, categoryRank, colorForCategory, domainCounts } from "@/lib/derive";
+import type { PipelineSummary, SortKey } from "@/lib/derive";
+import { DOMAIN_ORDER, colorForCategory, comparePipelines, domainCounts } from "@/lib/derive";
 import { layoutConstellation } from "@/lib/constellation";
 import { useCopy } from "@/components/ui/copy-button";
 import { Highlight } from "@/components/ui/highlight";
 import { SearchField, DomainChips } from "@/components/ui/filters";
 import { cn, formatDate } from "@/lib/utils";
 import { EASE } from "@/lib/motion";
-
-type SortKey = "name" | "parameters" | "modules" | "newest";
 
 const MAX_COMPARE = 4;
 
@@ -41,7 +39,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [hoverCategory, setHoverCategory] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("name");
+  const [sort, setSort] = useState<SortKey>("domain");
   const [view, setView] = useState<"orbit" | "grid">("orbit");
   const [selected, setSelected] = useState<string | null>(pipelines.find((p) => p.name === "rnaseq")?.name ?? pipelines[0]?.name ?? null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -71,22 +69,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
     return inQuery && (category === "All" || p.category === category);
   };
 
-  const sorted = useMemo(() => {
-    const arr = [...pipelines];
-    arr.sort((a, b) => {
-      switch (sort) {
-        case "parameters":
-          return b.parameterCount - a.parameterCount;
-        case "modules":
-          return b.moduleCount - a.moduleCount;
-        case "newest":
-          return (b.releaseDate ? +new Date(b.releaseDate) : 0) - (a.releaseDate ? +new Date(a.releaseDate) : 0);
-        default:
-          return categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name);
-      }
-    });
-    return arr;
-  }, [pipelines, sort]);
+  const sorted = useMemo(() => [...pipelines].sort(comparePipelines(sort)), [pipelines, sort]);
 
   const filtered = sorted.filter(matches);
   const matchSet = new Set(filtered.map((p) => p.name));
@@ -156,7 +139,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
                   aria-label="Sort pipelines"
                   className="w-full appearance-none rounded-xl border border-white/10 bg-ink-900/60 py-3 pl-4 pr-9 text-sm text-fog-muted outline-none transition focus:border-claw-400/40"
                 >
-                  <option value="name">Sort: Domain</option>
+                  <option value="domain">Sort: Domain</option>
                   <option value="parameters">Sort: Parameters</option>
                   <option value="modules">Sort: Modules</option>
                   <option value="newest">Sort: Newest</option>

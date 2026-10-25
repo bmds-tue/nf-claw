@@ -52,10 +52,6 @@ jobs:
           python-version: "3.11"
       # The YAML extra lets the final gate run the YAML params/samplesheet tests, as tests.yml does.
       - run: pip install -e ".[dev,yaml]" "pytest>=8,<10" ruff
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       - name: Discover, validate acceptance, keep only what Nextflow accepts
         id: disc

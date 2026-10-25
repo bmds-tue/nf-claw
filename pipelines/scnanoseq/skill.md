@@ -54,7 +54,7 @@ sample,fastq,cell_count
 No reference genome is set by default: supply your own reference. The iGenomes lookup is disabled by default (`--igenomes-ignore true`). Configure your reference explicitly (the `reference_genome_options` group in [reference.md](reference.md) lists the reference options). Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.
 
 ## Other parameters
-Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, default, allowed values and constraints — organised into these groups (counts are full group sizes, so they include any parameter already listed above):
+Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **Analysis options** (`analysis_options`) — 2 parameters
 - **Cell barcode options** (`cell_barcode_options`) — 4 parameters
 - **Fastq options** (`fastq_options`) — 1 parameter
@@ -65,6 +65,8 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Process skipping options** (`process_skipping_options`) — 11 parameters
 - **Read trimming options** (`read_trimming_options`) — 3 parameters
 - **Reference genome options** (`reference_genome_options`) — 7 parameters
+
+Upstream usage: https://github.com/nf-core/scnanoseq/blob/1.3.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -101,8 +103,5 @@ Full list with references: https://github.com/nf-core/scnanoseq/blob/1.3.0/CITAT
 ```bash
 nfclaw run scnanoseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
-
-## Full reference
-Every parameter — name, type, required, hidden, allowed values, constraints, default and description — is in [reference.md](reference.md). Use it as the source of truth; do not guess flags. nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. The reference uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). Upstream usage: https://github.com/nf-core/scnanoseq/blob/1.3.0/docs/usage.md
 
 <!-- Generated from nf-core/scnanoseq@83d55ea87eb625a3564d40124fb1fa54c4c63f9e. Do not edit by hand. -->

@@ -80,7 +80,7 @@ def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, di
                 ErrorCode.ENVIRONMENT, f"not a run directory: {outdir}",
                 fix="Pass the --outdir of a run (the replay's target, and the original it "
                     "reproduces).")
-        hashes, inventory, _ = outputs.snapshot(outdir, provenance._sha256)
+        hashes, inventory, _ = outputs.snapshot(outdir, provenance.sha256_file)
         return hashes, inventory
     except ValueError as exc:
         raise NfclawError(

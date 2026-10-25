@@ -71,7 +71,7 @@ def test_expiry_while_hashing_outputs_preserves_failed_bundle_without_rehashing(
         prepared, monkeypatch, clock, tmp_path):
     outdir = tmp_path / "out"
     hashed = []
-    sha256 = provenance._sha256
+    sha256 = provenance.sha256_file
 
     def execute(*args, **kwargs):
         (outdir / "result.txt").write_text("scientific evidence\n")
@@ -84,7 +84,7 @@ def test_expiry_while_hashing_outputs_preserves_failed_bundle_without_rehashing(
         return digest
 
     monkeypatch.setattr(orchestration.execution, "run", execute)
-    monkeypatch.setattr(provenance, "_sha256", slow_hash)
+    monkeypatch.setattr(provenance, "sha256_file", slow_hash)
     with pytest.raises(NfclawError) as error:
         _run(prepared, outdir)
     assert error.value.details["timeout_seconds"] == 5

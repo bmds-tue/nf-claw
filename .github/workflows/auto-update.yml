@@ -41,10 +41,6 @@ jobs:
       - run: pip install -e ".[dev,yaml]" "pytest>=8,<10" ruff
       - run: python -m librarian.update_pipelines --repo-root .
       - run: python -m librarian.write_catalog
-      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
-        with:
-          distribution: temurin
-          java-version: "17"
       - uses: ./.github/actions/setup-nextflow
       # A release bump changes a staged gitlink. Validate only those pipelines through Nextflow;
       # this keeps the daily job bounded while preventing an incompatible release from being
