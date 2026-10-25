@@ -23,20 +23,27 @@ ROOT = Path(__file__).resolve().parent.parent
 # log (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads
 # that log.
 FAKE_NFCLAW = textwrap.dedent("""
-    import signal, sys, time
+    import json, signal, sys, time
     from pathlib import Path
     argv = sys.argv[1:]
     opts = dict(a[2:].split("=", 1) for a in argv if a.startswith("--") and "=" in a)
     if argv[0] == "status":
+        def report(state, code, text):
+            if "--json" in argv:
+                print(json.dumps({"schema_version":1, "state":state, "exit_code":code,
+                                  "report":text, "completion_caveats":[], "progress":None}))
+            else:
+                print(text)
+            sys.exit(code)
         log = Path(argv[1]) / "provenance" / "logs" / "run.log"
         text = log.read_text() if log.is_file() else ""
         if "finished" in text and "success" in text:
-            print("status: success"); sys.exit(0)
+            report("success", 0, "status: success")
         if "finished" in text:
-            print("status: terminated by SIGTERM"); sys.exit(1)
+            report("ended", 1, "status: terminated by SIGTERM")
         if text:
-            print("status: running (nfclaw pid 1 on host)"); sys.exit(3)
-        print("status: no run log"); sys.exit(1)
+            report("running", 3, "status: running (nfclaw pid 1 on host)")
+        report("missing", 1, "status: no run log")
     if argv[0] == "chain":
         print("chain:", " ".join(argv)); sys.exit(0)
     print("argv:", " ".join(argv), flush=True)

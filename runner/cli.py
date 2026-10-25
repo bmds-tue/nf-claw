@@ -1,25 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import sys
 from pathlib import Path
 
 from runner import (acceptance, chain, discovery, execution, handoff, nextflow_command,
-                    orchestration, resources, runlog, sheetgen, verify, versions)
+                    library, orchestration, reports, resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
 def _repo_root() -> Path:
-    root = Path(__file__).resolve().parent.parent
-    if not (root / "pipelines").is_dir():
-        raise NfclawError(
-            ErrorCode.ENVIRONMENT,
-            "nf-claw repository content was not found next to the installed package.",
-            fix="Run from a cloned nf-claw repository and install it with `pip install -e .`.",
-        )
-    return root
+    return library.resolve()
 
 
 def _positive_int(raw: str) -> int:
@@ -116,8 +110,14 @@ def _chain(args: argparse.Namespace, parser: argparse.ArgumentParser, root: Path
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        print(chain.format_status(state, problems), end="")
-        return chain.status_exit_code(state, problems)
+        report = chain.format_status(state, problems)
+        code = chain.status_exit_code(state, problems)
+        if args.json:
+            print(json.dumps({"schema_version": 1, "kind": "chain", "state": state,
+                              "problems": problems, "exit_code": code, "report": report}))
+        else:
+            print(report, end="")
+        return code
     if args.spec is None and not args.resume:
         parser.error("chain run needs a spec file (or --resume an existing chain)")
     outdir = Path(args.outdir).expanduser().resolve()
@@ -224,6 +224,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="nfclaw")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
+    p_doctor = sub.add_parser("doctor",
+                             help="diagnose the environment without starting an analysis")
+    p_doctor.add_argument("--json", action="store_true")
+    p_jobs = sub.add_parser("jobs", help="inspect or prune detached-job metadata")
+    jobs_sub = p_jobs.add_subparsers(dest="jobs_cmd", required=True)
+    p_jobs_list = jobs_sub.add_parser("list")
+    p_jobs_list.add_argument("--limit", type=_positive_int, default=20)
+    p_jobs_list.add_argument("--before", help="continue before the previous page's last job ID")
+    p_jobs_list.add_argument("--state",
+                             choices=("running", "succeeded", "failed", "cancelled", "lost"))
+    p_jobs_list.add_argument("--json", action="store_true")
+    p_jobs_prune = jobs_sub.add_parser("prune")
+    p_jobs_prune.add_argument("--older-than-days", type=_positive_int, default=30)
+    p_jobs_prune.add_argument("--keep", type=int, default=20)
+    p_jobs_prune.add_argument("--apply", action="store_true",
+                              help="remove the previewed eligible metadata; default only previews")
+    p_jobs_prune.add_argument("--json", action="store_true")
     p_show = sub.add_parser("show")
     p_show.add_argument("name")
     p_show.add_argument("--pipeline-version", dest="pipeline_version")
@@ -233,12 +250,15 @@ def build_parser() -> argparse.ArgumentParser:
     # outcome (nfclaw killed outright) — so nobody has to read or interpret the log to know.
     p_status = sub.add_parser("status")
     p_status.add_argument("outdir", help="--outdir of the run (or replay target) to report on")
+    p_status.add_argument("--json", action="store_true", help="versioned machine-readable status")
     # Compare a replay against the run it reproduces. Keyed on path, because comparing the raw
     # `outputs.sha256` lines counts one changed file as both a missing and an extra one.
     p_verify = sub.add_parser("verify")
     p_verify.add_argument("replay", help="--outdir of the replayed run")
     p_verify.add_argument("--against", dest="against", required=True,
                           help="--outdir of the original run it should reproduce")
+    p_verify.add_argument("--json", action="store_true",
+                          help="versioned machine-readable comparison")
     p_verify.add_argument("--strict", action="store_true",
                           help="also fail when any output bytes or recorded link identities "
                                "differ, or when the runs' recorded execution environments "
@@ -265,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
     pc_status.add_argument("--quick", action="store_true",
                            help="report execution state without hashing data; lineage "
                                 "is not checked")
+    pc_status.add_argument("--json", action="store_true")
     pc_edges = chain_sub.add_parser("edges")
     pc_edges.add_argument("name", nargs="?", help="only the handoffs from or to this pipeline")
     # allow_abbrev=False: `run` forwards every unknown flag to the pipeline (via parse_known_args
@@ -367,11 +388,57 @@ def _main(argv: list[str] | None = None) -> int:
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
     try:
-        root = _repo_root()
+        needs_library = (args.cmd in ("list", "show", "versions", "run", "mcp")
+                         or args.cmd == "chain" and args.chain_cmd in ("run", "edges"))
+        root = _repo_root() if needs_library else Path.cwd()
     except NfclawError as exc:
         print(str(exc), file=sys.stderr)
         return 1
     pdir = root / "pipelines"
+
+    if args.cmd == "jobs":
+        from runner import job_retention, jobs
+        try:
+            if args.jobs_cmd == "prune":
+                result = job_retention.prune(older_than_days=args.older_than_days,
+                                             keep=args.keep, apply=args.apply)
+                if args.json:
+                    print(json.dumps(result))
+                else:
+                    print(f"job metadata: {len(result['candidates'])} eligible, "
+                          f"{len(result['protected'])} protected, {len(result['removed'])} removed")
+                    for row in result["candidates"]:
+                        print(f"  {row['job_id']}")
+                    if not args.apply:
+                        print("Preview only. Use --apply to remove eligible metadata.")
+                return 0
+            found = jobs.list_jobs(limit=args.limit, before=args.before, wanted_state=args.state)
+            rows = [{"job_id": job.id, "state": jobs.state(job), "kind": job.kind,
+                     "outdir": job.outdir, "created_at": job.created_at,
+                     "finished_at": job.finished_at} for job in found]
+            if args.json:
+                print(json.dumps({"schema_version": 1, "jobs": rows,
+                                  "next_cursor": rows[-1]["job_id"] if rows else None}))
+            else:
+                for row in rows:
+                    print(f"{row['job_id']}\t{row['state']}\t{row['outdir']}")
+            return 0
+        except jobs.JobError as exc:
+            print(f"nfclaw jobs: {exc}", file=sys.stderr)
+            return 1
+
+    if args.cmd == "doctor":
+        from runner import diagnostics
+        result = diagnostics.collect()
+        if args.json:
+            print(json.dumps(result))
+        else:
+            print(f"nf-claw environment: {'ready' if result['ok'] else 'needs attention'}")
+            print(f"library: {result['library_root'] or 'not configured'}")
+            print("container profiles: " + ", ".join(result["available_container_profiles"]))
+            for issue in result["issues"]:
+                print(f"  {issue}")
+        return 0 if result["ok"] else 1
 
     if args.cmd == "mcp":
         from runner import mcp_server                       # lazy: only the server needs it
@@ -432,12 +499,13 @@ def _main(argv: list[str] | None = None) -> int:
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        print(verify.report(cmp), end="")
+        report = verify.report(cmp)
+        result = reports.verification(cmp, strict=args.strict, report=report)
+        print(json.dumps(result) if args.json else report, end="\n" if args.json else "")
         # The default compares file presence. Strict verification additionally checks every byte and
         # recorded link identity; neither comparison by itself establishes analytical accuracy.
         # --strict also requires the same execution environment where both runs recorded one.
-        return 0 if ((cmp.byte_identical and cmp.same_environment) if args.strict
-                     else cmp.structurally_equal) else 1
+        return result["exit_code"]
 
     if args.cmd == "status":
         log = _run_log_path(args.outdir)
@@ -446,6 +514,10 @@ def _main(argv: list[str] | None = None) -> int:
         if not log.is_file() and chain_log.is_file():       # the --outdir of a chain
             log = chain_log
         st = runlog.read_state(log)
+        if args.json:
+            print(json.dumps(reports.status(Path(args.outdir).expanduser().resolve(), st,
+                                            report=_status_report(st))))
+            return 0 if st.state == "success" else 3 if st.state == "running" else 1
         print(_status_report(st), end="")
         if st.kind == "chain":
             print(f"chain: `nfclaw chain status {args.outdir}` lists its stages and verifies "

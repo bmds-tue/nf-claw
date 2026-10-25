@@ -44,6 +44,11 @@ def _isolate_nextflow_env(monkeypatch):
         monkeypatch.delenv(key, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_library_env(monkeypatch):
+    monkeypatch.delenv("NFCLAW_LIBRARY_ROOT", raising=False)
+
+
 @pytest.fixture
 def no_engine_probe(monkeypatch):
     """Record "test engine" as the Nextflow version instead of probing (and maybe downloading) one.

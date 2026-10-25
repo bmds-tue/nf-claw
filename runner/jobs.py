@@ -94,6 +94,7 @@ class Job:
     check: bool = False                        # `--check`: validates and prints, launches nothing
     pipeline: str | None = None
     created_at: str = ""
+    library_root: str | None = None
     log_path: str | None = None                # the run/chain log nfclaw keeps for this outdir
     log_size_before: int | None = None         # its size before this job (None: did not exist)
     supervisor_pid: int | None = None
@@ -146,7 +147,7 @@ def create_dir(label: str) -> Path:
 
 def launch(job_dir: Path, *, kind: str, argv: list[str], cwd: str, outdir: str,
            check: bool = False, pipeline: str | None = None, log_path: str | None = None,
-           command: list[str] | None = None) -> Job:
+           command: list[str] | None = None, library_root: str | None = None) -> Job:
     """Start `nfclaw <argv>` detached, supervised, and return its record."""
     if fcntl is None:
         raise JobError("detached jobs need a POSIX system (Linux or macOS)")
@@ -161,15 +162,19 @@ def launch(job_dir: Path, *, kind: str, argv: list[str], cwd: str, outdir: str,
     job = Job(id=job_dir.name, kind=kind, argv=list(argv),
               command=list(command) if command else cli_command(argv), cwd=cwd, outdir=outdir,
               check=check, pipeline=pipeline, created_at=_now(), log_path=log_path,
+              library_root=library_root,
               log_size_before=log_size, dir=job_dir)
     _write_json(job_dir / JOB_FILE, job.spec())
     lock_fd = os.open(job_dir / LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o600)
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with (job_dir / OUTPUT_LOG).open("ab") as out:
+            env = child_env()
+            if library_root is not None:
+                env["NFCLAW_LIBRARY_ROOT"] = str(library_root)
             proc = subprocess.Popen(
                 [sys.executable, "-m", "runner.jobs", str(job_dir)],
-                cwd=cwd, env=child_env(), stdin=subprocess.DEVNULL, stdout=out,
+                cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=out,
                 stderr=subprocess.STDOUT, start_new_session=True, pass_fds=(lock_fd,))
     except OSError as exc:
         _write_json(job_dir / SUPERVISOR_FILE,
@@ -192,8 +197,16 @@ def load(job_id: str) -> Job:
     spec = _read_json(job_dir / JOB_FILE)
     if not spec:
         raise JobError(f"no such job: {job_id}")
-    known = {f.name for f in fields(Job)}
-    job = Job(**{k: v for k, v in spec.items() if k in known}, dir=job_dir)
+    known = {f.name for f in fields(Job)} - {"dir"}
+    try:
+        job = Job(**{k: v for k, v in spec.items() if k in known}, dir=job_dir)
+        if (job.id != job_id or job.kind not in ("run", "chain")
+                or not isinstance(job.cwd, str) or not isinstance(job.outdir, str)
+                or not isinstance(job.argv, list) or not isinstance(job.command, list)
+                or not all(isinstance(token, str) for token in [*job.argv, *job.command])):
+            raise ValueError("invalid job metadata")
+    except (TypeError, ValueError) as exc:
+        raise JobError(f"invalid job record: {job_id}") from exc
     sup = _read_json(job_dir / SUPERVISOR_FILE)
     for key in ("child_pid", "started_at", "exit_code", "finished_at", "error"):
         if key in sup:
@@ -202,18 +215,34 @@ def load(job_id: str) -> Job:
     return job
 
 
-def list_jobs() -> list[Job]:
-    """Every recorded job, newest first."""
+def list_jobs(*, limit: int | None = None, before: str | None = None,
+              wanted_state: str | None = None) -> list[Job]:
+    """Newest IDs first; load only enough records to satisfy a page.
+
+    IDs begin with their UTC creation second and provide a stable pagination
+    cursor. The default preserves the historical unbounded Python API.
+    """
+    if limit is not None and (type(limit) is not int or limit < 1):
+        raise JobError("limit must be a positive integer")
+    if before is not None and (not isinstance(before, str) or not _ID.fullmatch(before)):
+        raise JobError("before must be a job ID returned on an earlier page")
     root = jobs_dir()
     if not root.is_dir():
         return []
     out = []
-    for d in root.iterdir():
+    for name in sorted((d.name for d in root.iterdir()
+                        if not d.is_symlink() and _ID.fullmatch(d.name)
+                        and (before is None or d.name < before)), reverse=True):
         try:
-            out.append(load(d.name))
+            job = load(name)
+            if wanted_state is not None and state(job) != wanted_state:
+                continue
+            out.append(job)
+            if limit is not None and len(out) >= limit:
+                break
         except JobError:
             continue
-    return sorted(out, key=lambda j: (j.created_at, j.id), reverse=True)
+    return out
 
 
 def alive(job: Job) -> bool:

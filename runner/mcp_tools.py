@@ -240,7 +240,8 @@ TOOLS = [
           "sessions and server restarts.",
           {"state": _s("Only jobs in this state.",
                        enum=["running", "succeeded", "failed", "cancelled", "lost"]),
-           "limit": _i("Maximum results (1-200, default 20).", minimum=1, maximum=200)},
+           "limit": _i("Maximum results (1-200, default 20).", minimum=1, maximum=200),
+           "before": _s("Return jobs older than this job ID (the previous page's next_cursor).")},
           [], read_only=True, idempotent=True),
     _tool("cancel_job", "Stop a job",
           "Stop a running job the way `kill <nfclaw pid>` does: nfclaw shuts Nextflow and its "
@@ -464,10 +465,25 @@ class NfclawTools:
         return str((Path(self.cwd) / Path(value).expanduser()).resolve())
 
     def _cli(self, argv: list[str]) -> CliResult:
-        proc = subprocess.run(jobs.cli_command(argv), cwd=self.cwd, env=jobs.child_env(),
+        env = {**jobs.child_env(), "NFCLAW_LIBRARY_ROOT": str(self.root.resolve())}
+        proc = subprocess.run(jobs.cli_command(argv), cwd=self.cwd, env=env,
                               stdin=subprocess.DEVNULL, capture_output=True, text=True,
                               timeout=self.command_timeout)
         return CliResult(proc.returncode, proc.stdout, proc.stderr)
+
+    def _structured_cli(self, argv: list[str]) -> tuple[CliResult, dict]:
+        res = self._cli([*argv, "--json"])
+        try:
+            value = json.loads(res.stdout)
+            if (not isinstance(value, dict) or value.get("schema_version") != 1
+                    or not isinstance(value.get("report"), str)
+                    or value.get("exit_code") != res.code):
+                raise ValueError("unsupported result schema")
+        except (ValueError, TypeError):
+            value = {"schema_version": 1, "state": "unknown", "exit_code": res.code,
+                     "report": res.text, "structured_result_error":
+                     "CLI returned no supported structured result"}
+        return res, value
 
     def _cli_or_error(self, argv: list[str]) -> CliResult:
         res = self._cli(argv)
@@ -628,7 +644,8 @@ class NfclawTools:
         job_dir = jobs.create_dir(args["pipeline"])
         job = jobs.launch(job_dir, kind="run", argv=argv, cwd=self.cwd, outdir=outdir, check=check,
                           pipeline=args["pipeline"],
-                          log_path=str(cli._run_log_path(outdir)))
+                          log_path=str(cli._run_log_path(outdir)),
+                          library_root=str(self.root.resolve()))
         return self._after_submit(job, args, ctx)
 
     def _tool_run_chain(self, args: dict, ctx: Context) -> dict:
@@ -646,7 +663,8 @@ class NfclawTools:
             spec_path.write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
         log_path = Path(outdir) / chain.RECORD_DIRNAME / "logs" / chain.LOG_NAME
         job = jobs.launch(job_dir, kind="chain", argv=self.chain_argv(args, spec_path),
-                          cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path))
+                          cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path),
+                          library_root=str(self.root.resolve()))
         return self._after_submit(job, args, ctx)
 
     def _after_submit(self, job: jobs.Job, args: dict, ctx: Context) -> dict:
@@ -695,10 +713,12 @@ class NfclawTools:
                 "exit_code": job.exit_code}
         launched = self._launched(job)
         if launched:
-            res = self._cli(["status", job.outdir])
-            view["status_report"] = res.text
-            view["run_state"] = {0: "success", 3: "running"}.get(res.code, "not successful")
-            view["caveats"] = "with caveats" in (res.stdout.splitlines() or [""])[0]
+            res, result = self._structured_cli(["status", job.outdir])
+            view["status_report"] = result["report"]
+            view["run_state"] = result.get("state", "unknown")
+            view["caveats"] = bool(result.get("completion_caveats"))
+            view["result"] = result
+            view["progress"] = result.get("progress")
             view["log"] = job.log_path
         if state == "running":
             view["phase"] = ("launched" if view.get("run_state") == "running"
@@ -728,7 +748,8 @@ class NfclawTools:
     def _tool_list_jobs(self, args: dict, ctx: Context) -> dict:
         wanted = args.get("state")
         rows = []
-        for job in jobs.list_jobs():
+        for job in jobs.list_jobs(limit=args.get("limit") or 20, before=args.get("before"),
+                                  wanted_state=wanted):
             state = jobs.state(job)
             if wanted and state != wanted:
                 continue
@@ -739,7 +760,8 @@ class NfclawTools:
                 break
         text = "\n".join(f"{r['job_id']}  {r['state']:<9}  {'check ' if r['check'] else ''}"
                          f"{r['kind']}  {r['outdir']}" for r in rows) or "No jobs."
-        return tool_result(text, {"jobs": rows})
+        return tool_result(text, {"jobs": rows,
+                                  "next_cursor": rows[-1]["job_id"] if rows else None})
 
     def _tool_cancel_job(self, args: dict, ctx: Context) -> dict:
         job = jobs.load(args["job_id"])
@@ -760,18 +782,19 @@ class NfclawTools:
             argv = ["chain", "status", outdir] + (["--quick"] if args.get("quick") else [])
         else:
             argv = ["status", outdir]
-        res = self._cli(argv)
+        res, result = self._structured_cli(argv)
         state = {0: "success", 3: "running"}.get(res.code, "not successful")
-        return tool_result(res.text, {"outdir": outdir, "state": state, "exit_code": res.code,
-                                      "report": res.text})
+        return tool_result(result["report"], {"outdir": outdir, "state": state,
+            "exit_code": res.code, "report": result["report"], "result": result})
 
     def _tool_verify_replay(self, args: dict, ctx: Context) -> dict:
         argv = ["verify", self._path(args["replay"]), f"--against={self._path(args['against'])}"]
         if args.get("strict"):
             argv.append("--strict")
-        res = self._cli(argv)
-        return tool_result(res.text, {"passed": res.code == 0, "strict": bool(args.get("strict")),
-                                      "exit_code": res.code, "report": res.text})
+        res, result = self._structured_cli(argv)
+        return tool_result(result["report"], {"passed": result.get("passed", False),
+            "strict": bool(args.get("strict")), "exit_code": res.code,
+            "report": result["report"], "result": result})
 
 
 def _squash(text: str) -> str:
