@@ -213,7 +213,7 @@ def normalize_repository(repository: str) -> str:
 
 
 def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | None,
-                           at_start: bool = False) -> dict:
+                           at_start: bool = False, image_id: str | None = None) -> dict:
     """The local engine's identity of an image it ran: image ID, registry digests, platform.
 
     `at_start` marks an inspection made as a task container started from the reference (while the
@@ -222,7 +222,7 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
     """
     repository, _, pinned = split_reference(reference)
     repository = normalize_repository(repository)
-    result = _run([engine, "image", "inspect", reference], env=env, timeout=60)
+    result = _run([engine, "image", "inspect", image_id or reference], env=env, timeout=60)
     failure = None
     if result is None:
         failure = f"`{engine} image inspect` could not be run"
@@ -237,14 +237,16 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
         except (ValueError, IndexError):
             failure = f"`{engine} image inspect` returned no image"
     if failure is not None:
-        if pinned and _DIGEST.fullmatch(pinned):
+        if image_id is None and pinned and _DIGEST.fullmatch(pinned):
             return {"kind": "registry", "repository": repository, "id": None, "digest": pinned,
                     "repo_digests": [f"{repository}@{pinned}"], "platform": None, "size": None,
                     "source": "reference digest"}
         return {"kind": "unresolved", "reason": failure}
-    image_id = data.get("Id") if isinstance(data.get("Id"), str) else None
-    if image_id and re.fullmatch(r"[0-9a-f]{64}", image_id):
-        image_id = "sha256:" + image_id                       # podman omits the algorithm
+    inspected_id = data.get("Id") if isinstance(data.get("Id"), str) else None
+    if inspected_id and re.fullmatch(r"[0-9a-f]{64}", inspected_id):
+        inspected_id = "sha256:" + inspected_id               # podman omits the algorithm
+    if image_id is not None and inspected_id != image_id:
+        return {"kind": "unresolved", "reason": "image inspection did not match container image ID"}
     repo_digests = []
     for item in data.get("RepoDigests") or []:
         if isinstance(item, str) and "@" in item:
@@ -254,7 +256,7 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
     repo_digests = sorted(set(repo_digests))
     own = sorted({item.partition("@")[2] for item in repo_digests
                   if item.partition("@")[0] == repository})
-    record = {"kind": "registry", "repository": repository, "id": image_id,
+    record = {"kind": "registry", "repository": repository, "id": inspected_id,
               "repo_digests": repo_digests,
               "platform": "/".join(str(data[key]) for key in ("Os", "Architecture", "Variant")
                                    if isinstance(data.get(key), str) and data[key]),
@@ -267,6 +269,27 @@ def resolve_registry_image(engine: str, reference: str, env: dict[str, str] | No
     elif own:
         record["digest_candidates"] = own               # pulled by more than one manifest
     return record
+
+
+def container_image(engine: str, container_id: str, env: dict[str, str] | None) -> dict:
+    """Read the immutable image ID from the container, never from a mutable tag."""
+    if not container_id:
+        return {"kind": "unresolved", "reason": "container start event has no container ID"}
+    result = _run([engine, "container", "inspect", container_id], env=env, timeout=30)
+    if result is None or result.returncode != 0:
+        return {"kind": "unresolved", "reason": "task container could not be inspected at start"}
+    try:
+        data = json.loads(result.stdout)
+        data = data[0] if isinstance(data, list) else data
+        image_id = data.get("Image")
+        if isinstance(image_id, str) and re.fullmatch(r"[0-9a-f]{64}", image_id):
+            image_id = "sha256:" + image_id
+        if not isinstance(image_id, str) or not _DIGEST.fullmatch(image_id):
+            raise ValueError("container has no immutable image ID")
+        config = data.get("Config") or {}
+        return {"id": image_id, "reference": config.get("Image")}
+    except (ValueError, IndexError, AttributeError, TypeError):
+        return {"kind": "unresolved", "reason": "container inspection has no usable image identity"}
 
 
 def resolve_file_image(path: str) -> dict:
@@ -485,9 +508,28 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
     record["container_engine"] = engine_details(engine, env)
     names = sorted({name for entry in processes.values() for name in entry["containers"]})
     earlier = (previous or {}).get("images") or {}
+    cached_names = {task["container"] for task in task_records if task.get("status") == "CACHED"}
     for name in names:
-        seen = (observed or {}).get(name) or []
-        distinct = {json.dumps(item, sort_keys=True): item for item in seen}
+        seen = list((observed or {}).get(name) or [])
+        if name in cached_names:
+            prior = earlier.get(name) or {}
+            if prior.get("kind") == "multiple":
+                seen.extend(prior.get("variants") or [])
+            elif prior.get("kind") == "registry":
+                seen.append({**prior, "source": "recorded by an earlier attempt of this run"})
+            else:
+                seen.append({"kind": "unresolved", "reason":
+                             "cached tasks have no recorded earlier container identity"})
+        distinct = {}
+        for item in seen:
+            key = json.dumps({k: v for k, v in item.items()
+                              if k not in ("source", "container_ids")}, sort_keys=True)
+            if key not in distinct:
+                distinct[key] = item
+            elif item.get("container_ids"):
+                previous_ids = distinct[key].get("container_ids") or []
+                distinct[key] = {**distinct[key], "container_ids": sorted(
+                    set(previous_ids) | set(item["container_ids"]))}
         if engine in REGISTRY_ENGINES and len(distinct) == 1:
             record["images"][name] = next(iter(distinct.values()))
         elif engine in REGISTRY_ENGINES and distinct:

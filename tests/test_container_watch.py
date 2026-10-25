@@ -10,14 +10,18 @@ from runner import environment_record as env_record
 DIGEST = "sha256:" + "a" * 64
 IMAGE_ID = "sha256:" + "e" * 64
 
-# `events` replays the lines of $FAKE_EVENTS, then stays open like the real stream; `image
-# inspect` knows one tag, and counts its calls in $FAKE_CALLS.
+# Container inspections bind each event to an image ID; image inspection never uses the tag.
 FAKE_DOCKER = r"""#!/usr/bin/env bash
 case "$1 $2" in
 "events --filter") cat "$FAKE_EVENTS"; exec sleep 600 ;;
+"container inspect")
+  echo "container $3" >> "$FAKE_CALLS"
+  [ "$3" != "other" ] || exit 1
+  printf '[{"Id":"%s","Image":"%s","Config":{"Image":"%s"}}]\n' "$3" "$FAKE_IMAGE_ID" "$FAKE_REFERENCE"
+  ;;
 "image inspect")
-  echo "$3" >> "$FAKE_CALLS"
-  [ "$3" = "$FAKE_REFERENCE" ] || { echo "Error: No such image: $3" >&2; exit 1; }
+  echo "image $3" >> "$FAKE_CALLS"
+  [ "$3" = "$FAKE_IMAGE_ID" ] || { echo "Error: No such image: $3" >&2; exit 1; }
   printf '[{"Id": "%s", "RepoDigests": ["quay.io/biocontainers/fastqc@%s"], "Os": "linux", "Architecture": "amd64"}]\n' "$FAKE_IMAGE_ID" "$FAKE_DIGEST"
   ;;
 *) exit 1 ;;
@@ -46,7 +50,8 @@ def _event(cid, name, image):
             "Actor": {"ID": cid, "Attributes": {"name": name, "image": image}}}
 
 
-def test_each_task_image_is_inspected_once_as_its_first_container_starts(tmp_path, monkeypatch):
+def test_each_container_is_inspected_and_immutable_image_inspection_is_cached(
+        tmp_path, monkeypatch):
     calls = _fake_docker(tmp_path, monkeypatch, [
         _event(f"task{n}", f"nxf-{n}", REFERENCE) for n in range(50)] + [
         _event("web", "web-server", "nginx:1"),                       # not a Nextflow task
@@ -54,28 +59,28 @@ def test_each_task_image_is_inspected_once_as_its_first_container_starts(tmp_pat
     ])
     watch = container_watch.ContainerWatch("docker", tmp_path / "work", dict(os.environ)).start()
     deadline = time.monotonic() + 10
-    while ((not calls.exists() or len(calls.read_text().split()) < 2)
+    while ((not calls.exists() or len(calls.read_text().splitlines()) < 52)
            and time.monotonic() < deadline):
         time.sleep(0.05)
     observed = watch.stop()
-    assert sorted(calls.read_text().split()) == sorted(["quay.io/removed:1", REFERENCE])
-    assert list(observed) == [REFERENCE]
+    assert sorted(calls.read_text().splitlines()) == sorted(
+        [f"container task{n}" for n in range(50)] + ["container other", f"image {IMAGE_ID}"])
+    assert observed["quay.io/removed:1"][0]["kind"] == "unresolved"
     (identity,) = observed[REFERENCE]
     assert identity["id"] == IMAGE_ID and identity["digest"] == DIGEST
     assert identity["source"] == "task container at start"
 
 
-def test_a_reference_seen_again_later_is_inspected_again(tmp_path, monkeypatch):
+def test_two_starts_under_one_reference_inspect_both_containers(tmp_path, monkeypatch):
     calls = _fake_docker(tmp_path, monkeypatch, [_event("a", "nxf-a", REFERENCE),
                                                  _event("b", "nxf-b", REFERENCE)])
-    monkeypatch.setattr(container_watch, "RECHECK_SECONDS", 0)
     watch = container_watch.ContainerWatch("docker", None, dict(os.environ)).start()
     deadline = time.monotonic() + 10
-    while ((not calls.exists() or len(calls.read_text().split()) < 2)
+    while ((not calls.exists() or len(calls.read_text().splitlines()) < 3)
            and time.monotonic() < deadline):
         time.sleep(0.05)
     watch.stop()
-    assert calls.read_text().split() == [REFERENCE, REFERENCE]
+    assert calls.read_text().splitlines() == ["container a", f"image {IMAGE_ID}", "container b"]
 
 
 def test_a_missing_engine_observes_nothing(tmp_path, monkeypatch):
@@ -90,13 +95,14 @@ def test_engine_is_taken_from_the_profile():
     assert container_watch.engine_for("test,singularity") is None
 
 
-def _capture_with(tmp_path, monkeypatch, *, observed=None, previous=None, inspect=None):
+def _capture_with(tmp_path, monkeypatch, *, observed=None, previous=None, inspect=None,
+                  task_status="COMPLETED"):
     out = tmp_path / "out"
     (out / ".nextflow").mkdir(parents=True)
     (out / ".nextflow" / "history").write_text("2026-10-15 "
                                                "10:00:00\t1s\trun_a\tOK\tabc\tsess\tcmd\n")
     monkeypatch.setattr(env_record, "tasks", lambda *a, **k: [
-        {"process": "P:FASTQC", "container": "quay.io/tool:1", "status": "COMPLETED",
+        {"process": "P:FASTQC", "container": "quay.io/tool:1", "status": task_status,
          "workdir": None}])
     monkeypatch.setattr(env_record, "engine_details", lambda engine, env: {"name": engine})
     monkeypatch.setattr(env_record, "resolve_registry_image", inspect or (
@@ -117,6 +123,15 @@ def test_a_tag_that_ran_two_images_is_not_pinned(tmp_path, monkeypatch):
     one = {"kind": "registry", "repository": "quay.io/tool", "id": IMAGE_ID, "digest": DIGEST}
     two = {**one, "id": "sha256:" + "f" * 64, "digest": "sha256:" + "b" * 64}
     record = _capture_with(tmp_path, monkeypatch, observed={"quay.io/tool:1": [one, two]})
+    assert record["images"]["quay.io/tool:1"]["kind"] == "multiple"
+    assert record["pinned_containers"] == {} and record["issues"]
+
+
+def test_cached_tasks_keep_the_earlier_identity_when_tag_moved(tmp_path, monkeypatch):
+    earlier = {"kind": "registry", "repository": "quay.io/tool", "id": IMAGE_ID, "digest": DIGEST}
+    new = {**earlier, "id": "sha256:" + "f" * 64, "digest": "sha256:" + "b" * 64}
+    record = _capture_with(tmp_path, monkeypatch, task_status="CACHED",
+        previous={"images": {"quay.io/tool:1": earlier}}, observed={"quay.io/tool:1": [new]})
     assert record["images"]["quay.io/tool:1"]["kind"] == "multiple"
     assert record["pinned_containers"] == {} and record["issues"]
 

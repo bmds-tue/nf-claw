@@ -1,17 +1,9 @@
 """Observe images as task containers start, so the run records the images it actually ran.
 
-Reading image identities only after a run misses images removed while it ran (an `image prune`
-on a shared host, a disk guard) and takes the identity of a tag re-pulled since. While Nextflow
-runs, nfclaw follows the container engine's start events. The first time a Nextflow task container
-(`nxf-…`) starts from an image reference, the image is inspected at once, while a container uses
-it and it cannot be removed, and resolved to its image ID and registry digest
-(runner.environment_record). A reference seen again after a while is inspected again, so a tag
-re-pulled to other bytes mid-run shows up as two images rather than one.
-
-One inspection per image reference keeps up with any number of containers on a busy host. Other
-programs' references that start meanwhile are inspected too and simply never matched against the
-run's processes. Best effort by design: a reference the engine cannot inspect, or an engine
-without an events stream, is left to the inspection after the run.
+Every start event queues its container ID. Container inspection determines the immutable
+image ID; only then is that image inspected. Tags may move before either queued probe runs.
+Immutable image/repository pairs are cached, while distinct containers remain attributable.
+Missing container evidence is retained explicitly instead of replaced by a later tag lookup.
 """
 from __future__ import annotations
 
@@ -21,14 +13,11 @@ import queue
 import signal
 import subprocess
 import threading
-import time
 from pathlib import Path
 
 from runner import environment_record
 
 ENGINES = environment_record.REGISTRY_ENGINES
-# How long a reference's identity stands before a later container start inspects it again.
-RECHECK_SECONDS = 600
 
 
 def engine_for(profile: str) -> str | None:
@@ -66,7 +55,8 @@ class ContainerWatch:
         self.work_dir = work_dir
         self.env = env
         self.observed: dict[str, dict[str, dict]] = {}
-        self._checked: dict[str, float] = {}
+        self._checked: set[str] = set()
+        self._images: dict[tuple[str, str], dict] = {}
         self._queue: queue.Queue = queue.Queue()
         self._process: subprocess.Popen | None = None
         self._threads: list[threading.Thread] = []
@@ -98,26 +88,45 @@ class ContainerWatch:
             name = _name(event)
             reference = _reference(event)
             # Nextflow names task containers `nxf-…`; anything else is another program's.
-            if reference is None or (name and not name.startswith("nxf-")):
+            if name and not name.startswith("nxf-"):
                 continue
-            now = time.monotonic()
-            last = self._checked.get(reference)
-            if last is None or now - last >= RECHECK_SECONDS:
-                self._checked[reference] = now
-                self._queue.put(reference)
+            actor = event.get("Actor") if isinstance(event.get("Actor"), dict) else {}
+            cid = actor.get("ID") or event.get("id") or event.get("ID")
+            cid = cid if isinstance(cid, str) else ""
+            key = cid or "missing:" + (reference or "unknown")
+            if key not in self._checked:
+                self._checked.add(key)
+                self._queue.put((cid, reference))
         self._queue.put(None)
 
     def _inspect(self) -> None:
-        while (reference := self._queue.get()) is not None:
+        while (item := self._queue.get()) is not None:
+            cid, reference = item
             try:
-                identity = environment_record.resolve_registry_image(
-                    self.engine, reference, self.env, at_start=True)
+                container = environment_record.container_image(self.engine, cid, self.env)
+                reference = reference or container.get("reference")
+                if not isinstance(reference, str) or not reference:
+                    continue
+                if container.get("kind") == "unresolved":
+                    identity = container
+                else:
+                    key = (reference, container["id"])
+                    identity = self._images.get(key)
+                    if identity is None:
+                        identity = environment_record.resolve_registry_image(
+                            self.engine, reference, self.env, at_start=True,
+                            image_id=container["id"])
+                        self._images[key] = identity
             except Exception:          # one unreadable image must not end the observation
-                continue
-            if identity.get("kind") != "registry":
+                identity = {"kind": "unresolved", "reason": "container image inspection failed"}
+            if not reference:
                 continue
             with self._lock:
-                self.observed.setdefault(reference, {})[identity.get("id") or reference] = identity
+                images = self.observed.setdefault(reference, {})
+                key = identity.get("id") or "unresolved:" + cid
+                entry = images.setdefault(key, {**identity, "container_ids": []})
+                if cid and cid not in entry["container_ids"]:
+                    entry["container_ids"].append(cid)
 
     def stop(self, timeout: float = 30) -> dict[str, list[dict]]:
         """End the observation; references already queued are still inspected while time allows."""
