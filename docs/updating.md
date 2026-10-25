@@ -66,10 +66,7 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
 
 1. **DSL2 Filtering:** Inspects the nf-core pipeline registry, excluding archived or disabled entries and entries explicitly marked `is_DSL2: false`. A missing marker alone does not exclude a candidate; the Nextflow acceptance gate must still pass before onboarding. Legacy DSL1 workflows are unsupported.
 2. **Name Sanitization & Security:**
-   - Every candidate pipeline name is strictly validated: alphanumeric characters, dots, hyphens, and underscores, bounded by alphanumeric characters:
-     ```regex
-     ^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$
-     ```
+   - Every candidate pipeline name must satisfy the [pipeline-name rule](../CONTRIBUTING.md#step-1-validate-the-pipeline-name).
    - Remotes are deterministically constructed as `https://github.com/nf-core/<validated-name>.git`. Mutable catalog metadata cannot redirect automation to external repositories.
 3. **Scaffolding:** Adds the submodule, pins its newest release tag, and generates initial context files.
    - Discovery shares the runner's submodule writer lock and checks ownership before mutation. Existing pipeline entries, Git index entries, registrations and cached object stores are preserved, including caches in linked worktrees. Reinitializing an existing pipeline is a separate `git submodule update --init pipelines/<name>/upstream` operation.
@@ -97,7 +94,6 @@ The drift gate guards against divergence between pinned code and documentation:
 | **Manifest Equivalence** | `sources.tsv`, `.gitmodules`, `pipelines/` | Asserts exact equality of pipeline inventory and git remote URLs. |
 | **Context Parity** | `skill.md`, `reference.md`, `catalog.*` | Recompiles context in memory and verifies character-for-character equality against disk. |
 | **Handoff Verification** | `handoffs/*.json` rules | Validates parameter mappings and downstream column compatibility against pinned schemas. Published file existence and identity are checked at runtime. |
-| **Agent Guidelines Parity** | `AGENTS.md` and `CLAUDE.md` | A separate pytest check (`tests/test_agent_docs.py`), run by `make check`, enforces 100% byte-for-byte identity. |
 
 If any upstream pipeline is updated without regenerating context, or if a manual edit is introduced, `make check` fails immediately.
 
@@ -109,11 +105,5 @@ Developers can run maintenance tasks locally from the repository root with Pytho
 and initialized submodules. Install test dependencies with `pip install -e ".[dev,yaml]"`.
 Change generators rather than editing generated context, then run `make build` and
 `make check`. `make update` fetches tags, changes submodule checkouts and stages their
-gitlinks; review those changes before committing. It does not run the CI acceptance gate:
-
-| Command | Action |
-|---|---|
-| `make update` | Queries remotes, bumps submodules to newest tags, and regenerates context files. |
-| `make build` | Regenerates `skill.md`, `reference.md`, and `catalog.*` from current submodules. |
-| `make check` | Runs the schema drift gate followed by the full pytest suite. |
-| `make test` | Executes all unit, integration, and regression tests. |
+gitlinks; review those changes before committing. It does not run the CI acceptance gate.
+[CONTRIBUTING.md](../CONTRIBUTING.md#makefile-targets-summary) lists every target.

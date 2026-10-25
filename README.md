@@ -18,29 +18,22 @@ A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelin
 
 ---
 
-Explicit local and remote input filenames are validated before launch because pinned task scripts can interpret shell-active names. Unsafe basenames, local directory entries, symlink targets and local matched filenames are refused without silently renaming scientific samples. See [the input rules](AGENTS.md) for supported names and the scope of these checks.
-
-Local path parameters retain the supplied basename, including a symlink's name and format suffix. For example, `sheet.csv` pointing to `stored.data` remains `sheet.csv` for samplesheet validation and Nextflow staging. Parent directories are resolved against the caller's directory; both alias and target names are checked, and provenance records the link identity and target bytes.
-
-LF/CR in local input paths or resolved targets are refused because Nextflow can turn them into shell lines. Samplesheet paths crossing a directory symlink with `..` must use an explicit parent path: Nextflow may otherwise select different data. Ordinary parent traversal is supported; wildcard parents followed by `..` are refused. Local colon parents remain local dependencies. Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode separators without losing file identities.
-
-Keep output and work directories outside consumed input directories. nfclaw checks explicit local dependencies, samplesheet data paths, directory glob matches and nested aliases before creating a writer lock or run files. It also refuses output trees containing input data or pipeline/configuration files, and redirects of generated files or the Nextflow log into inputs. Chain preflight checks the whole chain output tree before writing its record. Existing output symlinks and hard links receive the same separation check; declared work/cache trees can still hold staged read aliases. Boundary refusals leave input data and existing run logs untouched. Refusal logging also leaves multiply linked logs untouched.
-
-Preflight binds each validated local sample sheet to its content and namespace, including auxiliary tables. A changed descriptor is refused before execution or a check-only command is returned, so the selected data cannot silently diverge from dependency discovery. Pipeline identity and tracked-file cleanliness are rechecked after external probes and when capturing the launch source.
-
-Declared local dependencies are checked again after execution before success is reported. Changed bytes, directory namespaces, configurations or tracked pipeline source fail the run; the launch hashes and results remain available for inspection. A tainted attempt cannot be replayed as a verified reproduction, and restoring input bytes does not make its cached tasks safe to reuse. Resume archives it and recomputes. These checks also run with `--no-provenance`. They compare checkpoints and cannot detect transient changes restored between checks, remote input changes or indirect configuration dependencies.
-
-Numeric CLI flags and JSON/YAML parameters preserve their decimal value, including large integers written with decimals or exponents and small nonzero values. The same handling covers nested parameters, chain records, numeric schema comparisons and numeric CSV/TSV column bounds. Values reach Nextflow as JSON numbers; integers beyond its signed 64-bit JSON parser range use decimal notation to prevent wraparound. NaN and infinity are refused. This preserves the supplied value at the wrapper boundary, while downstream tools retain their own arithmetic precision.
+nfclaw checks a run before it starts and again before it reports success. It refuses unknown flags,
+invalid values, unsafe input filenames or sample identities and outputs that overlap their inputs
+rather than silently correcting them, and it fails a run whose declared inputs, configs or pipeline
+source changed while it ran. [AGENTS.md](AGENTS.md) states each rule,
+[docs/architecture.md](docs/architecture.md) how it is enforced, and
+[docs/known-issues.md](docs/known-issues.md) where its checks stop.
 
 ### Navigation
 
-[Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance](#maintain) • [Adding Pipelines](#adding-pipelines) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
+[Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance & Adding Pipelines](#maintain) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
 
 ---
 
 ## Layout
 
-The repository is structured into four functional zones:
+The repository is structured into four functional zones, plus the catalogs, documentation and portal built from them:
 
 | Path | Component | Description |
 |---|---|---|
@@ -50,6 +43,8 @@ The repository is structured into four functional zones:
 | `handoffs/` | **Chaining Rules** | Declarative rules (`handoffs/<upstream>/<downstream>.json`) mapping outputs between sequential pipeline stages, statically verified by the drift gate. |
 | `catalog.md` / `.json` | **Pipeline Catalog** | Auto-compiled index detailing declared inputs, conditional outputs, upstream descriptions, and citations for all tracked pipelines. |
 | `sources.tsv` | **Release Manifest** | Registry mapping pipeline names to upstream remotes and version tracking policies (`latest-release`). |
+| `docs/` | **Documentation** | The guides listed below. |
+| `website/` | **Live Portal** | Next.js static site and documentation hub, rebuilt from the repository data on every push to `main`. |
 
 ### Documentation Guides
 
@@ -63,7 +58,7 @@ The repository is structured into four functional zones:
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
 | **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
 | **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: tools, detached jobs, chains. |
-| **Agent Guidance** | [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) | Authoritative reference for autonomous coding assistants and LLM agents. |
+| **Agent Guidance** | [`AGENTS.md`](AGENTS.md) | Authoritative reference for autonomous coding assistants and LLM agents; [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
 | **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map and navigation index for external AI agents (llms.txt standard). |
 
 ---
@@ -102,13 +97,8 @@ nfclaw status results
 Replace the example reference paths with your own matched FASTA and GTF files.
 Later rnaseq examples focus on individual options; include these reference arguments
 or another reference selection supported by the chosen release. Schema-required
-parameters alone do not describe every reference the analysis needs.
-
-Data paths inside samplesheets must be absolute. Use a fresh `--outdir` for each
-analysis; a non-empty directory requires `--resume`. Output directories must be outside
-the repository or ignored by Git (`results/` is ignored). Docker is the default profile;
-`-profile` / `--profile` accepts comma-separated profiles, and `--demo` adds the bundled
-`test` profile, whose data and references can require network access.
+parameters alone do not describe every reference the analysis needs. Samplesheet data
+paths, output directories and profiles follow the rules in [AGENTS.md](AGENTS.md).
 
 > [!NOTE]
 > The editable install is intentional: `nfclaw` resolves pinned submodules and generated schema context directly from the repository tree, even when invoked from another directory. An installation without that repository content emits a clear setup error instead of an empty catalog.
@@ -122,12 +112,8 @@ nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
   --fasta /data/reference.fa --gtf /data/genes.gtf --igenomes-ignore true --check
 ```
 
-`--check` validates explicit values and environment requirements; conditional and
-complex schema rules remain subject to upstream runtime validation. It can initialize
-submodules, fetch requested versions and probe Nextflow, while leaving `--outdir`
-untouched. `--params-file params.json` loads pipeline parameters (YAML requires the
-`yaml` extra); explicit CLI values override the file. Extra Nextflow configs use
-repeatable `--config PATH` / `-c PATH`.
+`--check` leaves `--outdir` untouched; conditional and complex schema rules remain subject to
+upstream runtime validation.
 
 ### Samplesheet from Data Files
 
@@ -140,19 +126,16 @@ nfclaw run rnaseq --input /data/fastq --sheet-set strandedness=auto --outdir res
 nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' --outdir results
 ```
 
-Sample names come from the file names and are never altered (a name the pipeline cannot take is refused, naming the file). FastQ mates are paired by `_R1`/`_R2` (an advisory flags first read names that disagree) and by `_1`/`_2` only when their first read names show they are mates, so numbered single-end replicates are not mistaken for mates; Illumina lane numbers fill a `lane` column. Values no file determines (strandedness, patient, condition, …) come only from `--sheet-set COLUMN=VALUE` — a constant or a `{sample}`/`{lane}` template — or the schema's own defaults: a gap is refused with the column's allowed values, and so is an ambiguous or stray file. The sheet passes the same checks as a hand-written one, is staged as `<outdir>/provenance/samplesheet.csv` and recorded in the provenance bundle, and a replay reuses it rather than re-scanning the directory.
+The pinned schema decides the columns, sample names come unaltered from file names, and gaps,
+ambiguous or stray files are refused; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
+and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
+releases whose contracts were corrected from their pinned source.
 
 Review the generated sheet against the experimental design. Filename conventions and the first
 read header provide limited identity evidence; they do not establish biological replicates,
 complete read synchronization or correct study metadata. Distinct SRA `accession.spot-id`
 values remain distinct molecules. Explicit mate labels that contradict an inferred pairing
 are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about contradictions.
-
-Sample, patient, genome and database identifiers become upstream shell arguments and filenames. They must start with a letter, digit or underscore and use only letters, digits, combining marks, dots, underscores or hyphens; choose explicit safe aliases for other names. The runner preserves accepted identities exactly. CSV/TSV and flat JSON/YAML records receive these guards, duplicate-field checks and absolute local-path checks (including globs). YAML preflight requires the optional `pip install -e ".[yaml]"` dependency. Explicitly supplied auxiliary tables (for example `--genome-sheet` and `--databases`) receive their own declared schema checks too. Declared local data paths in these records are hashed for replay; nested input structures still rely on the pinned nf-schema validation.
-
-Older schemas can omit path formats or put them only on alternatives. The runner preserves branch-specific formats and supplements documented omissions with [source-audited roles bound to exact schema hashes](runner/input_roles.json). Literal sentinels such as `none` or `NA` and filename metadata remain distinct from data paths. HGTseq and Nanoseq ship stale template schemas; their generated instructions and validation use the actual pinned consumers' columns, guarded by the pipeline revision and consumer source hashes. These two formats require an explicit samplesheet.
-
-The audit also covers consumed directory inputs and Oncoanalyser's semicolon-delimited FASTQ pair, recording each member separately for replay and handoffs. Its filename-forming identifiers receive literal alias checks, and unsupported apostrophes in read-group overrides are refused before launch. Datasync's `output_path` is a destination, excluded from consumed-input capture using an exact revision and source check.
 
 ### 3. Provenance Replay & Verification
 
@@ -167,11 +150,8 @@ nfclaw verify results.replay --against results           # structural check (fil
 nfclaw verify results.replay --against results --strict
 ```
 
-Default verification reports environment differences but its exit status checks output
-structure. `--strict` also requires matching file bytes, link identities and an
-`identical` environment comparison when both records can be read. If either environment
-record is unavailable, the report says `not recorded by both runs` and strict mode
-checks outputs only; it does not certify the execution environment.
+What each mode checks, and what it cannot certify, is in
+[the verification engine](docs/architecture.md#27-verification-engine-nfclaw-verify).
 
 ### 4. Release Selection & Development Code
 
@@ -227,20 +207,9 @@ nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
   --limit-cpus 4 --limit-memory 15.GB
 ```
 
-Resource ceilings require an identified Nextflow engine of version 24.04.0 or newer. An
-unavailable version probe cannot establish that a requested ceiling will be enforced; use
-`--nxf-ver` to select a concrete supported engine.
-
-`--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
-
-`--timeout SECONDS` instead sets an opt-in deadline including preparation and
-completion checks; a chain shares it across stages and retries. By default neither
-has a time limit. Cleanup and failure recording may finish beyond the deadline.
-See [timeouts and long analyses](docs/timeouts.md) for configurable setup/shutdown
-margins, whole-controller background execution and cheap chain monitoring with
-`nfclaw chain status OUTDIR --quick` (lineage explicitly not checked).
-`--no-provenance` disables the replay bundle and checksum recording,
-while keeping the parameter file and run logs needed for execution and status inspection.
+Ceilings need Nextflow 24.04.0 or newer; [AGENTS.md](AGENTS.md) explains how they apply to
+retries. Neither a task nor the analysis has a time limit by default: `--limit-time` caps each
+task and `--timeout` the whole analysis ([timeouts and long analyses](docs/timeouts.md)).
 
 ### 8. AI Agents over MCP
 
@@ -258,82 +227,22 @@ when the client disconnects and are followed by job id. See [`docs/mcp.md`](docs
 
 ## Provenance, Replay & Verification
 
-By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`.
-The log appends on `--resume`; metadata and checksums describe the latest attempt.
-External dependencies must remain available: the bundle does not archive every input.
-For declared local inputs, `--resume` retains the cache only when complete file selection,
-alias identities, recorded bytes and recursive directory namespaces are unchanged,
-including data named by samplesheets and files selected for generated sheets.
-Size and timestamp alone cannot establish unchanged scientific data. A changed
-namespace, changed file content or an unavailable inventory starts a fresh
-cache session and recomputes all tasks, with an explicit advisory. The complete
-previous run is preserved in a sibling `<outdir>.previous-<id>` archive, and its
-logs are copied forward. Old sample publications are kept in the archive. A changed
-selection of local input files (a sample added, removed or replaced, including in a
-generated samplesheet) also starts a fresh session in a fresh `--outdir`, so a removed
-sample's earlier results cannot remain beside the new ones. Replay targets
-inside a recorded input directory are refused before any lock or log is written.
-
-| Artifact | File Path | Function & Role |
-|---|---|---|
-| **Run Log** | `logs/run.log` | Complete launch record (host, PID, Nextflow stdout/stderr) ending with terminal outcome line: `==> nfclaw run finished <time>: <outcome>`. Child output is prefixed with `\| ` so it cannot forge status markers; raw streams are in `logs/stdout.txt` and `logs/stderr.txt`. |
-| **Replay Script** | `commands.sh` | Replays the recorded analysis into a fresh directory (default `<outdir>.replay`), preferring the unchanged recorded checkout and otherwise extracting the source archive. Uses recorded config copies and eligible container pins, with dependency guards and a fixed engine version; it does not resume the original attempt. |
-| **Dependency Guard** | `replay_guard.py` | Pre-flight validator executed by `commands.sh` verifying that the archived pipeline source, inputs, samplesheets, configs and environment records match recorded SHA-256 digests. |
-| **Pipeline Source** | `pipeline-source.tar.gz` | Deterministic archive of the tracked source files that ran; a replay runs it (extracted and checked) whenever the recorded checkout no longer holds exactly that source. |
-| **Config Copies** | `configs/` | Copies of external `--config` files, replayed in place of the originals (except a config using `includeConfig`). |
-| **Execution Environment** | `environment.json` / `containers.config` | Available container identities, Nextflow build, plugins and Java runtime, and remote-input hashes recovered from Nextflow's logs. Staged copies are hashed locally; supported validation-only URLs are read again after the run. The config is written only when Docker/Podman processes can be pinned to eligible registry digests. Inspect unresolved entries and `issues` for recording gaps. |
-| **Environment Replay Helper** | `environment_record.py` | Standalone recorder/comparator used after a replay. Writes the target's `environment.json` and `environment_check.json`; a detected mismatch fails the replay, while `unverified` entries and informational notes do not. |
-| **Run Manifest** | `run_manifest.json` | Pipeline version, commit SHA, command, recording timestamp, outcome, observed engine version and environment settings. |
-| **Parameter File** | `params.json` | Resolved wrapper parameters passed to Nextflow, including the report suffix where supported and the nf-core/configs commit (`custom_config_version`) when automatic pinning applies and resolves. Additional defaults or profile values can be recorded separately by the upstream pipeline. |
-| **Output Namespace** | `outputs.inventory.json` | Recorded result paths, empty directories, entry types and link identities; internal targets are relative to the result root so complete bundle moves preserve their identity. |
-| **Dependency Inventories** | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch directory entries, empty directories, entry types and symlink identities; replay checks these alongside file bytes. |
-| **Checksum Manifests** | `inputs.sha256` / `configs.sha256` / `pipeline.sha256` / `outputs.sha256` | SHA-256 digests of declared local inputs (including samplesheet data paths: path fields, data columns typed only by their pattern, and absolute paths of existing files in other columns), the params file and configs, the tracked pipeline source, and generated result files. Remote inputs and container images are recorded in `environment.json` instead. |
-| **Resource Limits** | `resource_limits.config` | Nextflow `process.resourceLimits` configuration generated when `--limit-*` flags are specified. |
-| **Compatibility Records** | `nf_schema_compat.config` / `fastqrepair_compat.config` | Generated only for affected source trees; record plugin adjustments and task corrections for replay. |
-
-The bundle archives tracked pipeline source and copies eligible external configs; it
-does not embed scientific input data, container images or plugins. Local inputs retain
-their recorded paths. Configs using `includeConfig` still need their original files
-and include targets. Inspect `pipeline_archive`, `bundled_configs`, `container_pins`
-and `execution_environment.issues` in the manifest for the evidence actually captured.
-See [the replay guide](AGENTS.md#replaying-a-run) for relocation and comparison limits.
-
-> [!IMPORTANT]
-> **Run Isolation & Sibling File Locking:** On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) across the execution lifecycle. Overlapping or concurrent runs targeting the same output directory fail fast with `ErrorCode.ENVIRONMENT`, eliminating race conditions and cache corruption.
+By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`: the run log, a
+replay script with its dependency guard, the archived pipeline source, config copies, parameter,
+checksum and inventory records, and what could be recorded of the execution environment.
+[docs/architecture.md](docs/architecture.md#25-provenance-bundles--dependency-hashing) lists every
+file and what it establishes. The bundle does not embed scientific input data, container images or
+plugins, so those must stay available for a replay. [AGENTS.md](AGENTS.md) covers replaying,
+resuming, run locking and their limits.
 
 ---
 
 ## Maintain
 
-Repository context and validation are managed via standard `make` targets:
-
-```bash
-pip install -e ".[dev,yaml]"  # Install pytest and optional YAML support for the test suite
-make build     # Regenerate skill.md, reference.md, and catalog.* from pinned submodules
-make update    # Bump submodules to newest release tags and rebuild context
-make check     # Run schema drift gate and complete test suite
-make test      # Run full pytest test suite
-```
-
----
-
-## Adding Pipelines
-
-To onboard a new nf-core pipeline to the library:
-
-1. **Register in `sources.tsv`:** Append a tab-separated entry (`<name>\thttps://github.com/nf-core/<name>.git\tlatest-release`).
-2. **Add Submodule:** Check out the upstream repository and pin to an official release tag:
-   ```bash
-   git submodule add https://github.com/nf-core/<name>.git pipelines/<name>/upstream
-   git -C pipelines/<name>/upstream checkout tags/<X.Y.Z>   # Pin to release tag (not default branch)
-   ```
-3. **Build Context & Verify:**
-   ```bash
-   make build     # Generate skill.md, reference.md, catalog.md, catalog.json
-   make check     # Run schema drift gate and unit test suite
-   ```
-
-Detailed contributor standards, naming constraints, and test procedures are provided in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Generated context is never edited by hand: `make build` regenerates every `skill.md`,
+`reference.md` and `catalog.*` from the pinned submodules, `make update` bumps them to their newest
+releases, and `make check` runs the drift gate and the test suite. [`CONTRIBUTING.md`](CONTRIBUTING.md)
+explains each target and how to add a pipeline or a chaining handoff rule.
 
 ---
 
@@ -361,28 +270,15 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
                                 └─────────────────────────────────┘
 ```
 
-- **`auto-update.yml`** (Daily): Discovers new upstream release tags via `git ls-remote --tags`, checks out new versions, regenerates context files, verifies Nextflow acceptance (`nextflow -preview`), runs the test suite and drift gate, and publishes the validated update.
-- **`discover-pipelines.yml`** (Weekly): Identifies newly published **DSL2** nf-core pipelines, scaffolds submodules, enforces strict exit code 0 acceptance, and publishes validated pipelines.
-- **`deploy-pages.yml`** (Push to `main`): Rebuilds and publishes the interactive static portal to GitHub Pages.
-- **`smoke.yml`** (Weekly & on changes): Validates command synthesis, schema parsing, and CLI arguments across all pipelines (`nfclaw run --check --demo`), as well as registered chains.
-- **`nextflow-validate.yml`** (Nightly & on changes): Executes `nextflow -preview` under pinned minimum Nextflow versions across parallel shards to verify pipeline compilation, profile resolution, schema validation, and DAG construction.
-- **`tests.yml`** (Push & PR): Executes the complete pytest test matrix across Python 3.11–3.13 on Ubuntu and macOS, deterministic Nextflow execution/replay/chaining, and static site validation.
-- **`drift-check.yml`** (PR, daily & manual): Re-audits the repository to guarantee zero schema drift between submodules, skills, references, manifests, and handoff rules.
-- **`demo-validation.yml`** (PR & manual): Executes the pinned demo on native Linux amd64, replays it into a fresh directory, and independently validates FastQC metrics, scientific replay, and static plot exports.
-- **`fastqrepair-validation.yml`** (PR & manual): Executes fastqrepair 1.1.1 with nfclaw's recorded runtime corrections on native Linux amd64 and checks gzip recovery and paired-read conservation against independent controls.
-- **`pipeline-execution.yml`** (PR & manual): Executes a selected pinned pipeline's bundled test on native Linux amd64 under bounded resources and its declared engine, checks the run status and the recorded engine identity, and retains the outputs and task scripts as evidence. It does not replay or verify the run; `demo-validation.yml` and `fastqrepair-validation.yml` do.
-- **`codeql.yml`** (Push, PR, weekly & manual): Scans Python, JavaScript/TypeScript and GitHub Actions code.
-
-Push and PR triggers can be filtered by changed paths; each workflow file defines its
-exact scope. Both maintenance jobs publish directly through a checked fast-forward of
-`main`, so they work even when organization policy forbids Actions from creating PRs.
-They validate first, report the required checks on the exact generated commit, and
-preserve concurrent changes to `main`. Because `GITHUB_TOKEN` pushes do not trigger push
-workflows, the publisher explicitly starts tests, smoke checks, CodeQL and Pages deployment.
-No organization setting change or personal access token is needed
-([details](docs/updating.md#2-automated-daily-updates-auto-updateyml)).
-
-Further details on drift prevention and update automation: [`docs/updating.md`](docs/updating.md).
+- **`auto-update.yml`** (daily) and **`discover-pipelines.yml`** (weekly) bump pinned releases and
+  onboard new DSL2 pipelines. Each validates its update first, then publishes it by a checked
+  fast-forward of `main`, which needs no pull-request permission ([docs/updating.md](docs/updating.md)).
+- **`smoke.yml`**, **`nextflow-validate.yml`**, **`tests.yml`**, **`drift-check.yml`**,
+  **`demo-validation.yml`**, **`fastqrepair-validation.yml`** and **`pipeline-execution.yml`**
+  validate every change; [docs/compatibility.md](docs/compatibility.md#3-automated-continuous-validation)
+  gives each one's scope and what fails it.
+- **`deploy-pages.yml`** (push to `main`) rebuilds the portal, and **`codeql.yml`** (push, PR and
+  weekly) scans the Python, JavaScript/TypeScript and GitHub Actions code.
 
 ---
 
@@ -412,6 +308,4 @@ When utilizing nf-claw in scientific research, cite via [`CITATION.cff`](CITATIO
 - **Executed Pipeline:** Cited individually in `pipelines/<name>/upstream/CITATIONS.md`.
 - **ClawBio:** Corpas M. ClawBio: Bioinformatics-Native AI Agent Skill Library. Zenodo (2026). [doi:10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648)
 
-nf-claw is MIT-licensed (© Danilo Monge) and includes components adapted from ClawBio (© Manuel Corpas, MIT — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)). Upstream nf-core pipelines are MIT-licensed, and Nextflow is Apache-2.0.
-
-**System Requirements:** Python 3.11+, git, Nextflow (Java 17+), Docker or Singularity.
+nf-claw is MIT-licensed (© Danilo Monge). Upstream nf-core pipelines are MIT-licensed, and Nextflow is Apache-2.0.

@@ -84,10 +84,9 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
     --limit-cpus 4 --limit-memory 15.GB
   ```
-  `--limit-time DURATION` also caps how long any one task may run: a task that needs longer is stopped, and so is every retry, so set it only as a deliberate ceiling, never as a guess at how long the analysis takes.
-  nfclaw writes these as Nextflow's [`process.resourceLimits`](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources) and passes the generated config with `-c` — the mechanism nf-core prescribes, and the same one its own `test` profiles use (many bundled test profiles set small ceilings, while real runs often need explicit limits). The ceiling applies to **every** process *and every retry*, so one flag covers whatever the pipeline asks for next; the generated config is kept in `<outdir>/provenance/resource_limits.config`, so `commands.sh` replays the run under the same ceiling.
+  nfclaw writes these as Nextflow's [`process.resourceLimits`](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources), the mechanism nf-core prescribes, so one ceiling covers every process and every retry and is replayed from `<outdir>/provenance/resource_limits.config`; [AGENTS.md](../AGENTS.md) has the details, including `--limit-time`.
 
-  A named override (`withName: 'STAR_GENOMEGENERATE' { memory = '15.GB' }`) sizes only that selected process. A constant override applies to its retries too, while an expression using `task.attempt` can grow; neither establishes a ceiling for the other processes. You would need to cover every step that might exceed the host (`STAR_GENOMEGENERATE`, then `BBMAP_BBSPLIT`, then the next). Use `withName` (via `--config`) only to tune one specific step, e.g. giving a tool *less* than its label implies:
+  A named override sizes only its own process, so it cannot stand in for that ceiling: you would need one for every step that might exceed the host (`STAR_GENOMEGENERATE`, then `BBMAP_BBSPLIT`, then the next). Use `withName` (via `--config`) only to tune one specific step, e.g. giving a tool *less* than its label implies:
   ```groovy
   // tune-one-step.config
   process {
@@ -248,13 +247,12 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### Launching several pipelines in parallel
 - **Status: Fixed.** Starting 2+ pipelines simultaneously whose submodules were uninitialised previously raced on `.git/config`. `nfclaw run` serializes submodule initialization with a per-repo file lock, ensuring concurrent first-time runs initialize submodules cleanly.
 
-### Replaying a run: `provenance/commands.sh` reproduces into a *fresh* directory
-- **Status: Fixed.** The replay script reproduces the run into a **fresh** directory, defaulting to `<outdir>.replay`:
-  ```bash
-  ./results/provenance/commands.sh                 # → results.replay/
-  ./results/provenance/commands.sh /tmp/check-it   # or name the target yourself
-  ```
-  It refuses a target that already holds files, launches Nextflow from the target directory, and passes `--outdir "$target"`.
+### Replaying a run: `provenance/commands.sh` refuses a target that holds files
+- **Symptom:** `commands.sh` refuses its target directory, or a replay into the original `--outdir`
+  fails on `pipeline_info/execution_trace_*.txt`.
+- **Fix:** Replay into a fresh directory: `commands.sh` defaults to `<outdir>.replay`, or takes a
+  target (`./results/provenance/commands.sh /tmp/check-it`); [replay](architecture.md#26-replay--replay-guard)
+  explains why a replay cannot publish over the original run.
 
   Stop it with `kill <replay pid>`. New bundles run the command in its own process
   group, allow the shutdown grace recorded at launch (10 seconds by default), then
@@ -265,20 +263,13 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   nonzero exit status even if the command handles the signal with exit zero.
   Tasks or containers detached from that group still require executor cleanup.
 
-### `--check` never writes into `--outdir`
-- **Status: Fixed.** `--check` validates parameters and prints the command without launching, staging parameters in a temporary directory and leaving `--outdir` untouched.
-
 ### A replay can change bytes and timestamped metadata filenames
 Some outputs embed dates or durations: execution reports, timelines, gzip headers,
 FastQC ZIP entries and MultiQC HTML can differ between runs. A changed checksum
 does not identify the cause; inspect scientific results with a format-aware comparison.
-Matching file inventories alone does not establish analytical agreement. Check both with:
-```bash
-nfclaw verify results.replay --against results
-```
-It hashes the replay's live files and compares them with the original recorded checksums
-**by path**, reporting `identical` / `changed` / `missing` / `extra` / `renamed`. Missing or extra
-files or directories fail the structural check; add `--strict` to fail on changed file bytes or recorded link identities as well. When both environment records are readable, strict mode also requires an `identical` comparison; default verification reports environment differences without changing its structural exit criterion. `unverified` therefore permits standalone replay but fails strict verification when compared records are available. A missing or unreadable record is reported as `not recorded by both runs`, leaving the environment outside verification. Link targets can differ when independent executions use different task work directories; inspect those differences explicitly.
+Matching file inventories alone does not establish analytical agreement. Compare the two with
+`nfclaw verify results.replay --against results`; [the verification engine](architecture.md#27-verification-engine-nfclaw-verify)
+explains its default and `--strict` checks.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
 code generates other filenames directly from the clock. For example, demo 1.2.0's
