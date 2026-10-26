@@ -31,7 +31,7 @@ const SECTIONS = [
   { id: "docs", label: "Documentation hub", hint: "Rendered from the repo" },
 ];
 
-const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
+export const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
 
 /** Open the palette from anywhere (a search button, the header). */
 export function openPalette(): void {
@@ -118,10 +118,11 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       const typing = (e.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable=true]");
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((v) => !v);
+        if (open) setOpen(false);
+        else openPalette();
       } else if (e.key === "/" && !typing && !open) {
         e.preventDefault();
-        setOpen(true);
+        openPalette();
       }
     };
     const onOpen = () => setOpen(true);

@@ -64,13 +64,13 @@ class FakeHandler:
 class Session:
     """A client on the other end of a pipe pair, with a reader thread so reads can time out."""
 
-    def __init__(self, handler=None):
+    def __init__(self, handler=None, **server_options):
         self.handler = handler or FakeHandler()
         r1, w1 = os.pipe()
         r2, w2 = os.pipe()
         self._to_server = os.fdopen(w1, "wb")
         self.server = Server(self.handler, name="test", version="9.9", instructions="read me",
-                             title="Test")
+                             title="Test", **server_options)
         self.thread = threading.Thread(target=self.server.run,
                                        args=(os.fdopen(r1, "rb"), os.fdopen(w2, "wb")), daemon=True)
         self.thread.start()
@@ -394,5 +394,43 @@ def test_eight_long_polls_leave_ping_status_and_cancellation_responsive():
             reply = client.request(rid, 'tools/call',
                                    {'name': name, 'arguments': {'wait_seconds': 0}}, timeout=1)
             assert reply['result']['content'][0]['text'] == name
+    finally:
+        client.close()
+
+
+def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
+        tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from runner import jobs, mcp_tools
+    handler = mcp_tools.NfclawTools(ROOT, cwd=str(tmp_path))
+    ready = threading.Condition()
+    started = []
+    job = SimpleNamespace(id='fixture')
+    monkeypatch.setattr(jobs, 'load', lambda _id: job)
+    monkeypatch.setattr(jobs, 'cancel', lambda _job: True)
+
+    def wait(job_id, seconds, ctx):
+        if seconds:
+            with ready:
+                started.append(job_id)
+                ready.notify_all()
+            ctx.cancelled.wait(30)
+        return job
+
+    monkeypatch.setattr(handler, '_wait', wait)
+    monkeypatch.setattr(handler, '_job_result', lambda *a, **k: tool_result('stop requested'))
+    client = Session(handler, waiting_tools=('run_pipeline', 'run_chain', 'replay_run'),
+                     control_tools=('cancel_job',))
+    try:
+        client.initialize()
+        for rid in range(10, 18):
+            client.send({'jsonrpc': '2.0', 'id': rid, 'method': 'tools/call',
+                         'params': {'name': 'cancel_job', 'arguments': {'job_id': 'fixture'}}})
+        with ready:
+            assert ready.wait_for(lambda: len(started) == 8, timeout=5)
+        assert client.request(20, 'ping', timeout=1)['result'] == {}
+        reply = client.request(21, 'tools/call', {'name': 'cancel_job', 'arguments': {
+            'job_id': 'fixture', 'wait_seconds': 0}}, timeout=1)
+        assert reply['result']['content'][0]['text'] == 'stop requested'
     finally:
         client.close()

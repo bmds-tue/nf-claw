@@ -242,3 +242,18 @@ def test_complete_environment_mode_accepts_complete_matching_evidence(tmp_path):
     _complete_environment(replay)
     assert cli.main(['verify', str(replay), '--against', str(original),
                      '--strict', '--require-environment']) == 0
+
+
+@pytest.mark.parametrize('invalid', ['digest', 'id'])
+def test_complete_environment_refuses_malformed_supplied_image_identity(tmp_path, invalid):
+    original = _run(tmp_path, 'original', {'counts.tsv': b'gene\t10\n'})
+    replay = _run(tmp_path, 'replay', {'counts.tsv': b'gene\t10\n'})
+    for outdir, identity in ((original, 'a'), (replay, 'b')):
+        record = _complete_environment(outdir)
+        image = record['images']['quay.io/a:1']
+        image.update(digest='sha256:' + ('a' if invalid == 'id' else identity) * 64,
+                     id='sha256:' + identity * 64)
+        image[invalid] = 'invalid'
+        (outdir / 'provenance/environment.json').write_text(json.dumps(record))
+    assert cli.main(['verify', str(replay), '--against', str(original),
+                     '--require-environment']) == 1

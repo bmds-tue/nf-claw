@@ -624,9 +624,10 @@ def completeness_issues(record) -> list[str]:
             for reference in containers:
                 image = images.get(reference)
                 valid = isinstance(image, dict) and (
-                    image.get("kind") == "registry" and any(
-                        isinstance(image.get(key), str) and _DIGEST.fullmatch(image[key])
-                        for key in ("digest", "id"))
+                    image.get("kind") == "registry"
+                    and any(image.get(key) for key in ("digest", "id"))
+                    and all(image.get(key) is None or isinstance(image[key], str)
+                            and _DIGEST.fullmatch(image[key]) for key in ("digest", "id"))
                     or image.get("kind") == "file" and isinstance(image.get("sha256"), str)
                     and re.fullmatch(r"[0-9a-f]{64}", image["sha256"]))
                 if not valid:

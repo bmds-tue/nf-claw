@@ -4,8 +4,8 @@
 client — Claude Code, Codex, Antigravity, Hermes, MCP Inspector, the official SDKs — on stdin/stdout. It is part
 of the `nfclaw` command and adds no dependency: the server is standard-library Python.
 
-Every tool runs a documented `nfclaw` command, so the CLI stays the single implementation. Runs and
-chains execute as **detached jobs** that keep going when the client disconnects, and are followed by
+Pipeline execution uses the existing CLI; replay uses the bundle's existing guarded script.
+Library and bounded artifact previews read their existing files. Runs, chains and replays execute as **detached jobs** that keep going when the client disconnects, and are followed by
 job id. The agent docs (`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are served unchanged.
 
 ---
@@ -86,6 +86,8 @@ non-interactive shell's environment.
 | `chain_edges` | `nfclaw chain edges` | Which pipeline can follow which in a chain. |
 | `run_pipeline` | `nfclaw run` | Start a run as a job. Every CLI flag is an argument; pipeline parameters go in `params`; `check: true` validates and prints the command. |
 | `run_chain` | `nfclaw chain run` | Start a chain as a job, from the chain spec as JSON ([format](chaining.md)). |
+| `replay_run` | recorded `provenance/commands.sh` | Start a guarded replay as a supervised job in a fresh destination. |
+| `read_artifact` | bounded file read | Preview UTF-8 text inside a job's outdir; reports truncation and rejects external symlinks/binary files. |
 | `get_job` | `nfclaw status` | A job's state, nfclaw's status report and its latest output; `wait_seconds` returns as soon as it ends. |
 | `list_jobs` | — | Jobs started through MCP, newest first. |
 | `cancel_job` | `kill <nfclaw pid>` | Stop a job cleanly: Nextflow and its tasks shut down, the outcome and provenance are recorded. |
@@ -94,12 +96,13 @@ non-interactive shell's environment.
 
 The server's own instructions give agents the workflow: find → read the skill → `check` → run →
 follow → results. Every tool asks Antigravity to load it up front (`_meta`
-`antigravity/alwaysLoad`, about 2.7k tokens for all eleven): deferred, its model called them
+`antigravity/alwaysLoad`): deferred, its model called them
 without their schemas, guessing arguments or passing its call tool's `toolSummary` among them.
 Tool failures (an invalid argument, a refused launch) come back as results with
 `isError` and nfclaw's own message — `[code] message`, the issues, and `fix:` — so the model can correct
 the call. A parameter is refused if it is one of `nfclaw run`'s own options (`outdir`, `resume`, …:
-those are arguments of the tool) or is not a scalar (use `params_file` for structured values).
+those are arguments of the tool). Scalars, arrays and objects are accepted in `params`; structured
+values are staged privately in a params file and still undergo the pipeline's schema validation.
 
 Use absolute paths. A relative path means what it would on the command line in the directory the
 client started the server from.
@@ -237,3 +240,13 @@ determine which arrays/objects are valid.
 `verify_replay(require_environment=true)` requests the CLI's `--require-environment` gate. It
 requires complete matching environment evidence even when output structure agrees; combine it
 with `strict=true` to require identical output bytes as well.
+
+`replay_run(original, outdir)` reuses the original bundle's guarded replay script under the same
+job supervisor as runs and chains. It supports detached execution, status and cancellation. Keep
+the original bundle; the replay directory contains its results and execution records, not a new
+complete replay bundle. A retry needs a new empty destination.
+
+`read_artifact(job_id, path, max_bytes=16384)` previews at most 65536 bytes of UTF-8 text. The path
+is relative to that job's output directory. Traversal, binary files, nonregular files and symlinks
+outside the output tree are refused. For external published symlinks, inspect them explicitly on
+the server. A running job's preview may be incomplete and does not validate scientific results.

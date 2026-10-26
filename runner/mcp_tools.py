@@ -10,10 +10,12 @@ through `show_pipeline`.
 """
 from __future__ import annotations
 
+import codecs
 import math
 import os
 import re
 import shlex
+import stat
 import subprocess
 import time
 from dataclasses import dataclass
@@ -39,6 +41,9 @@ session ends; nothing needs to stay connected.
 5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then \
 succeeded, failed, cancelled or lost. On failure, read status_report and output_tail, fix the \
 cause, and resubmit with resume=true to continue from Nextflow's cache.
+Replays: replay_run(original, outdir) uses the recorded guarded replay as a supervised job. \
+Always choose a fresh destination; replay jobs cannot resume in place. \
+read_artifact(job_id, path, max_bytes) previews bounded text from a job's output tree. \
 Chains: chain_edges shows which pipeline can feed which; run_chain(spec) runs stages in order, \
 each started only after the previous one succeeded (spec format: resource nfclaw://docs/chaining). \
 run_status(outdir, chain=true) verifies a chain's lineage. cancel_job stops a job cleanly \
@@ -129,7 +134,7 @@ def _tool(name: str, title: str, description: str, properties: dict, required: l
                         "openWorldHint": open_world},
         # Antigravity hides MCP tools behind one generic call tool unless a tool asks to be loaded
         # up front, and its model then guessed their arguments or passed the call tool's own
-        # `toolSummary` among them. All eleven together cost it about 2.7k tokens.
+        # `toolSummary` among them. Load every schema together so clients see the real arguments.
         "_meta": {"antigravity/alwaysLoad": True},
     }
 
@@ -224,6 +229,15 @@ TOOLS = [
            "wait_seconds": {**_WAIT, "description": _WAIT["description"]
                             + f" Default {_DEFAULT_RUN_WAIT}."}},
           ["outdir"], read_only=False, open_world=True),
+    _tool("replay_run", "Replay a recorded run",
+          "Execute a recorded run's guarded provenance/commands.sh into a fresh directory, "
+          "as a detached supervised job. Follow it with get_job and stop it with cancel_job. "
+          "The original bundle and its external dependencies must remain available. A failed "
+          "replay requires a new empty destination; it cannot resume in place.",
+          {"original": _s("The original run directory holding provenance/commands.sh."),
+           "outdir": _s("A new or empty replay destination, absolute path."),
+           "wait_seconds": _WAIT},
+          ["original", "outdir"], read_only=False),
     _tool("get_job", "Follow a job",
           "State of a job started by run_pipeline or run_chain: running (phase 'preparing' = "
           "validating or staging, 'launched' = Nextflow is running), succeeded, failed, cancelled, "
@@ -234,6 +248,16 @@ TOOLS = [
                            "(0-500, default 20).",
                            minimum=0, maximum=500)},
           ["job_id"], read_only=True, idempotent=True),
+    _tool("read_artifact", "Preview a job artifact",
+          "Read a bounded UTF-8 preview of a regular file inside a job's output directory, "
+          "such as a generated samplesheet, run log or text result. Reports truncation and "
+          "size. Rejects traversal, binary files and symlinks outside the output tree. "
+          "A preview of a running job may be incomplete; it is not a scientific validation.",
+          {"job_id": _JOB_ID,
+           "path": _s("A file path relative to this job's outdir, e.g. provenance/logs/run.log."),
+           "max_bytes": _i("Maximum preview bytes (default 16384, maximum 65536).",
+                           minimum=1, maximum=65536)},
+          ["job_id", "path"], read_only=True, idempotent=True),
     _tool("list_jobs", "List jobs",
           "Jobs started through this server, newest first, with their state. Jobs persist across "
           "sessions and server restarts.",
@@ -661,6 +685,20 @@ class NfclawTools:
                           cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path))
         return self._after_submit(job, args, ctx)
 
+    def _tool_replay_run(self, args: dict, ctx: Context) -> dict:
+        original = Path(self._path(args["original"]))
+        script = original / "provenance" / "commands.sh"
+        if not script.is_file() or not (script.parent / "run_manifest.json").is_file():
+            raise ToolError(f"no recorded replay bundle in {original}")
+        outdir = self._path(args["outdir"])
+        self._refuse_busy_outdir(outdir)
+        job_dir = jobs.create_dir("replay")
+        command = ["bash", str(script), outdir]
+        job = jobs.launch(job_dir, kind="replay", argv=command, command=command,
+                          cwd=self.cwd, outdir=outdir,
+                          log_path=str(cli._run_log_path(outdir)))
+        return self._after_submit(job, args, ctx)
+
     def _after_submit(self, job: jobs.Job, args: dict, ctx: Context) -> dict:
         wait = args.get("wait_seconds")
         job = self._wait(job.id, _DEFAULT_RUN_WAIT if wait is None else wait, ctx,
@@ -700,9 +738,11 @@ class NfclawTools:
 
     def job_view(self, job: jobs.Job, *, log_lines: int) -> dict:
         state = jobs.state(job)
+        command = job.command if job.kind == "replay" else ["nfclaw", *job.argv]
         view = {"job_id": job.id, "kind": job.kind, "pipeline": job.pipeline, "state": state,
                 "check": job.check, "outdir": job.outdir,
-                "command": shlex.join(["nfclaw", *job.argv]), "cwd": job.cwd,
+                "command": shlex.join(command),
+                "cwd": job.cwd,
                 "created_at": job.created_at, "finished_at": job.finished_at,
                 "exit_code": job.exit_code}
         launched = self._launched(job)
@@ -741,6 +781,53 @@ class NfclawTools:
         return self._job_result(job, log_lines=(200 if job.check else 20) if lines is None
                                 else lines)
 
+    def _tool_read_artifact(self, args: dict, ctx: Context) -> dict:
+        job = jobs.load(args["job_id"])
+        relative = Path(args["path"])
+        if (relative.is_absolute() or ".." in relative.parts or not relative.parts
+                or "\x00" in args["path"]):
+            raise ToolError("artifact path must be a relative file path inside the job's outdir")
+        root = Path(job.outdir).resolve()
+        limit = args.get("max_bytes") or 16384
+        try:
+            path = (root / relative).resolve(strict=True)
+            if not path.is_relative_to(root):
+                raise ToolError("artifact symlinks must stay inside the job's output tree")
+            # Hold each ancestor open: resolving followed by an absolute-path open permits a
+            # task to swap an ancestor for an external symlink between those operations.
+            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            parent_fd = os.open(path.anchor, directory_flags)
+            try:
+                parts = path.relative_to(path.anchor).parts
+                for part in parts[:-1]:
+                    next_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+                    os.close(parent_fd)
+                    parent_fd = next_fd
+                fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                             dir_fd=parent_fd)
+            finally:
+                os.close(parent_fd)
+            with os.fdopen(fd, "rb") as stream:
+                metadata = os.fstat(stream.fileno())
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise ToolError("artifact previews require a regular text file")
+                data = stream.read(limit + 1)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ToolError(f"cannot read this job artifact: {exc}") from exc
+        truncated = len(data) > limit
+        data = data[:limit]
+        if b"\x00" in data:
+            raise ToolError("binary artifacts cannot be previewed as text")
+        try:
+            content = codecs.getincrementaldecoder("utf-8")().decode(data, final=not truncated)
+        except UnicodeDecodeError as exc:
+            raise ToolError("artifact is not UTF-8 text; binary artifacts cannot be previewed") \
+                from exc
+        result = {"job_id": job.id, "path": str(relative), "size_bytes": metadata.st_size,
+                  "returned_bytes": len(content.encode("utf-8")), "truncated": truncated,
+                  "text": content}
+        return tool_result(content, result)
+
     def _tool_list_jobs(self, args: dict, ctx: Context) -> dict:
         wanted = args.get("state")
         rows = []
@@ -765,8 +852,11 @@ class NfclawTools:
                                "nothing to stop.\n\n"
                                + _render_job(view), view)
         wait = args.get("wait_seconds")
-        job = self._wait(job.id, 15 if wait is None else wait, ctx)
-        return self._job_result(job, log_lines=20)
+        def complete():
+            stopped = self._wait(job.id, 15 if wait is None else wait, ctx)
+            return self._job_result(stopped, log_lines=20)
+
+        return ctx.complete_after(complete) if wait != 0 else complete()
 
     # --- reports --------------------------------------------------------------------------------
 
@@ -837,6 +927,11 @@ def _next_step(view: dict) -> str:
     if state == "running":
         return (f"get_job(job_id={jid!r}, wait_seconds=60) to follow it; "
                 f"cancel_job(job_id={jid!r}) to stop it.")
+    if view["kind"] == "replay":
+        if state == "succeeded":
+            return (f"Replay results are in {view['outdir']}. Retain the original replay bundle "
+                    "and compare the outputs with verify_replay before using them.")
+        return "Inspect this replay's status and logs; retry into a new empty destination."
     if state == "succeeded":
         if view["check"]:
             return "Validation passed: run the same arguments without check to launch it."

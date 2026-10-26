@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # log (--mode=succeed), or writes the log and waits for SIGTERM (--mode=hang); `status` reads
 # that log.
 FAKE_NFCLAW = textwrap.dedent("""
-    import signal, sys, time
+    import os, signal, sys, time
     from pathlib import Path
     argv = sys.argv[1:]
     opts = dict(a[2:].split("=", 1) for a in argv if a.startswith("--") and "=" in a)
@@ -48,6 +48,8 @@ FAKE_NFCLAW = textwrap.dedent("""
     log = Path(opts["outdir"]) / "provenance" / "logs" / "run.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("==> nfclaw run started 2026-10-26T00:00:00Z\\n")
+    with log.open("a") as fh:
+        fh.write(f"    pid: {os.getpid()}\\n")
     if mode == "hang":
         def stop(*_):
             with log.open("a") as fh:
@@ -187,7 +189,7 @@ def test_every_tool_is_loaded_up_front_by_antigravity(tools):
     # every session. Loaded up front, a tool is called with its own schema.
     tools_listed = tools.list_tools(Context())
     assert all((t.get("_meta") or {}).get("antigravity/alwaysLoad") is True for t in tools_listed)
-    assert len(tools_listed) == 11
+    assert len(tools_listed) == 13
 
 
 def test_list_pipelines_reports_no_match(tools):
@@ -402,3 +404,94 @@ def test_structured_params_are_merged_privately_without_losing_precision(
                                      'enabled': True}}
     assert stat.S_IMODE(generated.stat().st_mode) == 0o600
     assert json.loads(source.read_text()) == {'label': 'base', 'values': ['base'], 'keep': 7}
+
+
+@pytest.mark.parametrize('cancel', [False, True])
+@pytest.mark.usefixtures('no_engine_probe')
+def test_replays_use_the_job_supervisor_and_can_be_cancelled(tools, tmp_path, cancel):
+    from runner import provenance
+    from runner.submodule import SubmoduleStatus
+    assert 'replay_run' in {tool['name'] for tool in tools.list_tools(Context())}
+    original = tmp_path / 'original'
+    provenance.write(outdir=original, pipeline='fixture',
+        command_str="bash -c 'sleep 60'" if cancel else 'printf replayed > result.txt',
+        submodule=SubmoduleStatus('fixture', tmp_path / 'up', True, True, '1', 'abc', ()),
+        input_paths=[])
+    replay = tmp_path / 'replay'
+    submitted = call(tools, 'replay_run', original=str(original), outdir=str(replay),
+                     wait_seconds=10)
+    assert not submitted.get('isError'), submitted
+    job_id = submitted['structuredContent']['job_id']
+    final = call(tools, 'cancel_job' if cancel else 'get_job', job_id=job_id,
+                 wait_seconds=30)['structuredContent']
+    assert final['kind'] == 'replay'
+    assert final['state'] == ('cancelled' if cancel else 'succeeded')
+    if not cancel:
+        assert (replay / 'result.txt').read_text() == 'replayed'
+        assert final['run_state'] == 'success'
+    else:
+        assert 'resume=true' not in final['next']
+
+
+def _artifact_job(tools, tmp_path):
+    assert 'read_artifact' in {tool['name'] for tool in tools.list_tools(Context())}
+    out = tmp_path / 'artifacts'
+    result = call(tools, 'run_pipeline', pipeline='demo', outdir=str(out), check=True,
+                  wait_seconds=30)
+    out.mkdir()
+    return result['structuredContent']['job_id'], out
+
+
+def test_artifact_previews_are_bounded_and_report_truncation(tools, fake_cli, tmp_path):
+    job_id, out = _artifact_job(tools, tmp_path)
+    (out / 'counts.tsv').write_text('gene\tcount\nA\t10\n')
+    result = call(tools, 'read_artifact', job_id=job_id, path='counts.tsv', max_bytes=8)
+    assert not result.get('isError'), result
+    data = result['structuredContent']
+    assert data['text'] == 'gene\tcou'
+    assert data['truncated'] is True and data['returned_bytes'] == 8
+    assert data['size_bytes'] == 16
+
+
+@pytest.mark.parametrize('kind', ['parent', 'absolute', 'symlink', 'binary'])
+def test_artifact_previews_refuse_escape_routes_and_binary_files(
+        tools, fake_cli, tmp_path, kind):
+    job_id, out = _artifact_job(tools, tmp_path)
+    secret = tmp_path / 'private.txt'
+    secret.write_text('PRIVATE_BYTES_MUST_NOT_ESCAPE')
+    path = '../private.txt' if kind == 'parent' else str(secret) if kind == 'absolute' else 'link'
+    if kind == 'symlink':
+        (out / path).symlink_to(secret)
+    if kind == 'binary':
+        (out / path).write_bytes(b'\x00\xff\x01')
+    result = call(tools, 'read_artifact', job_id=job_id, path=path)
+    assert result.get('isError'), result
+    assert 'PRIVATE_BYTES_MUST_NOT_ESCAPE' not in text(result)
+
+
+def test_artifact_preview_cannot_escape_when_an_ancestor_is_swapped(
+        tools, fake_cli, tmp_path, monkeypatch):
+    import os
+    job_id, out = _artifact_job(tools, tmp_path)
+    folder = out / 'reports'
+    folder.mkdir()
+    (folder / 'counts.tsv').write_text('safe counts')
+    outside = tmp_path / 'private'
+    outside.mkdir()
+    (outside / 'counts.tsv').write_text('PRIVATE_BYTES_MUST_NOT_ESCAPE')
+    original_open = os.open
+    swapped = False
+
+    def racing_open(path, flags, *args, **kwargs):
+        nonlocal swapped
+        if not swapped and str(path).endswith('counts.tsv'):
+            swapped = True
+            folder.rename(out / 'original-reports')
+            folder.symlink_to(outside, target_is_directory=True)
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(os, 'open', racing_open)
+    result = call(tools, 'read_artifact', job_id=job_id, path='reports/counts.tsv')
+    assert swapped
+    assert 'PRIVATE_BYTES_MUST_NOT_ESCAPE' not in text(result)
+    assert result.get('isError') or result['structuredContent']['text'] == 'safe counts'

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Github, Menu, Search, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { openPalette } from "@/components/layout/command-palette";
+import { openPalette, OPEN_PALETTE_EVENT } from "@/components/layout/command-palette";
 import { ReadingProgress } from "@/components/layout/reading-progress";
 import { lockScroll } from "@/lib/scroll-lock";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,11 @@ export function Nav({ repo }: { repo: string | null }) {
 
   // Close the mobile menu on navigation and on Escape.
   useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    const onSearch = () => setOpen(false);
+    window.addEventListener(OPEN_PALETTE_EVENT, onSearch);
+    return () => window.removeEventListener(OPEN_PALETTE_EVENT, onSearch);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const unlock = lockScroll();

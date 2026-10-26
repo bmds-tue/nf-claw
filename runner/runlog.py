@@ -557,7 +557,7 @@ def _physical_lines(data: bytes) -> list[str]:
     return [line.removesuffix("\r") for line in lines]  # retain legacy CRLF logs
 
 
-def read_state(log: Path) -> RunState:
+def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
     """The state of the last launch in `log`, deterministically: its last line if it has one,
     otherwise whether the nfclaw that wrote it is still running. One pass finds where the last
     launch starts; only that launch's header and the tail of the file are then parsed, so a
@@ -627,8 +627,8 @@ def read_state(log: Path) -> RunState:
         if st.state == "success":
             # A replay's header names no Nextflow log: it runs from its target, as a run does.
             nextflow_log = (Path(st.nextflow_log) if st.nextflow_log else
-                            log.parent.parent.parent / ".nextflow.log" if st.kind == "replay"
-                            else None)
+                            (replay_engine_log or log.parent.parent.parent / ".nextflow.log")
+                            if st.kind == "replay" else None)
             st.caveats = header_caveats + completion_caveats(st.console, nextflow_log)
     elif ((st.host_id and st.host_id != host_identity())
           or (not st.host_id and st.host and st.host != socket.gethostname())):

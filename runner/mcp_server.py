@@ -76,6 +76,13 @@ def at_least(version: str, minimum: str) -> bool:
 
 
 @dataclass
+class DeferredToolResult:
+    """A tool's optional completion wait, after its immediate control action has finished."""
+
+    complete: Callable[[], dict]
+
+
+@dataclass
 class Context:
     """What a handler may use while serving one request."""
 
@@ -87,6 +94,11 @@ class Context:
     _notify: Callable[[str, dict], None] | None = None
     _progress_token: Any = None
     _last_progress: float = -1.0
+    _defer_waits: bool = False
+
+    def complete_after(self, wait: Callable[[], dict]) -> dict | DeferredToolResult:
+        """Keep a transport worker free after an immediate action such as sending a stop."""
+        return DeferredToolResult(wait) if self._defer_waits else wait()
 
     def progress(self, progress: float, total: float | None = None,
                  message: str | None = None) -> None:
@@ -237,7 +249,7 @@ class Server:
         params = message.get("params") if isinstance(message.get("params"), dict) else {}
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
         ctx = Context(protocol_version=self.protocol_version, _notify=self._notify,
-                      _progress_token=meta.get("progressToken"))
+                      _progress_token=meta.get("progressToken"), _defer_waits=True)
         if self._closing.is_set():
             ctx.cancelled.set()
         with self._inflight_lock:
@@ -249,6 +261,14 @@ class Server:
         except Exception as exc:                      # never let one request take the server down
             response = _error(message.get("id") if isinstance(message, dict) else None,
                               INTERNAL_ERROR, f"internal error: {exc}")
+        if response is not None:
+            if isinstance(response, DeferredToolResult):
+                self._wait_pool.submit(self._serve_deferred, response)
+            else:
+                self._send(response)
+
+    def _serve_deferred(self, pending: DeferredToolResult) -> None:
+        response = pending.complete()
         if response is not None:
             self._send(response)
 
@@ -280,12 +300,16 @@ class Server:
             ctx = self._inflight.get(_key(rid))
         if ctx is None:
             ctx = Context(_notify=self._notify)
-        modern = False
+        modern = deferred = False
         try:
             if not isinstance(params, dict):
                 raise RpcError(INVALID_PARAMS, "params must be an object")
             modern = self._select_version(method, params, ctx)
             result = self._dispatch(method, params, ctx)
+            if isinstance(result, DeferredToolResult):
+                deferred = True
+                return DeferredToolResult(
+                    lambda: self._finish_deferred(result, rid, method, ctx, modern))
         except RpcError as exc:
             code = exc.code
             if modern and code == RESOURCE_NOT_FOUND:
@@ -298,10 +322,28 @@ class Server:
                 result = self._modern_result(method, result)
             reply = {"jsonrpc": "2.0", "id": rid, "result": result}
         finally:
-            with self._inflight_lock:
-                self._inflight.pop(_key(rid), None)
+            if not deferred:
+                with self._inflight_lock:
+                    self._inflight.pop(_key(rid), None)
         # A request the client cancelled gets no response (MCP cancellation).
         return None if ctx.withdrawn and method != "initialize" else reply
+
+    def _finish_deferred(self, pending: DeferredToolResult, rid: Any, method: str,
+                         ctx: Context, modern: bool) -> dict | None:
+        try:
+            result = pending.complete()
+            if modern:
+                result = self._modern_result(method, result)
+            reply = {"jsonrpc": "2.0", "id": rid, "result": result}
+        except RpcError as exc:
+            code = INVALID_PARAMS if modern and exc.code == RESOURCE_NOT_FOUND else exc.code
+            reply = _error(rid, code, exc.message, exc.data)
+        except Exception as exc:
+            reply = _error(rid, INTERNAL_ERROR, f"internal error: {type(exc).__name__}: {exc}")
+        finally:
+            with self._inflight_lock:
+                self._inflight.pop(_key(rid), None)
+        return None if ctx.withdrawn else reply
 
     def _select_version(self, method: str, params: dict, ctx: Context) -> bool:
         """Settle which protocol version serves this request; True if it is a modern one.
@@ -363,6 +405,20 @@ class Server:
             except Exception as exc:                  # a tool that broke is a failed call, not a
                 result = tool_result(                 # protocol error: the model can read it
                     f"{name} failed unexpectedly: {type(exc).__name__}: {exc}", error=True)
+            if isinstance(result, DeferredToolResult):
+                pending = result
+
+                def complete():
+                    try:
+                        resolved = pending.complete()
+                    except RpcError:
+                        raise
+                    except Exception as exc:
+                        resolved = tool_result(
+                            f"{name} failed unexpectedly: {type(exc).__name__}: {exc}", error=True)
+                    return _shape_result(resolved, ctx.protocol_version)
+
+                return DeferredToolResult(complete)
             return _shape_result(result, ctx.protocol_version)
         if method == "resources/list":
             return {"resources": h.list_resources(ctx)}
@@ -452,5 +508,5 @@ def serve(repo_root: Path) -> int:
     tools = mcp_tools.NfclawTools(repo_root)
     return serve_stdio(tools, name="nfclaw", title="nf-claw", version=mcp_tools.server_version(),
                        instructions=mcp_tools.INSTRUCTIONS,
-                       waiting_tools=("run_pipeline", "run_chain"),
+                       waiting_tools=("run_pipeline", "run_chain", "replay_run"),
                        control_tools=("cancel_job",))

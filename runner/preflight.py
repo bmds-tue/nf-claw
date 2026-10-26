@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -91,13 +92,15 @@ def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | N
     """Why `--outdir` cannot take this run, or None.
 
     Every probe here can meet a directory the caller may not search (`--outdir /root/x` as another
-    user), where Path.exists()/is_dir() raise PermissionError instead of answering; that is reported
+    user). Stat errors other than missing/not-a-directory must be reported, including on Python
+    versions whose Path.exists()/is_dir() suppress all OSError exceptions. That is reported
     as an issue like the others, never a traceback."""
     try:
-        is_dir = output_dir.is_dir()
+        metadata = _stat_if_exists(output_dir)
+        is_dir = metadata is not None and stat.S_ISDIR(metadata.st_mode)
         # An --outdir that exists but is a file can never work — nfclaw creates it and writes the
         # provenance bundle under it.
-        if not is_dir and output_dir.exists():
+        if not is_dir and metadata is not None:
             return f"--outdir exists but is not a directory: {output_dir}"
         if (unwritable := _unwritable(output_dir, "--outdir")) is not None:
             return unwritable
@@ -113,6 +116,13 @@ def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | N
     return None
 
 
+def _stat_if_exists(path: Path):
+    try:
+        return path.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+
+
 def _unwritable(path: Path, label: str) -> str | None:
     """Why the run could not write the directory `path` (or create it), or None.
 
@@ -122,9 +132,9 @@ def _unwritable(path: Path, label: str) -> str | None:
     ancestor when it does not exist yet — the one `mkdir` would have to write into. May raise
     OSError for a path whose ancestors cannot be searched; callers report that."""
     target = path
-    while not target.exists() and target != target.parent:
+    while (metadata := _stat_if_exists(target)) is None and target != target.parent:
         target = target.parent
-    if target != path and not target.is_dir():
+    if target != path and (metadata is None or not stat.S_ISDIR(metadata.st_mode)):
         return f"{label} cannot be created: {target} is not a directory"
     if not os.access(target, os.W_OK | os.X_OK):
         return (f"{label} is not writable: {path}" if target == path else
@@ -137,7 +147,8 @@ def _work_dir_issue(work_dir: Path) -> str | None:
     to whoever ran first, so on a clone shared by several users the others cannot write it."""
     fix = "set a writable one with --nxf-env NXF_WORK=/a/writable/dir"
     try:
-        if work_dir.exists() and not work_dir.is_dir():
+        metadata = _stat_if_exists(work_dir)
+        if metadata is not None and not stat.S_ISDIR(metadata.st_mode):
             return f"the Nextflow work directory is not a directory: {work_dir} — {fix}"
         issue = _unwritable(work_dir, "the Nextflow work directory")
     except OSError as exc:

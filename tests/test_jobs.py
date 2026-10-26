@@ -247,3 +247,78 @@ def test_malformed_job_is_isolated_from_listing_and_new_submissions(tmp_path, da
     later = _launch(tmp_path, _py('pass'))
     assert _finished(later.id)
     assert set(j.id for j in jobs.list_jobs()) == {first.id, later.id}
+
+
+def test_frozen_replay_status_retains_ignored_task_caveats_from_its_engine_log(tmp_path):
+    import json
+    d = jobs.create_dir('replay')
+    out = tmp_path / 'replay'
+    log = out / 'provenance/logs/run.log'
+    log.parent.mkdir(parents=True)
+    log.write_text('==> nfclaw replay started 2026-10-26T00:00:00Z\n'
+                   '    pid: 222\n'
+                   '==> nfclaw replay finished 2026-10-26T00:00:01Z: success\n')
+    (out / '.nextflow.log').write_text(
+        'Workflow completed > WorkflowStats[ignoredCount=2; cachedCount=0]\n')
+    jobs._freeze_run_status(d, {'log_path': str(log), 'log_size_before': None,
+                               'child_pid': 222})
+    frozen = json.loads((d / jobs.STATUS_FILE).read_text())
+    assert frozen['caveats'] is True
+    assert 'Nextflow ignored 2 failed task(s)' in frozen['status_report']
+
+
+def test_refused_concurrent_job_never_borrows_the_accepted_jobs_log(tmp_path):
+    d = jobs.create_dir('refused')
+    log = tmp_path / 'out/provenance/logs/run.log'
+    log.parent.mkdir(parents=True)
+    log.write_text('==> nfclaw run started 2026-10-26T00:00:00Z\n'
+                   '    pid: 111\n'
+                   '==> nfclaw run finished 2026-10-26T00:00:01Z: success\n')
+    jobs._freeze_run_status(d, {'log_path': str(log), 'log_size_before': None,
+                               'child_pid': 222})
+    assert not (d / jobs.STATUS_FILE).exists()
+
+
+def test_concurrent_job_snapshot_selects_its_own_pid_segment(tmp_path):
+    import json
+    d = jobs.create_dir('accepted')
+    log = tmp_path / 'out/provenance/logs/run.log'
+    log.parent.mkdir(parents=True)
+    log.write_text('==> nfclaw run started 2026-10-26T00:00:00Z\n'
+                   '    pid: 111\n'
+                   '==> nfclaw run finished 2026-10-26T00:00:01Z: refused before launch\n'
+                   '==> nfclaw run started 2026-10-26T00:00:02Z\n'
+                   '    pid: 222\n'
+                   '==> nfclaw run finished 2026-10-26T00:00:03Z: success\n')
+    jobs._freeze_run_status(d, {'log_path': str(log), 'log_size_before': None,
+                               'child_pid': 222})
+    assert json.loads((d / jobs.STATUS_FILE).read_text())['run_state'] == 'success'
+
+
+@pytest.mark.parametrize('recorded', [False, True])
+@pytest.mark.parametrize('absolute', [False, True])
+def test_frozen_replay_status_uses_effective_custom_engine_log(
+        tmp_path, monkeypatch, recorded, absolute):
+    import json
+    from runner import replay_guard
+    d = jobs.create_dir('replay')
+    out = tmp_path / 'replay'
+    original = tmp_path / 'original'
+    bundle = original / 'provenance'
+    bundle.mkdir(parents=True)
+    raw = str(tmp_path / 'engine.log') if absolute else 'custom-engine.log'
+    env = {'NXF_LOG_FILE': raw} if recorded else {}
+    (bundle / 'run_manifest.json').write_text(json.dumps({'nextflow_env': env}))
+    monkeypatch.setenv('NXF_LOG_FILE', 'wrong-ambient.log' if recorded else raw)
+    log = out / 'provenance/logs/run.log'
+    log.parent.mkdir(parents=True)
+    engine = Path(raw) if absolute else out / raw
+    engine.write_text('Workflow completed > WorkflowStats[ignoredCount=2; cachedCount=0]\n')
+    (out / '.nextflow.log').write_text('Workflow completed > WorkflowStats[ignoredCount=0]\n')
+    replay_guard.start_replay_log(log, str(original), '222')
+    with log.open('a') as stream:
+        stream.write('==> nfclaw replay finished 2026-10-26T00:00:03Z: success\n')
+    jobs._freeze_run_status(d, {'log_path': str(log), 'child_pid': 222})
+    frozen = json.loads((d / jobs.STATUS_FILE).read_text())
+    assert frozen['caveats'] is True
+    assert 'Nextflow ignored 2 failed task(s)' in frozen['status_report']

@@ -73,14 +73,38 @@ def _recorded_stub_sources(original: str) -> tuple[list[str], list[str]]:
     return names("stub_profiles", r"\w+"), names("stub_configs", r"[\w.+-]+")
 
 
+def _effective_replay_env(manifest: dict) -> dict:
+    redacted = manifest.get("redacted_nextflow_env", [])
+    return {**os.environ, **{key: value for key, value in
+                            manifest.get("nextflow_env", {}).items() if key not in redacted}}
+
+
+def _replay_engine_log(manifest: dict, target: Path, env: dict) -> Path:
+    args = shlex.split(manifest.get("command", ""))
+    raw = env.get("NXF_LOG_FILE") or ".nextflow.log"
+    for i, arg in enumerate(args):
+        if arg == "-log" and i + 1 < len(args):
+            raw = args[i + 1]
+            break
+        if arg.startswith("-log="):
+            raw = arg.split("=", 1)[1]
+            break
+    path = Path(raw).expanduser()
+    return path if path.is_absolute() else target / path
+
+
 def start_replay_log(log: Path, original: str, pid: str) -> None:
     """Write trusted replay controls independently of arbitrary path text."""
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     stub_profiles, stub_configs = _recorded_stub_sources(original)  # a replay runs the same stubs
+    manifest = json.loads((Path(original) / "provenance/run_manifest.json").read_text())
+    engine_log = _replay_engine_log(manifest, log.parent.parent.parent,
+                                    _effective_replay_env(manifest))
+    engine_path = str(engine_log).replace("\r", "\\r").replace("\n", "\\n")
     original = original.replace("\r", "\\r").replace("\n", "\\n")
     host = socket.gethostname().replace("\r", "\\r").replace("\n", "\\n")
     lines = [f"==> nfclaw replay started {stamp}", "    console format: prefixed",
-             f"    replay of: {original}", f"    host: {host}"]
+             f"    replay of: {original}", f"    nextflow log: {engine_path}", f"    host: {host}"]
     if identity := host_identity():
         lines.append(f"    host id: {identity}")
     if not pid.isdigit():
@@ -439,10 +463,7 @@ def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
 def check_replay_destination(bundle: Path, target: Path) -> None:
     """Check effective engine writes before creating even the replay's parent or lock."""
     manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
-    recorded = manifest.get("nextflow_env", {})
-    redacted = manifest.get("redacted_nextflow_env", [])
-    env = {**os.environ, **{key: value for key, value in recorded.items()
-                            if key not in redacted}}
+    env = _effective_replay_env(manifest)
     target = target.expanduser().resolve()
     sources = [bundle]
     for kind in ("inputs", "configs"):
@@ -470,7 +491,7 @@ def check_replay_destination(bundle: Path, target: Path) -> None:
     def option(names, default):
         return next((args[i + 1] for i, arg in enumerate(args[:-1]) if arg in names), default)
 
-    log = local(option(("-log",), env.get("NXF_LOG_FILE") or ".nextflow.log"))
+    log = _replay_engine_log(manifest, target, env)
     writes = [("replay output directory", target, True),
               ("replay writer lock", target.parent / f".{target.name}.nfclaw.lock", True),
               ("Nextflow state directory", target / ".nextflow", True),

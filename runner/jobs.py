@@ -201,7 +201,7 @@ def load(job_id: str) -> Job:
 
     required = {"id", "kind", "argv", "command", "cwd", "outdir", "created_at"}
     if (not required <= spec.keys() or spec.get("id") != job_id
-            or spec.get("kind") not in ("run", "chain") or "dir" in spec
+            or spec.get("kind") not in ("run", "chain", "replay") or "dir" in spec
             or not strings(spec.get("argv")) or not strings(spec.get("command"))
             or not spec["command"]
             or any(not isinstance(spec.get(key), str) or not Path(spec[key]).is_absolute()
@@ -333,19 +333,25 @@ def _freeze_run_status(job_dir: Path, spec: dict) -> None:
     """
     from runner import cli, runlog
 
-    if spec.get("check") or not spec.get("log_path"):
+    if spec.get("check") or not spec.get("log_path") or not spec.get("child_pid"):
         return
     log = Path(spec["log_path"])
     before = spec.get("log_size_before") or 0
-    head, tail, started = bytearray(), bytearray(), False
+    head, tail, started, matched = bytearray(), bytearray(), False, False
     with log.open("rb") as stream:
         size = os.fstat(stream.fileno()).st_size
         stream.seek(before if before < size else 0)
         for line in stream:
-            if not started:
-                if not re.match(rb"==> nfclaw (?:run|replay|chain) started", line):
-                    continue
+            if re.match(rb"==> nfclaw (?:run|replay|chain) started", line):
+                if matched:
+                    break
+                head.clear()
+                tail.clear()
                 started = True
+            if not started:
+                continue
+            if line.startswith(b"    pid: "):
+                matched = line.strip() == f"pid: {spec['child_pid']}".encode()
             if len(head) < 64 * 1024:
                 head.extend(line)
             else:
@@ -353,15 +359,18 @@ def _freeze_run_status(job_dir: Path, spec: dict) -> None:
                 if len(tail) > 512 * 1024:
                     del tail[:len(tail) - 512 * 1024]
             if re.match(rb"==> nfclaw (?:run|replay|chain) finished", line):
-                break  # no later invocation can become this job's result
-    if not started:
+                if matched:
+                    break  # no later invocation can become this job's result
+                started = False
+    if not matched:
         return
     if tail:
         # The retained tail may start in the middle of a physical line.
         tail = tail[tail.find(b"\n") + 1:]
     snapshot = job_dir / "run.log"
     snapshot.write_bytes(head + tail)
-    state = runlog.read_state(snapshot)
+    state = runlog.read_state(
+        snapshot, replay_engine_log=log.parent.parent.parent / ".nextflow.log")
     state.log = log
     _write_json(job_dir / STATUS_FILE, {
         "status_report": cli._status_report(state).rstrip(),
@@ -415,7 +424,7 @@ def supervise(job_dir: Path) -> int:
     _write_json(record_path, record)
     code = proc.wait()
     try:
-        _freeze_run_status(job_dir, spec)
+        _freeze_run_status(job_dir, {**spec, "child_pid": proc.pid})
     except (OSError, ValueError) as exc:
         record["status_error"] = f"could not freeze this job's run status: {exc}"
     record.update(exit_code=code, finished_at=_now())
