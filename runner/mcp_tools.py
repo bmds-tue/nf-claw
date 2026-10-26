@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, jobs, settings
+from runner import chain, cli, jobs, parameters, settings
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
@@ -182,7 +182,7 @@ TOOLS = [
            "sheet_set": _o("Samplesheet columns no file determines, when generating it from data "
                            "files: {column: value}; a value may use {sample} or {lane}."),
            "params": _o("Pipeline parameters by their schema name, e.g. {\"genome\": \"GRCh38\", "
-                        "\"skip_trimming\": true}. Scalar values only (string, number, boolean). "
+                        "\"skip_trimming\": true}. Scalars, arrays and objects are accepted. "
                         "Look names and allowed values up with show_pipeline."),
            "params_file": _s("A JSON or YAML parameters file; values in params override it."),
            "profile": _s("Nextflow profile(s), comma-separated. Default: docker."),
@@ -265,7 +265,9 @@ TOOLS = [
           "also requires identical bytes and environment.",
           {"replay": _s("The replay's output directory."),
            "against": _s("The original run's output directory."),
-           "strict": _b("Also require identical bytes, links and execution environment.")},
+           "strict": _b("Also require identical bytes, links and execution environment."),
+           "require_environment": _b("Require complete matching environment evidence; missing "
+                                      "observations and refetched inputs fail.")},
           ["replay", "against"], read_only=True, idempotent=True),
 ]
 _TOOLS_BY_NAME = {t["name"]: t for t in TOOLS}
@@ -564,7 +566,7 @@ class NfclawTools:
 
     # --- execution ------------------------------------------------------------------------------
 
-    def run_argv(self, args: dict) -> list[str]:
+    def run_argv(self, args: dict, *, allow_structured: bool = False) -> list[str]:
         """The `nfclaw run` command line for run_pipeline's arguments. Every value is one
         `--option=value` token, so a value starting with '-' can never be read as an option."""
         argv = ["run", self._pipeline(args["pipeline"]), f"--outdir={self._path(args['outdir'])}"]
@@ -596,6 +598,8 @@ class NfclawTools:
                                 f"it as the {key.replace('-', '_')!r} argument of run_pipeline")
             if value is None:
                 raise ToolError(f"params.{key} is null; omit a parameter to keep its default")
+            if allow_structured and isinstance(value, (list, dict)):
+                continue  # supplied through the private params file before this argv is launched
             argv.append(f"--{key}={_flag_value(key, value)}")
         return argv
 
@@ -618,12 +622,22 @@ class NfclawTools:
                                 f"get_job, stop it with cancel_job, or use another outdir")
 
     def _tool_run_pipeline(self, args: dict, ctx: Context) -> dict:
-        argv = self.run_argv(args)
+        argv = self.run_argv(args, allow_structured=True)
         outdir = self._path(args["outdir"])
         check = bool(args.get("check"))
         if not check:
             self._refuse_busy_outdir(outdir)
         job_dir = jobs.create_dir(args["pipeline"])
+        supplied = args.get("params") or {}
+        if any(isinstance(value, (list, dict)) for value in supplied.values()):
+            merged = (parameters.load_params_file(Path(self._path(args["params_file"])))
+                      if args.get("params_file") else {})
+            merged.update({key.replace("-", "_"): value for key, value in supplied.items()})
+            path = job_dir / "params.json"
+            parameters.write_params_file(merged, path)
+            path.chmod(0o600)
+            argv = [arg for arg in argv if not arg.startswith("--params-file=")]
+            argv.append(f"--params-file={path}")
         job = jobs.launch(job_dir, kind="run", argv=argv, cwd=self.cwd, outdir=outdir, check=check,
                           pipeline=args["pipeline"],
                           log_path=str(cli._run_log_path(outdir)))
@@ -771,8 +785,11 @@ class NfclawTools:
         argv = ["verify", self._path(args["replay"]), f"--against={self._path(args['against'])}"]
         if args.get("strict"):
             argv.append("--strict")
+        if args.get("require_environment"):
+            argv.append("--require-environment")
         res = self._cli(argv)
         return tool_result(res.text, {"passed": res.code == 0, "strict": bool(args.get("strict")),
+                                      "require_environment": bool(args.get("require_environment")),
                                       "exit_code": res.code, "report": res.text})
 
 

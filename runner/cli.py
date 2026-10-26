@@ -244,6 +244,9 @@ def build_parser() -> argparse.ArgumentParser:
                                "differ, or when the runs' recorded execution environments "
                                "(container images, plugins, staged remote inputs) do not match; "
                                "inspect timestamped reports separately from analytical results")
+    p_verify.add_argument("--require-environment", action="store_true",
+                          help="require complete matching recorded environment evidence; refuse "
+                               "missing observations, containerless tasks and refetched inputs")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -425,7 +428,8 @@ def _main(argv: list[str] | None = None) -> int:
     if args.cmd == "verify":
         try:
             cmp = verify.compare(Path(args.against).expanduser().resolve(),
-                                 Path(args.replay).expanduser().resolve())
+                                 Path(args.replay).expanduser().resolve(),
+                                 require_environment=args.require_environment)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
@@ -433,8 +437,11 @@ def _main(argv: list[str] | None = None) -> int:
         # The default compares file presence. Strict verification additionally checks every byte and
         # recorded link identity; neither comparison by itself establishes analytical accuracy.
         # --strict also requires the same execution environment where both runs recorded one.
-        return 0 if ((cmp.byte_identical and cmp.same_environment) if args.strict
-                     else cmp.structurally_equal) else 1
+        outputs_match = ((cmp.byte_identical and cmp.same_environment) if args.strict
+                         else cmp.structurally_equal)
+        evidence_matches = not args.require_environment or (
+            cmp.environment is not None and cmp.environment["status"] == "identical")
+        return 0 if outputs_match and evidence_matches else 1
 
     if args.cmd == "status":
         log = _run_log_path(args.outdir)

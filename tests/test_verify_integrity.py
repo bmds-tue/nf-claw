@@ -174,3 +174,71 @@ def test_co2footprint_reports_named_by_launch_time_are_paired(tmp_path):
     comparison = verify.compare(original, replay)
     assert comparison.missing == [] and comparison.extra == [] and len(comparison.renamed) == 3
     assert comparison.structurally_equal and not comparison.byte_identical
+
+
+def _complete_environment(outdir):
+    record = {'version': 1, 'nextflow_build': '25.10.4 build 11173',
+              'nextflow_runtime': 'Groovy on Java 17', 'nextflow_plugins': [],
+              'container_engine': {'name': 'docker', 'version': '29.1.3'},
+              'host': {'system': 'Linux', 'machine': 'x86_64'},
+              'processes': {'P:A': {'containers': ['quay.io/a:1'], 'tasks': 1,
+                                    'without_container': 0}},
+              'images': {'quay.io/a:1': {'kind': 'registry', 'digest': 'sha256:' + 'a' * 64}},
+              'remote_inputs': {}, 'issues': []}
+    (outdir / 'provenance/environment.json').write_text(json.dumps(record))
+    return record
+
+
+@pytest.mark.parametrize('damage', ['missing', 'empty', 'build', 'runtime', 'engine_version',
+                                    'processes', 'containerless', 'image', 'plugins',
+                                    'remote_hash', 'refetched', 'issues', 'different_build',
+                                    'different_processes'])
+def test_complete_environment_mode_refuses_gaps_or_different_evidence(tmp_path, damage, capsys):
+    original = _run(tmp_path, 'original', {'counts.tsv': b'gene\t10\n'})
+    replay = _run(tmp_path, 'replay', {'counts.tsv': b'gene\t10\n'})
+    _complete_environment(original)
+    record = _complete_environment(replay)
+    path = replay / 'provenance/environment.json'
+    if damage == 'missing':
+        path.unlink()
+    else:
+        if damage == 'empty':
+            record = {}
+        elif damage == 'build':
+            record.pop('nextflow_build')
+        elif damage == 'runtime':
+            record.pop('nextflow_runtime')
+        elif damage == 'engine_version':
+            record['container_engine'].pop('version')
+        elif damage == 'processes':
+            record['processes'] = {}
+        elif damage == 'containerless':
+            record['processes']['P:A']['without_container'] = 1
+        elif damage == 'image':
+            record['images'] = {}
+        elif damage == 'plugins':
+            record['nextflow_plugins'] = 'unknown'
+        elif damage == 'remote_hash':
+            record['remote_inputs'] = {'https://data/reads': {}}
+        elif damage == 'refetched':
+            record['remote_inputs'] = {
+            'https://data/reads': {'sha256': 'b' * 64, 'read_by': 'read again after the run'}}
+        elif damage == 'issues':
+            record['issues'] = ['could not capture a dependency']
+        elif damage == 'different_build':
+            record['nextflow_build'] = '26.04.0'
+        elif damage == 'different_processes':
+            record['processes']['P:B'] = record['processes'].pop('P:A')
+        path.write_text(json.dumps(record))
+    assert cli.main(['verify', str(replay), '--against', str(original),
+                     '--require-environment']) == 1
+    assert 'environment' in capsys.readouterr().out
+
+
+def test_complete_environment_mode_accepts_complete_matching_evidence(tmp_path):
+    original = _run(tmp_path, 'original', {'counts.tsv': b'gene\t10\n'})
+    replay = _run(tmp_path, 'replay', {'counts.tsv': b'gene\t10\n'})
+    _complete_environment(original)
+    _complete_environment(replay)
+    assert cli.main(['verify', str(replay), '--against', str(original),
+                     '--strict', '--require-environment']) == 0

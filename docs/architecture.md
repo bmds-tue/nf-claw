@@ -219,3 +219,14 @@ Invoked via `make`, the librarian automates generation and release tracking for 
 | `check_drift.py` | `make check` | Enforces bidirectional synchronization across `sources.tsv`, `.gitmodules`, disk directories, skills, references, and handoff rules. |
 | `update_pipelines.py` | `make update` | Scans upstream remotes for newly published release tags and bumps submodules. |
 | `discover_pipelines.py` | Workflow | Discovers newly published DSL2 nf-core pipelines and scaffolds initial submodules. |
+
+### Complete environment verification
+
+`nfclaw verify REPLAY --against ORIGINAL --require-environment` requires complete matching recorded
+environment evidence even if output structure alone agrees. It refuses missing records, unknown
+engine builds/runtimes/platforms/container engine versions, absent process or image identities,
+containerless tasks, missing plugin/remote inventories, recording issues and refetched validation
+inputs. Engine build/runtime, host platform and process inventories must agree as well as the
+container/plugin/remote comparisons. Combine it with `--strict` to also require output byte identity.
+This checks declared recorded evidence; it does not discover undeclared task downloads or prove
+continuous input immutability. The legacy default and `--strict` retain their existing behavior.

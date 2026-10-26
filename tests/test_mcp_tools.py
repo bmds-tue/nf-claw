@@ -367,3 +367,38 @@ def test_finished_job_keeps_its_own_status_when_a_retry_reuses_the_outdir(
         assert old['status_report'].splitlines()[0] == 'status: success'
     finally:
         call(tools, 'cancel_job', job_id=second_id, wait_seconds=30)
+
+
+def test_mcp_can_require_complete_environment_evidence(tools, tmp_path):
+    original, replay = tmp_path / 'original', tmp_path / 'replay'
+    original.mkdir()
+    replay.mkdir()
+    result = call(tools, 'verify_replay', replay=str(replay), against=str(original),
+                  require_environment=True)
+    assert not result.get('isError'), result
+    assert result['structuredContent']['passed'] is False
+    assert 'environment' in result['structuredContent']['report']
+
+
+def test_structured_params_are_merged_privately_without_losing_precision(
+        tools, fake_cli, tmp_path):
+    import stat
+    from decimal import Decimal
+    source = tmp_path / 'base.json'
+    source.write_text('{"label":"base","values":["base"],"keep":7}')
+    result = call(tools, 'run_pipeline', pipeline='demo', outdir=str(tmp_path / 'out'),
+                  params_file=str(source), check=True, wait_seconds=30,
+                  params={'values': ['A', 'B'], 'label': 'override',
+                          'settings': {'threshold': Decimal('0.1000000000000000000001'),
+                                       'enabled': True}})
+    assert not result.get('isError'), result
+    job = jobs.load(result['structuredContent']['job_id'])
+    file_arg = next(arg for arg in job.argv if arg.startswith('--params-file='))
+    generated = Path(file_arg.split('=', 1)[1])
+    assert generated.is_relative_to(job.dir)
+    observed = json.loads(generated.read_text(), parse_float=Decimal)
+    assert observed == {'label': 'override', 'values': ['A', 'B'], 'keep': 7,
+                        'settings': {'threshold': Decimal('0.1000000000000000000001'),
+                                     'enabled': True}}
+    assert stat.S_IMODE(generated.stat().st_mode) == 0o600
+    assert json.loads(source.read_text()) == {'label': 'base', 'values': ['base'], 'keep': 7}

@@ -228,3 +228,12 @@ for a later retry does not replace an older job ID's outcome or caveats. Histori
 that snapshot retain their supervisor outcome, but do not borrow a later run's status report.
 Long polls use separate worker capacity so ordinary status, ping and cancellation requests remain
 available. Malformed job records are rejected individually and omitted from global listing.
+
+`run_pipeline.params` accepts arrays and objects as well as scalar values. Structured values are
+merged with `params_file` into an exact-number JSON file inside the private job directory (0600);
+explicit `params` values win. The user's source params file is preserved. Pipeline schemas still
+determine which arrays/objects are valid.
+
+`verify_replay(require_environment=true)` requests the CLI's `--require-environment` gate. It
+requires complete matching environment evidence even when output structure agrees; combine it
+with `strict=true` to require identical output bytes as well.
