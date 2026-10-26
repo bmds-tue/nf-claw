@@ -640,6 +640,29 @@ def test_nxf_overlay_flows_to_execution_and_provenance(tmp_path, monkeypatch):
     assert manifest["nextflow_env"] == overlay  # and recorded for reproducibility
 
 
+def test_only_a_check_whose_advisories_are_read_judges_the_declared_engine(tmp_path, monkeypatch):
+    # Nextflow enforces `manifest.nextflowVersion` when it launches, so a launch is not pre-judged.
+    # A check never launches it: `--check` (and a chain's) judges the pin instead, while a chain's
+    # silent validation before its real run does not probe at all.
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
+    seen = []
+    monkeypatch.setattr(orchestration.engine_version, "check",
+                        lambda upstream, **k: seen.append(k.get("nxf_ver")) or ["engine too old"])
+    common = dict(repo_root=root, input_path=None, profile="docker", params_file=None,
+                  cli_overrides={}, resume=False, demo=True, write_provenance=False,
+                  timeout_seconds=10, nxf_ver="25.10.2")
+    shown = []
+    orchestration.run_pipeline("mini", outdir=tmp_path / "check", check_only=True,
+                               on_warning=shown.append, **common)
+    assert seen == ["25.10.2"] and "engine too old" in shown
+    orchestration.run_pipeline("mini", outdir=tmp_path / "silent", check_only=True, **common)
+    orchestration.run_pipeline("mini", outdir=tmp_path / "run", check_only=False,
+                               on_warning=shown.append, **common)
+    assert seen == ["25.10.2"]
+
+
 def _make_pipeline_with_bool(tmp_path, name="boolp"):
     up = tmp_path / "pipelines" / name / "upstream"
     up.mkdir(parents=True)

@@ -64,7 +64,7 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 
 #### What is left to Nextflow and the pinned release
 Every pinned release checks itself at launch, before any task runs. Nextflow enforces the manifest's `nextflowVersion`, and every pinned release uses the strict `!>=` form. The release's validation code checks every parameter and samplesheet against its schemas: nf-schema, nf-validation in older releases, or the `NfcoreSchema` library of the oldest template. nfclaw does not repeat a check whose result Nextflow or the release produces just as early:
-- **Engine version:** not judged before launch. `skill.md` states the declared engine, and when Nextflow refuses an older one, nfclaw's error names the `--nxf-ver` to pass.
+- **Engine version:** a launch does not probe for it. When Nextflow refuses an older engine, nfclaw's error names the `--nxf-ver` to pass, and `skill.md` states the declared engine. `--check` warns about it, because `nextflow config` does not enforce it.
 - **Java:** nfclaw looks for it where the Nextflow launcher does (`NXF_JAVA_HOME`, `JAVA_HOME`, then `PATH`). The launcher checks the version.
 - **Profiles, config syntax, conditional and nested schema constraints, remote files:** Nextflow and the plugin judge them at launch.
 - **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo validation compares its runs with that snapshot instead of re-deriving the tools' output.

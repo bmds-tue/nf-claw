@@ -45,7 +45,7 @@ To ensure reproducible execution across releases of varying ages, nf-claw provid
      ```bash
      nfclaw run chipseq --input samplesheet.csv --outdir results -profile docker --nxf-ver 25.10.4
      ```
-   - An engine older than the pipeline's declared `nextflowVersion` is refused by Nextflow itself at launch (every pinned release uses the strict `!>=` form); nfclaw does not repeat that check, and its error names the `--nxf-ver` the release declares.
+   - An engine older than the pipeline's declared `nextflowVersion` is refused by Nextflow itself at launch (every pinned release uses the strict `!>=` form). A launch does not repeat that check; nfclaw's error names the `--nxf-ver` the release declares. `--check`, which never starts Nextflow, prints an informational advisory instead.
 2. **`--nxf-env KEY=VALUE`**: Passes `NXF_*` variables directly to Nextflow:
    - IPv6-only environments: `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`
    - Air-gapped / offline runs: `--nxf-env NXF_OFFLINE=true`

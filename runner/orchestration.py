@@ -546,8 +546,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
     warnings = list(st.notes)
     warnings += _resume_advisory(outdir, st) if resume else []
-    # The release's declared engine (`manifest.nextflowVersion`) is not judged here: Nextflow
-    # enforces it at launch, and a refusal is explained with the engine to pin (runner.execution).
+    # The release's declared engine (`manifest.nextflowVersion`): Nextflow enforces it at launch,
+    # and a refusal names the engine to pin (runner.execution), so a launch does not probe for it.
+    # A check never launches Nextflow, so one whose advisories are read says it here instead; a
+    # chain's validation before its real run reads none (each stage meets the gate at launch).
+    if check_only and on_warning is not None:
+        warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
+        budget.check()
     # Advisory, never blocking: explains a warning the pinned release will emit for a reason that is
     # invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
     warnings += plugin_compat.check(st.path)
