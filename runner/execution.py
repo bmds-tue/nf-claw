@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -295,15 +296,26 @@ def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str]) -> Nfcla
                  if any(_NETWORK_UNREACHABLE in line for line in causes)
                  and not any(_PREFER_IPV6 in env.get(name, "") for name in _JVM_OPTION_VARS)
                  else "")
+    # Nextflow refused an engine older than the release's `manifest.nextflowVersion`; nfclaw leaves
+    # that check to Nextflow and only names the engine to pin.
+    required = next((m.group(1) for line in on_stdout + on_stderr
+                     if (m := _REQUIRED_ENGINE.search(line))), None)
+    engine_hint = (f"The release requires Nextflow {required} or later (its manifest's "
+                   f"nextflowVersion); add --nxf-ver {required} (a chain stage's \"nxf_ver\"). "
+                   if required else "")
     return NfclawError(
         ErrorCode.EXECUTION_FAILED, message,
-        fix=(f"{time_limit_hint}{ipv6_hint}Fix the cause Nextflow reports, then re-run the same "
-             f"command with --resume.{task_hint} The whole launch is in `run_log`. Common causes "
-             f"and fixes: {runlog.known_issues_path()}."),
+        fix=(f"{time_limit_hint}{ipv6_hint}{engine_hint}Fix the cause Nextflow reports, then "
+             f"re-run the same command with --resume.{task_hint} The whole launch is in "
+             f"`run_log`. Common causes and fixes: {runlog.known_issues_path()}."),
         details=details)
 
 
 _TIME_LIMIT_ABORT = "process hasn't exited"
+# Nextflow's refusal of an engine older than `manifest.nextflowVersion`: "Nextflow version 25.10.2
+# does not match workflow required version: >=25.10.4".
+_REQUIRED_ENGINE = re.compile(r"does not match workflow required version: !?\s*>=\s*"
+                              r"(\d+(?:\.\d+)+)")
 _NETWORK_UNREACHABLE = "Network is unreachable"
 _PREFER_IPV6 = "-Djava.net.preferIPv6Addresses=true"
 # Where the Nextflow launcher and the JVM read JVM options from.

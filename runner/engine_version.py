@@ -7,11 +7,12 @@ from pathlib import Path
 from runner.probes import capture
 from runner.settings import seconds
 
-# nf-core pins the engine in the manifest, e.g. `nextflowVersion = '!>=25.04.3'`.
-# We surface a NON-blocking advisory when the installed engine is clearly too old;
-# Nextflow itself is the authority and enforces this at launch. To avoid ever
-# contradicting it with a false positive, we judge only the unambiguous `>=`/`>`
-# constraint and stay silent on anything we cannot parse with confidence.
+# nf-core pins the engine in the manifest, e.g. `nextflowVersion = '!>=25.04.3'`. Nextflow enforces
+# it at launch — every pinned release uses the strict `!` form, so a too-old engine is refused with
+# "does not match workflow required version" before the pipeline runs — and nfclaw does not repeat
+# that check (runner.execution names the engine to pin from that refusal). The declaration is read
+# here to document it (skill.md) and to name the engine to pin when a chain stage's configuration
+# probe fails (runner.chain).
 
 _REQUIRED_RE = re.compile(r"""nextflowVersion\s*=\s*['"]([^'"]+)['"]""")
 _SPEC_RE = re.compile(r"^\s*!?\s*(>=?)\s*(\d+(?:\.\d+)*)\s*$")
@@ -75,27 +76,6 @@ def _installed_raw() -> str | None:
 
 def _tuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.split("."))
-
-
-def warning(spec: str | None, installed: str | None) -> str | None:
-    """An advisory string if `installed` clearly fails `spec`, else None (silent)."""
-    if not spec or not installed:
-        return None
-    sm = _SPEC_RE.match(spec)
-    im = _INSTALLED_RE.search(installed)
-    if sm is None or im is None:               # not a constraint/version we model → stay silent
-        return None
-    op, req, have = sm.group(1), sm.group(2), im.group(1)
-    req_t, have_t = _tuple(req), _tuple(have)
-    n = max(len(req_t), len(have_t))
-    req_t += (0,) * (n - len(req_t))
-    have_t += (0,) * (n - len(have_t))
-    satisfied = have_t >= req_t if op == ">=" else have_t > req_t
-    if satisfied:
-        return None
-    return (f"Nextflow {have} is older than this pipeline's required {op}{req}; "
-            f"Nextflow will likely reject the run "
-            f"(advisory — Nextflow enforces the engine version).")
 
 
 def effective(nxf_ver: str | None = None) -> str | None:
@@ -165,17 +145,3 @@ def java_major_for_nextflow(env: dict[str, str]) -> int | None:
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return None
     return java_major(f"{r.stderr or ''}\n{r.stdout or ''}") if r.returncode == 0 else None
-
-
-def check(upstream: Path, *, nxf_ver: str | None = None) -> list[str]:
-    """Zero or one advisory about the Nextflow engine vs. the pipeline's requirement.
-
-    When `nxf_ver` is given (the user pinned the engine via --nxf-ver / NXF_VER), that is the
-    version Nextflow will actually run, so judge the requirement against it — not the installed
-    launcher, which Nextflow only uses to bootstrap the requested version."""
-    spec = required_spec(upstream / "nextflow.config")
-    if spec is None:                           # no declared constraint → nothing to advise
-        return []
-    engine = f"version {nxf_ver}" if nxf_ver else _installed_raw()
-    w = warning(spec, engine)
-    return [w] if w else []

@@ -13,60 +13,6 @@ def test_required_spec_none_when_absent(tmp_path):
     assert ev.required_spec(cfg) is None
 
 
-def test_warning_silent_when_satisfied():
-    assert ev.warning("!>=25.04.3", "  version 25.10.5 build 5935\n") is None
-
-
-def test_warning_silent_when_equal():
-    assert ev.warning(">=24.04.0", "version 24.04.0 build 1") is None
-
-
-def test_warning_when_installed_too_old():
-    w = ev.warning("!>=26.04.0", "version 25.10.4 build 5935")
-    assert w is not None
-    assert "26.04.0" in w and "25.10.4" in w
-
-
-def test_warning_silent_on_unparseable_spec():
-    # operators / ranges we don't model → never contradict Nextflow's own enforcement
-    assert ev.warning("==24.04.0", "version 23.10.0 build 1") is None
-    assert ev.warning(">=24.04.0 && <25", "version 23.10.0") is None
-
-
-def test_warning_silent_when_installed_unknown():
-    assert ev.warning(">=24.04.0", "no version here") is None
-    assert ev.warning(">=24.04.0", None) is None
-    assert ev.warning(None, "version 24.04.0") is None
-
-
-def test_check_silent_without_manifest_constraint(tmp_path):
-    (tmp_path / "nextflow.config").write_text("manifest { name = 'x' }\n")
-    assert ev.check(tmp_path) == []
-
-
-def test_check_warns_when_too_old(tmp_path, monkeypatch):
-    (tmp_path / "nextflow.config").write_text("manifest { nextflowVersion = '!>=26.04.0' }\n")
-    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 25.10.4 build 1")
-    out = ev.check(tmp_path)
-    assert len(out) == 1 and "26.04.0" in out[0]
-
-
-def test_check_judges_the_pinned_version_when_given(tmp_path, monkeypatch):
-    # With --nxf-ver, the engine that runs is the pin, not the installed launcher: judge that.
-    (tmp_path / "nextflow.config").write_text("manifest { nextflowVersion = '!>=26.04.0' }\n")
-    # launcher is fine...
-    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 26.10.0 build 1")
-    out = ev.check(tmp_path, nxf_ver="25.10.2")  # ...but the pin is too old
-    assert len(out) == 1 and "26.04.0" in out[0] and "25.10.2" in out[0]
-
-
-def test_check_silent_when_pinned_version_satisfies(tmp_path, monkeypatch):
-    (tmp_path / "nextflow.config").write_text("manifest { nextflowVersion = '!>=25.04.0' }\n")
-    # would warn, but the pin is newer
-    monkeypatch.setattr(ev, "_installed_raw", lambda: "version 20.0.0 build 1")
-    assert ev.check(tmp_path, nxf_ver="25.10.2") == []
-
-
 def test_minimum_version_extracts_the_pin_for_nxf_ver():
     # skill.md tells the agent which engine to pin; the version must come from the manifest, never
     # be invented. A newer Nextflow major changes the config parser and adds warnings the release

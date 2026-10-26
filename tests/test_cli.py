@@ -290,15 +290,15 @@ def test_timeout_and_engine_version_are_validated(tmp_path, monkeypatch):
         assert exc.value.code == 2
 
 
-def test_run_surfaces_engine_warning_on_stderr(tmp_path, monkeypatch, capsys):
+def test_run_surfaces_advisories_on_stderr(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(orchestration, "run_pipeline",
                         lambda *a, **k: orchestration.RunResult(
-                            "CMD", Path("/o"), True, None, warnings=["engine too old"]))
+                            "CMD", Path("/o"), True, None, warnings=["inert release warning"]))
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 0
     cap = capsys.readouterr()
     assert "CMD" in cap.out                                    # command still on stdout
-    assert "warning: engine too old" in cap.err               # advisory on stderr
+    assert "warning: inert release warning" in cap.err         # advisory on stderr
 
 
 # --- dev: the unreleased development branch ---------------------------------------------------

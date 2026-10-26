@@ -159,7 +159,6 @@ def test_prelaunch_directory_shape_survives_changes_during_execution(library,
     original = source / "original_sample"
     original.mkdir()
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
 
     def launch(*args, **kwargs):
         original.rmdir()
@@ -334,7 +333,6 @@ def test_resume_without_provenance_still_recomputes_changed_directories(library,
     source.mkdir()
     (source / "original_sample").mkdir()
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     launches = []
     monkeypatch.setattr(orchestration.execution, "run", lambda cmd, **kwargs: launches.append(cmd))
     out = tmp_path / "out"

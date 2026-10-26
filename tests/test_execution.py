@@ -91,6 +91,22 @@ def test_failure_without_that_message_gives_no_time_limit_hint(tmp_path):
         execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
                       timeout_seconds=30)
     assert "time limit" not in exc.value.fix
+    assert "--nxf-ver" not in exc.value.fix
+
+
+def test_failure_names_the_engine_a_release_requires_when_nextflow_refuses_an_older_one(tmp_path):
+    # Nextflow enforces `manifest.nextflowVersion` itself (nf-core's strict `!>=` form); nfclaw
+    # does not pre-check it, so the refusal is where the engine to pin is named. Console text as
+    # Nextflow 25.10.2 prints it for nf-core/demo 1.2.0.
+    child = ("import sys; print(' N E X T F L O W   ~  version 25.10.2'); "
+             "print('Nextflow 26.10.3 is available - Please consider updating your version to it', "
+             "file=sys.stderr); print('Nextflow version 25.10.2 does not match workflow required "
+             "version: >=25.10.4', file=sys.stderr); sys.exit(1)")
+    with pytest.raises(NfclawError) as exc:
+        execution.run([PY, "-c", child], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
+    assert "does not match workflow required version: >=25.10.4" in str(exc.value)
+    assert "--nxf-ver 25.10.4" in exc.value.fix and "nxf_ver" in exc.value.fix
 
 
 def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):

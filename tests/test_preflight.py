@@ -44,6 +44,28 @@ def test_missing_nextflow_flagged(tmp_path, monkeypatch):
     assert any("nextflow not found" in i for i in issues)
 
 
+@pytest.mark.parametrize("variable", ["NXF_JAVA_HOME", "JAVA_HOME"])
+def test_java_is_found_where_the_nextflow_launcher_looks(tmp_path, monkeypatch, variable):
+    # The launcher runs `$NXF_JAVA_HOME/bin/java` or `$JAVA_HOME/bin/java` before `java` on PATH
+    # (verified with Nextflow 26.04.3 and Java on JAVA_HOME only).
+    monkeypatch.setattr(preflight.shutil, "which",
+                        lambda x: None if x == "java" else "/usr/bin/" + x)
+    home = tmp_path / "jdk"
+    (home / "bin").mkdir(parents=True)
+    (home / "bin" / "java").write_text("#!/bin/sh\n")
+    (home / "bin" / "java").chmod(0o755)
+    common = dict(profile="singularity", output_dir=tmp_path.parent / "out_java",
+                  submodule=_st(tmp_path / "up"), repo_root=tmp_path, resume=False)
+    missing = [i for i in preflight.check_environment(**common, env={}) if "java" in i]
+    assert missing == ["java not found on PATH, NXF_JAVA_HOME or JAVA_HOME "
+                       "(Nextflow needs Java 17+)"]
+    assert not [i for i in preflight.check_environment(**common, env={variable: str(home)})
+                if "java" in i]
+    # A home without a Java falls back to PATH, as the launcher does.
+    assert [i for i in preflight.check_environment(**common, env={variable: str(tmp_path)})
+            if "java" in i] == missing
+
+
 def _clean_env(monkeypatch):
     # tools present, docker daemon healthy — isolate the space check from unrelated issues
     monkeypatch.setattr(preflight.shutil, "which", lambda x: "/usr/bin/" + x)

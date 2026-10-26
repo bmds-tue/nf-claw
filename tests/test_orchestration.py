@@ -486,7 +486,8 @@ def test_run_is_logged_in_the_bundle_with_nextflow_log_and_advisories(tmp_path, 
     # told where it is; Nextflow's own log is resolved against the outdir it is launched from.
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *a, **k: ["engine too old"])
+    monkeypatch.setattr(orchestration.plugin_compat, "check",
+                        lambda *a, **k: ["inert release warning"])
     monkeypatch.delenv("NXF_LOG_FILE", raising=False)
     eseen = {}
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: eseen.update(k))
@@ -499,7 +500,8 @@ def test_run_is_logged_in_the_bundle_with_nextflow_log_and_advisories(tmp_path, 
     assert eseen["run_log"].path == log_path and eseen["logs_dir"] == log_path.parent
     assert eseen["run_log"].nextflow_log == out / ".nextflow.log"
     log = log_path.read_text()
-    assert "warning: engine too old" in log and f"nextflow log: {out / '.nextflow.log'}" in log
+    assert "warning: inert release warning" in log
+    assert f"nextflow log: {out / '.nextflow.log'}" in log
     assert log.rstrip().splitlines()[-1].endswith(": success")
     assert res.log_path == log_path
 
@@ -636,25 +638,6 @@ def test_nxf_overlay_flows_to_execution_and_provenance(tmp_path, monkeypatch):
     assert seen["exec_env"] == overlay  # applied to the nextflow subprocess
     manifest = json.loads((tmp_path / "out" / "provenance" / "run_manifest.json").read_text())
     assert manifest["nextflow_env"] == overlay  # and recorded for reproducibility
-
-
-def test_nxf_ver_makes_engine_check_judge_the_pin(tmp_path, monkeypatch):
-    root = _make_pipeline(tmp_path, "mini")
-    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
-    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
-    seen = {}
-
-    def fake_check(upstream, **k):
-        seen["nxf_ver"] = k.get("nxf_ver")
-        return []                                             # check() always returns list[str]
-
-    monkeypatch.setattr(orchestration.engine_version, "check", fake_check)
-    orchestration.run_pipeline(
-        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
-        profile="docker", params_file=None, cli_overrides={}, resume=False,
-        demo=True, check_only=False, write_provenance=False, timeout_seconds=10,
-        nxf_ver="25.10.2")
-    assert seen["nxf_ver"] == "25.10.2"
 
 
 def _make_pipeline_with_bool(tmp_path, name="boolp"):
@@ -1002,7 +985,7 @@ def test_validated_descriptor_cannot_select_different_data_before_launch(
     sheet.write_text(f"{header}\nA,{first}\n")
     module, function = {"validation": (orchestration.samplesheet, "validate"),
                         "discovery": (orchestration.provenance, "samplesheet_dependencies"),
-                        "probe": (orchestration.engine_version, "check")}[phase]
+                        "probe": (orchestration.plugin_compat, "check")}[phase]
     original = getattr(module, function)
 
     def replace_descriptor(*args, **kwargs):
@@ -1042,7 +1025,7 @@ def test_validated_descriptor_namespace_cannot_change_with_identical_bytes(
         sheet.symlink_to(other)
         return []
 
-    monkeypatch.setattr(orchestration.engine_version, "check", replace_namespace)
+    monkeypatch.setattr(orchestration.plugin_compat, "check", replace_namespace)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     launched = []
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: launched.append(True))
@@ -1647,7 +1630,7 @@ def test_the_documented_pin_runs(tmp_path, monkeypatch):
 def test_launch_source_must_still_be_the_validated_release(
         tmp_path, monkeypatch, check_only, phase, change):
     root, up = _pinned_git_pipeline(tmp_path)
-    module, function = {"probe": (orchestration.engine_version, "check"),
+    module, function = {"probe": (orchestration.plugin_compat, "check"),
                         "command": (orchestration.nextflow_command, "build")}[phase]
     original = getattr(module, function)
 

@@ -546,14 +546,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
     warnings = list(st.notes)
     warnings += _resume_advisory(outdir, st) if resume else []
-    # Advisory only: preflight has confirmed nextflow is on PATH, so compare the installed
-    # engine to the pipeline's declared requirement. Non-blocking — Nextflow is the authority
-    # and enforces this itself at launch; we just surface it earlier with a clear message.
-    warnings += engine_version.check(st.path, nxf_ver=nxf_overlay.get("NXF_VER"))
-    budget.check()
-    # Same contract: advisory, never blocking. Explains a warning the pinned release will emit for a
-    # reason that is invisible in its log, so it is not mistaken for a fault in the run or
-    # in nfclaw.
+    # The release's declared engine (`manifest.nextflowVersion`) is not judged here: Nextflow
+    # enforces it at launch, and a refusal is explained with the engine to pin (runner.execution).
+    # Advisory, never blocking: explains a warning the pinned release will emit for a reason that is
+    # invisible in its log, so it is not mistaken for a fault in the run or in nfclaw.
     warnings += plugin_compat.check(st.path)
     # Also advisory: a pinned plugin version with a known, inert bug (e.g. nf-core-utils@0.4.0's
     # spurious "positional argument `nextflow`" logged on every sarek run). Surfaced up front so the
@@ -602,7 +598,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     issues = preflight.check_environment(profile=composed_profile, output_dir=outdir,
                                          submodule=st, repo_root=repo_root, resume=resume,
                                          work_dir=work_dir, allow_spaces=allow_spaces,
-                                         check_only=check_only)
+                                         check_only=check_only,
+                                         env={**os.environ, **nxf_overlay})
     budget.check()
     if issues:
         raise NfclawError(ErrorCode.ENVIRONMENT, "Preflight checks failed.",

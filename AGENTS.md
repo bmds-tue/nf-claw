@@ -214,7 +214,7 @@ Prefer a release for results you need to reproduce from a version number; use `d
 
 `nfclaw run` inherits your shell environment and passes it through to Nextflow. Two run flags make the engine and its runtime explicit and reproducible (both are recorded in `<outdir>/provenance/`):
 
-- **`--nxf-ver X.Y.Z`** — pin the Nextflow engine for this run (sets `NXF_VER`). Use it when a newer Nextflow breaks an older pipeline release (e.g. a config-parser change in a new Nextflow major), or to reproduce a prior run exactly. nfclaw judges the version requirement against this pin.
+- **`--nxf-ver X.Y.Z`** — pin the Nextflow engine for this run (sets `NXF_VER`). Use it when a newer Nextflow breaks an older pipeline release (e.g. a config-parser change in a new Nextflow major), or to reproduce a prior run exactly. Nextflow itself refuses an engine older than the release's declared `nextflowVersion` (see `skill.md`); nfclaw's error then names the `--nxf-ver` to pass.
 - **`--nxf-env KEY=VALUE`** — set an `NXF_*` variable for this run (repeatable). Common fixes:
   - IPv6-only host where the JVM can't reach GitHub for remote configs:
     `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`

@@ -45,7 +45,7 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
 3. **Context Regeneration:** Invokes `librarian/write_skill.py` and `librarian/write_catalog.py` to regenerate all parameter tables, input schemas, tool lists, and catalog manifests.
 4. **Comprehensive In-Job Validation:**
    - Runs `scripts/nextflow_accept.sh` (`nextflow -preview`) to verify pipeline compilation, profile resolution, and parameter validation.
-   - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the nightly preview workflow green, but cannot authorize an automated release merge.
+   - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the weekly preview workflow green, but cannot authorize an automated release merge.
    - Executes the complete pytest suite.
    - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped.
    - Runs Ruff, the website dependency audit, TypeScript checks and the static site build. These gates run in the maintenance job before it can publish anything.

@@ -62,6 +62,19 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Reproducibility Advisories:** `runner/reproducibility.py` scans pinned task scripts before launch to detect known sources of run-to-run variability (such as dada2 `assignTaxonomy` tie-breaking or unseeded QIIME2 rarefaction) and announces prelaunch advisories unless those steps are explicitly skipped. It also announces pinned workflow code that reorders, in place, a list Nextflow hands to several processes at once (createtaxdb 3.1.0's sourmash step) when that step runs.
 - **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
 
+#### What is left to Nextflow and the pinned release
+Every pinned release checks itself at launch, before any task runs. Nextflow enforces the manifest's `nextflowVersion`, and every pinned release uses the strict `!>=` form. The release's validation code checks every parameter and samplesheet against its schemas: nf-schema, nf-validation in older releases, or the `NfcoreSchema` library of the oldest template. nfclaw does not repeat a check whose result Nextflow or the release produces just as early:
+- **Engine version:** not judged before launch. `skill.md` states the declared engine, and when Nextflow refuses an older one, nfclaw's error names the `--nxf-ver` to pass.
+- **Java:** nfclaw looks for it where the Nextflow launcher does (`NXF_JAVA_HOME`, `JAVA_HOME`, then `PATH`). The launcher checks the version.
+- **Profiles, config syntax, conditional and nested schema constraints, remote files:** Nextflow and the plugin judge them at launch.
+- **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo validation compares its runs with that snapshot instead of re-deriving the tools' output.
+
+nfclaw keeps its own schema checks where they act before Nextflow could:
+- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never start Nextflow.
+- A chain validates every stage before the first one launches. Otherwise a later stage's own validation would run only after the stages before it have finished.
+- Unknown parameters are refused. nf-schema only warns about them by default, because institutional profiles may set extra parameters, so a mistyped flag would run with its default.
+- Samplesheet paths must be absolute, identifiers shell-safe and inputs readable. nfclaw launches Nextflow from `--outdir` and hashes every input; a release's schemas do not cover these requirements.
+
 ### 2.2 Run Execution & Sibling Directory Locking
 - **Launch Isolation:** Nextflow is launched from `--outdir`, isolating its `.nextflow/` history and session databases. Task work files default to the shared `<repo>/work/` directory; `NXF_WORK` selects another location and is resolved against the caller's working directory before launch.
 - **Sibling File Locking:** On POSIX systems, `runner/locking.py` acquires an exclusive, non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) before creating or modifying `--outdir`. Overlapping or concurrent runs into the same directory fail fast with `ErrorCode.ENVIRONMENT`, preventing corrupted session states or interleaved logs.
