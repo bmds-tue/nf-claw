@@ -8,7 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (budget, container_watch, dependency_stability, discovery, engine_version,
+from runner import (budget, container_watch, demo_defaults, dependency_stability, discovery,
+                    engine_version,
                     environment_record, execution, fastqrepair_compat, input_safety, inputs,
                     institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
                     preflight, provenance, reproducibility, resources, resume_safety, runlog,
@@ -282,6 +283,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
 
     # Read the params file once; it is merged below, and it may be what supplies `input`.
     file_params = parameters.load_params_file(params_file) if params_file is not None else {}
+    # Only the release's bundled demo data gets its audited missing reference. Explicit input
+    # or parameter values remain authoritative, including an explicitly supplied null.
+    demo_params = (demo_defaults.parameters(name, st.commit)
+                   if demo and input_path is None and file_params.get('input') is None
+                   and 'input' not in deferred_params else {})
+    applied_demo_params = {key: value for key, value in demo_params.items()
+                           if key not in file_params and key not in cli_overrides}
+    file_params = {**applied_demo_params, **file_params}
 
     # What --input is comes from the pipeline's own schema, not an assumption: a samplesheet,
     # another local path (a directory, an SDRF file), or a plain value (a PRIDE accession, a URL,
@@ -545,6 +554,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
     # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
     warnings = list(st.notes)
+    if applied_demo_params:
+        warnings.append(demo_defaults.note(name, st.commit))
     warnings += _resume_advisory(outdir, st) if resume else []
     # The release's declared engine (`manifest.nextflowVersion`): Nextflow enforces it at launch,
     # and a refusal names the engine to pin (runner.execution), so a launch does not probe for it.

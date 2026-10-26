@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs,
+from runner import (demo_defaults, discovery, engine_version, fastqrepair_compat, handoff, inputs,
                     nextflow_command,
                     sheetgen, versions)
 from runner import schema as schema_mod
@@ -705,6 +705,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
                  "hold no results; `nfclaw status` reports the success with a "
                  "`stub run:` caveat.\n\n"
                  if nextflow_command.stub_profiles(st.path, "test") else "")
+    if correction := demo_defaults.note(name, st.commit):
+        demo_note += correction + "\n\n"
     nfclaw_cmd, raw_cmd = _run_invocation(name, ps, insch, pipeline_version, tree)
     if dev:
         first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its "
