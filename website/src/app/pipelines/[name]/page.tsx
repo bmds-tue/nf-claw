@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { getPipeline, getPipelines, githubRepoPath, pipelineNames } from "@/lib/data";
 import { toSkill, categorize, colorForCategory } from "@/lib/derive";
+import { Markdown } from "@/components/ui/markdown";
 import { CodeBlock } from "@/components/ui/code-block";
 import { InlineMarkdown } from "@/components/ui/inline-markdown";
 import { ParameterExplorer } from "@/components/pipeline/parameter-explorer";
@@ -236,6 +237,17 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
             <CodeBlock code={pipeline.demoCommand} label="demo · bundled test profile" />
           </div>
         )}
+        <div className="mt-6 space-y-6">
+          {pipeline.operatingGuidance.map((section) => (
+            <div key={section.title} className="glass p-5">
+              <h3 className="text-lg font-semibold text-fog">{section.title}</h3>
+              <Markdown content={section.content} links={{
+                source: `pipelines/${pipeline.name}/skill.md`, docs: {},
+                repoBlobBase: "https://github.com/danilomonge/nf-claw/blob/main",
+              }} />
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* samplesheet */}

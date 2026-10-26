@@ -7,7 +7,6 @@ import { EASE } from "@/lib/motion";
 export function Reveal({
   children,
   delay = 0,
-  y = 22,
   className,
 }: {
   children: ReactNode;
@@ -19,7 +18,7 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y }}
+      initial={false}
       whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.8, ease: EASE, delay }}
@@ -51,7 +50,7 @@ export function StaggerGroup({
     <motion.div
       className={className}
       variants={reduce ? undefined : staggerContainer}
-      initial={reduce ? false : "hidden"}
+      initial={false}
       whileInView={reduce ? undefined : "show"}
       viewport={{ once: true, margin: "-60px" }}
     >

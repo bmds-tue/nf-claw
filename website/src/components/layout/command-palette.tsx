@@ -26,7 +26,7 @@ const SECTIONS = [
   { id: "how", label: "How it works", hint: "Find, read, run — three commands" },
   { id: "pipelines", label: "Pipeline universe", hint: "Explore the constellation" },
   { id: "skills", label: "Skills explorer", hint: "What an agent reads" },
-  { id: "activity", label: "Live activity", hint: "Commits & automation" },
+  { id: "activity", label: "Repository activity", hint: "Commits & automation" },
   { id: "releases", label: "Release timeline", hint: "Pinned versions" },
   { id: "docs", label: "Documentation hub", hint: "Rendered from the repo" },
 ];

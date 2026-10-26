@@ -47,17 +47,17 @@ FAKE_NFCLAW = textwrap.dedent("""
         print("[params_invalid] Parameters failed validation", file=sys.stderr); sys.exit(1)
     log = Path(opts["outdir"]) / "provenance" / "logs" / "run.log"
     log.parent.mkdir(parents=True, exist_ok=True)
-    log.write_text("==> nfclaw run started\\n")
+    log.write_text("==> nfclaw run started 2026-10-26T00:00:00Z\\n")
     if mode == "hang":
         def stop(*_):
             with log.open("a") as fh:
-                fh.write("==> nfclaw run finished: terminated by SIGTERM\\n")
+                fh.write("==> nfclaw run finished 2026-10-26T00:00:01Z: terminated by SIGTERM\\n")
             sys.exit(143)
         signal.signal(signal.SIGTERM, stop)
         while True:
             time.sleep(0.1)
     with log.open("a") as fh:
-        fh.write("==> nfclaw run finished: success\\n")
+        fh.write("==> nfclaw run finished 2026-10-26T00:00:01Z: success\\n")
 """)
 
 
@@ -267,7 +267,7 @@ def test_a_successful_run_is_followed_to_its_status_report(tools, fake_cli, tmp_
     view = result["structuredContent"]
     assert not result.get("isError")
     assert view["state"] == "succeeded" and view["run_state"] == "success"
-    assert view["status_report"] == "status: success"
+    assert view["status_report"].splitlines()[0] == "status: success"
     assert view["log"] == str(outdir / "provenance" / "logs" / "run.log")
     assert any("argv: run demo" in line for line in view["output_tail"])
 
@@ -286,7 +286,7 @@ def test_a_running_job_is_launched_and_cancel_stops_it_cleanly(tools, fake_cli, 
     stopped = call(tools, "cancel_job", job_id=view["job_id"], wait_seconds=30)
     final = stopped["structuredContent"]
     assert final["state"] == "cancelled" and final["exit_code"] == 143
-    assert final["status_report"] == "status: terminated by SIGTERM"
+    assert final["status_report"].splitlines()[0] == "status: terminated by SIGTERM"
     again = call(tools, "cancel_job", job_id=view["job_id"])
     assert "not running" in text(again)
 
@@ -334,3 +334,36 @@ def test_run_status_reports_a_directory_nfclaw_never_ran_in(tools, tmp_path):
     result = call(tools, "run_status", outdir=str(tmp_path / "never"))
     assert result["structuredContent"]["state"] == "not successful"
     assert "no run log" in text(result)
+
+
+def test_inline_chain_spec_retains_exact_numbers_in_durable_spec(tools, fake_cli, tmp_path):
+    from decimal import Decimal
+    from runner import exact_json
+    spec = exact_json.loads('{"stages":[{"pipeline":"demo","params":'
+                            '{"ratio":0.1000000000000000000001,"tiny":1e-9999}}]}')
+    result = call(tools, 'run_chain', spec=spec, outdir=str(tmp_path / 'chain'),
+                  check=True, wait_seconds=1)
+    assert not result.get('isError'), result
+    job = jobs.load(result['structuredContent']['job_id'])
+    observed = json.loads((job.dir / 'spec.json').read_text(), parse_float=Decimal)
+    assert observed['stages'][0]['params'] == {
+        'ratio': Decimal('0.1000000000000000000001'), 'tiny': Decimal('1e-9999')}
+
+
+def test_finished_job_keeps_its_own_status_when_a_retry_reuses_the_outdir(
+        tools, fake_cli, tmp_path):
+    out = str(tmp_path / 'retry-out')
+    first = call(tools, 'run_pipeline', pipeline='demo', outdir=out, wait_seconds=30)
+    first_id = first['structuredContent']['job_id']
+    assert call(tools, 'get_job', job_id=first_id, wait_seconds=30)['structuredContent'][
+        'run_state'] == 'success'
+    second = call(tools, 'run_pipeline', pipeline='demo', outdir=out, resume=True,
+                  params={'mode': 'hang'}, wait_seconds=30)
+    second_id = second['structuredContent']['job_id']
+    try:
+        old = call(tools, 'get_job', job_id=first_id)['structuredContent']
+        assert old['state'] == 'succeeded'
+        assert old['run_state'] == 'success'
+        assert old['status_report'].splitlines()[0] == 'status: success'
+    finally:
+        call(tools, 'cancel_job', job_id=second_id, wait_seconds=30)

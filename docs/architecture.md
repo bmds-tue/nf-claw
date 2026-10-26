@@ -165,7 +165,7 @@ the archive's file checksums and logical namespace.
 
 The archive is verified before and after execution. When the replay uses the original
 checkout, its revision and tracked bytes are also rechecked at completion. The extracted
-working tree is checked while created, but is not separately rehashed after execution.
+working tree is checked on creation and rehashed against the source manifest after execution.
 Replay targets receive logs and source/environment records; the original bundle remains
 the replay entry point and the reference for dependency and output checks.
 

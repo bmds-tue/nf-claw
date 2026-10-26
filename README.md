@@ -127,7 +127,7 @@ nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' 
 ```
 
 The pinned schema decides the columns, sample names come unaltered from file names, and gaps,
-ambiguous or stray files are refused; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
+ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
 and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
 releases whose contracts were corrected from their pinned source.
 

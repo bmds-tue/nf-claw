@@ -130,7 +130,7 @@ jobs:
             ${{ runner.temp }}/demo-replay
             work/**/.command.*
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 90
 
   apptainer-demo:
     # Image identities for an engine that runs local image files: each image is recorded by the
@@ -199,4 +199,4 @@ jobs:
             ${{ runner.temp }}/demo/provenance
             ${{ runner.temp }}/demo-replay/provenance
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 90

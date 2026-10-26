@@ -29,7 +29,7 @@
 # Env:
 #   NFCLAW_RESULT_FILE      if set, write "<name>\t<verdict>" per line: accepted, staging-unverified,
 #                           rejected, stale-exception, or known-(rejected|staging-unverified|timeout)
-#   NFCLAW_KEEP_SUBMODULES  if "1", do not deinit submodules after checking
+#   Initialized source checkouts are retained; only disposable preview files are removed.
 #   NFCLAW_LOG_DIR         if set, retain console and engine logs per pipeline
 #   NFCLAW_ACCEPT_EXCEPTIONS  the exceptions file (default: beside this script)
 #   NFCLAW_ACCEPT_RETRY_DELAY seconds before the first retry of an unreachable remote file (30);
@@ -116,7 +116,7 @@ for name in "${names[@]}"; do
   up="pipelines/$name/upstream"
   out="$tmp/prev-$name"
   work="$tmp/work-$name"
-  if ! git submodule update --init --depth 1 "$up" >"$tmp/$name-submodule.out" 2>&1; then
+  if [ ! -e "$up/.git" ] && ! git submodule update --init --depth 1 "$up" >"$tmp/$name-submodule.out" 2>&1; then
     cat "$tmp/$name-submodule.out"
     if [ -n "$logs" ]; then
       cp -- "$tmp/$name-submodule.out" "$logs/$name-submodule.log" || exit 1
@@ -135,6 +135,13 @@ for name in "${names[@]}"; do
   fi
   # The documented exception for exactly this commit, if any (blank and `#` lines are comments).
   commit=$(git -C "$up" rev-parse HEAD 2>/dev/null || true)
+  pin=$(git ls-files --stage -- "$up" 2>/dev/null | awk '$1 == "160000" {print $2}')
+  if [ -n "$pin" ] && [ "$commit" != "$pin" ]; then
+    echo "::error::$name checkout differs from the pinned commit; preserving it unchanged"
+    printf '%s\trejected\n' "$name" >> "$result"
+    fail=1
+    continue
+  fi
   expected=""
   evidence=""
   reason=""
@@ -226,9 +233,6 @@ for name in "${names[@]}"; do
     fail=1
   fi
   echo "::endgroup::"
-  if [ "${NFCLAW_KEEP_SUBMODULES:-}" != "1" ]; then
-    git submodule deinit -f "$up" >/dev/null 2>&1 || true
-  fi
   rm -rf "$work" "$out"
 done
 

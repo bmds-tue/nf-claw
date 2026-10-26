@@ -82,4 +82,4 @@ jobs:
           path: |
             ${{ runner.temp }}/acceptance.tsv
             ${{ runner.temp }}/acceptance-logs
-          retention-days: 14
+          retention-days: 90

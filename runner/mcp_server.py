@@ -17,7 +17,6 @@ and the server keeps its stdout to itself: see `serve_stdio`.
 """
 from __future__ import annotations
 
-import json
 import os
 import sys
 import threading
@@ -26,6 +25,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
+
+from runner import exact_json as json
 
 # Newest first. Modern versions are declared per request; legacy ones are negotiated
 # by `initialize`.
@@ -150,7 +151,8 @@ def _requested_version(params: Any) -> str | None:
 
 class Server:
     def __init__(self, handler: Handler, *, name: str, version: str, instructions: str = "",
-                 title: str | None = None, max_workers: int = 8):
+                 title: str | None = None, max_workers: int = 8,
+                 waiting_tools: tuple[str, ...] = (), control_tools: tuple[str, ...] = ()):
         self.handler = handler
         self.info = {"name": name, "version": version}
         self.title = title
@@ -162,6 +164,9 @@ class Server:
         self._inflight_lock = threading.Lock()
         self._closing = threading.Event()
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mcp")
+        self._wait_pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mcp-wait")
+        self._waiting_tools = frozenset(waiting_tools)
+        self._control_tools = frozenset(control_tools)
 
     # --- transport ------------------------------------------------------------------------------
 
@@ -188,6 +193,7 @@ class Server:
                 for ctx in self._inflight.values():
                     ctx.cancelled.set()
             self._pool.shutdown(wait=True)
+            self._wait_pool.shutdown(wait=True)
         return 0
 
     def _send(self, message: dict | list) -> None:
@@ -215,7 +221,17 @@ class Server:
         else:
             if isinstance(message, dict):
                 self._track(message)
-            self._pool.submit(self._serve_one, message)
+            params = message.get("params", {}) if isinstance(message, dict) else {}
+            params = params if isinstance(params, dict) else {}
+            arguments = params.get("arguments", {})
+            arguments = arguments if isinstance(arguments, dict) else {}
+            tool = params.get("name")
+            wait = arguments.get("wait_seconds", 0)
+            waiting = (isinstance(tool, str) and tool not in self._control_tools
+                       and ((tool in self._waiting_tools and arguments.get("wait_seconds") != 0)
+                            or isinstance(wait, (int, float)) and wait > 0))
+            pool = self._wait_pool if waiting else self._pool
+            pool.submit(self._serve_one, message)
 
     def _track(self, message: dict) -> None:
         params = message.get("params") if isinstance(message.get("params"), dict) else {}
@@ -435,4 +451,6 @@ def serve(repo_root: Path) -> int:
     from runner import mcp_tools
     tools = mcp_tools.NfclawTools(repo_root)
     return serve_stdio(tools, name="nfclaw", title="nf-claw", version=mcp_tools.server_version(),
-                       instructions=mcp_tools.INSTRUCTIONS)
+                       instructions=mcp_tools.INSTRUCTIONS,
+                       waiting_tools=("run_pipeline", "run_chain"),
+                       control_tools=("cancel_job",))

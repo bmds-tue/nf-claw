@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Github, Menu, Search, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
@@ -52,6 +52,8 @@ export function Nav({ repo }: { repo: string | null }) {
   const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [mac, setMac] = useState(true);
   const reduce = useReducedMotion();
   const section = useActiveSection(isHome);
@@ -72,11 +74,37 @@ export function Nav({ repo }: { repo: string | null }) {
   useEffect(() => {
     if (!open) return;
     const unlock = lockScroll();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const header = headerRef.current;
+    if (!header) return unlock;
+    const background = Array.from(header.parentElement?.children ?? [])
+      .filter((node): node is HTMLElement => node instanceof HTMLElement && node !== header)
+      .map((node) => ({ node, inert: node.inert }));
+    background.forEach(({ node }) => { node.inert = true; });
+    const focusable = () => Array.from(header.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex="0"]'))
+      .filter((node) => node.getClientRects().length > 0);
+    const first = header.querySelector<HTMLElement>('#mobile-menu a[href]');
+    first?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+      if (e.key !== "Tab") return;
+      const nodes = focusable();
+      const index = nodes.indexOf(document.activeElement as HTMLElement);
+      if (index < 0 || e.shiftKey && index === 0 || !e.shiftKey && index === nodes.length - 1) {
+        e.preventDefault();
+        nodes[e.shiftKey ? nodes.length - 1 : 0]?.focus();
+      }
+    };
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const onResize = () => { if (desktop.matches) setOpen(false); };
+    desktop.addEventListener('change', onResize);
     window.addEventListener("keydown", onKey);
     return () => {
       unlock();
+      background.forEach(({ node, inert }) => { node.inert = inert; });
+      desktop.removeEventListener('change', onResize);
       window.removeEventListener("keydown", onKey);
+      toggleRef.current?.focus();
     };
   }, [open]);
 
@@ -86,7 +114,9 @@ export function Nav({ repo }: { repo: string | null }) {
   const githubUrl = repo ? `https://github.com/${repo}` : "https://github.com";
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    <header ref={headerRef} role={open ? "dialog" : undefined}
+      aria-modal={open ? true : undefined} aria-label={open ? "Navigation menu" : undefined}
+      className="fixed inset-x-0 top-0 z-50">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-claw-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink-950"
@@ -161,6 +191,7 @@ export function Nav({ repo }: { repo: string | null }) {
             <button
               onClick={() => setOpen((v) => !v)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-fog md:hidden"
+              ref={toggleRef}
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               aria-controls="mobile-menu"

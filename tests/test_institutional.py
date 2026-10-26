@@ -99,9 +99,29 @@ def test_ls_remote_reads_the_branch_head(monkeypatch, returncode, stdout, stderr
     def run(command, **kwargs):
         seen.update(command=command, env=kwargs["env"])
         return subprocess.CompletedProcess(command, returncode, stdout, stderr)
-    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(institutional, "capture", run)
     assert _REAL_LS_REMOTE("https://github.com/nf-core/configs", "master") == expected
     assert seen["command"] == ["git", "ls-remote", "--exit-code",
                                "https://github.com/nf-core/configs",
                                "refs/heads/master"]
     assert seen["env"]["GIT_TERMINAL_PROMPT"] == "0"
+
+
+def test_lookup_obeys_active_budget_and_stops_download_helpers(tmp_path, monkeypatch):
+    import os
+    import time
+    from runner import budget
+    from runner.errors import NfclawError
+    from test_version_probe_cleanup import _alive
+    marker = tmp_path / 'child.pid'
+    git = tmp_path / 'git'
+    git.write_text(f'#!/bin/sh\nsleep 60 &\necho $! > "{marker}"\nwait\n')
+    git.chmod(0o755)
+    monkeypatch.setenv('PATH', f'{tmp_path}:{os.environ["PATH"]}')
+    start = time.monotonic()
+    with pytest.raises(NfclawError):
+        with budget.scope(0.5):
+            _REAL_LS_REMOTE('https://github.com/nf-core/configs', 'master')
+    assert time.monotonic() - start < 5
+    assert marker.exists()
+    assert not _alive(int(marker.read_text()))

@@ -222,3 +222,9 @@ from nfclaw's error:
 | Codex 0.144.4 | `initialize`, 2025-06-18 |
 | Antigravity CLI (`agy`) 1.4.7 | `server/discover`, 2026-07-28 |
 | MCP Python SDK 2.3.0 (scripted: runs, a chain, cancel, resume, replay) | both |
+
+Completed jobs retain a private snapshot of their own run status. Reusing the output directory
+for a later retry does not replace an older job ID's outcome or caveats. Historical jobs without
+that snapshot retain their supervisor outcome, but do not borrow a later run's status report.
+Long polls use separate worker capacity so ordinary status, ping and cancellation requests remain
+available. Malformed job records are rejected individually and omitted from global listing.

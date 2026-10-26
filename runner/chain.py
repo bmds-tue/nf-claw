@@ -148,7 +148,15 @@ def _parse_options(raw: dict, where: str) -> dict:
         out["configs"] = tuple(_abs(c) for c in configs)
     try:
         if "nxf_env" in raw:
-            out["nxf_env"] = resources.parse_nxf_env(raw["nxf_env"] or {})
+            env = resources.parse_nxf_env(raw["nxf_env"] or {})
+            missing = [key for key, value in env.items() if value == "<redacted>"
+                       and (not os.environ.get(key) or os.environ[key] == "<redacted>")]
+            if missing:
+                raise _bad(f"{where}: redacted environment values must be supplied again: "
+                           + ", ".join(missing)
+                           + "; export them or pass the original private spec")
+            out["nxf_env"] = {key: os.environ[key] if value == "<redacted>" else value
+                              for key, value in env.items()}
         if raw.get("nxf_ver"):
             out["nxf_ver"] = resources.check_nxf_version(raw["nxf_ver"])
         if "limits" in raw:
@@ -359,8 +367,9 @@ def normalized(spec: ChainSpec, planned: list[Planned]) -> dict:
     """The spec as `chain/chain.json` records it: absolute paths, so it means the same thing from
     any directory — it is what `--resume` without a spec, and a replay of the chain, re-read."""
     lim = spec.limits
-    return {
-        "profile": spec.profile, "nxf_ver": spec.nxf_ver, "nxf_env": dict(spec.nxf_env),
+    record = {
+        "profile": spec.profile, "nxf_ver": spec.nxf_ver,
+        "nxf_env": provenance.effective_nxf_env(spec.nxf_env),
         "config": list(spec.configs), "allow_spaces": spec.allow_spaces,
         "limits": ({k: v for k, v in (("cpus", lim.cpus), ("memory", lim.memory),
                                       ("time", lim.time)) if v is not None} if lim else {}),
@@ -375,6 +384,10 @@ def normalized(spec: ChainSpec, planned: list[Planned]) -> dict:
                     **_options_json(p.stage.options)}
                    for p in planned],
     }
+    for entry in (record, *record["stages"]):
+        if "nxf_env" in entry:
+            entry["nxf_env"], _ = provenance.safe_env(entry["nxf_env"])
+    return record
 
 
 # --- running it ----------------------------------------------------------------------------
@@ -392,7 +405,10 @@ def _write_json(path: Path, data: Any) -> Path:
     """Atomically: a reader polling state.json never sees half a file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with open(tmp, "w", encoding="utf-8", opener=lambda name, flags: os.open(
+            name, flags, 0o600)) as handle:
+        os.chmod(tmp, 0o600)
+        handle.write(json.dumps(data, indent=2, sort_keys=True) + "\n")
     os.replace(tmp, path)
     return path
 
@@ -432,7 +448,8 @@ def _lock(record: Path, outdir: Path) -> Iterator[None]:
     """One chain process per --outdir: two would race on the same stages and state."""
     fd = None
     try:
-        record.mkdir(parents=True, exist_ok=True)
+        record.mkdir(parents=True, exist_ok=True, mode=0o700)
+        record.chmod(0o700)
         fd = os.open(record / ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o644)
         if fcntl is not None:
             try:
@@ -598,7 +615,11 @@ def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> s
     try:
         source = sheetgen.detect(p.input, p.tree.path)
     except NfclawError:
-        return None
+        values = p.input if isinstance(p.input, list) else [p.input]
+        if all(isinstance(value, str) and not sheetgen.present(sheetgen.Source((value,), ""))
+               and not Path(value).is_symlink() for value in values):
+            return None  # every formerly consumed source was removed
+        return "cannot verify its current --input data for safe resume"
     if source is None or not sheetgen.present(source):
         return None
     work_dir = orchestration.work_directory(options(spec, p.stage).nxf_env, repo_root)
@@ -607,7 +628,21 @@ def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> s
                                       assignments=p.stage.sheet_set, outdir=stage_dir,
                                       work_dir=work_dir)
     except NfclawError:
-        return None
+        # Pure removal is allowed for a frozen stage. Establish that independently of the
+        # failed generation; unreadable inventories or any newly found file remain a refusal.
+        recorded = stage_dir / "provenance" / record["file"]
+        used = sheetgen.named_paths(recorded)
+        kept = tuple(value for value in source.values
+                     if sheetgen.present(sheetgen.Source((value,), source.sheet))
+                     or Path(value).is_symlink())
+        try:
+            current = sheetgen.discover(sheetgen.Source(kept, source.sheet),
+                                        outdir=stage_dir, work_dir=work_dir)
+            if used and all(str(path) in used for path, _ in current):
+                return None
+        except NfclawError:
+            pass
+        return "cannot verify its current --input data: samplesheet regeneration failed"
     recorded = stage_dir / "provenance" / record["file"]
     used = sheetgen.named_paths(recorded)
     new = [path.name for path in generated.files if str(path) not in used]

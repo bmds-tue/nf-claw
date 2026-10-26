@@ -13,6 +13,7 @@ import math
 import os
 import re
 import select
+import shlex
 import signal
 import socket
 import stat
@@ -22,7 +23,7 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from pathlib import Path
 
 
@@ -328,16 +329,163 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
     return data
 
 
+def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
+                           writes: list[tuple[str, Path, bool]]) -> None:
+    """Refuse writes beneath any consumed directory, including nested directory aliases.
+
+    The boolean also refuses dependencies inside a destination that can publish arbitrary
+    results. Work/cache trees use False: previously computed files there are legitimate
+    inputs for a later task, but a whole consumed directory must never acquire new work.
+    Inspect metadata only; prelaunch content snapshots remain the source of byte evidence.
+    """
+    if not sources:
+        return
+    destinations = [(label, path.expanduser().resolve(), contains)
+                    for label, path, contains in writes]
+    cached_trees = [destination for _, destination, contains in destinations if not contains]
+    physical_writes: dict[tuple[int, int], tuple[str, Path]] = {}
+    inspected: set[Path] = set()
+
+    def inspect_writer(label: str, path: Path, recursive: bool) -> None:
+        try:
+            metadata = path.stat()
+        except (FileNotFoundError, NotADirectoryError):
+            return  # Missing output slots, including broken links, can be repaired by the run.
+        if stat.S_ISREG(metadata.st_mode):
+            if metadata.st_nlink > 1 or path.is_symlink():
+                physical_writes[(metadata.st_dev, metadata.st_ino)] = label, path
+        elif recursive and stat.S_ISDIR(metadata.st_mode):
+            root = path.resolve()
+            excluded = [cache for cache in cached_trees
+                        if cache != root and cache.is_relative_to(root)]
+            pending = [root]
+            while pending:
+                directory = pending.pop()
+                resolved = directory.resolve()
+                if resolved in inspected:
+                    continue
+                inspected.add(resolved)
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        child = Path(entry.path)
+                        target = child.resolve()
+                        # Nextflow stages inputs in its work/cache trees. Those declared trees
+                        # have a narrower write policy; publication scans must not reinterpret
+                        # their existing read aliases as output files.
+                        if any(child.is_relative_to(cache) for cache in excluded):
+                            continue
+                        try:
+                            metadata = entry.stat(follow_symlinks=True)
+                        except (FileNotFoundError, NotADirectoryError):
+                            continue
+                        if stat.S_ISDIR(metadata.st_mode):
+                            if entry.is_symlink():
+                                destinations.append((label, target, True))
+                            pending.append(child)
+                        elif stat.S_ISREG(metadata.st_mode) and (
+                                metadata.st_nlink > 1 or entry.is_symlink()):
+                            physical_writes[(metadata.st_dev, metadata.st_ino)] = label, child
+
+    try:
+        for label, path, contains in writes:
+            inspect_writer(label, path.expanduser(), contains)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Cannot inspect execution destination boundaries: {exc}") from exc
+
+    def refuse(label: str, destination: Path, path: Path, dependency: Path):
+        raise ValueError(
+            f"{label} {destination} overlaps local dependency {path} "
+            f"(resolved to {dependency}). Execution writes would change its input data.")
+
+    @lru_cache(maxsize=1024)
+    def route_parents(parent: Path) -> frozenset[Path]:
+        # Retain the containing output slot even when a later directory symlink redirects
+        # it elsewhere. Resolving each ancestor also handles OS aliases such as /var on macOS.
+        return frozenset(part.resolve() for part in (parent, *parent.parents))
+
+    def check(path: Path):
+        dependency = path.resolve()
+        logical = Path(os.path.abspath(path.expanduser()))
+        parents = route_parents(path.expanduser().absolute().parent)
+        directory = path.is_dir()
+        for label, destination, contains in destinations:
+            if (dependency == destination
+                    or directory and destination.is_relative_to(dependency)
+                    or contains and (dependency.is_relative_to(destination)
+                                     or logical.is_relative_to(destination)
+                                     or destination in parents)):
+                refuse(label, destination, path, dependency)
+        if physical_writes:
+            try:
+                metadata = path.stat()
+            except FileNotFoundError:
+                return
+            if alias := physical_writes.get((metadata.st_dev, metadata.st_ino)):
+                refuse(*alias, path, dependency)
+
+    for source in sources:
+        # Judge the named path even if absent; a mandatory missing input must not become an
+        # execution destination. Missing optional path parameters retain upstream semantics.
+        try:
+            check(source)
+            inspect_input_paths([source], check)
+        except MissingInputSource:
+            continue
+        except (OSError, RuntimeError) as exc:
+            raise ValueError(
+                f"Cannot inspect local dependency boundaries: {source}: {exc}") from exc
+
+
 def check_replay_destination(bundle: Path, target: Path) -> None:
-    """Refuse writing locks, logs or results into a recorded scientific input directory."""
-    inventory = read_input_inventory(bundle / "inputs.inventory.json")
+    """Check effective engine writes before creating even the replay's parent or lock."""
+    manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
+    recorded = manifest.get("nextflow_env", {})
+    redacted = manifest.get("redacted_nextflow_env", [])
+    env = {**os.environ, **{key: value for key, value in recorded.items()
+                            if key not in redacted}}
     target = target.expanduser().resolve()
-    for name, entry in inventory.items():
-        if entry["type"] == "directory":
-            roots = {Path(entry.get("resolved_path", name)), Path(name).resolve()}
-            if any(target.is_relative_to(root) for root in roots):
-                raise ValueError(f"replay output directory {target} overlaps recorded input "
-                                 f"directory {name}; choose a separate output directory")
+    sources = [bundle]
+    for kind in ("inputs", "configs"):
+        inventory = read_input_inventory(bundle / f"{kind}.inventory.json")
+        if kind == "inputs":
+            for name, entry in inventory.items():
+                if entry["type"] == "directory":
+                    roots = {Path(entry.get("resolved_path", name)), Path(name).resolve()}
+                    if any(target.is_relative_to(root) for root in roots):
+                        raise ValueError(f"replay output directory {target} overlaps recorded "
+                                         f"input directory {name}; choose a separate directory")
+                    sources.extend(roots)
+        # Inspect each root once, retaining nested symlinks and hard-link aliases.
+        sources.extend(Path(name) for name in inventory if not any(
+            str(parent) in inventory and inventory[str(parent)]["type"] == "directory"
+            for parent in Path(name).parents))
+    if manifest.get("pipeline_path"):
+        sources.append(Path(manifest["pipeline_path"]))
+
+    def local(value):
+        path = Path(value).expanduser()
+        return path if path.is_absolute() else target / path
+
+    args = shlex.split(manifest.get("command", ""))
+    def option(names, default):
+        return next((args[i + 1] for i, arg in enumerate(args[:-1]) if arg in names), default)
+
+    log = local(option(("-log",), env.get("NXF_LOG_FILE") or ".nextflow.log"))
+    writes = [("replay output directory", target, True),
+              ("replay writer lock", target.parent / f".{target.name}.nfclaw.lock", True),
+              ("Nextflow state directory", target / ".nextflow", True),
+              ("Nextflow log", log, True),
+              ("Nextflow work directory", local(option(("-work-dir", "-w"),
+                  env.get("NXF_WORK") or "work")), False)]
+    # Nextflow rotates existing logs before opening the new log.
+    writes.extend(("Nextflow rotated log", Path(str(log) + f".{i}"), True)
+                  for i in range(1, 10))
+    for name in ("NXF_HOME", "NXF_DIST", "NXF_TEMP", "NXF_CACHE_DIR", "CAPSULE_CACHE_DIR"):
+        value = env.get(name) or (str(Path.home() / ".nextflow") if name == "NXF_HOME" else
+                                 env.get("TMPDIR", "") if name == "NXF_TEMP" else "")
+        if value:
+            writes.append((f"Nextflow {name}", local(value), False))
+    check_write_boundaries(sources, writes)
 
 
 def pipeline_head(repo: Path) -> str | None:
@@ -596,8 +744,20 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
     # After a replay: the source it ran must still be the recorded source.
     if replay_target is not None:
         used = replay_pipeline_source(replay_target)
-        if used is not None and used.get("from") == "checkout":
-            check_pipeline_checkout(bundle, manifest)
+        if used is not None:
+            if used.get("from") == "checkout":
+                check_pipeline_checkout(bundle, manifest)
+            elif used.get("from") == "archive":
+                source = replay_target / "provenance" / "pipeline"
+                expected = read_checksums(bundle / "pipeline.sha256")
+                current = hash_pipeline(source)
+                if current.keys() != expected.keys():
+                    raise ValueError(f"pipeline source inventory changed: {source}")
+                for name, digest in expected.items():
+                    if current[name] != digest:
+                        raise ValueError(f"pipeline source content changed: {source / name}")
+            else:
+                raise ValueError("invalid replay pipeline source record")
     for kind in ("inputs", "configs"):
         expected = read_checksums(bundle / f"{kind}.sha256", relative=False)
         sources = json.loads((bundle / f"{kind}.sources.json").read_text(encoding="utf-8"))

@@ -357,3 +357,43 @@ def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path
                              capture_output=True, text=True)
     accepted = inventory_exit == 0 and verdict == "mini\taccepted\n"
     assert (process.returncode == 0) == accepted, process.stdout
+
+
+@pytest.mark.parametrize("diverged", [False, True])
+def test_preview_preserves_existing_submodule_and_untracked_files(tmp_path, diverged):
+    upstream = tmp_path / 'origin'
+    upstream.mkdir()
+    (upstream / 'nextflow.config').write_text("manifest { nextflowVersion = '!>=25.10.4' }\n")
+    (upstream / 'main.nf').write_text('workflow {}\n')
+    def git(where, *args):
+        return subprocess.run(['git', '-C', str(where), *args], check=True,
+                              capture_output=True, text=True)
+    git(upstream, 'init', '-q')
+    git(upstream, 'add', '.')
+    git(upstream, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+        'commit', '-qm', 'fixture')
+    root = tmp_path / 'repo'
+    root.mkdir()
+    git(root, 'init', '-q')
+    git(root, '-c', 'protocol.file.allow=always', 'submodule', 'add', str(upstream),
+        'pipelines/mini/upstream')
+    sentinel = root / 'pipelines/mini/upstream/precious-untracked.txt'
+    sentinel.write_text('existing user data\n')
+    if diverged:
+        git(sentinel.parent, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+            'commit', '--allow-empty', '-qm', 'user-selected release')
+    selected = git(sentinel.parent, 'rev-parse', 'HEAD').stdout.strip()
+    fake = tmp_path / 'bin'
+    fake.mkdir()
+    _executable(fake / 'nextflow', '#!/bin/sh\nexit 0\n')
+    env = {**os.environ, 'PATH': f'{fake}{os.pathsep}{os.environ["PATH"]}',
+           'RUNNER_TEMP': str(tmp_path)}
+    env.pop('NFCLAW_KEEP_SUBMODULES', None)
+    process = subprocess.run(['bash', str(ROOT / 'scripts/nextflow_accept.sh'), 'mini'],
+                             cwd=root, env=env, capture_output=True, text=True, timeout=30)
+    assert process.returncode == (1 if diverged else 0), process.stdout + process.stderr
+    assert sentinel.exists(), 'preview deleted a preexisting untracked file'
+    assert sentinel.read_text() == 'existing user data\n'
+    assert (sentinel.parent / 'main.nf').exists()
+
+    assert git(sentinel.parent, 'rev-parse', 'HEAD').stdout.strip() == selected

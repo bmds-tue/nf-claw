@@ -610,3 +610,11 @@ def test_release_git_calls_never_wait_on_a_credential_prompt(tmp_path, monkeypat
     versions._fetch_tag(tmp_path, "1.0.0")
     assert [c[1] for c, _ in seen] == ["ls-remote", "-C"]
     assert all(env.get("GIT_TERMINAL_PROMPT") == "0" for _, env in seen)
+
+
+def test_explicit_verified_local_pin_does_not_need_remote_tag_inventory(tmp_path, monkeypatch):
+    pin = SubmoduleStatus('p', tmp_path / 'up', True, True, '2.0.0', 'abc', ())
+    monkeypatch.setattr(versions.submod, 'ensure_initialized', lambda *a, **k: pin)
+    monkeypatch.setattr(versions, 'release_tags',
+                        lambda *a, **k: pytest.fail('verified local pin requested tags'))
+    assert versions.ensure('p', 'v2.0.0', pipelines_dir=tmp_path, repo_root=tmp_path) is pin

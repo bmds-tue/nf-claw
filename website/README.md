@@ -97,9 +97,10 @@ NEXT_PUBLIC_BASE_PATH=/nf-claw NEXT_PUBLIC_SITE_URL=https://<user>.github.io npm
    `GITHUB_TOKEN` and Pages OIDC permissions; no personal access token is required.
 2. **Live GitHub augmentation (optional).** If a `GITHUB_TOKEN` (or `GH_TOKEN`) is present
    at build time, `src/lib/data/github.ts` augments the Activity section with live Actions
-   runs and Releases via the REST API. Without it, the site falls back to local git tags
+   runs via the REST API. Release information comes from local pins and git tags.
+   Without a token, the site shows local git history
    and workflow definitions. The token is only ever read at build time and is never shipped
-   to the client. Actions and release data are snapshots captured during the build;
+   to the client. Actions data is a snapshot captured during the build;
    the deployed static site does not poll GitHub and updates on the next deployment.
 
 Override the data root with `NFCLAW_REPO_ROOT` if the website is built outside the repo.

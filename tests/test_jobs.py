@@ -205,3 +205,45 @@ def test_state_dir_follows_the_environment(monkeypatch, tmp_path):
     assert jobs.state_dir() == tmp_path / "xdg" / "nfclaw"
     monkeypatch.delenv("XDG_STATE_HOME")
     assert jobs.state_dir() == Path.home() / ".local" / "state" / "nfclaw"
+
+
+def test_load_recovers_supervisor_identity_after_submitter_crash(tmp_path):
+    import json
+    job = _launch(tmp_path, _py('import time; print("up", flush=True); time.sleep(60)'))
+    try:
+        assert _until(lambda: jobs.load(job.id).child_pid is not None)
+        path = job.dir / jobs.JOB_FILE
+        record = json.loads(path.read_text())
+        record['supervisor_pid'] = None  # server crashed before its second atomic write
+        path.write_text(json.dumps(record))
+        recovered = jobs.load(job.id)
+        assert recovered.supervisor_pid == job.supervisor_pid
+        assert jobs.cancel(recovered)
+        assert _finished(job.id)
+        assert jobs.state(jobs.load(job.id)) == 'cancelled'
+    finally:
+        jobs.cancel(job)
+        _finished(job.id)
+
+
+@pytest.mark.parametrize('damage', [None, [], {'kind': 'invalid'}, {'id': 'wrong'},
+                                    {'created_at': []}, {'argv': 'run demo'}, {'dir': '/other'},
+                                    {'supervisor_pid': 'not-a-pid'}])
+def test_malformed_job_is_isolated_from_listing_and_new_submissions(tmp_path, damage):
+    import json
+    first = _launch(tmp_path, _py('pass'))
+    assert _finished(first.id)
+    damaged = jobs.create_dir('broken')
+    record = first.spec()
+    record['id'] = damaged.name
+    if isinstance(damage, dict):
+        record.update(damage)
+    else:
+        record = damage
+    (damaged / jobs.JOB_FILE).write_text(json.dumps(record))
+    with pytest.raises(jobs.JobError):
+        jobs.load(damaged.name)
+    assert [j.id for j in jobs.list_jobs()] == [first.id]
+    later = _launch(tmp_path, _py('pass'))
+    assert _finished(later.id)
+    assert set(j.id for j in jobs.list_jobs()) == {first.id, later.id}

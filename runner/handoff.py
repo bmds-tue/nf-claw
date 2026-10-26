@@ -714,7 +714,7 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
             row[col] = text
         rows.append(row)
     if not rows:
-        raise _Unresolved(f"no file in {root} matches {spec['rows']!r}")
+        raise _NoMatch(f"no file in {root} matches {spec['rows']!r}")
     return _write_sheet(dest.with_suffix("." + spec.get("format", "csv")),
                         _schema_order(list(spec["columns"]), sheet_schema), rows), derived, {}
 
@@ -759,7 +759,7 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
     params, recorded_in = used
     value = params.get(src.spec["upstream_param"])
     if value is None or value == "" or value is False:
-        raise _Unresolved(f"the {rule.upstream} run did not set "
+        raise _NoMatch(f"the {rule.upstream} run did not set "
                           f"{_flag(src.spec['upstream_param'])}")
     extra: dict[str, Any] = {}
     if isinstance(value, str) and not inputs.is_remote_url(value):
@@ -857,7 +857,7 @@ def materialize(rule: Rule, *, upstream_outdir: Path, downstream_tree: Path,
                 f"{_flag(target)}: {exc}",
                 fix="Restore the producer's recorded data and provenance before resuming.") from exc
         except _Unresolved as why:
-            if src.optional:
+            if src.optional and isinstance(why, _NoMatch):
                 continue
             raise NfclawError(
                 ErrorCode.HANDOFF_FAILED,

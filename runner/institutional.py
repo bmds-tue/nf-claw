@@ -17,6 +17,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from runner.probes import capture
+
 REPOSITORY = "https://github.com/nf-core/configs"
 PARAM = "custom_config_version"
 BASE_PARAM = "custom_config_base"
@@ -29,9 +31,9 @@ _COMMIT = re.compile(r"[0-9a-f]{40}")
 def _ls_remote(repository: str, ref: str) -> tuple[str | None, str | None]:
     """(commit, None) for a branch head, or (None, why it could not be resolved)."""
     try:
-        result = subprocess.run(
+        result = capture(
             ["git", "ls-remote", "--exit-code", repository, f"refs/heads/{ref}"],
-            capture_output=True, text=True, timeout=30,
+            timeout=30,
             env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
     except (OSError, subprocess.SubprocessError) as exc:
         return None, f"git ls-remote could not run: {exc}"

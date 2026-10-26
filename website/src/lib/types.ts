@@ -59,6 +59,7 @@ export interface Pipeline {
   runCommand: string;
   rawCommand: string | null;
   demoCommand: string | null;
+  operatingGuidance: { title: string; content: string }[];
   samplesheet: SamplesheetColumn[];
   samplesheetHeaders: SamplesheetHeader[]; // one per allowed column group
   requiredParams: RequiredParam[];

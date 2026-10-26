@@ -205,9 +205,13 @@ function ParamRow({
 }) {
   const expandable = Boolean(param.description || param.allowed.length || param.constraints || param.default);
   const flag = param.name.startsWith("-") ? param.name : `--${param.name}`;
-  const example = param.type.startsWith("boolean")
-    ? flag
-    : `${flag} ${param.allowed[0] ?? (param.default && param.default.length < 40 ? param.default.replace(/^`|`$/g, "") : "<value>")}`;
+  const candidate = param.allowed[0] ?? (param.default && param.default.length < 40
+    ? param.default.replace(/^`|`$/g, "") : null);
+  const concrete = candidate !== null && !/\$|\bparams\.|\bprojectDir\b|^<|^\[|^\{/.test(candidate);
+  const boolean = param.type.startsWith("boolean");
+  const copyable = boolean || concrete;
+  const quoted = candidate === null ? "" : "'" + candidate.replace(/'/g, "'\"'\"'") + "'";
+  const example = boolean ? flag : concrete ? `${flag}=${quoted}` : `${flag}=<value>`;
   return (
     <div
       className={cn(
@@ -307,7 +311,8 @@ function ParamRow({
                     <span className="text-cream">{flag}</span>
                     {example.slice(flag.length)}
                   </code>
-                  <CopyButton text={example} label="Copy" />
+                  {copyable ? <CopyButton text={example} label="Copy" /> :
+                    <span className="px-2 text-xs text-fog-dim">Set a concrete value before copying</span>}
                 </div>
               </div>
             </div>

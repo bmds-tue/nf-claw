@@ -10,7 +10,6 @@ through `show_pipeline`.
 """
 from __future__ import annotations
 
-import json
 import math
 import os
 import re
@@ -18,9 +17,11 @@ import shlex
 import subprocess
 import time
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from runner import chain, cli, jobs, settings
+from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
 
@@ -315,6 +316,10 @@ def _flag_value(key: str, value) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
+        return str(value)
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            raise ToolError(f"params.{key}: {value} is not a finite number")
         return str(value)
     if isinstance(value, float):
         if not math.isfinite(value):
@@ -687,7 +692,11 @@ class NfclawTools:
                 "created_at": job.created_at, "finished_at": job.finished_at,
                 "exit_code": job.exit_code}
         launched = self._launched(job)
-        if launched:
+        frozen = jobs.run_status(job) if state != "running" else {}
+        if frozen:
+            view.update(frozen)
+            view["log"] = job.log_path
+        elif launched and state == "running":
             res = self._cli(["status", job.outdir])
             view["status_report"] = res.text
             view["run_state"] = {0: "success", 3: "running"}.get(res.code, "not successful")
