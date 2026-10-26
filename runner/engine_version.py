@@ -7,11 +7,12 @@ from pathlib import Path
 from runner.probes import capture
 from runner.settings import seconds
 
-# nf-core pins the engine in the manifest, e.g. `nextflowVersion = '!>=25.04.3'`.
-# We surface a NON-blocking advisory when the installed engine is clearly too old;
-# Nextflow itself is the authority and enforces this at launch. To avoid ever
-# contradicting it with a false positive, we judge only the unambiguous `>=`/`>`
-# constraint and stay silent on anything we cannot parse with confidence.
+# nf-core pins the engine in the manifest, e.g. `nextflowVersion = '!>=25.04.3'`. Nextflow enforces
+# it when it launches the pipeline — every pinned release uses the strict `!` form — and a refusal
+# names the engine to pin (runner.execution), so a launch is not pre-judged. `nextflow config` does
+# not enforce it, so a `--check`, which never launches Nextflow, gets a NON-blocking advisory from
+# `check()`. To avoid ever contradicting Nextflow with a false positive, it judges only the
+# unambiguous `>=`/`>` constraint and stays silent on anything it cannot parse with confidence.
 
 _REQUIRED_RE = re.compile(r"""nextflowVersion\s*=\s*['"]([^'"]+)['"]""")
 _SPEC_RE = re.compile(r"^\s*!?\s*(>=?)\s*(\d+(?:\.\d+)*)\s*$")

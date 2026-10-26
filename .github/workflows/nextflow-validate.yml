@@ -7,16 +7,21 @@ name: nextflow-validate
 # it does not establish task execution or biological accuracy. Upstream release
 # CI is separate evidence. Submodules are initialised one at a time and cleaned up, so
 # disk stays bounded as the library grows.
+#
+# A pin is accepted when it is adopted: the maintenance bots run the same script on every changed
+# pipeline before publishing, and a merge that moves a pin runs this workflow. Between pin changes
+# the commit and engine stay the same, so the weekly run only watches what lives outside the
+# repository (hosted test data, plugin releases).
 on:
   schedule:
-    - cron: "0 5 * * *"      # nightly, 05:00 UTC
+    - cron: "0 5 * * 2"      # weekly, Tuesday 05:00 UTC
   workflow_dispatch:
   push:
     branches: [main]
     paths:
+      # The pins and the gate itself. Generated docs (skill.md) do not enter a preview.
       - "sources.tsv"
       - ".gitmodules"
-      - "pipelines/*/skill.md"
       - "pipelines/*/upstream"
       - "scripts/nextflow_accept.sh"
       - "scripts/nextflow_accept_exceptions.tsv"

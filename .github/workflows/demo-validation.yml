@@ -5,7 +5,7 @@ on:
     paths:
       - "runner/**"
       - "pipelines/demo/upstream"
-      - "scripts/check_demo_fastqc_metrics.py"
+      - "scripts/check_nftest_snapshot.py"
       - ".github/workflows/demo-validation.yml"
 
 permissions:
@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 30
     env:
       NXF_ANSI_LOG: "false"
+      SNAPSHOT: pipelines/demo/upstream/tests/default.nf.test.snap
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -33,72 +34,38 @@ jobs:
             --limit-cpus 2 --limit-memory 2.GB --limit-time 15.min --timeout 900
       - name: Replay the recorded command into a fresh directory
         run: '"$RUNNER_TEMP/demo/provenance/commands.sh" "$RUNNER_TEMP/demo-replay"'
-      - name: Independently validate statistics, scientific replay and all plot exports
+      # nf-core/demo's own test snapshot records the results its CI expects of this test: the stable
+      # output paths and the checksum of every stable file (FastQC's statistics, the trimmed reads,
+      # MultiQC's tables). Both runs are compared with it, so nfclaw is checked for changing none of
+      # them; the tools themselves are upstream's to test.
+      - name: Check both runs against the release's own nf-test snapshot
         run: |
-          python scripts/check_demo_fastqc_metrics.py "$RUNNER_TEMP/demo" \
-            --output "$RUNNER_TEMP/demo-metrics.json"
-          python scripts/check_demo_fastqc_metrics.py "$RUNNER_TEMP/demo-replay" \
-            --output "$RUNNER_TEMP/demo-replay-metrics.json" --against "$RUNNER_TEMP/demo-metrics.json"
+          python scripts/check_nftest_snapshot.py "$SNAPSHOT" "$RUNNER_TEMP/demo" --test "-profile test"
+          python scripts/check_nftest_snapshot.py "$SNAPSHOT" "$RUNNER_TEMP/demo-replay" --test "-profile test"
+      - name: Check what nfclaw recorded and replayed
+        run: |
+          nfclaw verify "$RUNNER_TEMP/demo-replay" --against "$RUNNER_TEMP/demo"
           python - <<'PY'
-          import gzip
           import json
           import os
           import re
           from pathlib import Path
-          from xml.etree import ElementTree
-          from runner.outputs import result_files
           original = Path(os.environ["RUNNER_TEMP"]) / "demo"
           replay = original.with_name("demo-replay")
           manifest = json.loads((original / "provenance/run_manifest.json").read_text())
           if manifest["nextflow"] != "nextflow version 25.10.4":
               raise SystemExit(f"Executed engine identity was not recorded correctly: {manifest['nextflow']!r}")
-          inventories = [{p.relative_to(root).as_posix() for p in result_files(root)}
-                         for root in (original, replay)]
-          missing, extra = inventories[0] - inventories[1], inventories[1] - inventories[0]
-          metadata = r"pipeline_info/params_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json"
-          if len(missing) != len(extra) or len(missing) > 1 or not all(re.fullmatch(metadata, p) for p in missing | extra):
-              raise SystemExit(f"Unclassified replay inventory differences: missing={missing}, extra={extra}")
-          parameter_files = [[p for p in inventory if re.fullmatch(metadata, p)] for inventory in inventories]
-          if any(len(files) != 1 for files in parameter_files):
-              raise SystemExit(f"Expected one upstream parameter report per run: {parameter_files}")
-          parameters = [json.loads((root / name).read_text())
-                        for root, name in ((original, parameter_files[0][0]), (replay, parameter_files[1][0]))]
+          metadata = re.compile(r"params_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json")
+          reports = [sorted(p for p in (root / "pipeline_info").iterdir() if metadata.fullmatch(p.name))
+                     for root in (original, replay)]
+          if any(len(files) != 1 for files in reports):
+              raise SystemExit(f"Expected one upstream parameter report per run: {reports}")
+          parameters = [json.loads(files[0].read_text()) for files in reports]
           for params in parameters:
               params.pop("outdir")
           if parameters[0] != parameters[1]:
               raise SystemExit("Replay changed upstream parameters beyond its output directory")
-          reads = sorted(p for p in inventories[0] if p.startswith("fq/") and p.endswith(".fastq.gz"))
-          if len(reads) != 6:
-              raise SystemExit(f"Expected six trimmed read outputs, found {len(reads)}")
-          for name in reads:
-              with gzip.open(original / name, "rb") as a, gzip.open(replay / name, "rb") as b:
-                  if a.read() != b.read():
-                      raise SystemExit(f"Replay changed trimmed reads: {name}")
-          if (original / "cowpy/cowpy.txt").read_bytes() != (replay / "cowpy/cowpy.txt").read_bytes():
-              raise SystemExit("Replay changed cowpy output")
-          multiqc = [json.loads((root / "multiqc/multiqc_data/multiqc_data.json").read_text())
-                     for root in (original, replay)]
-          for key in ("report_saved_raw_data", "report_general_stats_data"):
-              if multiqc[0][key] != multiqc[1][key]:
-                  raise SystemExit(f"Replay changed MultiQC scientific data: {key}")
-          for base in (original, replay):
-              root = base / "multiqc/multiqc_plots"
-              for suffix in ("png", "svg", "pdf"):
-                  files = sorted(root.rglob(f"*.{suffix}"))
-                  if len(files) != 12:
-                      raise SystemExit(f"Expected 12 {suffix} exports in {base}, found {len(files)}")
-                  for path in files:
-                      content = path.read_bytes()
-                      if not content:
-                          raise SystemExit(f"Empty plot export: {path}")
-                      if suffix == "png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
-                          raise SystemExit(f"Invalid PNG header: {path}")
-                      if suffix == "pdf" and not content.startswith(b"%PDF-"):
-                          raise SystemExit(f"Invalid PDF header: {path}")
-                      if suffix == "svg" and ElementTree.fromstring(content).tag != "{http://www.w3.org/2000/svg}svg":
-                          raise SystemExit(f"Invalid SVG root: {path}")
-          print("Scientific data match; both runs produced all 36 valid plot exports.")
-          print(f"Timestamped parameter reports differ by filename: {missing} -> {extra}")
+          print("Engine identity recorded; the replay ran the recorded parameters")
           PY
       - name: Check the recorded execution environment and its replay
         run: |
@@ -139,53 +106,19 @@ jobs:
           mv pipelines/demo/upstream "$RUNNER_TEMP/demo-checkout-moved"
           "$RUNNER_TEMP/demo/provenance/commands.sh" "$RUNNER_TEMP/demo-archive-replay"
           mv "$RUNNER_TEMP/demo-checkout-moved" pipelines/demo/upstream
+          python scripts/check_nftest_snapshot.py "$SNAPSHOT" "$RUNNER_TEMP/demo-archive-replay" --test "-profile test"
           python - <<'PY'
-          import gzip
           import json
           import os
           from pathlib import Path
-          temp = Path(os.environ["RUNNER_TEMP"])
-          original, replay = temp / "demo", temp / "demo-archive-replay"
+          replay = Path(os.environ["RUNNER_TEMP"]) / "demo-archive-replay"
           used = json.loads((replay / "provenance/pipeline-source.json").read_text())
           if used["from"] != "archive" or not (replay / "provenance/pipeline/main.nf").is_file():
               raise SystemExit(f"The replay did not run the bundle's source archive: {used}")
           check = json.loads((replay / "provenance/environment_check.json").read_text())
           if check["status"] != "identical":
               raise SystemExit(f"Archive replay environment differs from the recording: {check}")
-          reads = sorted(p.relative_to(original) for p in (original / "fq").rglob("*.fastq.gz"))
-          for name in reads:
-              with gzip.open(original / name, "rb") as a, gzip.open(replay / name, "rb") as b:
-                  if a.read() != b.read():
-                      raise SystemExit(f"Archive replay changed trimmed reads: {name}")
-          data = [json.loads((root / "multiqc/multiqc_data/multiqc_data.json").read_text())
-                  for root in (original, replay)]
-          if data[0]["report_general_stats_data"] != data[1]["report_general_stats_data"]:
-              raise SystemExit("Archive replay changed MultiQC scientific data")
-          print(f"Archive replay: {len(reads)} trimmed read files and MultiQC statistics unchanged")
-          PY
-      - name: Retain and recalculate portable FastQC source evidence
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import shutil
-          from pathlib import Path
-          from scripts.check_demo_fastqc_metrics import collect_reports, check_report, compare_metrics
-          temp = Path(os.environ["RUNNER_TEMP"])
-          work = Path(os.environ["GITHUB_WORKSPACE"]) / "work"
-          archive = temp / "demo-fastqc-work"
-          for name in ("demo", "demo-replay"):
-              run = temp / name
-              for report in collect_reports(run):
-                  record = check_report(report)
-                  target = archive / report.relative_to(work)
-                  target.parent.mkdir(parents=True, exist_ok=True)
-                  shutil.copy2(report, target)
-                  # Dereference staged-read symlinks while the runner's cache still exists.
-                  shutil.copy2(report.parent / record["input"], target.parent / record["input"])
-              recalculated = [check_report(report) for report in collect_reports(run, work_root=archive)]
-              compare_metrics(recalculated, json.loads((temp / f"{name}-metrics.json").read_text())["results"])
-          print("Retained FastQC reports and read bytes reproduce both runs' scientific evidence.")
+          print("Archive replay ran the bundled source in an identical environment")
           PY
       - name: Retain native execution evidence
         if: always()
@@ -194,11 +127,8 @@ jobs:
           name: native-demo-evidence
           path: |
             ${{ runner.temp }}/demo
-            ${{ runner.temp }}/demo-metrics.json
             ${{ runner.temp }}/demo-replay
-            ${{ runner.temp }}/demo-replay-metrics.json
             work/**/.command.*
-            ${{ runner.temp }}/demo-fastqc-work
           include-hidden-files: true
           retention-days: 14
 

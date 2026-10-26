@@ -11,7 +11,6 @@ def test_overlapping_resume_cannot_overwrite_active_run(library, tmp_path, monke
     root = library("mini")
     outdir = tmp_path / "results"
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     entered = []
 
     def launch(*args, **kwargs):
@@ -73,7 +72,6 @@ def test_provenance_snapshots_sheet_data_and_config_before_execution(library,
     config.write_bytes(original_config)
     outdir = tmp_path / "results"
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda *args: "test")
 
     def launch(*args, **kwargs):
@@ -103,7 +101,6 @@ def test_planned_pipeline_tree_is_reused_for_check(library, tmp_path, monkeypatc
 
     monkeypatch.setattr(orchestration.versions, "ensure", unexpected_resolution)
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     result = orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "results",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
@@ -125,7 +122,6 @@ def test_pipeline_can_create_an_optional_path_destination(library, tmp_path, mon
     cache = tmp_path / "new-cache"
     outdir = tmp_path / "results"
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda *args: "test")
 
     def launch(*args, **kwargs):
@@ -150,7 +146,6 @@ def test_missing_schema_required_path_is_still_refused(library, tmp_path, monkey
     schema["definitions"]["reference_genome_options"]["properties"]["fasta"]["exists"] = True
     source.write_text(json.dumps(schema))
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.execution, "run",
                         lambda *args, **kwargs: pytest.fail("launched"))
     with pytest.raises(NfclawError, match="cannot snapshot local run dependencies"):
@@ -179,7 +174,6 @@ def test_optional_existing_source_with_broken_member_is_refused(
     else:
         value = cache
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.execution, "run",
                         lambda *args, **kwargs: pytest.fail("launched"))
     # Directory inputs and patterns inspect staged entries before the dependency snapshot.

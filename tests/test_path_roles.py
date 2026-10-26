@@ -60,7 +60,6 @@ def _run(st, tmp_path, monkeypatch, overrides, *, check_only=False):
     # Keep runner validation, path resolution and real provenance intact. Only the external
     # engine/environment are replaced: these tests do not claim pipeline execution accuracy.
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **kwargs: [])
-    monkeypatch.setattr(orchestration.engine_version, "check", lambda *args, **kwargs: [])
     monkeypatch.setattr(orchestration.provenance, "_nextflow_version", lambda *args: "test")
     monkeypatch.setattr(orchestration.execution, "run", lambda *args, **kwargs: None)
     library_entry = tmp_path / "pipelines" / st.name

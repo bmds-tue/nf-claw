@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 
 from runner.probes import capture
@@ -25,11 +26,16 @@ _ENGINE_COMMANDS = {
 
 def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleStatus,
                       repo_root: Path, resume: bool, work_dir: Path | None = None,
-                      allow_spaces: bool = False, check_only: bool = False) -> list[str]:
+                      allow_spaces: bool = False, check_only: bool = False,
+                      env: Mapping[str, str] | None = None) -> list[str]:
+    """`env` is the environment Nextflow runs with: the shell's plus the run's NXF_* overlay."""
     issues: list[str] = []
-    for tool, hint in (("git", ""), ("nextflow", ""), ("java", " (Nextflow needs Java 17+)")):
+    for tool in ("git", "nextflow"):
         if shutil.which(tool) is None:
-            issues.append(f"{tool} not found on PATH{hint}")
+            issues.append(f"{tool} not found on PATH")
+    if not _java_found(os.environ if env is None else env):
+        issues.append("java not found on PATH, NXF_JAVA_HOME or JAVA_HOME "
+                      "(Nextflow needs Java 17+)")
     tokens = {t.strip() for t in profile.split(",")}
     if "docker" in tokens and shutil.which("docker") is None:
         issues.append("profile uses docker but docker not found on PATH")
@@ -70,6 +76,15 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
     issues += _space_issues(repo_root=repo_root, output_dir=output_dir,
                             work_dir=work_dir, allow_spaces=allow_spaces)
     return issues
+
+
+def _java_found(env: Mapping[str, str]) -> bool:
+    """Whether the Nextflow launcher finds a Java: NXF_JAVA_HOME's or JAVA_HOME's `bin/java`, else
+    `java` on PATH — the places it looks (it also checks the version, so that is left to it). Only
+    PATH counted before, which refused a Java the launcher runs from JAVA_HOME."""
+    home = env.get("NXF_JAVA_HOME") or env.get("JAVA_HOME")
+    return bool(home and os.access(Path(home, "bin", "java"), os.X_OK)) or (
+        shutil.which("java") is not None)
 
 
 def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | None:
