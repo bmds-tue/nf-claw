@@ -101,3 +101,30 @@ def test_demo_reference_preserves_data_source_and_reference_selectors(
 @pytest.mark.parametrize('profile', ['docker,', ' docker , , test,'])
 def test_equivalent_engine_profiles_keep_the_same_demo_reference(profile):
     assert demo_defaults.bundled_profile(profile)
+
+
+def test_tumourevo_demo_uses_the_k_grid_intended_by_its_pinned_test_profile():
+    commit = '180ae5447d0eb0214f650b6fcf7dabed0c77b5a2'
+    assert demo_defaults.parameters('tumourevo', commit) == {'sparsesignatures_k': '2:3'}
+    assert demo_defaults.parameters('tumourevo', '0' * 40) == {}
+    assert demo_defaults.parameters('tumourevo', commit, provided=frozenset({'input'})) == {}
+
+
+@pytest.mark.parametrize('override', [None, 'cli', 'file'])
+def test_tumourevo_bundled_demo_preserves_explicit_k_grid(tmp_path, monkeypatch, override):
+    if not (ROOT / 'pipelines/tumourevo/upstream/nextflow_schema.json').is_file():
+        pytest.skip('requires the audited tumourevo source')
+    st = submodule.resolve('tumourevo', ROOT / 'pipelines')
+    if st.commit != '180ae5447d0eb0214f650b6fcf7dabed0c77b5a2':
+        pytest.skip('requires the audited tumourevo 1.0.0 source')
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
+    params_file = tmp_path / 'params.json' if override == 'file' else None
+    if params_file:
+        params_file.write_text(json.dumps({'sparsesignatures_k': '2:4'}))
+    result = orchestration.run_pipeline(
+        'tumourevo', repo_root=ROOT, input_path=None, outdir=tmp_path / 'out',
+        profile='docker', params_file=params_file,
+        cli_overrides={'sparsesignatures_k': '2:4'} if override == 'cli' else {}, resume=False,
+        demo=True, check_only=True, write_provenance=False, timeout_seconds=30)
+    params = Path(re.search(r'-params-file (\S+)', result.command).group(1))
+    assert json.loads(params.read_text())['sparsesignatures_k'] == ('2:4' if override else '2:3')
