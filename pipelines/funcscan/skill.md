@@ -18,11 +18,14 @@ nf-core/funcscan is a bioinformatics best-practice analysis pipeline for the scr
 ```bash
 git submodule update --init pipelines/funcscan/upstream   # first time only
 nfclaw run funcscan --input samplesheet.csv --outdir results -profile docker
-# raw equivalent (the submodule is already pinned to this release, so no -r is needed):
+# direct upstream execution (omits nfclaw's recorded workflow correction):
 nextflow run pipelines/funcscan/upstream -profile docker --input samplesheet.csv --outdir results
 ```
 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions funcscan` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show funcscan --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show funcscan --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
+
+## Runtime corrections
+For this exact commit, `nfclaw run` applies `funcscan-hmm-metadata-v1` in a separate verified working copy. HMM search retains sample metadata so all HMM results reach AMPcombi. The original pinned checkout stays unchanged. The direct Nextflow command omits this correction. The actual corrected bytes, recipe, source archive and executable modes are recorded for replay; resume refuses missing or changed source identity. Use `NFCLAW_SOURCE_CACHE` to select another writable user cache. [Recorded source corrections](../../docs/source-corrections.md) explains the exact scope and validation.
 
 ## Inputs
 | column | type | required | allowed values | constraints |

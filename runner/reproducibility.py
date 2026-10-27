@@ -62,7 +62,8 @@ def _sourmash_runs(upstream: Path, params: Mapping[str, Any], demo: bool) -> boo
                for name in _SOURMASH_SWITCHES)
 
 
-def advisories(upstream: Path, params: Mapping[str, Any], demo: bool = False) -> list[str]:
+def advisories(upstream: Path, params: Mapping[str, Any], demo: bool = False, *,
+               source_overrides: Mapping[str, bytes] | None = None) -> list[str]:
     """The run-to-run variability this pinned tree's task scripts are known to carry."""
     texts = list(_task_scripts(upstream))
     notes: list[str] = []
@@ -80,7 +81,10 @@ def advisories(upstream: Path, params: Mapping[str, Any], demo: bool = False) ->
             "This release can rarefy with QIIME2 core-metrics without a seed: rarefied diversity "
             "results differ between executions of identical input, replays included. See "
             "docs/known-issues.md (ampliseq).")
-    if (_IN_PLACE_GENOME_SORT.search(_read(upstream / _SOURMASH_SUBWORKFLOW))
+    sourmash_source = ((source_overrides or {}).get(_SOURMASH_SUBWORKFLOW.as_posix()))
+    sourmash_text = (sourmash_source.decode() if sourmash_source is not None else
+                     _read(upstream / _SOURMASH_SUBWORKFLOW))
+    if (_IN_PLACE_GENOME_SORT.search(sourmash_text)
             and ".groupTuple(" in _read(upstream / _GROUPED_GENOMES)
             and _sourmash_runs(upstream, params, demo)):
         notes.append(

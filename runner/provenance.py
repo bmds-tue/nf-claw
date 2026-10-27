@@ -21,7 +21,7 @@ from runner.inputs import is_remote_url
 from runner.outputs import result_files
 from runner.probes import capture
 # Re-exported (`X as X`): callers read the bundle's checksum helpers from this module.
-from runner.replay_guard import (PIPELINE_ARCHIVE, write_pipeline_archive,
+from runner.replay_guard import (PIPELINE_ARCHIVE, check_corrected_source, write_pipeline_archive,
                                  MissingInputSource as MissingInputSource,
                                  checksum_text as checksum_text,
                                  hash_inputs as hash_inputs, hash_pipeline as hash_pipeline,
@@ -45,6 +45,7 @@ _URI_CREDENTIALS_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^/\s?#]*@")
 # nfclaw upgraded while a long run goes on must not pair the old script with the new helpers.
 _BUNDLED_SCRIPTS = {name: Path(__file__).with_name(name).read_bytes()
                     for name in ("replay_guard.py", "environment_record.py")}
+_DEFAULT_EXECUTION_HEAD = object()
 
 
 def sha256_file(path: Path) -> str:
@@ -472,7 +473,10 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           history_offset: int | None = None,
           institutional_configs: dict | None = None,
           observed_images: dict[str, list[dict]] | None = None,
-          validation_scope: dict | None = None) -> Path:
+          validation_scope: dict | None = None,
+          execution_path: Path | None = None,
+          execution_git_head: str | None | object = _DEFAULT_EXECUTION_HEAD,
+          source_corrections: dict | None = None) -> Path:
     try:
         grace = (seconds("NFCLAW_SHUTDOWN_GRACE", 10)
                  if shutdown_grace_seconds is None else float(shutdown_grace_seconds))
@@ -550,21 +554,35 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     # read (runner.institutional).
     if institutional_configs:
         manifest["institutional_configs"] = dict(institutional_configs)
-    if pipeline_checksums is not None or submodule.path.is_dir():
-        manifest["pipeline_path"] = str(submodule.path.absolute())
+    actual_source = execution_path if execution_path is not None else submodule.path
+    if source_corrections is not None:
+        if source_corrections.get('files') != pipeline_checksums:
+            raise ValueError('the source correction differs from the frozen launch snapshot')
+        # Retain the launch identity even when the live source/minimum resume record changed.
+        # A failed bundle must still describe the bytes launched, without overwriting that evidence.
+        correction_file = prov / 'source-corrections.json'
+        _atomic_text(correction_file,
+                     json.dumps(source_corrections, sort_keys=True, indent=2) + '\n')
+        manifest['source_corrections'] = {'file': correction_file.name,
+                                         'sha256': sha256_file(correction_file)}
+    if pipeline_checksums is not None or actual_source.is_dir():
+        manifest["pipeline_path"] = str(actual_source.absolute())
         manifest["pipeline_git_head"] = (
-            submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
-        pipeline_hashes = (hash_pipeline(submodule.path) if pipeline_checksums is None
+            (submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
+            if execution_git_head is _DEFAULT_EXECUTION_HEAD else execution_git_head)
+        pipeline_hashes = (hash_pipeline(actual_source) if pipeline_checksums is None
                            else pipeline_checksums)
         _atomic_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
         # The source itself, not only its checksums: a replay runs this archive, so it reproduces
         # the run after the checkout has moved to another release, been edited or been deleted.
         archive = prov / PIPELINE_ARCHIVE
-        if submodule.path.is_dir():
+        if actual_source.is_dir():
             try:
+                if source_corrections is not None:
+                    check_corrected_source(actual_source, source_corrections)
                 manifest["pipeline_archive"] = {
                     "file": PIPELINE_ARCHIVE, "files": len(pipeline_hashes),
-                    "sha256": write_pipeline_archive(submodule.path, pipeline_hashes, archive)}
+                    "sha256": write_pipeline_archive(actual_source, pipeline_hashes, archive)}
             except (OSError, ValueError) as exc:
                 archive.unlink(missing_ok=True)
                 manifest["pipeline_archive_error"] = str(exc)

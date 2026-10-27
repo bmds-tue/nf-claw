@@ -13,7 +13,7 @@ from runner import (budget, container_watch, demo_defaults, dependency_stability
                     environment_record, execution, fastqrepair_compat, input_safety, inputs,
                     institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
                     preflight, provenance, reproducibility, resources, resume_safety, runlog,
-                    samplesheet, sheetgen, submodule, versions)
+                    samplesheet, sheetgen, source_corrections, submodule, versions)
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
@@ -270,6 +270,11 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # pinned submodule) and, for any tree, without local edits.
     pin_doc = pipelines_dir / name / "skill.md" if not versions.is_cached(st) else None
     _check_pipeline_identity(st, pin_doc)
+    source_plan = source_corrections.plan(st)
+    resumed_source = source_corrections.resume_source(outdir, source_plan) if resume else None
+    source_destination = (resumed_source.path if resumed_source is not None else
+                          source_corrections.cache_destination(source_plan)
+                          if source_plan is not None and not check_only else None)
     # The Nextflow runtime env nfclaw applies for this run: --nxf-env vars plus --nxf-ver
     # (sugar for NXF_VER, which wins if both set it). Threaded to the engine check, the
     # subprocess and provenance so the engine actually used is consistent and recorded.
@@ -486,6 +491,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                                     *(sheet.files if sheet is not None else ())]))
     local_dependencies = tuple(dict.fromkeys([*prov_inputs, st.path, *extra_configs,
                                               *([params_file] if params_file else [])]))
+    if source_destination is not None:
+        # Protect an existing working copy before output locks, engine probes or log creation.
+        local_dependencies = (*local_dependencies, source_destination)
     repair_compat = name == "fastqrepair" and st.commit == fastqrepair_compat.SUPPORTED_COMMIT
     repair_input = resolved_input.local_path if resolved_input is not None else None
     if repair_compat:
@@ -530,6 +538,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
     writes += input_safety.engine_write_paths(outdir, nxf_overlay)
     input_safety.check_write_boundaries(local_dependencies, writes)
+    if source_destination is not None:
+        input_safety.check_write_boundaries(
+            tuple(path for path in local_dependencies if path != source_destination),
+            [('corrected source cache', source_destination, True),
+             ('corrected source lock', source_destination.parent /
+              f'.{source_destination.name}.nfclaw-source.lock', True)])
+        input_safety.check_write_boundaries([source_destination], writes)
     budget.check()
     # An engine older than Nextflow's Java 17 support cannot compile any pipeline config on Java 17+
     # (Groovy fails with "Unsupported class file major version"): refuse before launching.
@@ -566,6 +581,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # First, how the tree itself was resolved: running unreleased `dev` code (and, offline, a
     # possibly stale `dev` head) is said up front, so it is never mistaken for a release run.
     warnings = list(st.notes)
+    if source_plan is not None:
+        warnings.append(f'Applying recorded source correction {source_plan.recipe_id} '
+                        f'({source_plan.fingerprint[:12]}) in a separate verified working copy; '
+                        f'the original {st.version} source remains unchanged.')
     if applied_demo_params:
         warnings.append(demo_defaults.note(name, st.commit))
     warnings += _resume_advisory(outdir, st) if resume else []
@@ -585,7 +604,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     warnings += plugin_compat.known_plugin_warnings(st.path)
     # Also advisory: steps whose results are measured to vary between executions of identical
     # input, so differences between runs or replays are expected rather than investigated.
-    warnings += reproducibility.advisories(st.path, merged, demo=demo)
+    warnings += reproducibility.advisories(
+        st.path, merged, demo=demo,
+        source_overrides=source_plan.patched_files if source_plan is not None else None)
     if institutional_advisory:
         warnings.append(institutional_advisory)
     # A selected profile (proteinfold's `test`) or a `--config` that runs every task as a stub:
@@ -716,6 +737,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                                   f"({exc.filename or outdir})",
                                   fix="Pass an --outdir in a directory you can write to.") from exc
             staging = outdir / "provenance"
+        execution_source = None
+        pipeline_path = st.path
+        if source_plan is not None:
+            destination = (staging / 'pipeline' if check_only and resumed_source is None else
+                           source_destination)
+            execution_source = (resumed_source if effective_resume and resumed_source is not None
+                                else source_corrections.materialize(source_plan, destination))
+            pipeline_path = execution_source.path
+            local_dependencies = tuple(dict.fromkeys([*local_dependencies, pipeline_path]))
+            input_safety.check_write_boundaries([pipeline_path], writes)
+            source_corrections.write_record(execution_source, staging)
         sheet_path = None
         if sheet is not None:
             # The bytes validated above, staged beside the params file that names them.
@@ -752,24 +784,37 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         # and any extra `-c` configs. nfclaw launches Nextflow from the outdir (below) so each run
         # gets its own .nextflow/ state, but the work dir must not move into the results.
         cmd, cmd_str = nextflow_command.build(
-            upstream=st.path, profile=composed_profile, params_file=params_file_out,
+            upstream=pipeline_path, profile=composed_profile, params_file=params_file_out,
             resume=effective_resume, work_dir=work_dir, extra_configs=tuple(extra_configs),
             bundle_params={"input": sheet_path} if sheet_path else None)
         replay_configs = tuple(dict.fromkeys([*extra_configs, params_file_out,
-                                              *([sheet_path] if sheet_path else [])]))
+                                              *([sheet_path] if sheet_path else []),
+                                              *([staging / source_corrections.RECORD_FILE]
+                                                if execution_source else [])]))
         git_head = None
         if not check_only:
             try:
                 config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
-                pipeline_snapshot = provenance.hash_pipeline(st.path)
-                git_head = pipeline_head(st.path)
+                if execution_source is not None:
+                    source_corrections.verify(execution_source)
+                pipeline_snapshot = provenance.hash_pipeline(pipeline_path)
+                if execution_source is not None:
+                    expected = execution_source.metadata['files']
+                    if pipeline_snapshot != expected:
+                        raise NfclawError(
+                            ErrorCode.ENVIRONMENT,
+                            'Corrected pipeline source changed while capturing '
+                            'its launch snapshot.',
+                            fix='Preserve the changed source for inspection and use a fresh cache.')
+                    pipeline_snapshot = dict(expected)
+                git_head = pipeline_head(pipeline_path)
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot snapshot local run dependencies: {exc}",
                                   fix="Make the configuration and pipeline files "
                                       "readable before launching.") from exc
 
-            if st.commit and git_head != st.commit:
+            if st.commit and pipeline_head(st.path) != st.commit:
                 raise NfclawError(
                     ErrorCode.SUBMODULE_INCOMPLETE,
                     "The pipeline code revision changed while capturing the launch snapshot.",
@@ -818,7 +863,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              nextflow_log=run_log.nextflow_log,
                              history_offset=history_offset,
                              institutional_configs=institutional_configs,
-                             observed_images=observed_images, validation_scope=validation_scope)
+                             observed_images=observed_images, validation_scope=validation_scope,
+                             execution_path=pipeline_path, execution_git_head=git_head,
+                             source_corrections=execution_source.metadata if execution_source
+                             else None)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -866,8 +914,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                             input_inventory=input_inventory,
                             configs=replay_configs, config_checksums=config_snapshot,
                             config_inventory=config_inventory,
-                            pipeline=st.path, pipeline_checksums=pipeline_snapshot,
-                            git_head=git_head)
+                            pipeline=pipeline_path, pipeline_checksums=pipeline_snapshot,
+                            git_head=git_head,
+                            corrected_source=(execution_source.metadata
+                                              if execution_source else None))
                     if stability["status"] == "changed" and not stopped:
                         run_log.fail(dependency_stability.FAILED_EXECUTION_OUTCOME)
                 except Exception:
@@ -898,7 +948,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                     input_inventory=input_inventory,
                     configs=replay_configs, config_checksums=config_snapshot,
                     config_inventory=config_inventory,
-                    pipeline=st.path, pipeline_checksums=pipeline_snapshot, git_head=git_head)
+                    pipeline=pipeline_path, pipeline_checksums=pipeline_snapshot, git_head=git_head,
+                    corrected_source=execution_source.metadata if execution_source else None)
                 if stability["status"] != "unchanged":
                     if write_provenance:
                         try:

@@ -78,6 +78,26 @@ def test_funcscan_dramp_recipe_is_visible_and_bound_to_the_tested_consumer(tmp_p
     assert 'prepare-dramp' not in text
 
 
+@pytest.mark.parametrize('name,commit,recipe', [
+    ('createtaxdb', 'b01a0f8ed96a5990d15470828dfa92a22cf08bba',
+     'createtaxdb-sourmash-copy-sort-v1'),
+    ('funcscan', 'aee3dc965eb0c77267435544dda30da858763913', 'funcscan-hmm-metadata-v1')])
+def test_workflow_correction_docs_distinguish_direct_upstream_execution(
+        tmp_path, name, commit, recipe):
+    pdir = _seed(tmp_path, 'mini')
+    st = SubmoduleStatus(name, pdir / 'mini/upstream', True, True, 'fixture', commit, ())
+    for version in (None, 'fixture', 'dev'):
+        text, _ = write_skill.render_status(st, pipeline_version=version)
+        assert '## Runtime corrections' in text
+        assert recipe in text
+        assert '# raw equivalent' not in text
+        assert 'NFCLAW_SOURCE_CACHE' in text
+        assert 'docs/source-corrections.md' in text
+    other = SubmoduleStatus(name, st.path, True, True, 'future', 'different', ())
+    text, _ = write_skill.render_status(other)
+    assert '## Runtime corrections' not in text
+
+
 def _seed(tmp_path, name):
     up = tmp_path / name / "upstream"
     up.mkdir(parents=True)

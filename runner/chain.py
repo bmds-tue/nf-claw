@@ -27,7 +27,7 @@ from typing import Any
 
 from runner import (budget, consumption, discovery, engine_version, execution, handoff, inputs,
                     input_safety, nextflow_command, orchestration, parameters, preflight,
-                    provenance, resources, runlog, sheetgen, versions)
+                    provenance, resources, runlog, sheetgen, source_corrections, versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
 from runner import exact_json as json
@@ -359,6 +359,8 @@ def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
             "config_sha256": {c: _file_sha256(Path(c)) for c in opts.configs}}
     if s.sheet_set:                   # absent when unset: earlier chains keep their fingerprints
         body["sheet_set"] = dict(s.sheet_set)
+    if correction := source_corrections.recipe_identity(s.pipeline, p.tree.commit):
+        body['source_correction'] = correction
     text = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 

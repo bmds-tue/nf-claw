@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+for (const pipeline of ['createtaxdb', 'funcscan']) {
+  test(`${pipeline} shows its recorded workflow correction beside run guidance`, async ({ page }) => {
+    await page.goto(`/pipelines/${pipeline}/`);
+    await expect(page.getByRole('heading', { name: 'Runtime corrections', exact: true })).toBeVisible();
+    await expect(page.getByText(/NFCLAW_SOURCE_CACHE/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Recorded source corrections' })).toBeVisible();
+  });
+}
+
 test('funcscan shows the prepared DRAMP reference route beside its run guidance', async ({ page }) => {
   await page.goto('/pipelines/funcscan/');
   await expect(page.getByRole('heading', { name: 'Reference database', exact: true })).toBeVisible();

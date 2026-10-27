@@ -38,6 +38,13 @@ archived as their resolved contents; untracked/ignored source files are not arch
 judged for runtime significance. These are explicit limits, so a tracked-byte match is not a claim
 that every possible filesystem dependency or continuous source state was reproduced.
 
+The two exact-pin [recorded source corrections](source-corrections.md) use independent regular-file
+copies with a separately bound inventory, executable modes and complete directory namespace.
+They reject original untracked/ignored files and source symlinks, and verify the actual corrected
+copy or extracted archive before/after execution. These stronger checks apply to those corrected
+copies; they do not retroactively strengthen ordinary historical bundles or establish continuous
+filesystem immutability.
+
 ## Generation boundaries
 
 Generation consumes local directories, quoted local globs or explicit local files. Remote dataset

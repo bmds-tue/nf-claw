@@ -8,7 +8,7 @@ from pathlib import Path
 
 from runner import (demo_defaults, discovery, engine_version, fastqrepair_compat, handoff, inputs,
                     nextflow_command,
-                    sheetgen, versions)
+                    sheetgen, source_corrections, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -771,6 +771,24 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
             "offset alone is insufficient. See [Cock et al. (2010)]"
             "(https://doi.org/10.1093/nar/gkp1137) for the encoding and score definitions.\n\n"
         )
+    correction_block = ''
+    if correction := source_corrections.recipe_identity(name, st.commit):
+        raw_comment = ('# direct upstream execution (omits nfclaw\'s recorded workflow '
+                       'correction):')
+        purpose = ('Sourmash sorts a copy rather than the shared genome list.'
+                   if name == 'createtaxdb' else
+                   'HMM search retains sample metadata so all HMM results reach AMPcombi.')
+        doc_root = '../..' if pipeline_version is None else '../../../..'
+        correction_block = (
+            '## Runtime corrections\n'
+            f'For this exact commit, `nfclaw run` applies `{correction["recipe"]}` in a '
+            f'separate verified working copy. {purpose} The original pinned checkout stays '
+            'unchanged. The direct Nextflow command omits this correction. '
+            'The actual corrected bytes, recipe, source archive and executable modes are '
+            'recorded for replay; resume refuses missing or changed source identity. '
+            'Use `NFCLAW_SOURCE_CACHE` to select another writable user cache. '
+            f'[Recorded source corrections]({doc_root}/docs/source-corrections.md) explains '
+            'the exact scope and validation.\n\n')
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
     if name == 'funcscan' and st.commit == 'aee3dc965eb0c77267435544dda30da858763913':
@@ -805,6 +823,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{raw_comment}\n"
         f"{raw_cmd}\n```\n\n"
         f"{version_note}"
+        f"{correction_block}"
         f"## Inputs\n{_inputs_section(insch, ps)}\n"
         f"## Required parameters\n{_required_params(ps)}\n"
         f"{mandatory_block}"

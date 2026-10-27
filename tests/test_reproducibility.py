@@ -91,3 +91,12 @@ def test_in_place_sort_advisory_clears_when_grouping_no_longer_shares_lists(tmp_
     fixed = {**SOURMASH, "subworkflows/local/preprocessing/main.nf":
              "ch_prepped_dna_fastas = ch_x\n    .groupBy()\n"}
     assert reproducibility.advisories(_tree(tmp_path, fixed), {}, demo=True) == []
+
+
+def test_advisory_describes_the_verified_working_source_instead_of_the_original(tmp_path):
+    tree = _tree(tmp_path, SOURMASH)
+    overrides = {'subworkflows/local/sourmash_create/main.nf':
+                 SOURMASH['subworkflows/local/sourmash_create/main.nf'].replace(
+                     '.sort()', '.sort(false)').encode()}
+    assert reproducibility.advisories(tree, {}, demo=True, source_overrides=overrides) == []
+    assert reproducibility.advisories(tree, {}, demo=True)
