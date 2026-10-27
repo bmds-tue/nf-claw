@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    preflight, resources, runlog, sheetgen, verify, versions)
+                    exact_json, preflight, resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -247,6 +247,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument("--require-environment", action="store_true",
                           help="require complete matching recorded environment evidence; refuse "
                                "missing observations, containerless tasks and refetched inputs")
+    p_assess = sub.add_parser("assess", help="check an explicit scientific output contract")
+    p_assess.add_argument("outdir", help="run output directory to assess")
+    p_assess.add_argument("--contract", required=True, help="versioned JSON output contract")
+    p_assess.add_argument("--against", help="original run with recorded output checksums")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -366,6 +370,16 @@ def _main(argv: list[str] | None = None) -> int:
     # typo that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if args.cmd == "assess":
+        from runner import scientific
+        try:
+            result = scientific.assess(Path(args.outdir), Path(args.contract),
+                                       against=Path(args.against) if args.against else None)
+        except NfclawError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(exact_json.dumps(result, indent=2))
+        return 0 if result['passed'] else 1
     try:
         root = _repo_root()
     except NfclawError as exc:

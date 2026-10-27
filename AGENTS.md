@@ -106,6 +106,12 @@ When a run fails, nfclaw's error quotes what Nextflow reported on stdout and std
 
 ## Replaying a run
 
+Check declared scientific outputs with `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]`.
+This is separate from file/environment verification. The
+[output-contract guide](docs/scientific-output-contracts.md) defines sample coverage, exact parsed
+comparisons, reasoned numeric tolerances and explicit exclusions for tables/BAM/VCF/FASTA and
+selected H5AD matrices. Two exact-pin demo contracts are supplied; other branches need their own.
+
 `<outdir>/provenance/commands.sh` re-runs the recorded command. It reproduces the run into a **fresh** directory (default `<outdir>.replay`, or pass one: `./commands.sh /path/to/fresh-dir`) and refuses a target that already holds files. That is deliberate: an nf-core pipeline publishes into `--outdir` and cannot re-publish over a previous run's files, so replaying in place fails immediately on `pipeline_info/execution_trace_*.txt` (and on sarek's `manifest_*.bco.json`). A replay re-executes the pipeline — it is a reproduction, not a `--resume` — and the result can be compared against the original bundle's `outputs.sha256`. It logs itself the same way, to `<target>/provenance/logs/run.log`, ending with its outcome: `nfclaw status <target>` reads it, and `kill <replay pid>` stops Nextflow with it.
 
 Before launching Nextflow, `commands.sh` runs `provenance/replay_guard.py` against the original bundle. The guard checks the recorded pipeline revision and tracked source bytes (`pipeline.sha256`), declared local input content including data paths referenced in samplesheets (`inputs.sha256`), and parameters and configuration (`configs.sha256`). The `inputs.inventory.json` and `configs.inventory.json` records also preserve directory entries (including empty directories), entry types and symlink identities. Changed or missing dependencies and incomplete bundles are refused, rather than producing silently divergent scientific results. Replay targets inside a recorded input directory are refused before creating their locks or logs. New replay bundles acquire the same output-directory writer lock as `nfclaw run`, so overlapping runs and replays cannot write into that directory concurrently.

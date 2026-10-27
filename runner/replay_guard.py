@@ -160,10 +160,17 @@ def checksum_text(checksums: dict[str, str]) -> str:
 
 def read_checksums(path: Path, *, relative: bool = True) -> dict[str, str]:
     """Read a manifest; malformed/duplicate paths raise ValueError, I/O retains OSError."""
-    out: dict[str, str] = {}
-    # Only LF separates records. Unicode line separators are valid filesystem characters.
     with path.open(encoding="utf-8", newline="") as stream:
-        records = stream.read().split("\n")
+        return parse_checksums(stream.read(), source=str(path), relative=relative)
+
+
+def parse_checksums(text: str, *, source: str = 'checksum record',
+                    relative: bool = True) -> dict[str, str]:
+    """Parse the bytes already read from a held file, without reopening a mutable path."""
+    out: dict[str, str] = {}
+    path = source
+    # Only LF separates records. Unicode line separators are valid filesystem characters.
+    records = text.split("\n")
     if records and records[-1] == "":
         records.pop()
     for number, line in enumerate(records, start=1):

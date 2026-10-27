@@ -14,6 +14,7 @@ dependencies = []
 # to one minor series: a new release adds stable rules to the selected families (`B`, `UP`).
 dev = ["pytest>=8", "mcp>=1.9,<3", "ruff>=0.17,<0.18"]
 yaml = ["pyyaml>=6"]
+scientific = ["pysam>=0.24.1,<0.25", "h5py>=3.16,<4"]
 
 [project.scripts]
 nfclaw = "runner.cli:main"
@@ -22,7 +23,7 @@ nfclaw = "runner.cli:main"
 packages = ["runner", "librarian"]
 
 [tool.setuptools.package-data]
-runner = ["path_roles.json", "input_roles.json", "param_roles.json"]
+runner = ["path_roles.json", "input_roles.json", "param_roles.json", "output_contracts/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

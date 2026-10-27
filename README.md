@@ -285,6 +285,12 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 
 ## Scientific Validation & Limitations
 
+Use `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]` to require declared scientific
+outputs and sample coverage, and compare their parsed content. The
+[output-contract guide](docs/scientific-output-contracts.md) defines the supported tables,
+BAM/VCF/FASTA and selected H5AD matrix scope, exact comparisons, explicit tolerances and exclusions.
+Two source-bound demo contracts are supplied; other pipelines/branches still need their own.
+
 > [!WARNING]
 > **Analytical Rigor & Validation Caveats:**
 > nf-claw validates declared inputs, checks parameters against schemas, assembles commands, isolates execution environments, and tracks cryptographic provenance. Successful parameter validation, exit code 0 completion, or identical output file structures do not inherently establish biological or analytical accuracy.
