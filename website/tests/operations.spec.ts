@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+test('funcscan shows the prepared DRAMP reference route beside its run guidance', async ({ page }) => {
+  await page.goto('/pipelines/funcscan/');
+  await expect(page.getByRole('heading', { name: 'Reference database', exact: true })).toBeVisible();
+  await expect(page.getByText(/nfclaw prepare-dramp/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'DRAMP reference preparation' })).toBeVisible();
+});
+
 test('proteinfold shows its authoritative demo caveat beside the command', async ({ page }) => {
   await page.goto('/pipelines/proteinfold/');
   await expect(page.locator('#run')).toContainText(/placeholder|computes nothing/i);

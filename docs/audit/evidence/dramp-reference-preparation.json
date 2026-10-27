@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "created_at": "2026-10-27T15:22:39.284521+00:00",
+  "consumer": "AMPcombi 3.0.0",
+  "policy": {
+    "id": "identified-uppercase-canonical-20-v1",
+    "description": "Retain nonempty uppercase ACDEFGHIKLMNPQRSTVWY sequences with a DRAMP identifier verbatim; preserve all retained annotations. Exclude missing identifiers. Other peptides may be biologically valid."
+  },
+  "input": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/dramp-reference/raw/general_amps.http1.txt",
+    "bytes": 13221293,
+    "sha256": "4e044b3a4d9fcfc24cff81cbcf9fdb48184b41d8773837c697a2f205c1ab9dd5"
+  },
+  "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/dramp-reference/amp_DRAMP_database",
+  "rows": {
+    "read": 12784,
+    "retained": 10564,
+    "excluded": 2220
+  },
+  "exclusions": {
+    "counts": {
+      "noncanonical_sequence": 2219,
+      "missing_identifier": 1
+    },
+    "examples": [
+      {
+        "id": "DRAMP00244",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP02393",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP02394",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP02843",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP02845",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP02441",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP03215",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP04004",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP00065",
+        "reason": "noncanonical_sequence"
+      },
+      {
+        "id": "DRAMP00082",
+        "reason": "noncanonical_sequence"
+      }
+    ],
+    "examples_truncated": true
+  },
+  "outputs": {
+    "general_amps.fasta": "124fa8367dd4d711cc5757c6b0a1eba0ed4b2490e23c8d0de69d041641d1de84",
+    "general_amps.txt": "b920f8c0c1965c7fa12eeaf3d23402340cd0175402daad867c4cd9d31bdb7457"
+  },
+  "index": {
+    "status": "not_built",
+    "required": "Build mmseqs2/ref_DB before supplying this directory to Funcscan --amp_ampcombi_db."
+  }
+}

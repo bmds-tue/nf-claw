@@ -1,4 +1,23 @@
 {
+  "33d3109917df06e10c973638919a3842b4ec93cf214b342ff45a2949e1060019": {
+    "pipeline": "funcscan",
+    "releases": {
+      "4.0.0": "aee3dc965eb0c77267435544dda30da858763913"
+    },
+    "paths": {
+      "amp_ampcombi_db": {
+        "format": "directory-path",
+        "exists": true,
+        "source": [
+          "subworkflows/local/amp.nf:118-119",
+          "modules/nf-core/ampcombi2/parsetables/main.nf:15",
+          "modules/nf-core/ampcombi2/parsetables/main.nf:31",
+          "modules/nf-core/ampcombi2/parsetables/main.nf:41"
+        ],
+        "use": "passed as a staged reference directory to AMPcombi --amp_database_dir; contains FASTA, annotation TXT and prebuilt MMseqs2 indexes"
+      }
+    }
+  },
   "e4abfe602c101a3d739f128b3f435e0f8abe1f7daa2abfadbab64203399aa55e": {
     "pipeline": "nanoseq",
     "releases": {

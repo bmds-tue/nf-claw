@@ -63,6 +63,21 @@ def test_affected_fastqrepair_docs_distinguish_corrected_runs_from_direct_source
     assert "**Runtime corrections.**" not in text
 
 
+def test_funcscan_dramp_recipe_is_visible_and_bound_to_the_tested_consumer(tmp_path):
+    pdir = _seed(tmp_path, "mini")
+    st = SubmoduleStatus("funcscan", pdir / "mini" / "upstream", True, True,
+                         "4.0.0", "aee3dc965eb0c77267435544dda30da858763913", ())
+    for version in (None, '4.0.0', 'dev'):
+        text, _ = write_skill.render_status(st, pipeline_version=version)
+        assert '## Reference database' in text
+        assert 'prepare-dramp' in text
+        assert '--amp-ampcombi-db' in text
+        assert 'mmseqs2/ref_DB' in text
+    other = SubmoduleStatus('funcscan', st.path, True, True, '4.1.0', 'different', ())
+    text, _ = write_skill.render_status(other)
+    assert 'prepare-dramp' not in text
+
+
 def _seed(tmp_path, name):
     up = tmp_path / name / "upstream"
     up.mkdir(parents=True)

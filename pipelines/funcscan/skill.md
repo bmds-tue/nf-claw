@@ -56,6 +56,9 @@ Any of the optional columns above may be appended to the header when your data n
 | `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing sample names and paths to corresponding FASTA files, and optional annotation files. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
+## Reference database
+The bundled demo selects APD. For DRAMP, this release uses AMPcombi 3.0.0, whose downloader crashes on missing sequence cells. Prepare a complete local DRAMP TSV with `nfclaw prepare-dramp RAW.tsv --outdir /refs/amp_DRAMP_database`, inspect its recorded exclusions, then build `mmseqs2/ref_DB` before analysis. Supply both `--amp-ampcombi-db-id DRAMP` and `--amp-ampcombi-db /refs/amp_DRAMP_database`. The helper preserves retained sequences and annotations, excludes missing IDs and noncanonical/missing sequences, and refuses an existing output. [DRAMP reference preparation](../../docs/dramp-reference.md) gives the pinned-image index recipe and validation scope.
+
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
 - **AMP: ampcombi2 cluster** (`amp_ampcombi2_cluster`) — 7 parameters

@@ -251,6 +251,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_assess.add_argument("outdir", help="run output directory to assess")
     p_assess.add_argument("--contract", required=True, help="versioned JSON output contract")
     p_assess.add_argument("--against", help="original run with recorded output checksums")
+    p_dramp = sub.add_parser("prepare-dramp",
+                             help="prepare a recorded DRAMP reference for AMPcombi 3")
+    p_dramp.add_argument("table", help="complete local DRAMP general_amps TSV download")
+    p_dramp.add_argument("--outdir", required=True,
+                         help="fresh reference directory whose name contains DRAMP")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -370,6 +375,15 @@ def _main(argv: list[str] | None = None) -> int:
     # typo that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if args.cmd == "prepare-dramp":
+        from runner import dramp
+        try:
+            result = dramp.prepare(Path(args.table), Path(args.outdir))
+        except NfclawError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(exact_json.dumps(result, indent=2))
+        return 0
     if args.cmd == "assess":
         from runner import scientific
         try:

@@ -773,6 +773,19 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         )
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
+    if name == 'funcscan' and st.commit == 'aee3dc965eb0c77267435544dda30da858763913':
+        doc_root = '../..' if pipeline_version is None else '../../../..'
+        reference_block += (
+            '## Reference database\n'
+            'The bundled demo selects APD. For DRAMP, this release uses AMPcombi 3.0.0, whose '
+            'downloader crashes on missing sequence cells. Prepare a complete local DRAMP TSV '
+            'with `nfclaw prepare-dramp RAW.tsv --outdir /refs/amp_DRAMP_database`, inspect its '
+            'recorded exclusions, then build `mmseqs2/ref_DB` before analysis. Supply both '
+            '`--amp-ampcombi-db-id DRAMP` and `--amp-ampcombi-db /refs/amp_DRAMP_database`. '
+            'The helper preserves retained sequences and annotations, excludes missing IDs and '
+            'noncanonical/missing sequences, and refuses an existing output. '
+            f'[DRAMP reference preparation]({doc_root}/docs/dramp-reference.md) gives the '
+            'pinned-image index recipe and validation scope.\n\n')
     store_names = _nextflow_store_section(st)
     store_block = f"## Secrets\n{store_names}\n" if store_names else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its

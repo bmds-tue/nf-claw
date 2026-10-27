@@ -61,6 +61,10 @@ def test_value_role_does_not_extend_to_other_revisions(tmp_path, monkeypatch):
 def test_registry_records_exact_releases_and_audited_sources():
     assert REGISTRY
     for digest, audit in REGISTRY.items():
-        assert len(digest) == 64 and audit["pipeline"] and audit["values"]
+        roles = {**audit.get('values', {}), **audit.get('paths', {})}
+        assert len(digest) == 64 and audit["pipeline"] and roles
         assert audit["releases"] and all(len(commit) == 40 for commit in audit["releases"].values())
-        assert all(evidence["source"] and evidence["use"] for evidence in audit["values"].values())
+        assert all(evidence["source"] and evidence["use"] for evidence in roles.values())
+        for evidence in audit.get('paths', {}).values():
+            assert evidence['format'] in schema.PATH_FORMATS
+            assert type(evidence['exists']) is bool
