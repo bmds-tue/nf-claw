@@ -272,8 +272,9 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 ```
 
 - **`auto-update.yml`** (daily) and **`discover-pipelines.yml`** (weekly) bump pinned releases and
-  onboard new DSL2 pipelines. Each validates its update first, then publishes it by a checked
-  fast-forward of `main`, which needs no pull-request permission ([docs/updating.md](docs/updating.md)).
+  onboard new DSL2 pipelines. Each fixed candidate must pass the full Ubuntu/macOS Python
+  3.11–3.15 matrix and real bundled tasks for every changed pin before a separate publisher
+  can fast-forward `main` ([publication policy](docs/maintenance.md)).
 - **`smoke.yml`**, **`nextflow-validate.yml`**, **`tests.yml`**, **`drift-check.yml`**,
   **`demo-validation.yml`**, **`fastqrepair-validation.yml`** and **`pipeline-execution.yml`**
   validate every change; [docs/compatibility.md](docs/compatibility.md#3-automated-continuous-validation)

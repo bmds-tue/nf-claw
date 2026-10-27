@@ -24,12 +24,21 @@ def _job(text: str, name: str) -> str:
 
 
 def test_no_workflow_expands_inputs_inside_a_shell_script():
-    # `${{ inputs.* }}` inside `run:` is substituted before bash parses the script, so a crafted
-    # value becomes shell code. Inputs may only reach a script through an `env:` mapping.
-    for wf in sorted(WF.glob("*.yml")):
-        for line in wf.read_text(encoding="utf-8").splitlines():
-            if re.search(r"\$\{\{\s*(inputs|github\.event\.inputs)\.", line):
-                assert re.match(r"^\s+[A-Z][A-Z0-9_]*:\s", line), f"{wf.name}: {line.strip()}"
+    yaml = pytest.importorskip('yaml')
+
+    def inspect(value):
+        if isinstance(value, dict):
+            if isinstance(value.get('run'), str):
+                assert not re.search(r"\$\{\{\s*(inputs|github\.event\.inputs)\.", value['run'])
+            for child in value.values():
+                inspect(child)
+        elif isinstance(value, list):
+            for child in value:
+                inspect(child)
+
+    paths = [*WF.glob('*.yml'), *(ROOT / '.github/actions').glob('*/action.yml')]
+    for path in paths:
+        inspect(yaml.load(path.read_text(), Loader=yaml.BaseLoader))
 
 
 def test_discovery_step_fails_when_discovery_fails():
@@ -49,49 +58,43 @@ def test_jobs_that_run_upstream_code_do_not_keep_a_write_token():
         assert checkouts == text.count("persist-credentials: false"), name
 
 
-@pytest.mark.parametrize("name", ["auto-update.yml", "discover-pipelines.yml"])
-def test_write_capable_test_gates_install_yaml_before_running_the_suite(name):
-    text = _text(name)
-    # PyYAML is optional for the CLI, but required by the full automation gate. The scheduled
-    # update failed on valid merge overrides and recursive-alias controls without this extra.
-    install = re.search(r"- run: (pip install .*)", text)
-    assert install and install.start() < text.index("pytest -q"), name
-    args = shlex.split(install.group(1))
-    editable = args[args.index("-e") + 1]
-    assert editable.startswith(".[") and editable.endswith("]"), name
-    assert {"dev", "yaml"} <= set(editable[2:-1].split(",")), name
+@pytest.mark.parametrize('name', ['auto-update.yml', 'discover-pipelines.yml'])
+def test_maintenance_wires_candidate_gates_to_isolated_publication(name):
+    yaml = pytest.importorskip('yaml')
+    jobs = yaml.load(_text(name), Loader=yaml.BaseLoader)['jobs']
+    publisher = jobs['publish']
+    assert set(publisher['needs']) == {'prepare', 'validate', 'native', 'drift'}
+    assert jobs['validate']['uses'] == './.github/workflows/tests.yml'
+    assert jobs['native']['uses'] == './.github/workflows/maintenance-native.yml'
+    for job in ('prepare', 'validate', 'native', 'drift'):
+        assert jobs[job].get('permissions', {}).get('contents', 'read') == 'read'
+    environment = publisher['steps'][-1]['env']
+    for field, producer in [('VALIDATION_RESULT', 'validate'), ('DRIFT_RESULT', 'drift'),
+                            ('NATIVE_RESULT', 'native')]:
+        assert environment[field] == '${{ needs.' + producer + '.result }}'
+    # Candidate consumers use the immutable producer ID, including on failed-job reruns.
+    for job in ('validate', 'native'):
+        assert jobs[job]['with']['candidate_artifact'] == '${{ needs.prepare.outputs.artifact }}'
 
 
-@pytest.mark.parametrize("name, gate", [("auto-update.yml", "Unit tests + final drift gate"),
-                                        ("discover-pipelines.yml", "Unit tests + drift gate")])
-@pytest.mark.parametrize("parsing", ["..  [100%]\n",
-                                     "ss  [100%]\n"
-                                     "SKIPPED [1] tests/test_website_parsing.py:51: needs node\n"])
-def test_write_capable_gates_run_the_website_parsing_tests(tmp_path, name, gate, parsing):
-    # These jobs merge PRs that trigger no tests.yml run, and the site's parser tests skip without
-    # node: a silent skip would merge and deploy skill.md files the site was never checked to read.
-    text = _text(name)
-    step = text.index(f"- name: {gate}")
-    install = re.search(r"working-directory: website\n\s+run: (npm ci .*)", text)
-    assert install and install.start() < step, name
-    assert "--ignore-scripts" in install.group(1).split(), name
-    raw = text[step:].split("        run: |\n", 1)[1].split("\n      - ", 1)[0]
-    script = "\n".join(line[10:] for line in raw.splitlines())
-    fake = tmp_path / "bin"
+@pytest.mark.parametrize('parsing', ['..  [100%]\n',
+    'ss  [100%]\nSKIPPED [1] tests/test_website_parsing.py:51: needs node\n'])
+def test_reused_website_gate_refuses_skipped_parser_tests(tmp_path, parsing):
+    yaml = pytest.importorskip('yaml')
+    steps = yaml.load(_text('tests.yml'), Loader=yaml.BaseLoader)['jobs']['website']['steps']
+    script = next(step['run'] for step in steps
+                  if step.get('name') == 'Website parsing of the generated skills')
+    fake = tmp_path / 'bin'
     fake.mkdir()
-    (fake / "pytest").write_text(
-        '#!/bin/sh\ncase "$*" in *test_website_parsing*) printf "%s" "$PARSING" ;; esac\n')
-    (fake / "python").write_text("#!/bin/sh\nexit 0\n")
-    (fake / "ruff").write_text("#!/bin/sh\nexit 0\n")
-    (fake / "npm").write_text("#!/bin/sh\nexit 0\n")
+    (fake / 'pytest').write_text('#!/bin/sh\nprintf "%s" "$PARSING"\n')
+    (fake / 'pip').write_text('#!/bin/sh\nexit 0\n')
     for path in fake.iterdir():
         path.chmod(0o755)
-    env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
-           "RUNNER_TEMP": str(tmp_path), "PARSING": parsing}
-    # GitHub runs a step without an explicit shell as `bash -e {0}`, without pipefail.
-    result = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env,
+    env = {**os.environ, 'PATH': f"{fake}{os.pathsep}{os.environ['PATH']}",
+           'RUNNER_TEMP': str(tmp_path), 'PARSING': parsing}
+    result = subprocess.run(['bash', '-e', '-c', script], cwd=tmp_path, env=env,
                             capture_output=True, text=True)
-    assert (result.returncode == 0) == ("SKIPPED" not in parsing), result.stdout
+    assert (result.returncode == 0) == ('SKIPPED' not in parsing), result.stdout
 
 
 def test_pages_and_oidc_permissions_are_scoped_to_the_deploy_job():

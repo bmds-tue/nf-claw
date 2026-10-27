@@ -66,16 +66,6 @@ def test_nextflow_accept_timeout_is_portable():
     assert "budget=900" in text
 
 
-def test_auto_update_validates_changed_releases_before_publication():
-    text = (REPO / ".github" / "workflows" / "auto-update.yml").read_text(encoding="utf-8")
-    acceptance = text.index("Validate updated pipelines through Nextflow")
-    final_gate = text.index("Unit tests + final drift gate")
-    publish = text.index("Publish validated update")
-    assert "git diff --cached --name-only" in text
-    assert 'scripts/nextflow_accept.sh "${updated[@]}"' in text
-    assert acceptance < final_gate < publish
-    assert "uses: ./.github/actions/setup-nextflow" in text   # checksum-verified install (below)
-
 
 def test_setup_nextflow_action_verifies_the_checksum_and_stays_out_of_the_repo():
     # The launcher is fetched from the network on every job, so the install must stay pinned and

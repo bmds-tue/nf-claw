@@ -34,8 +34,8 @@ and a provenance bundle after. Workflow:
 2. show_pipeline(pipeline): its skill.md is authoritative for inputs, required parameters and the \
 reference genome. For any other parameter use show_pipeline(pipeline, document="reference", \
 grep=...). Never invent a parameter or value.
-3. run_pipeline(..., check=true) validates everything and prints the exact command without running \
-it.
+3. run_pipeline(..., check=true) checks supported parameters, declared local input paths and the \
+environment, then prints the command without running the analysis.
 4. run_pipeline(...) starts a detached job and returns its job_id. It keeps running after this \
 session ends; nothing needs to stay connected.
 5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then \
@@ -46,9 +46,10 @@ Always choose a fresh destination; replay jobs cannot resume in place. \
 read_artifact(job_id, path, max_bytes) previews bounded text from a job's output tree. \
 Chains: chain_edges shows which pipeline can feed which; run_chain(spec) runs stages in order, \
 each started only after the previous one succeeded (spec format: resource nfclaw://docs/chaining). \
-run_status(outdir, chain=true) verifies a chain's lineage. cancel_job stops a job cleanly \
-(Nextflow and its tasks shut down, provenance written). Use absolute paths and one new outdir per \
-run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
+run_status(outdir, chain=true) verifies a chain's lineage. cancel_job requests process-group \
+shutdown and outcome recording. Detached containers, scheduler jobs and host crashes can require \
+executor cleanup; verify they have stopped before resuming. Use absolute paths and one new outdir \
+per run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
 """
 
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")

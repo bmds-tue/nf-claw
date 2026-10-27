@@ -43,19 +43,20 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
 1. **Tag Discovery:** Queries upstream remotes via `git ls-remote --tags` (using standard git protocol to bypass GitHub REST API rate limits).
 2. **Deterministic Bumping:** When a newer release tag is discovered for a `latest-release` pipeline, the workflow checks out that tag in `pipelines/<name>/upstream`.
 3. **Context Regeneration:** Invokes `librarian/write_skill.py` and `librarian/write_catalog.py` to regenerate all parameter tables, input schemas, tool lists, and catalog manifests.
-4. **Comprehensive In-Job Validation:**
-   - Runs `scripts/nextflow_accept.sh` (`nextflow -preview`) to verify pipeline compilation, profile resolution, and parameter validation.
-   - Requires one unique `accepted` verdict for every changed pipeline. A matching documented upstream exception can keep the weekly preview workflow green, but cannot authorize an automated release merge.
-   - Executes the complete pytest suite.
-   - Runs the website parsing tests, which check that the site reads every regenerated `skill.md`, with the site's own TypeScript. The step fails if they are skipped.
-   - Runs Ruff, the website dependency audit, TypeScript checks and the static site build. These gates run in the maintenance job before it can publish anything.
-   - Runs the drift gate (`python3 -m librarian.check_drift`).
-5. **Automatic Publication:** After every validation gate passes, `scripts/publish_validated_update.sh` uses a separate Git index to stage only the generated pipeline files, catalogs and `.gitmodules` (plus `sources.tsv` for discovery). It creates one commit directly on the exact `main` the job validated and pushes it to a temporary branch named `maintenance-<kind>-<run-id>-<attempt>`.
-   - **No organization change or extra token:** the bots use the built-in `GITHUB_TOKEN` and never create or approve a pull request. They report the completed core checks on the generated commit and fast-forward `main` under its existing rules. The ruleset still requires those checks, prevents force pushes and has no bypass actor. It permits checked direct updates; a future requirement to publish through PRs would prevent this route and be reported as a failure.
-   - **Exact commit and source scope:** the publisher verifies the temporary branch's commit and parent before reporting checks. An isolated staging index keeps unrelated build files and existing staging out of the commit. Checkouts retain `persist-credentials: false`; only the final push authenticates, through a temporary Git credential helper.
-   - **Concurrent changes:** if `main` moves during validation, the publisher preserves it, leaves a notice and removes the candidate branch. The next scheduled maintenance run starts from the new `main`, regenerates the update and repeats validation. It never rebases an unvalidated combination or force-pushes. Actual check-reporting, permission, network or rule failures fail the job and keep its candidate branch for inspection; a later successful attempt of the same run removes it.
-   - **Follow-up workflows:** after publication, the temporary branch is removed and the job explicitly dispatches `tests.yml`, `smoke.yml`, `codeql.yml` and `deploy-pages.yml`. `GITHUB_TOKEN` pushes do not trigger ordinary push workflows. Every dispatch is attempted, and any dispatch failure is reported as a failed job so it cannot silently leave the website or checks stale.
-   - **One at a time:** both maintenance workflows share the `nfclaw-maintenance` concurrency group and check out `main` as it is when the job starts, so a run queued behind the other validates and publishes on top of what the first one published.
+4. **Freeze and validate one candidate:** After unique completed preview acceptance, a read-only
+   preparation job creates a generated-path-only commit and immutable Git-bundle artifact. Its
+   exact commit is checked by the complete Ubuntu/macOS Python 3.11–3.15 matrix, site/browser/parser
+   tests, real Nextflow integration, Ruff and generated drift. Every changed pipeline must also
+   complete actual bundled tasks; stub-only, incomplete or failed runs cannot authorize publication.
+5. **Automatic publication:** A fresh trusted-base job independently checks raw matrix/native
+   evidence before publishing that exact prevalidated commit. It alone has write permissions.
+   Main is updated atomically against the expected validated parent, with no unchecked rebase or
+   post-validation commit. A moved main defers publication; permission, rule, network or
+   follow-up dispatch failures remain failures. Both bots share one concurrency group and bind
+   preparation to their event commit; a queued stale run defers rather than changing main.
+   The [publication evidence policy](maintenance.md) defines resources, artifact identities,
+   supported skips, retention, reruns and the limits of actual-task evidence. The bots retain the
+   existing checked fast-forward route and dispatch tests, smoke, CodeQL and Pages after publication.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
 
 ---
@@ -81,7 +82,11 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
    - `rejected` and `staging-unverified` additions are pruned before committing, and are
      considered again by the next run. An incomplete result or unrecognized verdict fails the
      batch instead of merging it.
-5. **Batch Publication:** Validated additions must pass the tests (including non-skipped website parsing), Ruff, the drift gate, website dependency audit, type check and build. The same publisher commits the complete generated inventory, including new gitlinks and `sources.tsv`, reports the completed checks and fast-forwards `main` as for daily updates, then dispatches tests, smoke checks, CodeQL and Pages deployment.
+5. **Batch publication:** Surviving additions are frozen as one candidate and pass the same
+   full matrix, site, integration, drift and actual-task gates as daily updates. A failure in
+   real execution blocks the frozen candidate rather than silently dropping that pipeline.
+   The isolated publisher verifies raw evidence and updates main only from its validated parent.
+
 
 ---
 

@@ -1,9 +1,5 @@
 name: discover-pipelines
-# Find nf-core pipelines not yet in the library, scaffold each (pinned submodule
-# + generated skill.md/reference.md + catalog), then VALIDATE them: unit tests,
-# the drift gate and Nextflow acceptance (`-preview`). Pipelines that Nextflow
-# cannot fully validate are dropped from the batch; if any survive and all checks pass, the update
-# is published by a checked fast-forward (which rebuilds the site).
+# Discover and preview candidates, then require full-matrix and real-task gates before publication.
 on:
   schedule:
     - cron: "0 7 * * 1"      # weekly, Monday 07:00 UTC
@@ -14,9 +10,7 @@ on:
         default: "12"
 
 permissions:
-  contents: write
-  actions: write             # explicitly start push workflows after publication
-  checks: write              # report completed in-job validation on the generated commit
+  contents: read
 
 # Both maintenance bots publish to main: one at a time, so the second validates what the first
 # published instead of a main that no longer exists.
@@ -25,16 +19,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  discover:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.candidate.outputs.changed }}
+      base: ${{ steps.base.outputs.sha }}
+      sha: ${{ steps.candidate.outputs.sha }}
+      pipelines: ${{ steps.candidate.outputs.pipelines }}
+      artifact: ${{ steps.archive.outputs.artifact-id }}
     env:
       NXF_ANSI_LOG: "false"
       NFCLAW_KEEP_SUBMODULES: "1"   # keep newly-added submodules initialised for publication
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          # main as it is when the job starts (a queued run's event commit can be stale).
-          ref: main
+          # Bind preparation to the same commit as the reusable workflow definitions.
+          ref: ${{ github.sha }}
           submodules: recursive     # existing pipelines, so the drift gate can regenerate them
           fetch-depth: 0
           # This job runs upstream pipeline code (Nextflow parses each new release's Groovy config).
@@ -93,37 +93,115 @@ jobs:
           done
           python -m librarian.write_catalog
           echo "kept=$kept" >> "$GITHUB_OUTPUT"
-      # The site's markdown parser reads every generated skill.md. Its tests need node and the
-      # site's TypeScript; no dependency install scripts run in this write-capable job.
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - name: Freeze generated candidate
+        id: candidate
         if: steps.disc.outputs.kept != '0'
+        env:
+          BASE_SHA: ${{ steps.base.outputs.sha }}
+        run: python scripts/maintenance_candidate.py prepare --directory "$RUNNER_TEMP/candidate" --base "$BASE_SHA" --kind discover
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: archive
+        if: steps.candidate.outputs.changed == 'true'
         with:
-          node-version: 24
-      - name: Install website dependencies
-        if: steps.disc.outputs.kept != '0'
-        working-directory: website
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      # The complete local gates must pass before this write-capable job can publish a commit.
-      - name: Unit tests + drift gate
-        if: steps.disc.outputs.kept != '0'
-        run: |
-          set -eo pipefail
-          pytest -q --ignore=tests/test_nextflow_integration.py --ignore=tests/test_git_path_identity.py
-          ruff check .
-          pytest -q tests/test_nextflow_integration.py tests/test_git_path_identity.py
-          pytest -q -rs tests/test_website_parsing.py | tee "$RUNNER_TEMP/website-parsing.log"
-          if grep -q "SKIPPED" "$RUNNER_TEMP/website-parsing.log"; then
-            echo "::error::website parsing tests were skipped instead of run"
-            exit 1
-          fi
-          python -m librarian.check_drift
-          npm --prefix website audit --audit-level=low
-          npm --prefix website run typecheck
-          npm --prefix website run build
+          name: maintenance-candidate-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/candidate
+          if-no-files-found: error
+          retention-days: 90
+
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/tests.yml
+    with:
+      base_sha: ${{ needs.prepare.outputs.base }}
+      candidate_sha: ${{ needs.prepare.outputs.sha }}
+      candidate_artifact: ${{ needs.prepare.outputs.artifact }}
+
+  native:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true' && needs.prepare.outputs.pipelines != '[]'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/maintenance-native.yml
+    with:
+      base_sha: ${{ needs.prepare.outputs.base }}
+      candidate_sha: ${{ needs.prepare.outputs.sha }}
+      candidate_artifact: ${{ needs.prepare.outputs.artifact }}
+      pipelines: ${{ needs.prepare.outputs.pipelines }}
+
+  drift:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - uses: ./.github/actions/restore-maintenance-candidate
+        with:
+          artifact: ${{ needs.prepare.outputs.artifact }}
+          base: ${{ needs.prepare.outputs.base }}
+          sha: ${{ needs.prepare.outputs.sha }}
+      - run: git submodule foreach 'git fetch -q --tags origin'
+      - run: pip install -e .
+      - run: python -m librarian.check_drift
+
+  publish:
+    needs: [prepare, validate, native, drift]
+    if: >-
+      always() && needs.prepare.result == 'success' && needs.prepare.outputs.changed == 'true' &&
+      needs.validate.result == 'success' && needs.drift.result == 'success' &&
+      (needs.native.result == 'success' ||
+       (needs.prepare.outputs.pipelines == '[]' && needs.native.result == 'skipped'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      checks: write
+    steps:
+      # Trusted base only: do not check out or execute candidate/upstream code in this job.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.artifact }}
+          path: ${{ runner.temp }}/maintenance-candidate
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: maintenance-pytest-${{ needs.prepare.outputs.sha }}-*
+          path: ${{ runner.temp }}/maintenance-matrix
+          merge-multiple: true
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        if: needs.prepare.outputs.pipelines != '[]'
+        with:
+          pattern: maintenance-native-${{ needs.prepare.outputs.sha }}-*
+          path: ${{ runner.temp }}/maintenance-native
+          merge-multiple: true
       - name: Publish validated update
-        if: success() && steps.disc.outputs.kept != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE_SHA: ${{ steps.base.outputs.sha }}
+          BASE_SHA: ${{ needs.prepare.outputs.base }}
+          CANDIDATE_SHA: ${{ needs.prepare.outputs.sha }}
+          CANDIDATE_DIR: ${{ runner.temp }}/maintenance-candidate
+          MATRIX_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-matrix
+          NATIVE_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-native
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+          DRIFT_RESULT: ${{ needs.drift.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
           UPDATE_KIND: discover
         run: bash scripts/publish_validated_update.sh

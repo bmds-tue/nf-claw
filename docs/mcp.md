@@ -90,7 +90,7 @@ non-interactive shell's environment.
 | `read_artifact` | bounded file read | Preview UTF-8 text inside a job's outdir; reports truncation and rejects external symlinks/binary files. |
 | `get_job` | `nfclaw status` | A job's state, nfclaw's status report and its latest output; `wait_seconds` returns as soon as it ends. |
 | `list_jobs` | — | Jobs started through MCP, newest first. |
-| `cancel_job` | `kill <nfclaw pid>` | Stop a job cleanly: Nextflow and its tasks shut down, the outcome and provenance are recorded. |
+| `cancel_job` | `kill <nfclaw pid>` | Request process-group shutdown and outcome recording; detached/external executor work may need cleanup. |
 | `run_status` | `nfclaw status` / `nfclaw chain status` | Any run or chain directory, including ones started from a shell; `chain: true` verifies lineage. |
 | `verify_replay` | `nfclaw verify` | Compare a replay with the run it reproduces. |
 
@@ -137,8 +137,11 @@ Long-poll with `get_job(job_id, wait_seconds=N)`, keeping `N` below your client'
 job is not affected when a call returns or is cancelled. Clients that send a progress token receive
 progress notifications while a call waits.
 
-`cancel_job` sends the job SIGTERM, which nfclaw turns into a clean stop exactly as for
-`kill <nfclaw pid>` from a shell. The run can then continue with `resume: true`. A second job into an
+`cancel_job` sends the job SIGTERM, requesting the same process-group shutdown and outcome
+recording as `kill <nfclaw pid>` from a shell. Detached containers, scheduler jobs and host crashes
+can leave external work running or evidence unfinished. Inspect the executor and reconcile that
+work before continuing with `resume: true`; a cancelled or lost MCP label alone does not prove
+every task has stopped. A second job into an
 `outdir` that a running job holds is refused with that job's id (nfclaw's own `--outdir` lock is the
 authority either way), so retrying a submission cannot start a run twice.
 
