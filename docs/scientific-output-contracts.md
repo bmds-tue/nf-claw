@@ -16,6 +16,13 @@ must still match their recorded `provenance/outputs.sha256` before their content
 reference. Candidate files are always read live. Both sides are hashed again after parsing.
 These before/after observations do not establish continuous immutability.
 
+The BAM/VCF and H5AD adapters are optional. h5py 3.16 has no Python 3.15 wheel: installation on
+that interpreter needs a source build with HDF5 development headers/libraries (and pkg-config, or
+explicit HDF5 include/library paths). The server's Python 3.15 adapter tests passed with a private
+HDF5 1.10.10 build environment. CI prepares HDF5 on Linux 3.15; macOS 3.15 tests the runner and
+BAM/VCF adapters, while its H5AD lane awaits an available wheel. Other CI Python versions install
+all adapters. This describes configured CI scope, not a claim that macOS was executed on denbi.
+
 The version-1 contract contains `name`, `version: 1`, a nonempty `artifacts` list, and an optional
 `pipeline` binding with an exact `name`, 40-character `commit`, and explicit `params` conditions.
 Unknown or duplicate fields are refused. Parameter conditions preserve JSON types (false is not
