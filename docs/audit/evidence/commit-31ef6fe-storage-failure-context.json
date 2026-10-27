@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "source_commit": "31ef6fe17b17afff0c45ed36a86f2a0fad4c2577",
+  "recorded_at": "2026-10-27T21:34:36.535906+00:00",
+  "attempts": [
+    {
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash",
+      "exit_code": 1,
+      "task_count": 21,
+      "disposition": "Failed: 4.15GB MALT reference unzip publication ran out of disk; no pass claim."
+    },
+    {
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-prebuilt-map",
+      "exit_code": null,
+      "disposition": "Disk filled during Bracken task; recording failed too. Empty original JSON retained on server, not treated as a successful run.",
+      "incomplete_record_bytes": 0,
+      "incomplete_record_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "nextflow_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-prebuilt-map/.nextflow.log",
+      "nextflow_log_sha256": "1fcaec930c7282b3a5dbfe4c70710e86a3a24e9bc96aadb7bd5d1547af858879"
+    }
+  ],
+  "recovery": "Removed only completed synthetic pytest basetemps; relocated audits decompressed reference to private existing tmpfs after exact SHA256 verification, retaining its original2.225GB compressed archive and all user data/images.",
+  "setup_invocations": "Some helpers were started before their file transfer completed; no tests ran in those invocations. They are excluded from scientific and suite pass counts."
+}

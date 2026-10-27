@@ -1,0 +1,417 @@
+{
+  "version": 1,
+  "source_commit": "31ef6fe17b17afff0c45ed36a86f2a0fad4c2577",
+  "checked_at": "2026-10-27T21:39:25.781818+00:00",
+  "task_counts": [
+    31,
+    31
+  ],
+  "scope": "All configured test builders executed in original and fresh replay. Scientific assessment covers both merged Sourmash signatures, their exact five-input membership/bytes and positive exact-signature index retrieval. Six random Kraken/Bracken library filenames are paired by explicit role and exact content. Other changed database/report bytes remain unassessed; structural verify continues to report its differences and is not overridden.",
+  "sourmash": [
+    {
+      "artifact": "sourmash/database-sourmash-dna-31mer.sbt.zip",
+      "expected_input_files": [
+        "GCA_011545545.1_ASM1154554v1_genomic.fna",
+        "GCF_000292685.1_ASM29268v1_genomic.fna",
+        "GCF_016889925.1_ASM1688992v1_genomic.fna",
+        "GCF_900478275.1_34211_D02_genomic.fna",
+        "chrMT.fna"
+      ],
+      "input_records": [
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map",
+          "task": "/mnt/volume/nfclaw-remediation-matrix-source/work/0a/054def300d6ff046993c459c4d8608",
+          "input_files": {
+            "GCA_011545545.1_ASM1154554v1_genomic.fna": "1833c8720be7a62a4f132beefb68d2cbc32c3e20bd85a8939dba178850ba1ba4",
+            "chrMT.fna": "2564591817059ca7f6d00214bac50f72e48f05e6528e73701635a75db580cdc8",
+            "GCF_000292685.1_ASM29268v1_genomic.fna": "daba6e7d3db1ab2907d50a71e12cc78ac2ac5f0ea2dc223d0c7e4f454b6651ac",
+            "GCF_900478275.1_34211_D02_genomic.fna": "b07f9392c0a557ea8868716e415902f8f6e37de75bf1f162c6ea790370ec63f5",
+            "GCF_016889925.1_ASM1688992v1_genomic.fna": "ac1c10d2b6aa4bfcbe1dacb57addbc8ac72d5666af33dc100ca4a7c8f0c22448"
+          },
+          "library_order": [
+            "library/GCA_011545545.1_ASM1154554v1_genomic.fna",
+            "library/chrMT.fna",
+            "library/GCF_000292685.1_ASM29268v1_genomic.fna",
+            "library/GCF_900478275.1_34211_D02_genomic.fna",
+            "library/GCF_016889925.1_ASM1688992v1_genomic.fna"
+          ],
+          "command_sha256": "9b1696198c2348ddb47c032ef392aa8ddb932e60d64d285cb1409ee2b4b7e84b"
+        },
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map-replay",
+          "task": "/mnt/volume/nfclaw-remediation-matrix-source/work/26/70851b495aefc6db8c7dec97c1fe7c",
+          "input_files": {
+            "GCA_011545545.1_ASM1154554v1_genomic.fna": "1833c8720be7a62a4f132beefb68d2cbc32c3e20bd85a8939dba178850ba1ba4",
+            "chrMT.fna": "2564591817059ca7f6d00214bac50f72e48f05e6528e73701635a75db580cdc8",
+            "GCF_000292685.1_ASM29268v1_genomic.fna": "daba6e7d3db1ab2907d50a71e12cc78ac2ac5f0ea2dc223d0c7e4f454b6651ac",
+            "GCF_900478275.1_34211_D02_genomic.fna": "b07f9392c0a557ea8868716e415902f8f6e37de75bf1f162c6ea790370ec63f5",
+            "GCF_016889925.1_ASM1688992v1_genomic.fna": "ac1c10d2b6aa4bfcbe1dacb57addbc8ac72d5666af33dc100ca4a7c8f0c22448"
+          },
+          "library_order": [
+            "library/GCA_011545545.1_ASM1154554v1_genomic.fna",
+            "library/chrMT.fna",
+            "library/GCF_000292685.1_ASM29268v1_genomic.fna",
+            "library/GCF_900478275.1_34211_D02_genomic.fna",
+            "library/GCF_016889925.1_ASM1688992v1_genomic.fna"
+          ],
+          "command_sha256": "9b1696198c2348ddb47c032ef392aa8ddb932e60d64d285cb1409ee2b4b7e84b"
+        }
+      ],
+      "archives": [
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map",
+          "zip_sha256": "1c0f447c4e825937bc5acd6d581014fc736395d56573ab00cb6c86b0445366e5",
+          "members_sha256": {
+            ".sbt.database-sourmash-dna-31mer/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            ".sbt.database-sourmash-dna-31mer/internal.0": "8352196a656622e3ac03ee01eebdd48193a5bd8cfb7008e7ae171a89de061c3f",
+            ".sbt.database-sourmash-dna-31mer/4baacaa05881432f5b5cae8cd9bc4eaa": "bf03d20b64255216d8ccbbdd232650e7f0ad108b78d2ff925c2fa198027be8b4",
+            ".sbt.database-sourmash-dna-31mer/database-sourmash-dna-31mer.manifest.csv": "31675cb769460d836b8756489bb949cecdcb5ced4828fa221f55f2b6d9136074",
+            "database-sourmash-dna-31mer.sbt.json": "0ae75277bda796f4462828e1038efdb70fb15690f33994a357525375f0eb830e"
+          },
+          "leaf": ".sbt.database-sourmash-dna-31mer/4baacaa05881432f5b5cae8cd9bc4eaa",
+          "manifest": ".sbt.database-sourmash-dna-31mer/database-sourmash-dna-31mer.manifest.csv"
+        },
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map-replay",
+          "zip_sha256": "9a15d02e0142af4fbbdf1ce10a8921266b057d8d9e5e6a979a209d0d3f4366d6",
+          "members_sha256": {
+            ".sbt.database-sourmash-dna-31mer/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            ".sbt.database-sourmash-dna-31mer/internal.0": "8352196a656622e3ac03ee01eebdd48193a5bd8cfb7008e7ae171a89de061c3f",
+            ".sbt.database-sourmash-dna-31mer/4baacaa05881432f5b5cae8cd9bc4eaa": "1f13db1bb778b983f041c97146021e723c98df9fa02d0a651f52388ff5fe14b4",
+            ".sbt.database-sourmash-dna-31mer/database-sourmash-dna-31mer.manifest.csv": "8e8c745a842aea8cac9f3c785daf83181bc044d0681c2d35219494acd77a1f9a",
+            "database-sourmash-dna-31mer.sbt.json": "0ae75277bda796f4462828e1038efdb70fb15690f33994a357525375f0eb830e"
+          },
+          "leaf": ".sbt.database-sourmash-dna-31mer/4baacaa05881432f5b5cae8cd9bc4eaa",
+          "manifest": ".sbt.database-sourmash-dna-31mer/database-sourmash-dna-31mer.manifest.csv"
+        }
+      ],
+      "full_signature_sha256": "e88cfec31519ea6e403f60f2240a4a968ed55b40448870548b03646ea217a2de",
+      "all_signature_parameters_and_minhashes_identical": true,
+      "single_changed_minhash_refused": true,
+      "representative_filename_values": [
+        "library/GCA_011545545.1_ASM1154554v1_genomic.fna",
+        "library/GCF_000292685.1_ASM29268v1_genomic.fna"
+      ],
+      "classification": "Merged input set and all MinHash values/parameters agree. Only representative filename differs in leaf JSON/manifest; module uses unsorted find for library.txt. Other archive member contents agree.",
+      "searches": [
+        {
+          "command": [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--network",
+            "none",
+            "-v",
+            "/mnt/volume:/mnt/volume:ro",
+            "-v",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3:/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3",
+            "quay.io/biocontainers/sourmash@sha256:cf32bc7e7039340772184a79333a88d7988a2213a1209716b6e11977fa0d6719",
+            "sourmash",
+            "search",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/dna.sig",
+            "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map/sourmash/database-sourmash-dna-31mer.sbt.zip",
+            "--dna",
+            "-k",
+            "31",
+            "--threshold",
+            "1.0",
+            "--output",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/dna-0.csv"
+          ],
+          "exit_code": 0,
+          "matches": [
+            {
+              "similarity": "1.0",
+              "md5": "4baacaa05881432f5b5cae8cd9bc4eaa",
+              "filename": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map/sourmash/database-sourmash-dna-31mer.sbt.zip",
+              "name": "database_1",
+              "query_filename": "library/GCA_011545545.1_ASM1154554v1_genomic.fna",
+              "query_name": "database_1",
+              "query_md5": "4baacaa0",
+              "ani": "1.0"
+            }
+          ],
+          "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-sourmash-dna-search-v3-0.log",
+          "log_sha256": "1c40208cb00cc4461190bf5f63c558b3a3988381683f1d33a301847514d8f9fd"
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--network",
+            "none",
+            "-v",
+            "/mnt/volume:/mnt/volume:ro",
+            "-v",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3:/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3",
+            "quay.io/biocontainers/sourmash@sha256:cf32bc7e7039340772184a79333a88d7988a2213a1209716b6e11977fa0d6719",
+            "sourmash",
+            "search",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/dna.sig",
+            "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map-replay/sourmash/database-sourmash-dna-31mer.sbt.zip",
+            "--dna",
+            "-k",
+            "31",
+            "--threshold",
+            "1.0",
+            "--output",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/dna-1.csv"
+          ],
+          "exit_code": 0,
+          "matches": [
+            {
+              "similarity": "1.0",
+              "md5": "4baacaa05881432f5b5cae8cd9bc4eaa",
+              "filename": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map-replay/sourmash/database-sourmash-dna-31mer.sbt.zip",
+              "name": "database_1",
+              "query_filename": "library/GCA_011545545.1_ASM1154554v1_genomic.fna",
+              "query_name": "database_1",
+              "query_md5": "4baacaa0",
+              "ani": "1.0"
+            }
+          ],
+          "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-sourmash-dna-search-v3-1.log",
+          "log_sha256": "a16aed6dd74244c8be669d2f43027aee13ce947762e581e7dc56af36f12aec1c"
+        }
+      ]
+    },
+    {
+      "artifact": "sourmash/database-sourmash-protein-10mer.sbt.zip",
+      "expected_input_files": [
+        "GCA_011545545.1_ASM1154554v1_genomic.faa",
+        "GCF_000292685.1_ASM29268v1_genomic.faa",
+        "GCF_002881355.1_ASM288135v1_genomic.faa",
+        "GCF_016889925.1_ASM1688992v1_genomic.faa",
+        "GCF_900478275.1_34211_D02_genomic.faa"
+      ],
+      "input_records": [
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map",
+          "task": "/mnt/volume/nfclaw-remediation-matrix-source/work/c9/a8f1eeceb9287a4e86ba394c14759c",
+          "input_files": {
+            "GCF_016889925.1_ASM1688992v1_genomic.faa": "efaa8a0c79385a52b3c4d896751ca358df3300bda87a1f5b5cccf75c182d28ca",
+            "GCF_002881355.1_ASM288135v1_genomic.faa": "43c5591325c39852a90db045561d7d6734c0b1c1f8467d9cd07797b569a16a79",
+            "GCF_000292685.1_ASM29268v1_genomic.faa": "c0be5f886c6370128ebe816b4fc32d2df74bca0c938d906a408c9bf3b26887a9",
+            "GCA_011545545.1_ASM1154554v1_genomic.faa": "d84c8e9a59a47df07b2632ffaeefec56ce334038ca9e6bd24ba25e0fed0c2596",
+            "GCF_900478275.1_34211_D02_genomic.faa": "319b837e234a34a346d8bba352ea9cb6cf09cd229f9fda2057bfe30ea3d239cc"
+          },
+          "library_order": [
+            "library/GCF_016889925.1_ASM1688992v1_genomic.faa",
+            "library/GCF_002881355.1_ASM288135v1_genomic.faa",
+            "library/GCF_000292685.1_ASM29268v1_genomic.faa",
+            "library/GCA_011545545.1_ASM1154554v1_genomic.faa",
+            "library/GCF_900478275.1_34211_D02_genomic.faa"
+          ],
+          "command_sha256": "69c5fb370951ddffec7498505b3b46390741ceab6a9d77300abbc32adf91c9ca"
+        },
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map-replay",
+          "task": "/mnt/volume/nfclaw-remediation-matrix-source/work/06/bd69d15a2030e842e82f23711eb429",
+          "input_files": {
+            "GCF_016889925.1_ASM1688992v1_genomic.faa": "efaa8a0c79385a52b3c4d896751ca358df3300bda87a1f5b5cccf75c182d28ca",
+            "GCF_002881355.1_ASM288135v1_genomic.faa": "43c5591325c39852a90db045561d7d6734c0b1c1f8467d9cd07797b569a16a79",
+            "GCF_000292685.1_ASM29268v1_genomic.faa": "c0be5f886c6370128ebe816b4fc32d2df74bca0c938d906a408c9bf3b26887a9",
+            "GCA_011545545.1_ASM1154554v1_genomic.faa": "d84c8e9a59a47df07b2632ffaeefec56ce334038ca9e6bd24ba25e0fed0c2596",
+            "GCF_900478275.1_34211_D02_genomic.faa": "319b837e234a34a346d8bba352ea9cb6cf09cd229f9fda2057bfe30ea3d239cc"
+          },
+          "library_order": [
+            "library/GCF_016889925.1_ASM1688992v1_genomic.faa",
+            "library/GCF_002881355.1_ASM288135v1_genomic.faa",
+            "library/GCF_000292685.1_ASM29268v1_genomic.faa",
+            "library/GCA_011545545.1_ASM1154554v1_genomic.faa",
+            "library/GCF_900478275.1_34211_D02_genomic.faa"
+          ],
+          "command_sha256": "69c5fb370951ddffec7498505b3b46390741ceab6a9d77300abbc32adf91c9ca"
+        }
+      ],
+      "archives": [
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map",
+          "zip_sha256": "fb4185745cc42659ef2302fcf32494eef897a46d4474e3f7b8fbaf10bbc29f67",
+          "members_sha256": {
+            ".sbt.database-sourmash-protein-10mer/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            ".sbt.database-sourmash-protein-10mer/internal.0": "dc494f34703d60b4ebfc7bf41b25523d10e7cf1e801ec42310caac7b4bed04f0",
+            ".sbt.database-sourmash-protein-10mer/15839e4aa84b26aea2360c35ffbb9e3d": "c0cf5b11f615e502da1e396f88d4b53e33eacfd0bfb072d6fa9e172d7fc26975",
+            ".sbt.database-sourmash-protein-10mer/database-sourmash-protein-10mer.manifest.csv": "3d3db8dc0018f605efd02e5753a198626d9a1624dcb15fe67c105a1917625f02",
+            "database-sourmash-protein-10mer.sbt.json": "7ae10be0337095b7dce966c1f936143a8159d673f2722c339956b9265305fe29"
+          },
+          "leaf": ".sbt.database-sourmash-protein-10mer/15839e4aa84b26aea2360c35ffbb9e3d",
+          "manifest": ".sbt.database-sourmash-protein-10mer/database-sourmash-protein-10mer.manifest.csv"
+        },
+        {
+          "run": "commit-31ef6fe-createtaxdb-sourmash-ram-map-replay",
+          "zip_sha256": "80198932b7a74aed52ee9b0221c03f4e2510f447af8500c017bb90720b8d17c8",
+          "members_sha256": {
+            ".sbt.database-sourmash-protein-10mer/": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            ".sbt.database-sourmash-protein-10mer/internal.0": "dc494f34703d60b4ebfc7bf41b25523d10e7cf1e801ec42310caac7b4bed04f0",
+            ".sbt.database-sourmash-protein-10mer/15839e4aa84b26aea2360c35ffbb9e3d": "d20dcf8f797cd99e2cb71e627af1fbdab210389ec320b2f8fad473017469c262",
+            ".sbt.database-sourmash-protein-10mer/database-sourmash-protein-10mer.manifest.csv": "30a46e75a7c19d69124dcbed06e8bcb4c52e992d8ed20821a96644a915578885",
+            "database-sourmash-protein-10mer.sbt.json": "7ae10be0337095b7dce966c1f936143a8159d673f2722c339956b9265305fe29"
+          },
+          "leaf": ".sbt.database-sourmash-protein-10mer/15839e4aa84b26aea2360c35ffbb9e3d",
+          "manifest": ".sbt.database-sourmash-protein-10mer/database-sourmash-protein-10mer.manifest.csv"
+        }
+      ],
+      "full_signature_sha256": "6c26306f7ea9b537481a7c540cc3df23bef98f94d582b77896e1682b84580298",
+      "all_signature_parameters_and_minhashes_identical": true,
+      "single_changed_minhash_refused": true,
+      "representative_filename_values": [
+        "library/GCF_000292685.1_ASM29268v1_genomic.faa",
+        "library/GCA_011545545.1_ASM1154554v1_genomic.faa"
+      ],
+      "classification": "Merged input set and all MinHash values/parameters agree. Only representative filename differs in leaf JSON/manifest; module uses unsorted find for library.txt. Other archive member contents agree.",
+      "searches": [
+        {
+          "command": [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--network",
+            "none",
+            "-v",
+            "/mnt/volume:/mnt/volume:ro",
+            "-v",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3:/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3",
+            "quay.io/biocontainers/sourmash@sha256:cf32bc7e7039340772184a79333a88d7988a2213a1209716b6e11977fa0d6719",
+            "sourmash",
+            "search",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/protein.sig",
+            "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map/sourmash/database-sourmash-protein-10mer.sbt.zip",
+            "--protein",
+            "-k",
+            "10",
+            "--threshold",
+            "1.0",
+            "--output",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/protein-0.csv"
+          ],
+          "exit_code": 0,
+          "matches": [
+            {
+              "similarity": "1.0",
+              "md5": "15839e4aa84b26aea2360c35ffbb9e3d",
+              "filename": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map/sourmash/database-sourmash-protein-10mer.sbt.zip",
+              "name": "database_1",
+              "query_filename": "library/GCF_000292685.1_ASM29268v1_genomic.faa",
+              "query_name": "database_1",
+              "query_md5": "15839e4a",
+              "ani": "1.0"
+            }
+          ],
+          "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-sourmash-protein-search-v3-0.log",
+          "log_sha256": "35675102e2b60f5b41c7b6d97c0b64eaa40b1af5d9aa2aa61bd5f168c905f846"
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--network",
+            "none",
+            "-v",
+            "/mnt/volume:/mnt/volume:ro",
+            "-v",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3:/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3",
+            "quay.io/biocontainers/sourmash@sha256:cf32bc7e7039340772184a79333a88d7988a2213a1209716b6e11977fa0d6719",
+            "sourmash",
+            "search",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/protein.sig",
+            "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map-replay/sourmash/database-sourmash-protein-10mer.sbt.zip",
+            "--protein",
+            "-k",
+            "10",
+            "--threshold",
+            "1.0",
+            "--output",
+            "/dev/shm/nfclaw-remediation-sourmash-check-31ef6fe-v3/protein-1.csv"
+          ],
+          "exit_code": 0,
+          "matches": [
+            {
+              "similarity": "1.0",
+              "md5": "15839e4aa84b26aea2360c35ffbb9e3d",
+              "filename": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-createtaxdb-sourmash-ram-map-replay/sourmash/database-sourmash-protein-10mer.sbt.zip",
+              "name": "database_1",
+              "query_filename": "library/GCF_000292685.1_ASM29268v1_genomic.faa",
+              "query_name": "database_1",
+              "query_md5": "15839e4a",
+              "ani": "1.0"
+            }
+          ],
+          "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-31ef6fe-sourmash-protein-search-v3-1.log",
+          "log_sha256": "91a5a0f7294d6287ab781b26942a87dafa9d8af6b23092e75e4f09e0ec337a70"
+        }
+      ]
+    }
+  ],
+  "exact_content_renames": [
+    {
+      "original": "kraken2/database-kraken2/library/added/t0OS7ToSQR.fna",
+      "replay": "kraken2/database-kraken2/library/added/SGk79IgEfk.fna",
+      "sha256": "eb5db282e71abb3c22402b324aa2a446796ae29bce67e9049a286c678a56ed95"
+    },
+    {
+      "original": "kraken2/database-kraken2/library/added/t0OS7ToSQR.fna.masked",
+      "replay": "kraken2/database-kraken2/library/added/SGk79IgEfk.fna.masked",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "kraken2/database-kraken2/library/added/prelim_map_SPjbUGoPsz.txt",
+      "replay": "kraken2/database-kraken2/library/added/prelim_map_X0FSPggMVz.txt",
+      "sha256": "6872fc0ec84d7632edf6790e2e5c1853521150d7c8cf28237e5cd68e75e31f75"
+    },
+    {
+      "original": "bracken/database-bracken/library/added/t0OS7ToSQR.fna",
+      "replay": "bracken/database-bracken/library/added/SGk79IgEfk.fna",
+      "sha256": "eb5db282e71abb3c22402b324aa2a446796ae29bce67e9049a286c678a56ed95"
+    },
+    {
+      "original": "bracken/database-bracken/library/added/t0OS7ToSQR.fna.masked",
+      "replay": "bracken/database-bracken/library/added/SGk79IgEfk.fna.masked",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "bracken/database-bracken/library/added/prelim_map_SPjbUGoPsz.txt",
+      "replay": "bracken/database-bracken/library/added/prelim_map_X0FSPggMVz.txt",
+      "sha256": "6872fc0ec84d7632edf6790e2e5c1853521150d7c8cf28237e5cd68e75e31f75"
+    }
+  ],
+  "unassessed_changed_artifacts": [
+    "bracken/database-bracken/opts.k2d",
+    "centrifuger/database-centrifuger/database-centrifuger.4.cfr",
+    "downstream_samplesheets/databases-taxprofiler.csv",
+    "kmcp/database-kmcp-index.log",
+    "kmcp/database-kmcp-index/R001/__name_mapping.tsv",
+    "kraken2/database-kraken2/opts.k2d",
+    "malt/malt-build.log",
+    "malt/malt_index/table0.db",
+    "malt/malt_index/table0.idx",
+    "multiqc/multiqc_data/llms-full.txt",
+    "multiqc/multiqc_data/multiqc.log",
+    "multiqc/multiqc_data/multiqc.parquet",
+    "multiqc/multiqc_data/multiqc_data.json",
+    "multiqc/multiqc_report.html",
+    "pipeline_info/execution_report_2026-10-27_20-53-11.html",
+    "pipeline_info/execution_timeline_2026-10-27_20-53-11.html",
+    "pipeline_info/execution_trace_2026-10-27_20-53-11.txt",
+    "pipeline_info/params_2026-10-27_20-53-36.json -> pipeline_info/params_2026-10-27_20-55-32.json",
+    "sylph/database-sylph.syldb"
+  ],
+  "original_structural_verification": false,
+  "environment": {
+    "version": 1,
+    "status": "identical",
+    "mismatches": [],
+    "unverified": [],
+    "notes": []
+  }
+}

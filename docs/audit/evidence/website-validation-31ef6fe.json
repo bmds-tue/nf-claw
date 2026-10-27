@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "source_commit": "31ef6fe17b17afff0c45ed36a86f2a0fad4c2577",
+  "scope": "Linux amd64 production website typecheck/build and 12 Chromium browser cases",
+  "checked_at": "2026-10-27T21:46:11.314164+00:00",
+  "log": "/mnt/volume/nfclaw-website-31ef6fe.log",
+  "log_sha256": "65ec6b3f9a1fb9970f7103e10806c0439f7819a4e86d11682ad43a4522b17d0f",
+  "exit_code": 0
+}
