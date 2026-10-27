@@ -180,3 +180,52 @@ def _space_issues(*, repo_root: Path, output_dir: Path, work_dir: Path | None,
                       f"work directory mishandle spaces (Docker on macOS fails outright). "
                       f"{fix}, or pass --allow-spaces to run anyway.")
     return issues
+
+
+def scope_report(*, local_samplesheets: int, deferred_params: frozenset[str],
+                 local_bytes_hashed: bool) -> dict:
+    """Scope of a successfully completed wrapper preflight, before any workflow tasks run.
+
+    This inventory describes only the validations the wrapper performs. Deferred/unsupported
+    checks must not turn a successful preparation into a claim of complete runtime validation.
+    """
+    checks = [
+        ('source_identity', 'checked',
+         'Selected revision, tracked modifications and required files.'),
+        ('explicit_parameters', 'checked', 'Known names and supported scalar constraints; '
+         'not the complete JSON Schema language.'),
+        ('local_samplesheets', 'checked' if local_samplesheets else 'deferred',
+         f'{local_samplesheets} local table(s) validated with the supported input-schema subset; '
+         'profile-supplied and remote tables remain for runtime validation.'),
+        ('local_dependencies', 'checked', 'Declared local paths, types and table dependencies; '
+         'does not discover every implicit index or task download.'),
+        ('local_data_bytes', 'checked' if local_bytes_hashed else 'deferred',
+         'Declared local input bytes were hashed before launch.' if local_bytes_hashed else
+         'Preparation inspects paths; full input byte hashing is deferred to a real run.'),
+        ('write_boundaries', 'checked',
+         'Declared inputs separated from output/work/cache/log writes.'),
+        ('host_requirements', 'checked', 'Required executable presence and writable launch paths; '
+         'not a container daemon, scheduler or task execution test.'),
+        ('profile_config', 'deferred', 'Nextflow resolves profiles and config at launch, '
+         'including included configs and their parameter values.'),
+        ('complete_schema', 'deferred', 'The pinned pipeline/plugin validates nested, conditional '
+         'and complex constraints not covered by the wrapper subset.'),
+        ('remote_inputs', 'deferred', 'Remote inventory, availability, bytes and validation occur '
+         'during workflow staging/validation; no complete remote-input preflight is claimed.'),
+        ('implicit_dependencies', 'unsupported', 'Comprehensive discovery of implicit references, '
+         'indexes, Conda environments and task-managed downloads.'),
+        ('scientific_completeness', 'unsupported', 'Expected-versus-processed sample/output '
+         'contracts and biological accuracy are not established by wrapper preflight.'),
+        ('executor_recovery', 'unsupported', 'Detached containers, scheduler jobs and host-crash '
+         'reconciliation are not tested by preparation.'),
+    ]
+    return {'version': 1, 'local_samplesheets': local_samplesheets,
+            'deferred_parameters': sorted(deferred_params),
+            'checks': [{'id': name, 'status': status, 'scope': scope}
+                       for name, status, scope in checks]}
+
+
+def format_scope(report: dict) -> str:
+    return '\n'.join(f"preflight {status}: " + ', '.join(
+        row['id'] for row in report['checks'] if row['status'] == status)
+        for status in ('checked', 'deferred', 'unsupported'))

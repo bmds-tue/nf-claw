@@ -50,6 +50,12 @@ def test_check_only_returns_command(tmp_path, monkeypatch):
     # the output directory exactly as it found it. Creating it, or dropping a provenance/ directory
     # in it, made the next real run fail the "--outdir is not empty" guard over an empty result set.
     assert not (tmp_path / "out").exists()
+    checks = {row['id']: row for row in res.validation_scope['checks']}
+    assert checks['source_identity']['status'] == 'checked'
+    assert checks['local_samplesheets']['status'] == 'deferred'
+    assert checks['profile_config']['status'] == 'deferred'
+    assert checks['remote_inputs']['status'] == 'deferred'
+    assert checks['scientific_completeness']['status'] == 'unsupported'
 
 
 def test_full_run_invokes_execution(tmp_path, monkeypatch):
@@ -63,6 +69,58 @@ def test_full_run_invokes_execution(tmp_path, monkeypatch):
         profile="docker", params_file=None, cli_overrides={}, resume=False,
         demo=True, check_only=False, write_provenance=True, timeout_seconds=10)
     assert called.get("ran") and not res.checked_only
+    recorded = json.loads((tmp_path / 'out/provenance/run_manifest.json').read_text())
+    assert recorded['validation_scope'] == res.validation_scope
+    assert any(row['status'] == 'unsupported' for row in recorded['validation_scope']['checks'])
+
+
+@pytest.mark.parametrize('generated', [False, True])
+def test_preflight_scope_reports_a_local_table_only_after_it_is_validated(tmp_path, monkeypatch,
+                                                                         library, generated):
+    root = library('mini')
+    read = tmp_path / 'sample_R1.fastq'
+    read.write_text('@read\nACGT\n+\nIIII\n')
+    table = tmp_path / 'samples.csv'
+    table.write_text(f'sample,fastq_1,fastq_2\nsample,{read},\n')
+    if generated:
+        read2 = tmp_path / 'sample_R2.fastq'
+        read2.write_text('@read\nTGCA\n+\nIIII\n')
+        contract = root / 'pipelines/mini/upstream/assets/schema_input.json'
+        data = json.loads(contract.read_text())
+        for column in ('fastq_1', 'fastq_2'):
+            data['items']['properties'][column]['pattern'] = r'^\S+\.fastq$'
+        contract.write_text(json.dumps(data))
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
+    result = orchestration.run_pipeline(
+        'mini', repo_root=root, input_path=[str(read), str(read2)] if generated else str(table),
+        outdir=tmp_path / 'out',
+        profile='docker', params_file=None, cli_overrides={}, resume=False,
+        demo=True, check_only=True, write_provenance=False, timeout_seconds=30)
+    assert result.validation_scope['local_samplesheets'] == 1
+    check = next(row for row in result.validation_scope['checks']
+                 if row['id'] == 'local_samplesheets')
+    assert check['status'] == 'checked'
+
+
+def test_check_scope_does_not_claim_unreadable_data_bytes_were_checked(tmp_path, monkeypatch,
+                                                                      library):
+    root = library('mini')
+    read = tmp_path / 'sample.fastq'
+    read.write_text('@read\nACGT\n+\nIIII\n')
+    read.chmod(0)
+    table = tmp_path / 'samples.csv'
+    table.write_text(f'sample,fastq_1,fastq_2\nsample,{read},\n')
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
+    try:
+        result = orchestration.run_pipeline(
+            'mini', repo_root=root, input_path=str(table), outdir=tmp_path / 'out',
+            profile='docker', params_file=None, cli_overrides={}, resume=False,
+            demo=True, check_only=True, write_provenance=False, timeout_seconds=30)
+    finally:
+        read.chmod(0o600)
+    checks = {row['id']: row for row in result.validation_scope['checks']}
+    assert checks['local_data_bytes']['status'] == 'deferred'
+    assert 'readable' not in checks['local_dependencies']['scope']
 
 
 @pytest.mark.parametrize("console,expected", [

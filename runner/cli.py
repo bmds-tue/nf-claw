@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    resources, runlog, sheetgen, verify, versions)
+                    preflight, resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -524,6 +524,8 @@ def _main(argv: list[str] | None = None) -> int:
             if w not in shown:
                 warn(w)
         print(nextflow_command.shell_line(res.command, res.env))
+        if res.checked_only and res.validation_scope:
+            print(preflight.format_scope(res.validation_scope))
         if res.generated_samplesheet is not None:
             print(f"samplesheet: {res.generated_samplesheet} (generated from --input)")
         rep = res.outputs_report

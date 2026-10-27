@@ -471,7 +471,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           nextflow_log: Path | None = None,
           history_offset: int | None = None,
           institutional_configs: dict | None = None,
-          observed_images: dict[str, list[dict]] | None = None) -> Path:
+          observed_images: dict[str, list[dict]] | None = None,
+          validation_scope: dict | None = None) -> Path:
     try:
         grace = (seconds("NFCLAW_SHUTDOWN_GRACE", 10)
                  if shutdown_grace_seconds is None else float(shutdown_grace_seconds))
@@ -516,6 +517,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "output_inventory_version": 1,
         "provenance_real_path": str(prov.resolve()),
     }
+    if validation_scope is not None:
+        manifest['validation_scope'] = validation_scope
     concrete_pin = (isinstance(nxf_env.get("NXF_VER"), str) and re.fullmatch(
         r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", nxf_env["NXF_VER"]))
     if not manifest["nextflow"] and not concrete_pin:

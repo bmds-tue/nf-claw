@@ -57,3 +57,47 @@ def test_demo_reference_is_never_assumed_for_user_inputs(tmp_path, monkeypatch, 
         check_only=True, write_provenance=False, timeout_seconds=30)
     params = Path(re.search(r'-params-file (\S+)', result.command).group(1))
     assert 'fasta' not in json.loads(params.read_text())
+
+
+@pytest.mark.parametrize('configuration', ['profile', 'config'])
+def test_demo_reference_preserves_alternate_profiles_and_external_configs(
+        tmp_path, monkeypatch, configuration):
+    if not (ROOT / 'pipelines/bamtofastq/upstream/nextflow_schema.json').is_file():
+        pytest.skip('requires the audited bamtofastq source')
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
+    config = tmp_path / 'custom.config'
+    config.write_text("params.input = 'https://example.org/custom.csv'\n"
+                      "params.fasta = 'https://example.org/custom.fasta'\n")
+    result = orchestration.run_pipeline(
+        'bamtofastq', repo_root=ROOT, input_path=None, outdir=tmp_path / 'out',
+        profile='test_full,docker' if configuration == 'profile' else 'docker',
+        configs=[str(config)] if configuration == 'config' else [],
+        params_file=None, cli_overrides={}, resume=False, demo=True,
+        check_only=True, write_provenance=False, timeout_seconds=30)
+    params = Path(re.search(r'-params-file (\S+)', result.command).group(1))
+    assert 'fasta' not in json.loads(params.read_text())
+
+
+@pytest.mark.parametrize('source', ['cli', 'file'])
+@pytest.mark.parametrize('selector,value', [
+    ('pipelines_testdata_base_path', 'https://example.org/custom-data/'), ('genome', 'GRCh38')])
+def test_demo_reference_preserves_data_source_and_reference_selectors(
+        tmp_path, monkeypatch, source, selector, value):
+    if not (ROOT / 'pipelines/bamtofastq/upstream/nextflow_schema.json').is_file():
+        pytest.skip('requires the audited bamtofastq source')
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
+    params_file = tmp_path / 'params.json' if source == 'file' else None
+    if params_file:
+        params_file.write_text(json.dumps({selector: value}))
+    result = orchestration.run_pipeline(
+        'bamtofastq', repo_root=ROOT, input_path=None, outdir=tmp_path / 'out',
+        profile='docker', params_file=params_file,
+        cli_overrides={selector: value} if source == 'cli' else {}, resume=False, demo=True,
+        check_only=True, write_provenance=False, timeout_seconds=30)
+    params = Path(re.search(r'-params-file (\S+)', result.command).group(1))
+    assert 'fasta' not in json.loads(params.read_text())
+
+
+@pytest.mark.parametrize('profile', ['docker,', ' docker , , test,'])
+def test_equivalent_engine_profiles_keep_the_same_demo_reference(profile):
+    assert demo_defaults.bundled_profile(profile)

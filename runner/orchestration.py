@@ -168,6 +168,7 @@ class RunResult:
     local_dependencies: tuple[Path, ...] = ()  # check-only: chain-wide write separation
     # The samplesheet nfclaw generated from the data files --input named (runner.sheetgen).
     generated_samplesheet: Path | None = None
+    validation_scope: dict = field(default_factory=dict)
 
 
 def _check_pipeline_identity(st: SubmoduleStatus, pin_doc: Path | None) -> None:
@@ -285,9 +286,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     file_params = parameters.load_params_file(params_file) if params_file is not None else {}
     # Only the release's bundled demo data gets its audited missing reference. Explicit input
     # or parameter values remain authoritative, including an explicitly supplied null.
-    demo_params = (demo_defaults.parameters(name, st.commit)
+    provided_params = frozenset(key.replace('-', '_') for key in (*file_params, *cli_overrides)
+                                if isinstance(key, str))
+    demo_params = (demo_defaults.parameters(name, st.commit, provided=provided_params)
                    if demo and input_path is None and file_params.get('input') is None
-                   and 'input' not in deferred_params else {})
+                   and 'input' not in deferred_params and not extra_configs
+                   and demo_defaults.bundled_profile(profile) else {})
     applied_demo_params = {key: value for key, value in demo_params.items()
                            if key not in file_params and key not in cli_overrides}
     file_params = {**applied_demo_params, **file_params}
@@ -765,6 +769,9 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
 
         _check_pipeline_identity(st, pin_doc)
         _check_samplesheet_snapshots(sheet_snapshots)
+        validation_scope = preflight.scope_report(
+            local_samplesheets=len(sheet_inputs) + int(sheet is not None),
+            deferred_params=deferred_params, local_bytes_hashed=input_snapshot is not None)
 
         if check_only:
             budget.check()
@@ -772,7 +779,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              outputs_report=None, warnings=warnings, env=nxf_overlay,
                              staging=staging,
                              local_dependencies=local_dependencies,
-                             generated_samplesheet=sheet_path)
+                             generated_samplesheet=sheet_path, validation_scope=validation_scope)
 
         generation_record = None
         if sheet is not None:
@@ -803,7 +810,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              nextflow_log=run_log.nextflow_log,
                              history_offset=history_offset,
                              institutional_configs=institutional_configs,
-                             observed_images=observed_images)
+                             observed_images=observed_images, validation_scope=validation_scope)
 
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
@@ -955,4 +962,4 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         return RunResult(command=cmd_str, outdir=outdir, checked_only=False,
                          outputs_report=report, warnings=warnings,
                          log_path=logs_dir / runlog.RUN_LOG_NAME, env=nxf_overlay,
-                         generated_samplesheet=sheet_path)
+                         generated_samplesheet=sheet_path, validation_scope=validation_scope)

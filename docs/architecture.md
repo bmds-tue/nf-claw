@@ -50,6 +50,11 @@ The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas
 The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)).
 
 ### 2.1 Schema Preflight & Fast-Fail Parameter Validation
+`nfclaw run --check` lists completed, deferred and unsupported checks; real runs record the detailed
+`validation_scope` in their manifest. The [preflight scope guide](preflight.md) documents the schema
+subset and the generation support matrix, including differences between handwritten and generated
+tables and JSON/YAML inputs.
+
 Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight checks (`runner/preflight.py`, `runner/schema.py`, `runner/parameters.py`, `runner/inputs.py`):
 - **Syntactic Validation:** Rejects unknown flags, typos, and syntax errors prior to Nextflow process initialization.
 - **Type & Range Checking:** Validates scalar types, boolean flags, numeric bounds, and enum choices.

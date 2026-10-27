@@ -56,6 +56,7 @@ The repository is structured into four functional zones, plus the catalogs, docu
 | **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
+| **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked/deferred/unsupported validations, the schema subset, and the 95-pipeline samplesheet generation matrix. |
 | **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
 | **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: tools, detached jobs, chains. |
 | **Agent Guidance** | [`AGENTS.md`](AGENTS.md) | Authoritative reference for autonomous coding assistants and LLM agents; [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |

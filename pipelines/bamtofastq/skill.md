@@ -105,6 +105,6 @@ Full list with references: https://github.com/nf-core/bamtofastq/blob/2.2.1/CITA
 nfclaw run bamtofastq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-This pinned test profile omits its required reference. For the bundled demo input, nfclaw supplies the matched chr22:1-40001 test FASTA from immutable test-datasets commit `618f1541382c4ad49eff566dadf13d5ccbd0ebb4` and records it in params/provenance. Explicit `--fasta` or params-file values override it. Supplying your own input disables this demo default; choose a reference matched to your data. Other releases retain their own defaults.
+This pinned test profile omits its required reference. For the bundled demo input, nfclaw supplies the matched chr22:1-40001 test FASTA from immutable test-datasets commit `618f1541382c4ad49eff566dadf13d5ccbd0ebb4` and records it in params/provenance. Explicit `--fasta` or params-file values override it. Your own input, genome, test-data base, extra profiles or `--config` disable this demo default; choose a reference matched to your data. The correction applies only to the bundled test plus engine profiles. Other releases retain their own defaults.
 
 <!-- Generated from nf-core/bamtofastq@8a295860c0c9221337dec7f2620709a47cea254d. Do not edit by hand. -->

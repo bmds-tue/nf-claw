@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-27T09:36:01.985779+00:00",
+  "status": "passed",
+  "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/preflight-generated-control",
+  "pipeline_commit": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+  "profile": "test,docker",
+  "platform": "Linux amd64",
+  "nextflow": "nextflow version 25.10.4",
+  "base_commit": "0aa795091ca5b378900bfff9d2eacf6dedd839cd",
+  "dirty_worktree": true,
+  "runtime_sha256_at_assessment": {
+    "runner/cli.py": "c671d21111f231c169e637f2fd3a8588ea159a39767dbef5aa23b879e445ef81",
+    "runner/orchestration.py": "598a33aef351c038f199bfb244a08f40ba316de0159dcbddbe7fa72b7ede49b2",
+    "runner/preflight.py": "6d5d6f9179004043153be3512ae72fe30f3e839e9da1ebb94cdfe7c26e95a8f9",
+    "runner/provenance.py": "0bfef8189912616b62a7d04c5227156e3104fb62717d4247efda09d5dffa57fa"
+  },
+  "source_hash_scope": "Files on disk at assessment; a complete launch-time wrapper source snapshot was not captured.",
+  "generated_samplesheet_count": 1,
+  "expected_samples": [
+    "sample1",
+    "sample2"
+  ],
+  "processed_samples": {
+    "FASTQC": [
+      "sample1",
+      "sample2"
+    ],
+    "SEQTK_TRIM": [
+      "sample1",
+      "sample2"
+    ]
+  },
+  "completed_tasks": 6,
+  "completion_caveats": [],
+  "local_dependency_stability": {
+    "checked_at": "2026-10-27T09:15:31+00:00",
+    "issues": [],
+    "status": "unchanged",
+    "version": 1
+  },
+  "plot_exports": [
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/demo",
+      "files": 36,
+      "formats": {
+        "png": 12,
+        "svg": 12,
+        "pdf": 12
+      },
+      "nonempty_valid_headers": true
+    },
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/preflight-generated-control",
+      "files": 36,
+      "formats": {
+        "png": 12,
+        "svg": 12,
+        "pdf": 12
+      },
+      "nonempty_valid_headers": true
+    }
+  ],
+  "scope": "Sample/process coverage and plot artifact integrity for these controls, not biological accuracy or macOS execution."
+}

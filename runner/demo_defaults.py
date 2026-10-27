@@ -6,16 +6,27 @@ _REFERENCE = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
               '618f1541382c4ad49eff566dadf13d5ccbd0ebb4/'
               'data/genomics/homo_sapiens/genome/genome.fasta')
 _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE}}
+_DATA_SELECTORS = {_BAMTOFASTQ: {'input', 'genome', 'pipelines_testdata_base_path'}}
 _NOTES = {_BAMTOFASTQ:
     'This pinned test profile omits its required reference. For the bundled demo input, nfclaw '
     'supplies the matched chr22:1-40001 test FASTA from immutable test-datasets commit '
     '`618f1541382c4ad49eff566dadf13d5ccbd0ebb4` and records it in params/provenance. Explicit '
-    '`--fasta` or params-file values override it. Supplying your own input disables this demo '
-    'default; choose a reference matched to your data. Other releases retain their own defaults.'}
+    '`--fasta` or params-file values override it. Your own input, genome, test-data base, extra '
+    'profiles or `--config` '
+    'disable this demo default; choose a reference matched to your data. The correction applies '
+    'only to the bundled test plus engine profiles. Other releases retain their own defaults.'}
 
 
-def parameters(name: str, commit: str | None) -> dict:
-    return dict(_PARAMETERS.get((name, commit), {}))
+def bundled_profile(profile: str) -> bool:
+    """Extra profiles can replace the demo's input/reference, so never override them."""
+    engines = {'test', 'docker', 'podman', 'singularity', 'apptainer', 'conda', 'mamba',
+               'charliecloud', 'shifter'}
+    return {part.strip() for part in profile.split(',') if part.strip()}.issubset(engines)
+
+
+def parameters(name: str, commit: str | None, *, provided: frozenset[str] = frozenset()) -> dict:
+    key = (name, commit)
+    return {} if provided & _DATA_SELECTORS.get(key, set()) else dict(_PARAMETERS.get(key, {}))
 
 
 def note(name: str, commit: str | None) -> str:
