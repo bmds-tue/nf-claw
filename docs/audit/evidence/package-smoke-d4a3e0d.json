@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "status": "passed",
+  "checked_at": "2026-10-27T10:42:43.161580+00:00",
+  "source_commit": "d4a3e0d77e1d5d65a5d34d0144e3d9be4174c43e",
+  "wheel": "/mnt/volume/nfclaw-remediation-evidence-20261026/packages/nfclaw-1.0.0-py3-none-any.whl",
+  "wheel_sha256": "6388748e0acb1b61c0df4ae6a507b31a0ed24e5a3de5e4ab2b124eb7127249c0",
+  "checks": [
+    "isolated install without dependencies or network",
+    "CLI/verify/MCP help",
+    "complete-environment flag",
+    "packaged role inventories",
+    "packaged demo correction module"
+  ],
+  "scope": "Code distribution smoke; using the pipeline library still requires the documented repository installation."
+}
