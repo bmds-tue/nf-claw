@@ -26,6 +26,11 @@ def _typed(value):
     return value
 
 
+def _header(value):
+    data = _json(value).encode()
+    return {'sha256': hashlib.sha256(data).hexdigest(), 'canonical_bytes': len(data)}
+
+
 def _record(db, side, value):
     key = _json(hashlib.sha256(_json(value).encode()).hexdigest())
     db.execute(f'INSERT INTO {side} VALUES (?, ?, 0) '
@@ -118,7 +123,7 @@ def _bam(stream, item, db, side, pysam):
             _record(db, side, value)
             count += 1
     issues = _coverage(item.get('expected_samples'), observed, 'observed BAM read-group')
-    return {'records': count, 'samples': sorted(observed), 'header': header,
+    return {'records': count, 'samples': sorted(observed), 'header': _header(header),
             'adapter': f'pysam/{pysam.__version__}',
             'semantics': 'Every decoded alignment, including unmapped and nonprimary records; '
                          'reference names, all flags/fields and typed tags; SHA-256 multiset. '
@@ -201,7 +206,7 @@ def _vcf(stream, item, db, side, pysam):
                               record.alleles, _typed(record.qual), sorted(filters), typed_info,
                               associations])
             count += 1
-    return {'records': count, 'samples': sorted(samples), 'header': header,
+    return {'records': count, 'samples': sorted(samples), 'header': _header(header),
             'adapter': f'pysam/{pysam.__version__}',
             'semantics': 'Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, '
                          'sample associations and phase separators; SHA-256 multiset. '

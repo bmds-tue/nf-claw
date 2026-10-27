@@ -42,6 +42,8 @@ if necessary. Large record inventories use disk, while table rows, individual se
 headers and H5AD axis identifiers still need memory. Reports cap mismatch examples and list how
 many result files were not assessed. No unmatched result is implicitly accepted as scientifically
 validated. The contract SHA-256 and comparator/adapter versions identify the assessment.
+Exact BAM/VCF header comparison uses canonical header digests in the report; thousands of
+declarations are not repeated in its JSON. The complete header remains in the selected data file.
 
 | Format | Required declarations and exact comparison scope |
 | --- | --- |

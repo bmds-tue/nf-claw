@@ -194,3 +194,19 @@ def test_explicit_gatk_strand_table_encoding_validates_each_allele(tmp_path, cou
     result = assess(root, vcf_spec(tmp_path, field_encodings={
         'INFO/AS_SB_TABLE': 'gatk-strand-counts'}))
     assert result['passed'] is valid
+
+
+def test_large_vcf_headers_compare_exactly_without_expanding_the_report(tmp_path):
+    declarations = ''.join(f'##INFO=<ID=EXTRA_{n},Number=1,Type=Integer,Description="Extra {n}">\n'
+                           for n in range(1000))
+    header = VCF_HEADER.replace('#CHROM', declarations + '#CHROM')
+    a = run_dir(tmp_path, 'a', {'variants.vcf': header + VARIANT})
+    b = run_dir(tmp_path, 'b', {'variants.vcf': header + VARIANT})
+    result = assess(b, vcf_spec(tmp_path), a)
+    assert result['passed']
+    assert len(json.dumps(result)) < 25000
+    measured = result['artifacts'][0]['replay']['header']
+    assert len(measured['sha256']) == 64
+    (b / 'variants.vcf').write_text(header.replace('Description="Extra 999"',
+                                                  'Description="Changed meaning"') + VARIANT)
+    assert not assess(b, vcf_spec(tmp_path), a)['passed']

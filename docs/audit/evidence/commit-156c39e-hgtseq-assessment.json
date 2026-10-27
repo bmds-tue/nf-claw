@@ -38,38 +38,8 @@
           "records": 1220,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample01_1_val_1.fq.gz testsample01_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample01_sorted.bam -T testsample01_sorted testsample01.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample01.bam -"
-              }
-            ]
+            "sha256": "4f93749c9e4efd6bc40c4fe83b54938df91e3a10106c8ab2350332c9aa38706c",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -79,38 +49,8 @@
           "records": 1220,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample01_1_val_1.fq.gz testsample01_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample01_sorted.bam -T testsample01_sorted testsample01.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample01.bam -"
-              }
-            ]
+            "sha256": "4f93749c9e4efd6bc40c4fe83b54938df91e3a10106c8ab2350332c9aa38706c",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -136,38 +76,8 @@
           "records": 1340,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample02_1_val_1.fq.gz testsample02_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample02_sorted.bam -T testsample02_sorted testsample02.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample02.bam -"
-              }
-            ]
+            "sha256": "70bfd9d2bbc5510b97871fd4161ff098a7122ba97cea3f7af88c14e68ab70408",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -177,38 +87,8 @@
           "records": 1340,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample02_1_val_1.fq.gz testsample02_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample02_sorted.bam -T testsample02_sorted testsample02.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample02.bam -"
-              }
-            ]
+            "sha256": "70bfd9d2bbc5510b97871fd4161ff098a7122ba97cea3f7af88c14e68ab70408",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -234,38 +114,8 @@
           "records": 1465,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample03_1_val_1.fq.gz testsample03_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample03_sorted.bam -T testsample03_sorted testsample03.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample03.bam -"
-              }
-            ]
+            "sha256": "1f36b2d6c2d8fe9d860d3dc9e2c029a818536e970d753c4b885569ad68d24e63",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -275,38 +125,8 @@
           "records": 1465,
           "samples": [],
           "header": {
-            "HD": {
-              "VN": "1.6",
-              "SO": "coordinate"
-            },
-            "SQ": [
-              {
-                "SN": "chr21",
-                "LN": 46709983
-              }
-            ],
-            "PG": [
-              {
-                "ID": "bwa",
-                "PN": "bwa",
-                "VN": "0.7.17-r1188",
-                "CL": "bwa mem -t 2 ./bwa/genome testsample03_1_val_1.fq.gz testsample03_2_val_2.fq.gz"
-              },
-              {
-                "ID": "samtools.1",
-                "PN": "samtools",
-                "PP": "samtools",
-                "VN": "1.17",
-                "CL": "samtools sort -@ 2 -m 3072M -o testsample03_sorted.bam -T testsample03_sorted testsample03.bam"
-              },
-              {
-                "ID": "samtools",
-                "PN": "samtools",
-                "PP": "bwa",
-                "VN": "1.16.1",
-                "CL": "samtools view --threads 2 -o testsample03.bam -"
-              }
-            ]
+            "sha256": "1f36b2d6c2d8fe9d860d3dc9e2c029a818536e970d753c4b885569ad68d24e63",
+            "canonical_bytes": 491
           },
           "adapter": "pysam/0.24.1",
           "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
@@ -357,5 +177,12 @@
   },
   "contract_path": "/mnt/volume/nfclaw-remediation-matrix-source/runner/output_contracts/hgtseq-1.1.0-historical-demo.json",
   "assessed_at": "2026-10-27T12:34:40.064419+00:00",
-  "source_scope": "Commit identifies the assessor, not the earlier workflow launch; workflow launch records and retained run manifests are separate."
+  "source_scope": "Commit identifies the assessor, not the earlier workflow launch; workflow launch records and retained run manifests are separate.",
+  "stored_report": {
+    "compactor": "nfclaw.audit.header-digests/1",
+    "compactor_sha256": "b4d119d81f976154c691e1dd59d24feb6ec00a096c25d113329e288dccf70328",
+    "raw_record": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-156c39e-hgtseq-assessment.json",
+    "raw_record_sha256": "8ff9770c7025523137bb89499cdfec7fd99380a9816cc920bf88887efb93dc82",
+    "scope": "Lossless assessment conclusions; verbose decoded BAM/VCF header metadata is represented by its sorted compact ASCII JSON SHA-256 and byte length. The original raw assessor record is preserved at the linked server path. This storage transformation is separate from the recorded assessor execution."
+  }
 }
