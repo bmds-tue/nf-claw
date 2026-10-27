@@ -1,14 +1,14 @@
 ---
 name: sarek
 pipeline: nf-core/sarek
-version: 3.10.0
-commit: 8ccac7ad37b05dd792447763bf9671b719824587
+version: 3.11.0
+commit: 6e9b164daa2a54c98f7dda538645d340c561ac24
 description: An open-source analysis pipeline to detect germline or somatic variants from whole genome or targeted sequencing
 summary: nf-core/sarek is a workflow designed to detect variants on whole genome or targeted sequencing data. Initially designed for Human, and Mouse, it can work on any species with a reference genome. Sarek can also handle tumour / normal pairs and could include additional relapses.
 has_samplesheet: true
 input: samplesheet (patient, sample, sex, status, lane, fastq_1, fastq_2, spring_1, spring_2, table, cram, crai, bam, bai, contamination, vcf, variantcaller)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["ASCAT", "alleleCount", "BCFTools", "BGZip", "BWA-MEM", "BWA-MEM2", "CNVKIT", "Condel", "Control-FREEC", "dbNSFP", "DeepVariant", "DragMap", "EnsemblVEP", "FastP", "FastQC", "FGBio", "FreeBayes", "GATK", "GNU sed", "goleft indexcov", "HaplotypeCaller Joint Germline", "LOFTEE", "Manta", "Mastermind", "Mosdepth", "MSIsensor2", "MSISensorPro", "MultiQC", "NGSCheckMate", "NVIDIA Clara Parabricks", "Phenotypes", "PIGZ", "P7Zip", "SAMtools", "snpEff", "SpliceAI", "SpliceRegion", "SPRING", "Strelka2", "SVDB", "Tabix", "TIDDIT", "Varlociraptor", "VCFTools", "vcflib", "Lofreq", "MuSE", "R", "RColorBrewer"]
+tools: ["ASCAT", "alleleCount", "BCFTools", "BGZip", "BWA-MEM", "BWA-MEM2", "CNVKIT", "Condel", "Control-FREEC", "dbNSFP", "DeepSomatic", "DeepVariant", "DragMap", "EnsemblVEP", "FastP", "FastQC", "FGBio", "FreeBayes", "GATK", "GNU sed", "goleft indexcov", "HaplotypeCaller Joint Germline", "LOFTEE", "Manta", "Mastermind", "Mosdepth", "MSIsensor2", "MSISensorPro", "MultiQC", "NGSCheckMate", "NVIDIA Clara Parabricks", "Phenotypes", "PIGZ", "P7Zip", "SAMtools", "snpEff", "SpliceAI", "SpliceRegion", "SPRING", "Strelka2", "SVDB", "Tabix", "TIDDIT", "Varlociraptor", "VCFTools", "vcflib", "Lofreq", "MuSE", "R", "RColorBrewer"]
 ---
 # sarek
 
@@ -86,9 +86,9 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Preprocessing** (`preprocessing`) — 6 parameters
 - **Reference genome options** (`reference_genome_options`) — 36 parameters
 - **Unique Molecular Identifiers** (`umi_processing`) — 10 parameters
-- **Variant Calling** (`variant_calling`) — 25 parameters
+- **Variant Calling** (`variant_calling`) — 26 parameters
 
-Upstream usage: https://github.com/nf-core/sarek/blob/3.10.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/sarek/blob/3.11.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -112,7 +112,7 @@ nfclaw run sarek ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/sarek/blob/3.10.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/sarek/blob/3.11.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
@@ -124,13 +124,13 @@ Fed by:
 - `fetchngs` — fetchngs writes a sarek samplesheet (patient = the ENA sample accession) with --nf-core-pipeline sarek; it has no lane, so each run's accession becomes its lane — sarek needs patient, sample and lane to be unique together; sarek reads paired-end FastQ only, so every row needs a fastq_2. No status or sex column is written: sarek treats every sample as normal tissue (status 0, sex NA) and runs germline analyses only; a tumour/normal design needs its own sarek samplesheet (a handoff's set gives every row the same value). Runs whose ENA instrument_platform is not a short-read platform (the ones nf-core/mag accepts as short reads: ILLUMINA, BGISEQ, DNBSEQ, ELEMENT, ULTIMA, ION_TORRENT, LS454, …) are refused: sarek analyses short reads, and long-read, capillary or colour-space runs would be processed as if they were.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: ASCAT, alleleCount, BCFTools, BGZip, BWA-MEM, BWA-MEM2, CNVKIT, Condel, Control-FREEC, dbNSFP, DeepVariant, DragMap, EnsemblVEP, FastP, FastQC, FGBio, FreeBayes, GATK, GNU sed, goleft indexcov, HaplotypeCaller Joint Germline, LOFTEE, Manta, Mastermind, Mosdepth, MSIsensor2, MSISensorPro, MultiQC, NGSCheckMate, NVIDIA Clara Parabricks, Phenotypes, PIGZ, P7Zip, SAMtools, snpEff, SpliceAI, SpliceRegion, SPRING, Strelka2, SVDB, Tabix, TIDDIT, Varlociraptor, VCFTools, vcflib, Lofreq, MuSE, R, RColorBrewer.
+The tools/methods this pipeline runs, per the authors' own list: ASCAT, alleleCount, BCFTools, BGZip, BWA-MEM, BWA-MEM2, CNVKIT, Condel, Control-FREEC, dbNSFP, DeepSomatic, DeepVariant, DragMap, EnsemblVEP, FastP, FastQC, FGBio, FreeBayes, GATK, GNU sed, goleft indexcov, HaplotypeCaller Joint Germline, LOFTEE, Manta, Mastermind, Mosdepth, MSIsensor2, MSISensorPro, MultiQC, NGSCheckMate, NVIDIA Clara Parabricks, Phenotypes, PIGZ, P7Zip, SAMtools, snpEff, SpliceAI, SpliceRegion, SPRING, Strelka2, SVDB, Tabix, TIDDIT, Varlociraptor, VCFTools, vcflib, Lofreq, MuSE, R, RColorBrewer.
 
-Full list with references: https://github.com/nf-core/sarek/blob/3.10.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/sarek/blob/3.11.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run sarek --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/sarek@8ccac7ad37b05dd792447763bf9671b719824587. Do not edit by hand. -->
+<!-- Generated from nf-core/sarek@6e9b164daa2a54c98f7dda538645d340c561ac24. Do not edit by hand. -->

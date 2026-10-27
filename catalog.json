@@ -485,7 +485,7 @@
     "input": "samplesheet (sample, short_reads_fastq_1, short_reads_fastq_2, long_reads_fastq_1)",
     "name": "detaxizer",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
-    "summary": "nf-core/detaxizer is a bioinformatics pipeline that checks for the presence of a specific taxon in (meta)genomic fastq files and to filter out this taxon or taxonomic subtree. The process begins with quality assessment via FastQC and optional preprocessing (adapter trimming, quality cutting and optional length and quality filtering) using fastp, followed by taxonomic classification with kraken2 and/or bbduk, and optionally employs blastn for validation of the reads associated with the identified taxa. Users must provide a samplesheet to indicate the fastq files and, if utilizing bbduk in the classification and/or the validation step, fasta files for usage of bbduk and creating the blastn database to verify the targeted taxon.",
+    "summary": "nf-core/detaxizer is a bioinformatics pipeline that checks for the presence of a specific taxon in (meta)genomic fastq files and filters out this taxon or taxonomic subtree. The process begins with quality assessment via FastQC and optional preprocessing (adapter trimming, quality cutting and optional length and quality filtering) with fastp. It continues with taxonomic classification using kraken2 and/or bbduk, and optionally uses blastn to validate reads linked to the identified taxa. Users must provide a samplesheet to indicate the fastq files. If bbduk is used in the classification and/or validation step, users must also provide fasta files to classify with bbduk and to build the blastn database that verifies the targeted taxon.",
     "tools": [
       "bbmap",
       "blastn",
@@ -496,9 +496,10 @@
       "seqkit",
       "dnaio",
       "Python",
-      "biopython"
+      "pandas",
+      "numpy"
     ],
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   {
     "description": "Differential abundance analysis",
@@ -2005,6 +2006,7 @@
       "Condel",
       "Control-FREEC",
       "dbNSFP",
+      "DeepSomatic",
       "DeepVariant",
       "DragMap",
       "EnsemblVEP",
@@ -2045,7 +2047,7 @@
       "R",
       "RColorBrewer"
     ],
-    "version": "3.10.0"
+    "version": "3.11.0"
   },
   {
     "description": "Single-cell/nuclei pipeline for data derived from Oxford Nanopore",

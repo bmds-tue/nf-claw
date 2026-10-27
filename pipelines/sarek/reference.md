@@ -1,7 +1,7 @@
 ---
 name: sarek
-version: 3.10.0
-commit: 8ccac7ad37b05dd792447763bf9671b719824587
+version: 3.11.0
+commit: 6e9b164daa2a54c98f7dda538645d340c561ac24
 ---
 
 # sarek — full parameter reference
@@ -44,7 +44,7 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--vep-phenotypes` | boolean |  |  |  |  |  | Enable the use of the VEP Phenotypes plugin. |
 | `--vep-spliceai` | boolean |  |  |  |  |  | Enable the use of the VEP SpliceAI plugin. |
 | `--vep-spliceregion` | boolean |  |  |  |  |  | Enable the use of the VEP SpliceRegion plugin. |
-| `--vep-version` | string |  |  |  |  | 116.0-0 | Should reflect the VEP version used in the container. |
+| `--vep-version` | string |  |  |  |  | 116.3-0 | Should reflect the VEP version used in the container. |
 
 ## fastq_preprocessing
 
@@ -125,7 +125,7 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--nucleotides-per-second` | integer |  |  |  | ≥ 1 | 200000 | Estimate interval size. |
 | `--skip-tools` | string |  |  |  | matches ^((baserecalibrator\|baserecalibrator_report\|bcftools\|dnascope_filter\|documentation\|fastqc\|haplotypecaller_filter\|haplotyper_filter\|markduplicates\|markduplicates_report\|mosdepth\|multiqc\|samtools\|vcftools\|versions)?,?)*(?<!,)$ |  | Disable specified tools. |
 | `--split-fastq` | integer |  |  |  |  | 50000000 | Specify how many reads each split of a FastQ file contains. Set 0 to turn off splitting at all. |
-| `--tools` | string |  |  |  | matches ^((ascat\|bbsplit\|bcfann\|cnvkit\|controlfreec\|deepvariant\|freebayes\|haplotypecaller\|indexcov\|lofreq\|manta\|merge\|mpileup\|msisensor2\|msisensorpro\|muse\|mutect2\|ngscheckmate\|parabricks_haplotypecaller\|sentieon_dedup\|sentieon_dnascope\|sentieon_haplotyper\|sentieon_tnscope\|snpeff\|snpsift\|strelka\|tiddit\|vep\|varlociraptor)?,?)*(?<!,)$ |  | Tools to use for contamination removal, duplicate marking, variant calling and/or for annotation. |
+| `--tools` | string |  |  |  | matches ^((ascat\|bbsplit\|bcfann\|cnvkit\|controlfreec\|deepsomatic\|deepvariant\|freebayes\|haplotypecaller\|indexcov\|lofreq\|manta\|merge\|mpileup\|msisensor2\|msisensorpro\|muse\|mutect2\|ngscheckmate\|parabricks_deepsomatic\|parabricks_deepvariant\|parabricks_haplotypecaller\|sentieon_dedup\|sentieon_dnascope\|sentieon_haplotyper\|sentieon_tnscope\|snpeff\|snpsift\|strelka\|tiddit\|vep\|varlociraptor)?,?)*(?<!,)$ |  | Tools to use for contamination removal, duplicate marking, variant calling and/or for annotation. |
 | `--wes` | boolean |  |  |  |  |  | Enable when exome or panel data is provided. |
 
 ## post_variant_calling
@@ -221,6 +221,7 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--ascat-min-base-qual` | integer |  |  |  | ≥ 0 | 20 | Overwrite Ascat min base quality required for a read to be counted. |
 | `--ascat-min-counts` | integer |  |  |  | ≥ 0 | 10 | Overwrite Ascat minimum depth required in the normal for a SNP to be considered. |
 | `--ascat-min-map-qual` | integer |  |  |  | ≥ 0 | 35 | Overwrite Ascat min mapping quality required for a read to be counted. |
+| `--ascat-penalty` | number |  |  |  | ≥ 0 | 70 | Set the penalty for ASCAT segmentation. |
 | `--ascat-ploidy` | number |  |  |  | ≥ 0 |  | Overwrite ASCAT ploidy. |
 | `--ascat-purity` | number |  |  |  |  |  | Overwrite ASCAT purity. |
 | `--cf-chrom-len` | string (file path) |  |  |  | matches ^\S+\.(fai\|len)$ |  | Specify a custom chromosome length file. |
@@ -244,4 +245,4 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--sentieon-dnascope-pcr-indel-model` | string |  |  |  | matches ^(NONE\|HOSTILE\|AGGRESSIVE\|CONSERVATIVE)(?<!,)$ | CONSERVATIVE | Option for selecting the PCR indel model used by Sentieon Dnascope. |
 | `--sentieon-haplotyper-emit-mode` | string |  |  |  | matches ^(all\|confident\|gvcf\|variant\|gvcf,all\|gvcf,confident\|gvcf,variant\|all,gvcf\|confident,gvcf\|variant,gvcf)(?<!,)$ | variant | Option for selecting output and emit-mode of Sentieon's Haplotyper. |
 
-<!-- Generated from nf-core/sarek@8ccac7ad37b05dd792447763bf9671b719824587. Do not edit by hand. -->
+<!-- Generated from nf-core/sarek@6e9b164daa2a54c98f7dda538645d340c561ac24. Do not edit by hand. -->
