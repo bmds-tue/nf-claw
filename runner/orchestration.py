@@ -311,7 +311,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     # generate the samplesheet its schema describes (runner.sheetgen). It is validated here like a
     # hand-written one, before anything is written, and staged beside the params file below; until
     # then `input` names that staged location, which the parameter checks treat as any sheet path.
-    sheet = None
+    sheet = demo_defaults.samplesheet(name, st.commit) if demo_params else None
+    if sheet is not None:
+        # A reviewed bundled fixture is explicit input, not automatic role inference. Reuse the
+        # same schema validation, staging and replay rebasing as file-generated samplesheets.
+        fixture_schema = schema_mod.load_input_schema(st.path)
+        if fixture_schema is None:
+            raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
+                              'The bundled demo fixture has no source-bound input schema.')
+        sheetgen._validate(sheet.text, sheet.suffix, fixture_schema, name)
     if (source := sheetgen.detect(raw_input, st.path)) is not None:
         sheet = sheetgen.generate(source, st.path, pipeline=name, assignments=sheet_set or {},
                                   outdir=outdir, work_dir=work_dir)

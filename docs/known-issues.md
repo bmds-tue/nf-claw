@@ -504,6 +504,13 @@ cache, network and environment changes can also change what it prints.
 
 ## Upstream pipeline bugs (documented, not patched)
 
+The exact-pin wrapper corrections are recorded in generated operating notes. HGTseq's bare demo
+now stages its immutable historical input/reference recipe; custom input, references, alignment
+indexes, data-base selectors, profiles or configs disable that whole recipe. Tumourevo's bare demo
+receives the intended `sparsesignatures_k=2:3` with explicit user values preserved; its native
+66-task control passed at a 24 GiB task ceiling. These corrections leave upstream sources intact.
+The table's explicit commands remain useful when using upstream directly or another revision.
+
 These defects affect specific pinned releases. Workarounds and recorded runtime corrections keep upstream source trees unchanged; generated task scripts may differ when a documented correction is applied:
 
 | Pipeline @ Version | Symptom | Underlying Defect | Recommended Workaround |
