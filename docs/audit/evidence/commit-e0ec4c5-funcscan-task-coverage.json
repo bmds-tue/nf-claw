@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-27T16:52:47.932960+00:00",
+  "source_commit": "e0ec4c5675a3825921a0197e407894ab8d5c9889",
+  "pipeline_commit": "aee3dc965eb0c77267435544dda30da858763913",
+  "cases": [
+    {
+      "label": "commit-e0ec4c5-funcscan-dramp",
+      "total_tasks": 19,
+      "task_status_counts": {
+        "COMPLETED": 19
+      },
+      "expected_ampcombi_sample_ids": [
+        "sample_1",
+        "sample_2"
+      ],
+      "ampcombi_tasks": [],
+      "ampcombi_expected_tasks_completed": false,
+      "published_summary_tables": [],
+      "task_messages": {},
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-e0ec4c5-funcscan-dramp/pipeline_info/execution_trace_2026-10-27_16-02-28.txt",
+      "trace_sha256": "d3a83c1ef03c033b392bdf52ce9a34e1c505af9a3a63c6869e5832494788e42b"
+    },
+    {
+      "label": "commit-e0ec4c5-funcscan-dramp-replay",
+      "total_tasks": 19,
+      "task_status_counts": {
+        "COMPLETED": 19
+      },
+      "expected_ampcombi_sample_ids": [
+        "sample_1",
+        "sample_2"
+      ],
+      "ampcombi_tasks": [],
+      "ampcombi_expected_tasks_completed": false,
+      "published_summary_tables": [],
+      "task_messages": {},
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-e0ec4c5-funcscan-dramp-replay/pipeline_info/execution_trace_2026-10-27_16-02-28.txt",
+      "trace_sha256": "f2dfadfdda8cb688e3f69bd072cf0b00be426b05d5ed06ef61b6a59136fd0d49"
+    },
+    {
+      "label": "commit-e0ec4c5-funcscan-dramp-macrel",
+      "total_tasks": 27,
+      "task_status_counts": {
+        "COMPLETED": 27
+      },
+      "expected_ampcombi_sample_ids": [
+        "sample_1",
+        "sample_2"
+      ],
+      "ampcombi_tasks": [
+        {
+          "name": "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_1)",
+          "status": "COMPLETED",
+          "hash": "63/dc6c82"
+        },
+        {
+          "name": "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_2)",
+          "status": "COMPLETED",
+          "hash": "3b/f0e2d9"
+        }
+      ],
+      "ampcombi_expected_tasks_completed": true,
+      "published_summary_tables": [],
+      "task_messages": {
+        "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_1)": [
+          "<--AMP_database> = amp_DRAMP_database is found and will be used",
+          "MMseqs2 directory already exists in amp_DRAMP_database.",
+          "Skipping sample_1 because no AMP hits were found with the given thresholds."
+        ],
+        "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_2)": [
+          "<--AMP_database> = amp_DRAMP_database is found and will be used",
+          "MMseqs2 directory already exists in amp_DRAMP_database.",
+          "Skipping sample_2 because no AMP hits were found with the given thresholds."
+        ]
+      },
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-e0ec4c5-funcscan-dramp-macrel/pipeline_info/execution_trace_2026-10-27_16-18-37.txt",
+      "trace_sha256": "45fc2c0df8ebd658f4cdd22cc6dacdc606f28418d5db826472b973b7d99a9238"
+    },
+    {
+      "label": "commit-e0ec4c5-funcscan-dramp-macrel-replay",
+      "total_tasks": 27,
+      "task_status_counts": {
+        "COMPLETED": 27
+      },
+      "expected_ampcombi_sample_ids": [
+        "sample_1",
+        "sample_2"
+      ],
+      "ampcombi_tasks": [
+        {
+          "name": "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_1)",
+          "status": "COMPLETED",
+          "hash": "17/eb81d3"
+        },
+        {
+          "name": "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_2)",
+          "status": "COMPLETED",
+          "hash": "52/e69c65"
+        }
+      ],
+      "ampcombi_expected_tasks_completed": true,
+      "published_summary_tables": [],
+      "task_messages": {
+        "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_1)": [
+          "<--AMP_database> = amp_DRAMP_database is found and will be used",
+          "MMseqs2 directory already exists in amp_DRAMP_database.",
+          "Skipping sample_1 because no AMP hits were found with the given thresholds."
+        ],
+        "NFCORE_FUNCSCAN:FUNCSCAN:AMP:AMPCOMBI2_PARSETABLES (sample_2)": [
+          "<--AMP_database> = amp_DRAMP_database is found and will be used",
+          "MMseqs2 directory already exists in amp_DRAMP_database.",
+          "Skipping sample_2 because no AMP hits were found with the given thresholds."
+        ]
+      },
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-e0ec4c5-funcscan-dramp-macrel-replay/pipeline_info/execution_trace_2026-10-27_16-18-37.txt",
+      "trace_sha256": "47927ce58419a1b0bf75cd9e9dd4def302e186f981da9d10fdc30566dab3dd50"
+    }
+  ],
+  "finding": "HMM construction drops category metadata and output resets metadata to id alone; FAA/GBK/InterPro channels retain category=all, so full-map join keys do not match. HMM-only silently omits AMPcombi. Macrel provides matching metadata and launches AMPcombi, while the HMM result group remains unmatched.",
+  "source_evidence": [
+    "workflows/funcscan.nf:72",
+    "subworkflows/local/amp.nf:88-91",
+    "subworkflows/local/amp.nf:98-101",
+    "subworkflows/local/amp.nf:105-109"
+  ],
+  "scope": "Task coverage and exact source diagnosis. Not a claim of biological no-hits from the omitted HMM-only path. Positive DRAMP search/annotation conservation is established independently by dramp-reference/reference-check.json."
+}

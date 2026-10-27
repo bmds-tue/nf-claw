@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "assessor_commit": "e0ec4c5675a3825921a0197e407894ab8d5c9889",
+  "reference_unchanged": true,
+  "structural_and_environment_comparison": {
+    "identical": [
+      "multiqc/multiqc_data/multiqc_citations.txt",
+      "multiqc/multiqc_data/multiqc_software_versions.txt",
+      "multiqc/multiqc_data/multiqc_sources.txt",
+      "pipeline_info/nf_core_funcscan_software_mqc_versions.yml"
+    ],
+    "changed": [
+      "amp/hmmer_hmmsearch/sample_1/sample_1_mybacteriocin.hmmer_hmmsearch.txt.gz",
+      "amp/hmmer_hmmsearch/sample_2/sample_2_mybacteriocin.hmmer_hmmsearch.txt.gz",
+      "multiqc/multiqc_data/llms-full.txt",
+      "multiqc/multiqc_data/multiqc.log",
+      "multiqc/multiqc_data/multiqc.parquet",
+      "multiqc/multiqc_data/multiqc_data.json",
+      "multiqc/multiqc_report.html",
+      "pipeline_info/execution_report_2026-10-27_16-02-28.html",
+      "pipeline_info/execution_timeline_2026-10-27_16-02-28.html",
+      "pipeline_info/execution_trace_2026-10-27_16-02-28.txt",
+      "pipeline_info/params_2026-10-27_16-02-45.json -> pipeline_info/params_2026-10-27_16-04-04.json",
+      "pipeline_info/pipeline_dag_2026-10-27_16-02-28.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "missing_directories": [],
+    "extra_directories": [],
+    "changed_links": [],
+    "unverified_structure": false,
+    "renamed": [
+      "pipeline_info/params_2026-10-27_16-02-45.json -> pipeline_info/params_2026-10-27_16-04-04.json"
+    ],
+    "environment": {
+      "version": 1,
+      "status": "identical",
+      "mismatches": [],
+      "unverified": [],
+      "notes": []
+    }
+  },
+  "structurally_equal": true,
+  "amp_tables": {
+    "commit-e0ec4c5-funcscan-dramp": {},
+    "commit-e0ec4c5-funcscan-dramp-replay": {}
+  },
+  "scope": "No blanket scientific equivalence claim for changed tables/reports. All changed/missing/extra files are retained in this structural report."
+}
