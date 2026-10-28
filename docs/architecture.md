@@ -83,6 +83,7 @@ nfclaw keeps its own schema checks where they act before Nextflow could:
 ### 2.2 Run Execution & Sibling Directory Locking
 - **Launch Isolation:** Nextflow is launched from `--outdir`, isolating its `.nextflow/` history and session databases. Task work files default to the shared `<repo>/work/` directory; `NXF_WORK` selects another location and is resolved against the caller's working directory before launch.
 - **Sibling File Locking:** On POSIX systems, `runner/locking.py` acquires an exclusive, non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) before creating or modifying `--outdir`. Overlapping or concurrent runs into the same directory fail fast with `ErrorCode.ENVIRONMENT`, preventing corrupted session states or interleaved logs.
+- **Docker Daemon Preflight:** For runs selecting the Docker profile, `runner/preflight.py` probes daemon responsiveness (`docker info`) with a configurable timeout (`NFCLAW_DOCKER_TIMEOUT`, default 60 seconds; bounded by `--timeout`), preventing premature aborts on busy CI or cloud runners.
 - **Check Safety:** `--check` stages parameters in temporary directories and never writes into
   `--outdir`. Resolving a requested pipeline version may fetch tags or populate its version cache.
 
@@ -179,17 +180,31 @@ the replay entry point and the reference for dependency and output checks.
 - **Structural Equivalence:** Separates file inventory from byte equality. Pairs timestamped
   metadata paths in `pipeline_info/` while preserving file multiplicity and reporting byte changes.
   Also compares directory inventories; a historical file-only manifest cannot certify structure.
+- **Random Library Name Pairing:** For tools like `kraken2-build --add-to-library` in createtaxdb that generate random temporary filenames (e.g. `XXXXXXXXXX.fna`, `.fna.masked`, `prelim_map_XXXXXXXXXX.txt`), `runner/verify.py` pairs exactly these names one to one within their directory, lists them under `renamed`, and compares their bytes without reporting false inventory discrepancies.
 - **Strict Mode (`--strict`):** Requires byte-for-byte identity for every paired result, including metadata, and agreement of recorded link identities. When both `environment.json` records are readable JSON objects, the environment comparison must also report `identical`; `differs` and `unverified` fail strict mode. Otherwise the report says `not recorded by both runs` and no environment condition is enforced.
 - **Environment Comparison:** Compares the container engine name, loaded plugin list, comparable images for processes present in both records, and the recorded remote-input URLs and hashes. Java runtime changes and processes present on only one side are notes. Nextflow build, container engine version, host platform and task counts are recorded but not equality gates. Default verification reports these findings without changing its structural exit criterion; standalone replay fails detected mismatches, but permits `unverified` results.
 - **Recording Scope:** An `identical` verdict covers the evidence compared. Inspect `issues`, `unverified` and `notes` as well; missing task or staging records are not comprehensively detected, and the verdict does not certify that every execution dependency was captured.
 - **Scientific Scope:** Inventory agreement alone establishes no analytical agreement. Matching
   bytes demonstrate agreement of the observed artifacts, not biological accuracy or universal reproducibility.
 
-### 2.8 Dynamic Version Selection & Dev Tracking
+### 2.8 Scientific Output Assessment (`nfclaw assess`)
+- `runner/scientific.py`, `runner/scientific_hts.py`, and `runner/scientific_h5ad.py` evaluate run outputs against explicit declarative contracts (`runner/output_contracts/*.json`).
+- **Format Parsers & Comparative Evaluation:**
+  - `table`: exact unique header, unique row-key column(s), finite decimal rational arithmetic comparisons, sample columns or expected sample membership, and documented column exclusions (`ignore_columns`).
+  - `fasta`: unique identifiers, exact case-preserved sequences/descriptions, sequence counts, lengths, and N50 summary.
+  - `bam`: 0-based half-open coordinates, alignments, unmapped/duplicate reads, flags, CIGAR, positions, mate fields, quality, tags, read-group sample labels, and canonical header digest comparisons.
+  - `vcf`: 1-based closed coordinates, HTSlib-decoded variants, INFO/FORMAT fields, genotype phase, sample columns, and GATK strand count encodings (`INFO/AS_SB_TABLE`).
+  - `h5ad_matrix`: dense/CSR/CSC matrix comparison by cell/gene identity with integer/nonnegative invariants.
+- **Assessment Modes:**
+  - Single-run assessment: checks that output artifacts exist, match expected schemas, record bounds, and meet coordinate requirements.
+  - Comparative assessment (`--against ORIGINAL`): parses candidate and verified original files, requiring that original outputs match their recorded `provenance/outputs.sha256` before serving as truth, and applies exact rational tolerances.
+- **Actionable Reporting:** Returns JSON detailing evaluation verdicts, parsed record counts, tolerance reasons, and unassessed file tallies; exits nonzero on any unmet expectation. See [`docs/scientific-output-contracts.md`](scientific-output-contracts.md).
+
+### 2.9 Dynamic Version Selection & Dev Tracking
 - `nfclaw run <name> --pipeline-version X.Y.Z`: Materializes the requested release tag as a git worktree in `pipelines/<name>/.versions/<tag>/`. Skill documentation is generated dynamically on demand.
 - `nfclaw run <name> --pipeline-version dev`: Resolves nf-core's `dev` branch to its current remote head commit and materializes an immutable worktree in `.versions/dev-<commit12>/`. Caches heads locally for offline fallback.
 
-### 2.9 Chaining Engine (`runner/chain.py`)
+### 2.10 Chaining Engine (`runner/chain.py`)
 - Runs multi-pipeline workflows sequentially, passing outputs from stage $k$ to inputs of stage $k+1$.
 - **Chain Locking:** Locks `<outdir>/chain/.lock` against concurrent chain execution.
 - **Preflight Configuration Probe:** Runs `nextflow config` under each stage's engine before

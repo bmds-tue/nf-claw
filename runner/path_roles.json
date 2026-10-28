@@ -34,5 +34,12 @@
       "source": ["conf/modules/download_cache.config:21-23", "conf/modules/download_cache.config:31-33"],
       "use": "publishDir destinations for downloaded annotation caches"
     }
+  },
+  "6e9b164daa2a54c98f7dda538645d340c561ac24": {
+    "outdir_cache": {
+      "pipeline": "sarek",
+      "source": ["conf/modules/download_cache.config:21-23", "conf/modules/download_cache.config:31-33"],
+      "use": "publishDir destinations for downloaded annotation caches (3.11.0: download_cache.config byte-identical to 3.10.0; no other use)"
+    }
   }
 }

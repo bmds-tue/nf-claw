@@ -355,14 +355,14 @@
         "format": "file-path"
       }
     },
-    "commit": "8ccac7ad37b05dd792447763bf9671b719824587",
+    "commit": "6e9b164daa2a54c98f7dda538645d340c561ac24",
     "pipeline": "sarek",
     "schema": "assets/schema_snpsift_databases.json",
     "source": [
-      "main.nf:237-249"
+      "main.nf:236-249"
     ],
     "source_sha256": {
-      "main.nf": "0416bc8c10c029d990c1e952a0e0ca32b6630b5e4bc536c3e2de07821c50f104"
+      "main.nf": "a54b942e9f57109fb2e4503d4f7a46d518504358caf2768bd23dfa94f54f9e20"
     },
     "use": "Database VCF and optional explicit tabix index consumed as files; omitted tbi is separately inferred as vcf.tbi by consumer"
   },

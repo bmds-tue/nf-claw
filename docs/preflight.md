@@ -10,6 +10,14 @@ paths but does not read every data file's bytes; `local_data_bytes` stays deferr
 has taken its input snapshots. A successful check can therefore still encounter unreadable data at
 launch, and is not a byte-readability guarantee.
 
+---
+
+### Navigation
+
+[Schema Subset](#wrapper-schema-subset) • [Replay Integrity Limits](#replay-integrity-limits) • [Generation Boundaries](#generation-boundaries) • [Support Matrix](#support-matrix-for-the-95-audited-pins)
+
+---
+
 ## Wrapper schema subset
 
 | Input or rule | What the wrapper checks | What remains for the pinned pipeline/plugin |
@@ -38,7 +46,7 @@ archived as their resolved contents; untracked/ignored source files are not arch
 judged for runtime significance. These are explicit limits, so a tracked-byte match is not a claim
 that every possible filesystem dependency or continuous source state was reproduced.
 
-The two exact-pin [recorded source corrections](source-corrections.md) use independent regular-file
+The three exact-pin [recorded source corrections](source-corrections.md) (Createtaxdb, Funcscan, and Bactmap) use independent regular-file
 copies with a separately bound inventory, executable modes and complete directory namespace.
 They reject original untracked/ignored files and source symlinks, and verify the actual corrected
 copy or extracted archive before/after execution. These stronger checks apply to those corrected

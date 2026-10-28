@@ -4,6 +4,14 @@
 No output-silence watchdog or automatic cancellation is enabled. An analysis may
 legitimately spend hours computing, waiting for a queue or downloading references.
 
+---
+
+### Navigation
+
+[Execution Budgets](#explicit-execution-budgets) • [Safety Margins](#configurable-safety-margins) • [Detached Execution](#detached-execution) • [Monitoring vs Verification](#cheap-progress-versus-verification)
+
+---
+
 ## Explicit execution budgets
 
 `--timeout SECONDS` opts into one monotonic deadline, beginning before preparation.
@@ -43,6 +51,7 @@ not create an overall analysis deadline.
 | `NFCLAW_SHUTDOWN_GRACE` | 10 | SIGTERM-to-SIGKILL grace for owned process groups |
 | `NFCLAW_CONFIG_TIMEOUT` | 300 | Each chain configuration probe |
 | `NFCLAW_VERSION_TIMEOUT` | 30 | Engine/runtime metadata probes |
+| `NFCLAW_DOCKER_TIMEOUT` | 60 | The `docker info` daemon check before a Docker-profile run |
 | `NFCLAW_GIT_TIMEOUT` | 10, 30, 60 or 120 by operation | Local Git checks, remote discovery and fetching |
 | `NFCLAW_INIT_TIMEOUT` | 300 | Pipeline submodule initialization |
 

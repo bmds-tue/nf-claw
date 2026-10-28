@@ -44,12 +44,18 @@ def check_environment(*, profile: str, output_dir: Path, submodule: SubmoduleSta
         if engine in tokens and not any(shutil.which(c) for c in commands):
             issues.append(f"profile uses {engine} but {'/'.join(commands)} not found on PATH")
     if "docker" in tokens and shutil.which("docker"):
+        # A busy but healthy daemon can take well over 10 s to answer (seen on hosted CI runners).
+        limit = seconds("NFCLAW_DOCKER_TIMEOUT", 60)
         try:
-            ok = capture(["docker", "info"], timeout=10, text=False).returncode == 0
-        except (OSError, subprocess.TimeoutExpired):
-            ok = False
-        if not ok:
-            issues.append("docker daemon not responding (is Docker running?)")
+            failed = capture(["docker", "info"], timeout=limit, text=False).returncode != 0
+            issue = "docker daemon not responding (is Docker running?)" if failed else None
+        except subprocess.TimeoutExpired:
+            issue = (f"docker daemon not responding within {limit:g} s (is Docker running? "
+                     "Set NFCLAW_DOCKER_TIMEOUT for a slow daemon)")
+        except OSError:
+            issue = "docker daemon not responding (is Docker running?)"
+        if issue:
+            issues.append(issue)
     if not submodule.complete:
         issues.append(f"pipeline submodule incomplete: missing {list(submodule.missing_files)}")
     try:

@@ -104,9 +104,19 @@ When a run fails, nfclaw's error quotes what Nextflow reported on stdout and std
 
 ---
 
-## Replaying a run
+## Replaying and verifying a run
 
-Check declared scientific outputs with `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]`.
+Verify output structure and file inventories with:
+```bash
+nfclaw verify results.replay --against results           # pairs timestamped trace files and random library names
+nfclaw verify results.replay --against results --strict   # requires byte identity and matching environment
+```
+
+Check declared scientific outputs and sample coverage against an explicit contract with:
+```bash
+nfclaw assess results.replay --contract runner/output_contracts/tumourevo-1.0.0-demo.json
+nfclaw assess results.replay --against results --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
+```
 This is separate from file/environment verification. The
 [output-contract guide](docs/scientific-output-contracts.md) defines sample coverage, exact parsed
 comparisons, reasoned numeric tolerances and explicit exclusions for tables/BAM/VCF/FASTA and
@@ -273,7 +283,7 @@ git submodule update --init pipelines/<name>/upstream
 nfclaw verify <replay-outdir> --against <original-outdir>
 ```
 
-Hashes the replay's live files and compares them **by path** with the original recorded `outputs.sha256` (or live originals when no manifest exists). It reports `identical` / `changed` / `missing` / `extra` for files, missing/extra directories, and changed link identities from `outputs.inventory.json`. Missing or extra files or directories fail the structural check. The nf-core run-metadata files the template names from its launch clock (`pipeline_info/params_<time>.json`, the execution report/timeline/trace/DAG of releases without `trace_report_suffix`, and the nf-co2footprint plugin's `co2footprint_{report,summary,trace}_<time>` files) are paired one to one, listed under `renamed` as `original -> replay`, and compared by bytes; any other dated path keeps its exact identity. A historical file-only manifest cannot certify its original directory structure; verification reports that gap and exits unsuccessfully. Without any historical checksum manifest, both live directory trees can still be compared. Changed bytes may reflect metadata or different scientific results; inspect them using a format-aware comparison. File structure alone establishes no analytical agreement. When both execution-environment records (`provenance/environment.json`) can be read as JSON objects, it also reports the comparison of container images, plugins, the container engine name and remote inputs (`environment: identical`, `differs` with the mismatches, or `unverified`). Add `--strict` to require identical file bytes, recorded link identities and an `identical` environment comparison when available. If either environment record is missing, unreadable or not a JSON object, verification reports `not recorded by both runs` and strict mode enforces only the output checks; it cannot establish environment agreement. Links into independently generated task work directories can differ; inspect those changes explicitly.
+Hashes the replay's live files and compares them **by path** with the original recorded `outputs.sha256` (or live originals when no manifest exists). It reports `identical` / `changed` / `missing` / `extra` for files, missing/extra directories, and changed link identities from `outputs.inventory.json`. Missing or extra files or directories fail the structural check. The nf-core run-metadata files the template names from its launch clock (`pipeline_info/params_<time>.json`, the execution report/timeline/trace/DAG of releases without `trace_report_suffix`, and the nf-co2footprint plugin's `co2footprint_{report,summary,trace}_<time>` files) are paired one to one, listed under `renamed` as `original -> replay`, and compared by bytes; so are the files `kraken2-build` adds to `library/added/` under random `mktemp` names (`XXXXXXXXXX.fna`, its `.fna.masked` copy and `prelim_map_XXXXXXXXXX.txt`, as in createtaxdb's Kraken2 and Bracken databases), within their own directory. Any other dated or differently named path keeps its exact identity. A historical file-only manifest cannot certify its original directory structure; verification reports that gap and exits unsuccessfully. Without any historical checksum manifest, both live directory trees can still be compared. Changed bytes may reflect metadata or different scientific results; inspect them using a format-aware comparison. File structure alone establishes no analytical agreement. When both execution-environment records (`provenance/environment.json`) can be read as JSON objects, it also reports the comparison of container images, plugins, the container engine name and remote inputs (`environment: identical`, `differs` with the mismatches, or `unverified`). Add `--strict` to require identical file bytes, recorded link identities and an `identical` environment comparison when available. If either environment record is missing, unreadable or not a JSON object, verification reports `not recorded by both runs` and strict mode enforces only the output checks; it cannot establish environment agreement. Links into independently generated task work directories can differ; inspect those changes explicitly.
 
 For a stronger recorded-environment guarantee, add `--require-environment` (and optionally
 `--strict` for output bytes). It refuses missing or incomplete environment observations,
