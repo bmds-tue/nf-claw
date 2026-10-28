@@ -146,16 +146,13 @@ def _parse_options(raw: dict, where: str) -> dict:
         if not isinstance(configs, list) or not all(isinstance(c, str) for c in configs):
             raise _bad(f"{where}: 'config' must list Nextflow config file paths")
         out["configs"] = tuple(_abs(c) for c in configs)
+    missing: list[str] = []
     try:
         if "nxf_env" in raw:
             env = resources.parse_nxf_env(raw["nxf_env"] or {})
             missing = [key for key, value in env.items() if value == "<redacted>"
                        and (not os.environ.get(key) or os.environ[key] == "<redacted>")]
-            if missing:
-                raise _bad(f"{where}: redacted environment values must be supplied again: "
-                           + ", ".join(missing)
-                           + "; export them or pass the original private spec")
-            out["nxf_env"] = {key: os.environ[key] if value == "<redacted>" else value
+            out["nxf_env"] = {key: os.environ.get(key, value) if value == "<redacted>" else value
                               for key, value in env.items()}
         if raw.get("nxf_ver"):
             out["nxf_ver"] = resources.check_nxf_version(raw["nxf_ver"])
@@ -165,6 +162,9 @@ def _parse_options(raw: dict, where: str) -> dict:
             out["limits"] = None if parsed.is_empty() else parsed
     except NfclawError as exc:
         raise _bad(f"{where}: {exc.message}") from None
+    if missing:
+        raise _bad(f"{where}: redacted environment values must be supplied again: "
+                   + ", ".join(missing) + "; export them or pass the original private spec")
     return out
 
 

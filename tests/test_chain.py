@@ -944,8 +944,10 @@ def test_chain_records_redact_environment_secrets_and_require_them_for_resume(
     record = out / 'chain/chain.json'
     assert stat.S_IMODE(record.stat().st_mode) == 0o600
     assert stat.S_IMODE(record.parent.stat().st_mode) == 0o700
-    with pytest.raises(NfclawError, match='redacted'):
+    with pytest.raises(NfclawError, match='redacted') as refused:
         chain.run_chain(None, repo_root=root, outdir=out, resume=True)
+    # One spec prefix: the refusal is not re-wrapped by the option parser's own handler.
+    assert refused.value.message.count('chain spec:') == 1
     monkeypatch.setenv('NXF_TOKEN', 'private-token-value')
     monkeypatch.setenv('NXF_JVM_ARGS', '-Dpassword=private-password-value')
     assert chain.run_chain(None, repo_root=root, outdir=out, resume=True).outcome == 'success'
