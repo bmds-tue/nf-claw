@@ -300,14 +300,15 @@ def test_preflight_probe_honors_active_run_budget(monkeypatch, tmp_path, probe):
 
 
 @pytest.mark.parametrize("probe,override,expected_timeout", [
-    ("docker", None, 10), ("git", None, 10), ("git", "0.25", 0.25),
+    ("docker", None, 60), ("docker", "5", 5), ("git", None, 10), ("git", "0.25", 0.25),
 ])
 def test_preflight_probe_keeps_default_limit_and_failure_diagnostic(
         monkeypatch, tmp_path, probe, override, expected_timeout):
+    variable = "NFCLAW_DOCKER_TIMEOUT" if probe == "docker" else "NFCLAW_GIT_TIMEOUT"
     if override is None:
-        monkeypatch.delenv("NFCLAW_GIT_TIMEOUT", raising=False)
+        monkeypatch.delenv(variable, raising=False)
     else:
-        monkeypatch.setenv("NFCLAW_GIT_TIMEOUT", override)
+        monkeypatch.setenv(variable, override)
     monkeypatch.setattr(preflight.shutil, "which", lambda tool: f"/tools/{tool}")
     seen = []
 
@@ -331,6 +332,25 @@ def test_preflight_probe_keeps_default_limit_and_failure_diagnostic(
     expected = ("docker daemon not responding" if probe == "docker"
                 else "outside the repo or a gitignored path")
     assert any(expected in issue for issue in issues)
+
+
+def test_slow_docker_daemon_is_reported_as_a_timeout_with_its_override(monkeypatch, tmp_path):
+    # Hosted CI runners sometimes take more than 10 s to answer `docker info`; the old fixed
+    # limit refused healthy runs before launch. A real timeout names the limit and its variable.
+    monkeypatch.setenv("NFCLAW_DOCKER_TIMEOUT", "2.5")
+    monkeypatch.setattr(preflight.shutil, "which", lambda tool: f"/tools/{tool}")
+
+    def capture(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(preflight, "capture", capture, raising=False)
+    root = tmp_path / "repo"
+    root.mkdir()
+    status = submodule.SubmoduleStatus("p", root / "upstream", True, True, "1.0.0", "a" * 40, ())
+    issues = preflight.check_environment(profile="docker", output_dir=tmp_path / "results",
+                                         submodule=status, repo_root=root, resume=False)
+    assert any("not responding within 2.5 s" in issue and "NFCLAW_DOCKER_TIMEOUT" in issue
+               for issue in issues)
 
 
 @pytest.fixture
