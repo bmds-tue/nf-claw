@@ -86,6 +86,27 @@ def test_h5ad_exception_applies_only_to_macos_python315_and_its_module(tmp_path)
         check(path, 'ubuntu-latest', '3.15')
 
 
+def test_module_collection_skip_is_judged_by_its_module_and_reason(tmp_path):
+    # Exactly what pytest's JUnit writer recorded for test_scientific_h5ad on macOS Python 3.15.
+    path = report(tmp_path, ('', 'tests.test_scientific_h5ad', 'collection skipped'))
+    tree = ET.parse(path)
+    skipped = next(case.find('skipped') for case in tree.iter('testcase')
+                   if case.get('name') == 'tests.test_scientific_h5ad')
+    skipped.text = ("('/Users/runner/work/nf-claw/nf-claw/tests/test_scientific_h5ad.py', 8, "
+                    "\"Skipped: could not import 'h5py': No module named 'h5py'\")")
+    tree.write(path)
+    result = check(path, 'macos-latest', '3.15')
+    assert result['skipped'] == [{'module': 'tests.test_scientific_h5ad',
+                                  'name': 'tests.test_scientific_h5ad',
+                                  'reason': "could not import 'h5py': No module named 'h5py'"}]
+    with pytest.raises(ValueError, match='Undeclared skipped coverage'):
+        check(path, 'macos-latest', '3.14')
+    skipped.text = "('tests/test_scientific_h5ad.py', 8, 'Skipped: unrelated reason')"
+    tree.write(path)
+    with pytest.raises(ValueError, match='Undeclared skipped coverage'):
+        check(path, 'macos-latest', '3.15')
+
+
 @pytest.mark.parametrize('module,reason', [
     ('tests.test_demo_fastqrepair', 'requires the audited fastqrepair 1.1.1 source'),
     ('tests.test_bactmap_corrections',

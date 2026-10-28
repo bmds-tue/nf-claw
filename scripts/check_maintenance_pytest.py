@@ -58,6 +58,11 @@ def check_report(path: Path, os_name: str, python: str) -> dict:
         omissions = case.findall('skipped')
         if omissions:
             reason = omissions[0].get('message', '')
+            if not module and reason == 'collection skipped':
+                # A module-level importorskip is one entry named after the module, whose text is
+                # the repr of (path, line, "Skipped: <reason>"). Judge that module and reason.
+                found = re.search(r"""(['"])Skipped: (.*)\1\)\s*$""", omissions[0].text or '')
+                module, reason = name, found[2] if found else reason
             if len(omissions) != 1 or not allowed_skip(module, name, reason, os_name, python):
                 raise ValueError(f'Undeclared skipped coverage: {module}.{name}: {reason}')
             skipped.append({'module': module, 'name': name, 'reason': reason})
