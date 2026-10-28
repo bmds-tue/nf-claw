@@ -24,6 +24,11 @@ runs:
         set -euo pipefail
         if [[ -n "$CANDIDATE_SHA" || -n "$CANDIDATE_ARTIFACT" || -n "$BASE_SHA" ]]; then
           [[ "$CANDIDATE_ARTIFACT" =~ ^[1-9][0-9]*$ && "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Jobs check out the trusted triggering commit; the candidate must build on exactly it.
+          if [[ "$(git rev-parse HEAD)" != "$BASE_SHA" ]]; then
+            echo "::error::The checked-out trusted commit is not the candidate's validated base"
+            exit 1
+          fi
         fi
     - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
       if: inputs.sha != ''
