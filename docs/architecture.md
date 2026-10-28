@@ -50,6 +50,11 @@ The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas
 The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)).
 
 ### 2.1 Schema Preflight & Fast-Fail Parameter Validation
+`nfclaw run --check` lists completed, deferred and unsupported checks; real runs record the detailed
+`validation_scope` in their manifest. The [preflight scope guide](preflight.md) documents the schema
+subset and the generation support matrix, including differences between handwritten and generated
+tables and JSON/YAML inputs.
+
 Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight checks (`runner/preflight.py`, `runner/schema.py`, `runner/parameters.py`, `runner/inputs.py`):
 - **Syntactic Validation:** Rejects unknown flags, typos, and syntax errors prior to Nextflow process initialization.
 - **Type & Range Checking:** Validates scalar types, boolean flags, numeric bounds, and enum choices.
@@ -73,7 +78,7 @@ nfclaw keeps its own schema checks where they act before Nextflow could:
 - `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never start Nextflow.
 - A chain validates every stage before the first one launches. Otherwise a later stage's own validation would run only after the stages before it have finished.
 - Unknown parameters are refused. nf-schema only warns about them by default, because institutional profiles may set extra parameters, so a mistyped flag would run with its default.
-- Samplesheet paths must be absolute, identifiers shell-safe and inputs readable. nfclaw launches Nextflow from `--outdir` and hashes every input; a release's schemas do not cover these requirements.
+- Declared local samplesheet paths must be absolute and identifiers shell-safe. A real run hashes its discovered local dependencies before launching Nextflow from `--outdir`; `--check` inspects paths without establishing every data file's byte readability. Implicit, transitive and remote dependencies retain the limits in [preflight scope](preflight.md).
 
 ### 2.2 Run Execution & Sibling Directory Locking
 - **Launch Isolation:** Nextflow is launched from `--outdir`, isolating its `.nextflow/` history and session databases. Task work files default to the shared `<repo>/work/` directory; `NXF_WORK` selects another location and is resolved against the caller's working directory before launch.
@@ -165,7 +170,7 @@ the archive's file checksums and logical namespace.
 
 The archive is verified before and after execution. When the replay uses the original
 checkout, its revision and tracked bytes are also rechecked at completion. The extracted
-working tree is checked while created, but is not separately rehashed after execution.
+working tree is checked on creation and rehashed against the source manifest after execution.
 Replay targets receive logs and source/environment records; the original bundle remains
 the replay entry point and the reference for dependency and output checks.
 
@@ -219,3 +224,14 @@ Invoked via `make`, the librarian automates generation and release tracking for 
 | `check_drift.py` | `make check` | Enforces bidirectional synchronization across `sources.tsv`, `.gitmodules`, disk directories, skills, references, and handoff rules. |
 | `update_pipelines.py` | `make update` | Scans upstream remotes for newly published release tags and bumps submodules. |
 | `discover_pipelines.py` | Workflow | Discovers newly published DSL2 nf-core pipelines and scaffolds initial submodules. |
+
+### Complete environment verification
+
+`nfclaw verify REPLAY --against ORIGINAL --require-environment` requires complete matching recorded
+environment evidence even if output structure alone agrees. It refuses missing records, unknown
+engine builds/runtimes/platforms/container engine versions, absent process or image identities,
+containerless tasks, missing plugin/remote inventories, recording issues and refetched validation
+inputs. Engine build/runtime, host platform and process inventories must agree as well as the
+container/plugin/remote comparisons. Combine it with `--strict` to also require output byte identity.
+This checks declared recorded evidence; it does not discover undeclared task downloads or prove
+continuous input immutability. The legacy default and `--strict` retain their existing behavior.

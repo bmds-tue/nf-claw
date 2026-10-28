@@ -5,7 +5,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from subprocess import SubprocessError
 
-from runner.replay_guard import hash_pipeline, pipeline_head, snapshot_inputs
+from runner.replay_guard import (check_corrected_source, hash_pipeline, pipeline_head,
+                                 snapshot_inputs)
 
 FAILED_OUTCOME = "failed after Nextflow succeeded (local dependencies changed)"
 FAILED_EXECUTION_OUTCOME = "failed (local dependencies changed during execution)"
@@ -13,7 +14,8 @@ FAILED_EXECUTION_OUTCOME = "failed (local dependencies changed during execution)
 
 def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
             configs: tuple[Path, ...], config_checksums: dict, config_inventory: dict,
-            pipeline: Path, pipeline_checksums: dict, git_head: str | None) -> dict:
+            pipeline: Path, pipeline_checksums: dict, git_head: str | None,
+            corrected_source: dict | None = None) -> dict:
     issues = []
     for kind, paths, before_hashes, before_nodes in (
         ("inputs", inputs, input_checksums, input_inventory),
@@ -33,6 +35,8 @@ def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
                 issues.append({"kind": kind, "path": name, "change": "content",
                                "before": before_hashes.get(name), "after": after_hashes.get(name)})
     try:
+        if corrected_source is not None:
+            check_corrected_source(pipeline, corrected_source)
         after_hashes = hash_pipeline(pipeline)
         after_head = pipeline_head(pipeline)
     except (OSError, ValueError, SubprocessError) as exc:

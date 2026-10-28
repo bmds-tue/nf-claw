@@ -1,0 +1,520 @@
+{
+  "version": 1,
+  "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+  "checked_at": "2026-10-28T00:44:29.802419+00:00",
+  "scope": "Complete suites on Linux amd64 Python 3.11-3.15; no macOS/GitHub-hosted execution claim.",
+  "completed_suites": [
+    {
+      "suite_validation": {
+        "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "scope": "full",
+        "started_at": "2026-10-28T00:05:18.889647+00:00",
+        "finished_at": "2026-10-28T00:31:56.982431+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "-q",
+          "-rs",
+          "--basetemp",
+          "/dev/shm/nfclaw-maintenance-full-matrix-512ade7/3.11",
+          "--junitxml",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.xml"
+        ],
+        "exit_code": 0,
+        "python": "Python 3.11.17",
+        "packages": {
+          "pytest": "9.1.1",
+          "pysam": "0.24.1",
+          "h5py": "3.16.0",
+          "numpy": "2.4.6"
+        },
+        "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+        "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/source-inventory.json",
+        "source_inventory_sha256_before": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "source_inventory_sha256_after": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "editable_fallback_code_bytes_and_execute_bits_match": true,
+        "editable_fallback_unchanged": true,
+        "fallback_initial_inventory_sha256": "3689880eb3cc5a9a774257bd35662b337c20a3b787a3940bd3b49a68b686ad82",
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.log",
+        "log_sha256": "9c4c16f063f6e0105514eb54f73d94b8a610b53bb470a4edf1fea74143156aae",
+        "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.xml",
+        "junit_sha256": "1b5c9fcf2f28967395e93cda83dd5a773860fb80cb07d1543fcad703b7679936",
+        "dependency_install_command": [],
+        "dependency_note": "Existing validated adapter environments",
+        "environment": {
+          "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+        },
+        "full_suite_evidence_check": {
+          "command": [
+            "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+            "scripts/check_maintenance_pytest.py",
+            "--report",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.xml",
+            "--os",
+            "ubuntu-latest",
+            "--python",
+            "3.11",
+            "--candidate",
+            "512ade721a51902ae2a9845c88849c9aac83be05",
+            "--output",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full-suite-evidence-check.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "Full-matrix evidence refused: Full-suite source trees are missing or at different pins\n"
+        }
+      },
+      "suite_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.json",
+      "suite_record_sha256": "25d9c6cb7f1109868dcd0406dea9bd934d2cb407e7926e6c412ea2dee55dc419",
+      "post_registration_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.11",
+          "--candidate",
+          "512ade721a51902ae2a9845c88849c9aac83be05",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-registered-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "evidence_receipt": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.11-registered-evidence-check.json",
+      "checked_report": {
+        "version": 1,
+        "candidate": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "os": "ubuntu-latest",
+        "python": "3.11",
+        "passed": 3326,
+        "skipped": [
+          {
+            "module": "tests.test_legacy_sheet_paths",
+            "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ],
+        "report_sha256": "1b5c9fcf2f28967395e93cda83dd5a773860fb80cb07d1543fcad703b7679936"
+      }
+    },
+    {
+      "suite_validation": {
+        "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "scope": "full",
+        "started_at": "2026-10-28T00:05:17.002034+00:00",
+        "finished_at": "2026-10-28T00:30:48.686469+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "-q",
+          "-rs",
+          "--basetemp",
+          "/dev/shm/nfclaw-maintenance-validation-512ade7/3.12",
+          "--junitxml",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml"
+        ],
+        "exit_code": 0,
+        "python": "Python 3.12.3",
+        "packages": {
+          "pytest": "9.1.1",
+          "pysam": "0.24.1",
+          "h5py": "3.16.0",
+          "numpy": "2.5.4"
+        },
+        "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+        "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/source-inventory.json",
+        "source_inventory_sha256_before": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "source_inventory_sha256_after": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "editable_fallback_code_bytes_and_execute_bits_match": true,
+        "editable_fallback_unchanged": true,
+        "fallback_initial_inventory_sha256": "3689880eb3cc5a9a774257bd35662b337c20a3b787a3940bd3b49a68b686ad82",
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.log",
+        "log_sha256": "2a687eb7ece3dd3f9c1b914c89282eda81c3bd006fb587f568ed88104999c3ce",
+        "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml",
+        "junit_sha256": "750810a4cecf16634a7b14a5d8d3239fceccc781157fc243c95e806cd2384208",
+        "dependency_install_command": [],
+        "dependency_note": "Existing validated adapter environments",
+        "environment": {
+          "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+        },
+        "full_suite_evidence_check": {
+          "command": [
+            "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+            "scripts/check_maintenance_pytest.py",
+            "--report",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml",
+            "--os",
+            "ubuntu-latest",
+            "--python",
+            "3.12",
+            "--candidate",
+            "512ade721a51902ae2a9845c88849c9aac83be05",
+            "--output",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/full-suite-evidence-check.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "Full-matrix evidence refused: Full-suite source trees are missing or at different pins\n"
+        }
+      },
+      "suite_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.json",
+      "suite_record_sha256": "9fd199499cf2929beeb45b7e86a4672c7e7624813ceab65d99064f4e5cdd8280",
+      "post_registration_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.12",
+          "--candidate",
+          "512ade721a51902ae2a9845c88849c9aac83be05",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-registered-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "evidence_receipt": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-registered-evidence-check.json",
+      "checked_report": {
+        "version": 1,
+        "candidate": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "os": "ubuntu-latest",
+        "python": "3.12",
+        "passed": 3326,
+        "skipped": [
+          {
+            "module": "tests.test_legacy_sheet_paths",
+            "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ],
+        "report_sha256": "750810a4cecf16634a7b14a5d8d3239fceccc781157fc243c95e806cd2384208"
+      }
+    },
+    {
+      "suite_validation": {
+        "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "scope": "full",
+        "started_at": "2026-10-28T00:05:18.890289+00:00",
+        "finished_at": "2026-10-28T00:32:15.835787+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "-q",
+          "-rs",
+          "--basetemp",
+          "/dev/shm/nfclaw-maintenance-full-matrix-512ade7/3.13",
+          "--junitxml",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.xml"
+        ],
+        "exit_code": 0,
+        "python": "Python 3.13.17",
+        "packages": {
+          "pytest": "9.1.1",
+          "pysam": "0.24.1",
+          "h5py": "3.16.0",
+          "numpy": "2.5.4"
+        },
+        "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+        "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/source-inventory.json",
+        "source_inventory_sha256_before": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "source_inventory_sha256_after": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "editable_fallback_code_bytes_and_execute_bits_match": true,
+        "editable_fallback_unchanged": true,
+        "fallback_initial_inventory_sha256": "3689880eb3cc5a9a774257bd35662b337c20a3b787a3940bd3b49a68b686ad82",
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.log",
+        "log_sha256": "f5d6183fc21edd7e33803dc0fbbc5a155f788dbd72e1be6f9aabd45447aef9f7",
+        "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.xml",
+        "junit_sha256": "1426397a64ef3c74db0f94cfee0442f48f494b6fcb072cdfa304f27147d6a844",
+        "dependency_install_command": [],
+        "dependency_note": "Existing validated adapter environments",
+        "environment": {
+          "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+        },
+        "full_suite_evidence_check": {
+          "command": [
+            "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+            "scripts/check_maintenance_pytest.py",
+            "--report",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.xml",
+            "--os",
+            "ubuntu-latest",
+            "--python",
+            "3.13",
+            "--candidate",
+            "512ade721a51902ae2a9845c88849c9aac83be05",
+            "--output",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full-suite-evidence-check.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "Full-matrix evidence refused: Full-suite source trees are missing or at different pins\n"
+        }
+      },
+      "suite_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.json",
+      "suite_record_sha256": "679b659f543d586357d3e18a6e96882dd524b02eff84f65a7e51107b3b909475",
+      "post_registration_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.13",
+          "--candidate",
+          "512ade721a51902ae2a9845c88849c9aac83be05",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-registered-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "evidence_receipt": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.13-registered-evidence-check.json",
+      "checked_report": {
+        "version": 1,
+        "candidate": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "os": "ubuntu-latest",
+        "python": "3.13",
+        "passed": 3326,
+        "skipped": [
+          {
+            "module": "tests.test_legacy_sheet_paths",
+            "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ],
+        "report_sha256": "1426397a64ef3c74db0f94cfee0442f48f494b6fcb072cdfa304f27147d6a844"
+      }
+    },
+    {
+      "suite_validation": {
+        "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "scope": "full",
+        "started_at": "2026-10-28T00:05:18.890790+00:00",
+        "finished_at": "2026-10-28T00:32:15.215284+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "-q",
+          "-rs",
+          "--basetemp",
+          "/dev/shm/nfclaw-maintenance-full-matrix-512ade7/3.14",
+          "--junitxml",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.xml"
+        ],
+        "exit_code": 0,
+        "python": "Python 3.14.9",
+        "packages": {
+          "pytest": "9.1.1",
+          "pysam": "0.24.1",
+          "h5py": "3.16.0",
+          "numpy": "2.5.4"
+        },
+        "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+        "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/source-inventory.json",
+        "source_inventory_sha256_before": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "source_inventory_sha256_after": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "editable_fallback_code_bytes_and_execute_bits_match": true,
+        "editable_fallback_unchanged": true,
+        "fallback_initial_inventory_sha256": "3689880eb3cc5a9a774257bd35662b337c20a3b787a3940bd3b49a68b686ad82",
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.log",
+        "log_sha256": "8803db7f6b09e56f14f50cbee2b8e64519cdf356654ab86692e4076736aa8d49",
+        "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.xml",
+        "junit_sha256": "66ccd17b49e6963b5a582f8329f5a3326ac1b58d95cb3501945aa406a233e647",
+        "dependency_install_command": [],
+        "dependency_note": "Existing validated adapter environments",
+        "environment": {
+          "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+        },
+        "full_suite_evidence_check": {
+          "command": [
+            "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+            "scripts/check_maintenance_pytest.py",
+            "--report",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.xml",
+            "--os",
+            "ubuntu-latest",
+            "--python",
+            "3.14",
+            "--candidate",
+            "512ade721a51902ae2a9845c88849c9aac83be05",
+            "--output",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full-suite-evidence-check.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "Full-matrix evidence refused: Full-suite source trees are missing or at different pins\n"
+        }
+      },
+      "suite_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.json",
+      "suite_record_sha256": "3815826739560e1e26e866818d4a1cae2c8f991038e1d8435bfd9ee165d95b84",
+      "post_registration_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.14",
+          "--candidate",
+          "512ade721a51902ae2a9845c88849c9aac83be05",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-registered-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "evidence_receipt": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.14-registered-evidence-check.json",
+      "checked_report": {
+        "version": 1,
+        "candidate": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "os": "ubuntu-latest",
+        "python": "3.14",
+        "passed": 3326,
+        "skipped": [
+          {
+            "module": "tests.test_legacy_sheet_paths",
+            "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ],
+        "report_sha256": "66ccd17b49e6963b5a582f8329f5a3326ac1b58d95cb3501945aa406a233e647"
+      }
+    },
+    {
+      "suite_validation": {
+        "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "scope": "full",
+        "started_at": "2026-10-28T00:05:18.891354+00:00",
+        "finished_at": "2026-10-28T00:32:52.088933+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "-q",
+          "-rs",
+          "--basetemp",
+          "/dev/shm/nfclaw-maintenance-full-matrix-512ade7/3.15",
+          "--junitxml",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.xml"
+        ],
+        "exit_code": 0,
+        "python": "Python 3.15.1",
+        "packages": {
+          "pytest": "9.1.1",
+          "pysam": "0.24.1",
+          "h5py": "3.16.0",
+          "numpy": "2.5.4"
+        },
+        "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+        "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/source-inventory.json",
+        "source_inventory_sha256_before": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "source_inventory_sha256_after": "a76bc4749a66182e7d90b60dc4ff0347b614221a4ecf20be90baa9e497469539",
+        "editable_fallback_code_bytes_and_execute_bits_match": true,
+        "editable_fallback_unchanged": true,
+        "fallback_initial_inventory_sha256": "3689880eb3cc5a9a774257bd35662b337c20a3b787a3940bd3b49a68b686ad82",
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.log",
+        "log_sha256": "dcabbe4db5662bd8b37b73edded3819e015b4706ed16ba94b8dc27e45e3b0322",
+        "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.xml",
+        "junit_sha256": "fa912235cbd90c0c51b91cd32ada6e6807d72929365f8aa932f0fa001f79ea29",
+        "dependency_install_command": [],
+        "dependency_note": "Existing validated adapter environments",
+        "environment": {
+          "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source",
+          "LD_LIBRARY_PATH": "/mnt/volume/nfclaw-remediation-python-matrix/hdf5-private/root/usr/lib/x86_64-linux-gnu"
+        },
+        "full_suite_evidence_check": {
+          "command": [
+            "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+            "scripts/check_maintenance_pytest.py",
+            "--report",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.xml",
+            "--os",
+            "ubuntu-latest",
+            "--python",
+            "3.15",
+            "--candidate",
+            "512ade721a51902ae2a9845c88849c9aac83be05",
+            "--output",
+            "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full-suite-evidence-check.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "Full-matrix evidence refused: Full-suite source trees are missing or at different pins\n"
+        }
+      },
+      "suite_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.json",
+      "suite_record_sha256": "c3fb8c48f8f4578b34c972e8276710de136b98f5f6911f5096ca28e68ce13636",
+      "post_registration_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.15",
+          "--candidate",
+          "512ade721a51902ae2a9845c88849c9aac83be05",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-registered-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "evidence_receipt": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7-full-matrix/3.15-registered-evidence-check.json",
+      "checked_report": {
+        "version": 1,
+        "candidate": "512ade721a51902ae2a9845c88849c9aac83be05",
+        "os": "ubuntu-latest",
+        "python": "3.15",
+        "passed": 3326,
+        "skipped": [
+          {
+            "module": "tests.test_legacy_sheet_paths",
+            "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ],
+        "report_sha256": "fa912235cbd90c0c51b91cd32ada6e6807d72929365f8aa932f0fa001f79ea29"
+      }
+    }
+  ],
+  "source_registration_context": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-512ade7-source-registration-recheck.json",
+  "source_registration_context_sha256": "fd8bc4af4934fb3fe7b8ada10c4a5dfa6395934eeb1801d4b4a65367128a8572",
+  "setup_dispositions": [
+    "The first two launch guards ran no tests: bytes/executable bits matched, but existing checkout permission bits differed. Both initial mode inventories are retained separately; each checkout full mode/byte inventory stayed unchanged during its real suite.",
+    "All five suites exited zero. Their initial evidence checks refused unregistered Git metadata. All 95 exact actual source pins and clean tracked trees were verified before git submodule init; no source checkout or report bytes changed. Raw failed driver assertions/records remain unchanged, with successful fresh receipt checks recorded here."
+  ]
+}

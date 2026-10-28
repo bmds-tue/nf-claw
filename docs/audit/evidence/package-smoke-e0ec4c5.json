@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "status": "passed",
+  "checked_at": "2026-10-27T16:17:22.471313+00:00",
+  "source_commit": "e0ec4c5675a3825921a0197e407894ab8d5c9889",
+  "wheel": "/mnt/volume/nfclaw-remediation-evidence-20261026/packages-e0ec4c5/nfclaw-1.0.0-py3-none-any.whl",
+  "wheel_sha256": "a7678c042411de501ea10f5f36951e2af0531f5f9548f1d0404923f082d03325",
+  "checks": [
+    "isolated no-network/no-dependency wheel install",
+    "CLI/verify/MCP/assess help",
+    "packaged source-bound JSON output contracts",
+    "standalone assessment outside repository",
+    "known-answer passing matrix and missing-sample refusal",
+    "standalone DRAMP preparation on complete retained official snapshot"
+  ],
+  "scope": "Scientific assessment of tables works outside a repository. Running the pipeline library still requires the documented repository installation. Optional BAM/VCF/H5AD adapters are tested in the server suites, not installed in this isolated smoke environment."
+}

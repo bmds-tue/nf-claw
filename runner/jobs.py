@@ -37,6 +37,7 @@ except ImportError:                                       # Windows: no detached
 JOB_FILE = "job.json"
 SUPERVISOR_FILE = "supervisor.json"
 OUTPUT_LOG = "output.log"
+STATUS_FILE = "run-status.json"
 CANCEL_FILE = "cancel"
 LOCK_FILE = "lock"
 # The directory `runner` is imported from: put on PYTHONPATH so `python -m runner` works for a job
@@ -192,11 +193,41 @@ def load(job_id: str) -> Job:
     spec = _read_json(job_dir / JOB_FILE)
     if not spec:
         raise JobError(f"no such job: {job_id}")
-    known = {f.name for f in fields(Job)}
+    def strings(value):
+        return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+    def optional(value, kind):
+        return value is None or type(value) is kind
+
+    required = {"id", "kind", "argv", "command", "cwd", "outdir", "created_at"}
+    if (not required <= spec.keys() or spec.get("id") != job_id
+            or spec.get("kind") not in ("run", "chain", "replay") or "dir" in spec
+            or not strings(spec.get("argv")) or not strings(spec.get("command"))
+            or not spec["command"]
+            or any(not isinstance(spec.get(key), str) or not Path(spec[key]).is_absolute()
+                   for key in ("cwd", "outdir"))
+            or not isinstance(spec["created_at"], str)
+            or type(spec.get("check", False)) is not bool
+            or not optional(spec.get("pipeline"), str)
+            or not optional(spec.get("log_path"), str)
+            or not optional(spec.get("log_size_before"), int)
+            or spec.get("log_size_before") is not None and spec["log_size_before"] < 0
+            or not optional(spec.get("supervisor_pid"), int)
+            or spec.get("supervisor_pid") is not None and spec["supervisor_pid"] <= 0):
+        raise JobError(f"malformed job record: {job_id}")
+    try:
+        datetime.fromisoformat(spec["created_at"])
+    except ValueError as exc:
+        raise JobError(f"malformed job timestamp: {job_id}") from exc
+    known = {f.name for f in fields(Job)} - {"dir"}
     job = Job(**{k: v for k, v in spec.items() if k in known}, dir=job_dir)
     sup = _read_json(job_dir / SUPERVISOR_FILE)
-    for key in ("child_pid", "started_at", "exit_code", "finished_at", "error"):
+    for key, kind in (("supervisor_pid", int), ("child_pid", int), ("exit_code", int),
+                      ("started_at", str), ("finished_at", str), ("error", str)):
         if key in sup:
+            if not optional(sup[key], kind) or (key.endswith("_pid")
+                                               and sup[key] is not None and sup[key] <= 0):
+                raise JobError(f"malformed supervisor record: {job_id}")
             setattr(job, key, sup[key])
     job.cancel_requested = (job_dir / CANCEL_FILE).exists()
     return job
@@ -284,6 +315,71 @@ def output_tail(job: Job, lines: int) -> list[str]:
     return out[-lines:]
 
 
+def run_status(job: Job) -> dict:
+    """The completed job's own frozen run report; never read a later retry's status."""
+    record = _read_json(job.dir / STATUS_FILE)
+    if (not isinstance(record.get("status_report"), str)
+            or record.get("run_state") not in ("success", "running", "not successful")
+            or type(record.get("caveats")) is not bool):
+        return {}
+    return {key: record[key] for key in ("status_report", "run_state", "caveats")}
+
+
+def _freeze_run_status(job_dir: Path, spec: dict) -> None:
+    """Read only this invocation's log segment, and retain bounded status evidence.
+
+    The supervisor still owns the job lock. A future retry may append or replace the shared
+    log; a completed job's report is derived from its private snapshot instead.
+    """
+    from runner import cli, runlog
+
+    if spec.get("check") or not spec.get("log_path") or not spec.get("child_pid"):
+        return
+    log = Path(spec["log_path"])
+    before = spec.get("log_size_before") or 0
+    head, tail, started, matched = bytearray(), bytearray(), False, False
+    with log.open("rb") as stream:
+        size = os.fstat(stream.fileno()).st_size
+        stream.seek(before if before < size else 0)
+        for line in stream:
+            if re.match(rb"==> nfclaw (?:run|replay|chain) started", line):
+                if matched:
+                    break
+                head.clear()
+                tail.clear()
+                started = True
+            if not started:
+                continue
+            if line.startswith(b"    pid: "):
+                matched = line.strip() == f"pid: {spec['child_pid']}".encode()
+            if len(head) < 64 * 1024:
+                head.extend(line)
+            else:
+                tail.extend(line)
+                if len(tail) > 512 * 1024:
+                    del tail[:len(tail) - 512 * 1024]
+            if re.match(rb"==> nfclaw (?:run|replay|chain) finished", line):
+                if matched:
+                    break  # no later invocation can become this job's result
+                started = False
+    if not matched:
+        return
+    if tail:
+        # The retained tail may start in the middle of a physical line.
+        tail = tail[tail.find(b"\n") + 1:]
+    snapshot = job_dir / "run.log"
+    snapshot.write_bytes(head + tail)
+    state = runlog.read_state(
+        snapshot, replay_engine_log=log.parent.parent.parent / ".nextflow.log")
+    state.log = log
+    _write_json(job_dir / STATUS_FILE, {
+        "status_report": cli._status_report(state).rstrip(),
+        "run_state": "success" if state.state == "success" else
+                     "running" if state.state == "running" else "not successful",
+        "caveats": bool(state.caveats),
+    })
+
+
 # --- the supervisor (`python -m runner.jobs <job dir>`) -------------------------------------------
 
 def supervise(job_dir: Path) -> int:
@@ -322,11 +418,15 @@ def supervise(job_dir: Path) -> int:
         _write_json(record_path, record)
         return 1
     child.append(proc)
-    if stopping:                                      # asked to stop before the command existed
-        relay(stopping[0], None)
+    if stopping or (job_dir / CANCEL_FILE).exists():
+        relay(stopping[0] if stopping else signal.SIGTERM, None)
     record["child_pid"] = proc.pid
     _write_json(record_path, record)
     code = proc.wait()
+    try:
+        _freeze_run_status(job_dir, {**spec, "child_pid": proc.pid})
+    except (OSError, ValueError) as exc:
+        record["status_error"] = f"could not freeze this job's run status: {exc}"
     record.update(exit_code=code, finished_at=_now())
     _write_json(record_path, record)
     return 0

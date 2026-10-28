@@ -1,0 +1,1090 @@
+{
+  "version": 1,
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "pipeline_commit": "70a38209407b9367a9ff7ab8b26d84cb1983ea18",
+  "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+  "upstream_files_before": {
+    ".devcontainer/devcontainer.json": {
+      "sha256": "7a781461a1d7dad5d218039f7b35b5855c360fa5b36a39774bdb7084bf6df4fa",
+      "mode": 436
+    },
+    ".devcontainer/setup.sh": {
+      "sha256": "917009e8e9999c1003453f8cc4ecdcf70ca9ae515c7c8894dbd738957cd43352",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "c789806a02f29774b9f8ee7a9ac019ed28cdce9d80a9284726b46c1a24e2c211",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.yml": {
+      "sha256": "e9d38775a4afee931af98c4823651fa63140e257a043e725fb6652d43e02c71f",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "11db331f8d680430d8748f0ed9facc9d88f6d24d8f0f95a8b4abdcc38b263e23",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.yml": {
+      "sha256": "1bd40cdf7a4caccb4c1596121d38ac0b5b1eb8fb8ee1a369b2f9b66f25bad2ee",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "0bc1cfeb039240a16c2f6915ec3af9b94152e4e4fffbad14c601db00b829f388",
+      "mode": 436
+    },
+    ".github/actions/get-shards/action.yml": {
+      "sha256": "bde449777823fdf54093974f0f9b1e91fbd33d97f4cd37743c94f862b5aa08f5",
+      "mode": 436
+    },
+    ".github/actions/nf-test/action.yml": {
+      "sha256": "0a3e2b55f0fd8b224e4631cb31a1c734c3c756b4b414ef47348b7484a58f2020",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "2075a6cfc68cfcac0451a614e66638bcb72300e5f9931c6e2561fde3b9b89c61",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "d3d261810ebcd27b5dfd4c6c57534c6a533fcb7bf1b65279c3bc49e59cb80d09",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "16cde98fa7f7c3ccae2fc4199bc629ce59786990b558f32d6bb3527c5727ad59",
+      "mode": 436
+    },
+    ".github/workflows/clean-up.yml": {
+      "sha256": "e41ff4edebd9d6f377203be1f9e3eac4d80603b49de2ee2bbc6305d62d024d9b",
+      "mode": 436
+    },
+    ".github/workflows/download_pipeline.yml": {
+      "sha256": "020cb24b58932859fd9b57871bfe9753377ac4c53b6fc216b5df0c7435225d0c",
+      "mode": 436
+    },
+    ".github/workflows/fix_linting.yml": {
+      "sha256": "5b995d8978a5b124acde0e7e5ed8c23acf0c140847ad16dfad9acc567c26474c",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "f1de6864636f232e2d62f30e862b5c7b657619d2aa10c3274c44344b2a4080a6",
+      "mode": 436
+    },
+    ".github/workflows/nf-test.yml": {
+      "sha256": "046f3842f96d42a763d80a4be18d278c08edec1c68128f4057dbaa3155499758",
+      "mode": 436
+    },
+    ".github/workflows/pr-comment.yml": {
+      "sha256": "6c73fe437bd62fd167337a3d988188dfd37de566a89b5a28cc99a2ee023f0de6",
+      "mode": 436
+    },
+    ".github/workflows/release-announcements.yml": {
+      "sha256": "68e8b9b1d4d270a691aaf2bf542ddd2bca36cd43266dfe3cfbf9096e786e7cd8",
+      "mode": 436
+    },
+    ".github/workflows/template-version-comment.yml": {
+      "sha256": "dd9f4cb9644491de8767b5d6f1e8a9fa08408a5adf396eb45ec32db90faa0405",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "058ea0b5dc745d9c4be384224f4c34f3f4478b44bf91473dedeaac7a9f64d802",
+      "mode": 436
+    },
+    ".nf-core.yml": {
+      "sha256": "2ed152dfa5f00ac274362ed14fbc067ea63290047d314697abc440e7d3c95431",
+      "mode": 436
+    },
+    ".pre-commit-config.yaml": {
+      "sha256": "59043a2db36e25f54ccb789d8068beeed11a26068c57f9cddec958cdc853c2e1",
+      "mode": 436
+    },
+    ".prettierignore": {
+      "sha256": "c350972d84684f88b188386068400b50318a9751151dca215dd350b1b86a5986",
+      "mode": 436
+    },
+    ".prettierrc.yml": {
+      "sha256": "fef7704ceb2e95b565d31287910d153ea0ec93aee930eab9855d7953ca89bc45",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "aadc7174f07bb71219c3a7536c89573fb12890791a4dc5ca9a33e48f6caae6d2",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "3b8838d21a4a0ec93b34ed4cd85ad58e9ca2f012ef8c884168c369d6afd26fb1",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "b474915a37b8510c1a640e27fa57404e6b2f02a611ede77466b4bce34324f7a6",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "db14f607748069ddfa965b057c493d11e3130ee2bcfd0862eaa02cbfb95feb89",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "a7877beda229d2494347249754abe068d6d95eaad7ead6bbf95fde66492f969e",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "a3e13915fe22cdcf5eac76f093ea1e7d7e9f630a03a3b838c482467093711a7b",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "e7c37c433ab7524d7803df86455ccdc3e8d479918eed02fb0aded9fba51266b0",
+      "mode": 436
+    },
+    "assets/methods_description_template.yml": {
+      "sha256": "e7d19b8c78b7e46fb6f76c6d57d0c670a3d1625dcc08bdb6cf42b088669df782",
+      "mode": 436
+    },
+    "assets/multiqc_config.yml": {
+      "sha256": "cb2ee6219dfc0009f1ae4d2cb1640aa0a4ee357b18588f57f6bb7be36281a4f5",
+      "mode": 436
+    },
+    "assets/nf-core-fastqrepair_logo_light.png": {
+      "sha256": "be8ed3ff256a832502895b250ae96527e7080409f2917bfb6186020f1c4f1922",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "7adce6233d68f43b1158244f6858639e0139eca7201a94ec93e75c0063a714fb",
+      "mode": 436
+    },
+    "assets/schema_input.json": {
+      "sha256": "7d9b53d7e1111088900cc435ba3161d4913b284db8d7ea5f4150e89171a1e761",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "6bbf427d97ea05449e140cb4595ebb0cb868418dd6aa410e9ae1d2fd90f04c34",
+      "mode": 436
+    },
+    "conf/base.config": {
+      "sha256": "08eb89662fd4fbe96948090c282bd132425ed100c93425cdea3e943aac139c65",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_amd64.config": {
+      "sha256": "3afb00175dea929fc8fff659a484802987b983e4fbbe1c13b89c8cefd894fff2",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_arm64.config": {
+      "sha256": "80a30417c214d75be33c44262cadc81f4eb6c273a17000aeb4d625ab9ab903b4",
+      "mode": 436
+    },
+    "conf/containers_docker_amd64.config": {
+      "sha256": "b17a70527fbf8c30025021be0c9beb0b1def8edae5539a22a6450fb6f476c3f5",
+      "mode": 436
+    },
+    "conf/containers_docker_arm64.config": {
+      "sha256": "f24763cab24582b00709c848edc44333f2cd6e2b9cce9093aa9d68075d8bece7",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_amd64.config": {
+      "sha256": "f01e24f21a9edf9fd476814c30c9869e25ff8f3b48b074ecfcf96fbdbc37c907",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_arm64.config": {
+      "sha256": "d33c8af60ef253c0d292a45e8ed5ffaabf3c618edb4a57183f076561f3e108f6",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_amd64.config": {
+      "sha256": "2340529bce77bfab05fd624db2d8452564c3f494c05db4bcd28746b8bceb8cee",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_arm64.config": {
+      "sha256": "2110f67a962e1d4abccf78089b4d72f11e6510f66aa3cf5eebe93165a06e1abf",
+      "mode": 436
+    },
+    "conf/modules.config": {
+      "sha256": "cd233c7697e598da10fda96dfc0dc9a7b04bde59cb6373a9ceb6b1a248037120",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "ce64fbc9340c37cf618348ddbc9eba302ae2b9bbbd993f3c79166d41ed06719b",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "cc604d499302be7baab5bd19828fd862432488b7010f040ed90692212c4ec1f9",
+      "mode": 436
+    },
+    "docs/CONTRIBUTING.md": {
+      "sha256": "f5a72a2cf084d0a4495e5ff0f7d43baf42e86d3df987a4d6ff381cd57d31a2e2",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "b5da7cc94e20a17d65e6bc7ba3193dc1c476ee97990d79d4ce7a778bd2aea0ab",
+      "mode": 436
+    },
+    "docs/images/fastqrepair-flow-diagram-v1.0.png": {
+      "sha256": "0d02f83a1c46db253a383610e1670f7c485974f1533b7bdbc7eae673826797b5",
+      "mode": 436
+    },
+    "docs/images/fastqrepair-flow-diagram-v1.0.svg": {
+      "sha256": "96d0a3672ca8fa498307354be7839337daa88bf07043e3744dbdcc8be12965e1",
+      "mode": 509
+    },
+    "docs/images/nf-core-fastqrepair_logo_dark.png": {
+      "sha256": "38fdd429e39d0a019118749dc9e8864deb7cb4a96c3bf7e6ff928434b48eae8e",
+      "mode": 436
+    },
+    "docs/images/nf-core-fastqrepair_logo_light.png": {
+      "sha256": "c5300a402ddc5c73cf04e0f46866ea47f5abf0ac9c71bd9c46d0e17ce98a4f97",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "417b116bdd81ea44515a6f6c0e8cf138892581632e5376713299bf50e3aec2c0",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "d7cf2050ec19f213ac08d4d1238b088b5079b55b23464be99c1bdb4f0cc88582",
+      "mode": 436
+    },
+    "main.nf": {
+      "sha256": "4b1ede881e006ce579c25ecb1417531a3675cf64b9a8b3ebafa54dfda5785602",
+      "mode": 436
+    },
+    "modules.json": {
+      "sha256": "c8ee5d9c144af41fd60ad9b04cd9e4ff1d31749b81ab197d4c5cc09d97e1e174",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/environment.yml": {
+      "sha256": "6ccff879b06122d6ea3b70239ea8ac1e96775cd829629cfb2b2d4a33a0ce0b3e",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/main.nf": {
+      "sha256": "7907c696896ea6388e8fbcf872be87dda7950e8403ce1681f3c36c08c93142a3",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/meta.yml": {
+      "sha256": "62f49fe395fbcb9a1166b83c9c1843d5e842618fe207dd6be03611e685bf963b",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/tests/main.nf.test": {
+      "sha256": "94e46a2c0855c8f69fd81cd6e8a6a6bc335fc1aac5a7e888a046197ab7164a54",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/tests/main.nf.test.snap": {
+      "sha256": "7ad4f85f30d930125bef1797f46802de343a585d4474190695319a3f1ba5321f",
+      "mode": 436
+    },
+    "modules/nf-core/bbmap/repair/tests/nextflow.config": {
+      "sha256": "d9ad3d0b317b211a98fc49d9e50ce3b2e5280f009132a232d790dec8225e1d13",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/.conda-lock/linux_amd64-bd-5cb1a2fa2f18c7c2_1.txt": {
+      "sha256": "aba10048af3b93956b77f47129aba8889b94806bd5278017a59cb0008ac3829d",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/.conda-lock/linux_arm64-bd-e455e32f745abe68_1.txt": {
+      "sha256": "422351623c68ec755fc80037a8da63dde7e05f984bc67e27cb478706346dd8f4",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/environment.yml": {
+      "sha256": "97b011d57e671a1ed2fbf71f3ffe686197f145bced8cbf7954c97bc510492aad",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/main.nf": {
+      "sha256": "1c4dcb7cd15d46c39cbe9263fbf6e50e08b3331a9bd8402827e9612c8091f6ec",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/meta.yml": {
+      "sha256": "c153ee332f03d2d067bb407f380632a6a417de1fc019081e2f7e5679af37f354",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/tests/main.nf.test": {
+      "sha256": "5dd1e8bef1168b6122fadf1a1fec28ba4d569e2ddda7cf683ba258dd181e9654",
+      "mode": 436
+    },
+    "modules/nf-core/fastqc/tests/main.nf.test.snap": {
+      "sha256": "ed268bcda7834a44b88d1a8ea8211e0effa5ce7408e81805f28dd052467997a7",
+      "mode": 436
+    },
+    "modules/nf-core/gzrt/environment.yml": {
+      "sha256": "7ec522b9fb1c62d9ddbe1e292b30d63b30a63a352affe3da081763cd4584eac9",
+      "mode": 436
+    },
+    "modules/nf-core/gzrt/main.nf": {
+      "sha256": "1c021fdda7a4ca7d76f2b0716b6d05385ddd83569f167d9ca95f12afd9c768bd",
+      "mode": 436
+    },
+    "modules/nf-core/gzrt/meta.yml": {
+      "sha256": "5077022f07742210ab76980079d8bb7c0f0fccfd6cc09f9b3680446b8e2051b1",
+      "mode": 436
+    },
+    "modules/nf-core/gzrt/tests/main.nf.test": {
+      "sha256": "267d2ff9610dcd187a80e9d6b2b6119648508b75f12cf4656a8280445102b49e",
+      "mode": 436
+    },
+    "modules/nf-core/gzrt/tests/main.nf.test.snap": {
+      "sha256": "12b498b346e561be4c6eb6af757388921bf23ea5df067456ef148e20e7f79c64",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_amd64-bd-c1f4a7982b743963_1.txt": {
+      "sha256": "674d54defd3ad0f0b519270102ccce52c5a76b1309ce26572fb5cdd5fbd3cad9",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_amd64-bd-db7c73dae76bc9e6_1.txt": {
+      "sha256": "de21cfcc740823165459e777928a39fd08bddb9e5a8f7e24165602b34b59f2c6",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_arm64-bd-40bf3b435e89dc22_1.txt": {
+      "sha256": "8e3762d9c30902bc08a6f46f353a23c75f5969893652878c9cf21f8651be1d1a",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_arm64-bd-d167b8012595a136_1.txt": {
+      "sha256": "0d4f4ee4c17431aff65d8988041eacb4020e157633c41c40f79585a133ced37b",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/environment.yml": {
+      "sha256": "9095e4cc35fc5b87f862200761f629ff2710bee78962e16d752627b9e87b5ae3",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/main.nf": {
+      "sha256": "d8e6765dc9e8110619c2c019461d7393ba85c11a564a9a3e5f4ada1558de93f9",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/meta.yml": {
+      "sha256": "d263f376213b33053f4a25a8fb795b8fb95bd953f84d78089ba9f8c3b68ea3f1",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/tests/custom_prefix.config": {
+      "sha256": "78ffb539c8d6227a87aa5ae0877bc14ce563801b08ef1f09a420584e5db8ea0b",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/tests/main.nf.test": {
+      "sha256": "917c2918c36ebc363f9606417600758df024e4a96ed04584d5a9c03f2868972e",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/tests/main.nf.test.snap": {
+      "sha256": "e0c1f7db6445385036b8831bdd9f750576a01ba8c1fbc6d8870a31bda53098de",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/tests/nextflow.config": {
+      "sha256": "517c44c0df0121a0eb2397b8ca810a258240e708afa794eaa1421c328500c172",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/environment.yml": {
+      "sha256": "eb03b20f1beebd527a6c8a0a129dfcf999c92b786d9b203a732093dc5ad74552",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/main.nf": {
+      "sha256": "9763bac5602ac2af0c86ca2e646f68b1672eb9a0d80ca255920e75bf7629292a",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/meta.yml": {
+      "sha256": "c15e43007823fcc104ebbc1e76ad73f0769a1c2436cd5f480381885cc95497d4",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/tests/main.nf.test": {
+      "sha256": "7bd7b85dd9745995f51d6aec6a25a0980e61ef554d3c63b5fb26ea45cc862819",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/tests/main.nf.test.snap": {
+      "sha256": "afbd336172a5cfcd8590bf41455fcdfe01de39f0297ccb384d5527c98578a405",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqgather/tests/nextflow.config": {
+      "sha256": "d8cd88bc7b9929a5013cd6d01fa6adf8124540ab69c79ec354f9334919766697",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/environment.yml": {
+      "sha256": "eb03b20f1beebd527a6c8a0a129dfcf999c92b786d9b203a732093dc5ad74552",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/main.nf": {
+      "sha256": "4b9a16efd8f86afdcbeea191592ae5185953e86213f3a204958ab555003e6f77",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/meta.yml": {
+      "sha256": "9508e619680640464a960c52bc632e80d5f8e26ab3b4d3e252b334465bdba85d",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/tests/main.nf.test": {
+      "sha256": "8056862cc72219d0aaa54be6d6928be133c1dcfe6489c0bf5b54f77f947871d2",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/tests/main.nf.test.snap": {
+      "sha256": "4fe7662162b69f184fb7c8a5d23168dc846f7583b817fe77bd0d907ed3719aad",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqscatter/tests/nextflow.config": {
+      "sha256": "1652aeee875c5720b855bc5a23a5948a44af296e74748b67e4dce5b9dfc8d494",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/environment.yml": {
+      "sha256": "eb03b20f1beebd527a6c8a0a129dfcf999c92b786d9b203a732093dc5ad74552",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/main.nf": {
+      "sha256": "efc1dc6a15986b4af451be79ec094abee0ce8afeeab28ce5cea1d198c40289ff",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/meta.yml": {
+      "sha256": "bf8cee05ef190cfb10ceec3bf874b75bba9ccbc5e3acb9d756970fd7b735d15f",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/tests/main.nf.test": {
+      "sha256": "61fb3b06a97b19e26503d3fc731b05caca47dab8b1d1c554f2dcb5fb5a733526",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/tests/main.nf.test.snap": {
+      "sha256": "51e283107306c49980c7b38527ded76cd646fd8ffb527de206b0a40aff77133d",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/fastqwiper/tests/nextflow.config": {
+      "sha256": "233080a7b20d4f800d228fe29408c0403701c92032937f2b93e77ce3f8506772",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/reportgather/environment.yml": {
+      "sha256": "eb03b20f1beebd527a6c8a0a129dfcf999c92b786d9b203a732093dc5ad74552",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/reportgather/main.nf": {
+      "sha256": "bab7835f837326d0c8152e95ed71a597d89da0289f2da5601fa18675cead26fa",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/reportgather/meta.yml": {
+      "sha256": "4c38463aec4a1adf837ed7f66c2e8de06e0179eb494d93a6917e9b9f34f431fa",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/reportgather/tests/main.nf.test": {
+      "sha256": "412717e662e7c3a7d0925e4a46a267a0f16428b91b61c62d0bf6180c2b7f2885",
+      "mode": 436
+    },
+    "modules/nf-core/wipertools/reportgather/tests/main.nf.test.snap": {
+      "sha256": "7f573c21fc7e955b6a1759862ec60c87d7f944c3629425a28083dea6e85c3265",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "09c1117a60edc10ae6646f5d1a526ac1e99fd4c3ab3b9eb8d2bca28f792cfec4",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "323f236cd74a165c842ea7f03b8f39777c109f7d894c0a042abef3d229aab6f9",
+      "mode": 436
+    },
+    "nf-test.config": {
+      "sha256": "7307ab0766c264e8840abba9160c2d57cebd68a225bbffad9fbff1800d2eb5ec",
+      "mode": 436
+    },
+    "ro-crate-metadata.json": {
+      "sha256": "dbc0e1918bebbb65340d85fc61bdba81114ac46693e6a69d081299e7571ec3b7",
+      "mode": 436
+    },
+    "subworkflows/local/fastq_repair_wipertools/main.nf": {
+      "sha256": "54cf2996cd36e3fd990888f50015228b17ea09b1b77fecfb6a6a8629d8d04443",
+      "mode": 436
+    },
+    "subworkflows/local/fastq_repair_wipertools/meta.yml": {
+      "sha256": "2f242b414ccd92307620fd750550145beb87084a4a4d54a13da0c73589bb278a",
+      "mode": 436
+    },
+    "subworkflows/local/fastq_repair_wipertools/tests/main.nf.test": {
+      "sha256": "9d1e12e9c69c4b000573e993b45420ad7cc80abbc86aeffb167ba9fce5a17f1a",
+      "mode": 436
+    },
+    "subworkflows/local/fastq_repair_wipertools/tests/main.nf.test.snap": {
+      "sha256": "b8daf66f0724922588f1c7ef5152bc705a82d4c9246325b0323629a4ebb5ec80",
+      "mode": 436
+    },
+    "subworkflows/local/utils_nfcore_fastqrepair_pipeline/main.nf": {
+      "sha256": "f41c6e1c7bb4cc158b3b2edd722da0cc2a6b266c64dd10bee04c609a22e04a9f",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/main.nf": {
+      "sha256": "a9d87d5b81cca9c189afbc4d1e682fbe6612a43e645371a8878963f94db41c69",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/meta.yml": {
+      "sha256": "5e50eeb6625bb90b2f19066274a52f1ca66f3878d5c53da3ea9ad34254f2514d",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/tests/main.function.nf.test": {
+      "sha256": "5dede2347a1d2efc11a92754d401b6dc4c49d7d73b0640135aa3b300e481a7b5",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/tests/main.function.nf.test.snap": {
+      "sha256": "3dc8e87825735e7faf8a0a38896da57fb5debfa776a5dcd6066c456e7787d6dd",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/tests/main.workflow.nf.test": {
+      "sha256": "7df28e6e5f773a153ad08b832e22a5566f7d95aedaa6aeba6ce02294720d3789",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nextflow_pipeline/tests/nextflow.config": {
+      "sha256": "4f1be1fd7e9bfc09966ae7a48a893ca8619b200a690b6ae3f8c403b6f32fcf5f",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/main.nf": {
+      "sha256": "ccc3a5f841f3eac3f00ad0e570d90533581e9b8b16c6266f36de97d3c34f6898",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/meta.yml": {
+      "sha256": "b1316cb30340d9df482e26a26befd589dae1e5ddb607d6737d3ebe8040eac46f",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.function.nf.test": {
+      "sha256": "92e869723f52cc6542c4a258d0aa553c00bc91c0434c3af6ce1e7a58c467ac66",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.function.nf.test.snap": {
+      "sha256": "934377955fbe058aeee6778e8e60a13ab2d12cacf0c2483df37167eb87bbef48",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.nf.test": {
+      "sha256": "b83f9d9bd0d922bf27707c5f9d4da1803f59ab00f1929bfaf47afa6ff885b9b3",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.nf.test.snap": {
+      "sha256": "4975d6bc0d7851e1cefbfed7dd42849b7682f4cddb1e4dabe3fe19f858a4fedb",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.workflow.nf.test": {
+      "sha256": "b83f9d9bd0d922bf27707c5f9d4da1803f59ab00f1929bfaf47afa6ff885b9b3",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/main.workflow.nf.test.snap": {
+      "sha256": "4975d6bc0d7851e1cefbfed7dd42849b7682f4cddb1e4dabe3fe19f858a4fedb",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfcore_pipeline/tests/nextflow.config": {
+      "sha256": "a1dfed22bf2cdc2b830219b62ee0f3b1602136e2f9469e275fa1d1c16bb68bfd",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfschema_plugin/main.nf": {
+      "sha256": "125f86789095f28ff201b1b18195308b9173d1c8afe9d7e9b06851142707a996",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfschema_plugin/meta.yml": {
+      "sha256": "f5b363f4b0709f18e6726f36714834b30d724c5cb7c105f7c5e111b72e2fd9cd",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfschema_plugin/tests/main.nf.test": {
+      "sha256": "ac881f479154e7f0f95514b4cc77f9bf2f2f1845b84f3c3f803fc7af17a06ba1",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfschema_plugin/tests/nextflow.config": {
+      "sha256": "49d8feed46ac131b58d7923b71ebf815da2eb523693d68aa553ab9dfeb3a0349",
+      "mode": 436
+    },
+    "subworkflows/nf-core/utils_nfschema_plugin/tests/nextflow_schema.json": {
+      "sha256": "94f9c689183eba6c79276c1da99f3e3ddc4fe5c59b14278c9dc7482a537b5dc8",
+      "mode": 436
+    },
+    "tests/.nftignore": {
+      "sha256": "b8316f7afbfdf14505e2bad2d0e872c578f673a37fcbe738c471e9f7feccd002",
+      "mode": 436
+    },
+    "tests/default.nf.test": {
+      "sha256": "dafda4949acf60903a2beaf4ccb2748018c8047638484158bb934fcf64e27e25",
+      "mode": 436
+    },
+    "tests/default.nf.test.snap": {
+      "sha256": "ed17c8bd9529fbab9ffc6d0a94e7289a9e276c04bfd9d2e84fe6c0385c09f6c6",
+      "mode": 436
+    },
+    "tests/main.nf.test": {
+      "sha256": "56c696f80202808f35cc7bb08df43eb42595ab504bf0e3f61665caedcdbfc2cb",
+      "mode": 509
+    },
+    "tests/main.nf.test.snap": {
+      "sha256": "cf7ce514c0328470a86e4e9b758bd0b8a52060910ace25f03e28913d4c652029",
+      "mode": 436
+    },
+    "tests/nextflow.config": {
+      "sha256": "6017ad6fc6029277a0090ddc257eda14835178853b4b847c1782272daddb6ccd",
+      "mode": 436
+    },
+    "tower.yml": {
+      "sha256": "3c323f82ccd98f79afc9a837018344cb9cf9f3f83b7bb7bd321eb0a831e7f6ac",
+      "mode": 436
+    },
+    "workflows/fastqrepair.nf": {
+      "sha256": "0887ba0d0179efeff51029684c8ea2fad247f93971db0e97a83a109a3f2014e9",
+      "mode": 436
+    }
+  },
+  "oracle": {
+    "paired": {
+      "version": 1,
+      "checked_at": "2026-10-28T01:07:45.736266+00:00",
+      "data_commit": "800330ec8f47c93caabe8157e20dd23e243de4e1",
+      "mates": {
+        "1": {
+          "url": "https://raw.githubusercontent.com/nf-core/test-datasets/800330ec8f47c93caabe8157e20dd23e243de4e1/testdata/fastq/testsample01_1.fastq.gz",
+          "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/fastqrepair-demo-oracle-20261028/testsample01_1.fastq.gz",
+          "bytes": 35370,
+          "sha256": "39c6925d2da41307d48dcdfdc755e3c3c04b8d9c4d267c5dfa23837a2a5a44d1",
+          "reads": 646,
+          "first_identifiers": [
+            "SRR13106578.463545",
+            "SRR13106578.803460",
+            "SRR13106578.987999"
+          ],
+          "canonical_records_sha256": "0de05d3acc2b4868a2bd95758284131930a304e36f525622dc54f4daf321bc9f"
+        },
+        "2": {
+          "url": "https://raw.githubusercontent.com/nf-core/test-datasets/800330ec8f47c93caabe8157e20dd23e243de4e1/testdata/fastq/testsample01_2.fastq.gz",
+          "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/fastqrepair-demo-oracle-20261028/testsample01_2.fastq.gz",
+          "bytes": 35896,
+          "sha256": "9f65d05700eebfdbc0703c7f2ce62c27218f50a43b3a47b4a03d763063f98740",
+          "reads": 646,
+          "first_identifiers": [
+            "SRR13106578.463545",
+            "SRR13106578.803460",
+            "SRR13106578.987999"
+          ],
+          "canonical_records_sha256": "57efe202d056a942b092536b1aeb96f7d0c09ec3eb2642c8b53dede9df759272"
+        }
+      },
+      "paired_ids": 646,
+      "left_orphan_ids": 0,
+      "right_orphan_ids": 0,
+      "scope": "Independent genuine immutable paired-read oracle; no arbitrary damaged-read recovery claim."
+    },
+    "damage": {
+      "data_commit": "f72c633f2547fdfaf475c7f05423437a7eac0bbf",
+      "inputs": {
+        "test_30reads_R1.fastq.gz": {
+          "url": "https://raw.githubusercontent.com/nf-core/test-datasets/f72c633f2547fdfaf475c7f05423437a7eac0bbf/testdata/test_30reads_R1.fastq.gz",
+          "sha256": "51f225075c7ccd1a7a17d3e78245dac32677749b5358ca884af7ba070e8bb3ea",
+          "bytes": 1710,
+          "decompressed_bytes_before_error": 6535,
+          "zlib_eof": false,
+          "zlib_error": {
+            "offset": 1705,
+            "error": "Error -3 while decompressing data: incorrect data check"
+          },
+          "lines": 151,
+          "complete_valid_records": 1,
+          "canonical_records_sha256": "ba87d4c09e1483cdc21ba6bef3b384491b5517f9805d4ac7d29fb44a03419dca"
+        },
+        "test_30reads_R2.fastq.gz": {
+          "url": "https://raw.githubusercontent.com/nf-core/test-datasets/f72c633f2547fdfaf475c7f05423437a7eac0bbf/testdata/test_30reads_R2.fastq.gz",
+          "sha256": "f9bf124bb8030087c1056b170523e09d06e8c5de652866022cbbc0b27bebb2cb",
+          "bytes": 1480,
+          "decompressed_bytes_before_error": 5645,
+          "zlib_eof": true,
+          "zlib_error": null,
+          "lines": 104,
+          "complete_valid_records": 24,
+          "canonical_records_sha256": "55f30ee743b508e4bf5a391faa952020c84ff5f36075ea9b5382bf66582e1075",
+          "baseline_output_records": 24,
+          "baseline_matches_complete_valid_records": true
+        },
+        "empty_file.fastq": {
+          "url": "https://raw.githubusercontent.com/nf-core/test-datasets/f72c633f2547fdfaf475c7f05423437a7eac0bbf/testdata/empty_file.fastq",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "r2_invalid_group_lines": [
+      89,
+      101
+    ]
+  },
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-fastqrepair-demo",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+        "-m",
+        "runner",
+        "run",
+        "fastqrepair",
+        "--demo",
+        "--outdir",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-fastqrepair-demo",
+        "--nxf-ver",
+        "25.10.4",
+        "--limit-cpus",
+        "2",
+        "--limit-memory",
+        "4.GB",
+        "--limit-time",
+        "15.min",
+        "--timeout",
+        "1200",
+        "--nxf-env",
+        "NXF_WORK=/dev/shm/nfclaw-fastqrepair-demo-eee40ee/work",
+        "--nxf-env",
+        "NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true"
+      ],
+      "started_at": "2026-10-28T01:34:03.345180+00:00",
+      "console_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-fastqrepair-demo.console.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T01:35:12.723310+00:00",
+      "console_log_sha256": "4c46c999a1b4f3a9738714e7e01dfb65d00e5def962da7960c14977c03dbb156",
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-fastqrepair-demo/pipeline_info/execution_trace_2026-10-28_01-34-03.txt",
+      "trace_sha256": "9789e181672d9a38cc0ea6f2e83f948cf9f7845c4b57d3c57f65aa364528d7d2",
+      "tasks": [
+        {
+          "task_id": "2",
+          "hash": "1d/a2694c",
+          "native_id": "3855964",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:GZRT (test_30reads_2)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:16.519",
+          "duration": "1.7s",
+          "realtime": "0ms",
+          "%cpu": "81.2%",
+          "peak_rss": "3.2 MB",
+          "peak_vmem": "4.3 MB",
+          "rchar": "96.2 KB",
+          "wchar": "7.3 KB"
+        },
+        {
+          "task_id": "3",
+          "hash": "01/c6fb0f",
+          "native_id": "3856014",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:GZRT (paired_control)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:16.557",
+          "duration": "1.8s",
+          "realtime": "0ms",
+          "%cpu": "101.8%",
+          "peak_rss": "3.2 MB",
+          "peak_vmem": "4.3 MB",
+          "rchar": "404.4 KB",
+          "wchar": "305.7 KB"
+        },
+        {
+          "task_id": "1",
+          "hash": "7c/5f7df3",
+          "native_id": "3855983",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:GZRT (test_30reads)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:16.539",
+          "duration": "1.9s",
+          "realtime": "0ms",
+          "%cpu": "77.8%",
+          "peak_rss": "3.2 MB",
+          "peak_vmem": "4.3 MB",
+          "rchar": "107.8 KB",
+          "wchar": "7.3 KB"
+        },
+        {
+          "task_id": "6",
+          "hash": "e3/1fa5cb",
+          "native_id": "3856837",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQSCATTER (paired_control_recovered_2)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:18.412",
+          "duration": "2.2s",
+          "realtime": "418ms",
+          "%cpu": "100.7%",
+          "peak_rss": "14 MB",
+          "peak_vmem": "19.9 MB",
+          "rchar": "3.8 MB",
+          "wchar": "36 KB"
+        },
+        {
+          "task_id": "4",
+          "hash": "bd/5bcbfd",
+          "native_id": "3856807",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQSCATTER (test_30reads_2_recovered)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:18.318",
+          "duration": "2.4s",
+          "realtime": "389ms",
+          "%cpu": "100.3%",
+          "peak_rss": "13.2 MB",
+          "peak_vmem": "18.3 MB",
+          "rchar": "3.8 MB",
+          "wchar": "2.3 KB"
+        },
+        {
+          "task_id": "5",
+          "hash": "88/064cd2",
+          "native_id": "3856851",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQSCATTER (paired_control_recovered_1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:18.428",
+          "duration": "2.3s",
+          "realtime": "404ms",
+          "%cpu": "99.3%",
+          "peak_rss": "13.8 MB",
+          "peak_vmem": "18.7 MB",
+          "rchar": "3.8 MB",
+          "wchar": "35.8 KB"
+        },
+        {
+          "task_id": "7",
+          "hash": "c6/9518fd",
+          "native_id": "3857487",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (paired_control_recovered_2__nfclaw_15b3c71454da271a_000)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.652",
+          "duration": "3s",
+          "realtime": "646ms",
+          "%cpu": "101.0%",
+          "peak_rss": "14 MB",
+          "peak_vmem": "19.9 MB",
+          "rchar": "6.5 MB",
+          "wchar": "17.9 KB"
+        },
+        {
+          "task_id": "8",
+          "hash": "8e/0faec0",
+          "native_id": "3857502",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (paired_control_recovered_2__nfclaw_15b3c71454da271a_001)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.678",
+          "duration": "3s",
+          "realtime": "662ms",
+          "%cpu": "100.2%",
+          "peak_rss": "13.2 MB",
+          "peak_vmem": "18.3 MB",
+          "rchar": "6.5 MB",
+          "wchar": "18.8 KB"
+        },
+        {
+          "task_id": "9",
+          "hash": "53/4dfc45",
+          "native_id": "3857512",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (test_30reads_2_recovered__nfclaw_15b3c71454da271a_000)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.702",
+          "duration": "3.2s",
+          "realtime": "600ms",
+          "%cpu": "100.4%",
+          "peak_rss": "13.1 MB",
+          "peak_vmem": "18.5 MB",
+          "rchar": "6.5 MB",
+          "wchar": "1.7 KB"
+        },
+        {
+          "task_id": "12",
+          "hash": "06/e9e215",
+          "native_id": "3857549",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (paired_control_recovered_1__nfclaw_15b3c71454da271a_001)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.750",
+          "duration": "3.5s",
+          "realtime": "642ms",
+          "%cpu": "100.2%",
+          "peak_rss": "13.8 MB",
+          "peak_vmem": "18.7 MB",
+          "rchar": "6.5 MB",
+          "wchar": "18.7 KB"
+        },
+        {
+          "task_id": "11",
+          "hash": "72/94a13e",
+          "native_id": "3857560",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (paired_control_recovered_1__nfclaw_15b3c71454da271a_000)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.758",
+          "duration": "3.5s",
+          "realtime": "629ms",
+          "%cpu": "100.6%",
+          "peak_rss": "14.3 MB",
+          "peak_vmem": "20 MB",
+          "rchar": "6.5 MB",
+          "wchar": "17.8 KB"
+        },
+        {
+          "task_id": "10",
+          "hash": "77/01d7c8",
+          "native_id": "3857520",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQWIPER (test_30reads_2_recovered__nfclaw_15b3c71454da271a_001)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:20.710",
+          "duration": "3.6s",
+          "realtime": "623ms",
+          "%cpu": "100.1%",
+          "peak_rss": "13.6 MB",
+          "peak_vmem": "18.6 MB",
+          "rchar": "6.5 MB",
+          "wchar": "1.6 KB"
+        },
+        {
+          "task_id": "16",
+          "hash": "4a/640b88",
+          "native_id": "3858858",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQGATHER (paired_control_recovered_2)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.320",
+          "duration": "3.1s",
+          "realtime": "500ms",
+          "%cpu": "100.4%",
+          "peak_rss": "14.2 MB",
+          "peak_vmem": "19.5 MB",
+          "rchar": "4.7 MB",
+          "wchar": "35 KB"
+        },
+        {
+          "task_id": "18",
+          "hash": "46/a74f0a",
+          "native_id": "3858868",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQGATHER (paired_control_recovered_1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.327",
+          "duration": "3.5s",
+          "realtime": "481ms",
+          "%cpu": "100.0%",
+          "peak_rss": "14.2 MB",
+          "peak_vmem": "19.6 MB",
+          "rchar": "4.7 MB",
+          "wchar": "34.5 KB"
+        },
+        {
+          "task_id": "17",
+          "hash": "50/33fe40",
+          "native_id": "3858879",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_FASTQGATHER (test_30reads_2_recovered)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.333",
+          "duration": "3.5s",
+          "realtime": "423ms",
+          "%cpu": "98.4%",
+          "peak_rss": "14.1 MB",
+          "peak_vmem": "19.6 MB",
+          "rchar": "4.6 MB",
+          "wchar": "1.9 KB"
+        },
+        {
+          "task_id": "13",
+          "hash": "a7/5939a4",
+          "native_id": "3858848",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_REPORTGATHER (paired_control_recovered_2)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.314",
+          "duration": "3.6s",
+          "realtime": "379ms",
+          "%cpu": "100.5%",
+          "peak_rss": "14.2 MB",
+          "peak_vmem": "20 MB",
+          "rchar": "3.8 MB",
+          "wchar": "1 KB"
+        },
+        {
+          "task_id": "14",
+          "hash": "a2/60d390",
+          "native_id": "3858832",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_REPORTGATHER (test_30reads_2_recovered)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.302",
+          "duration": "3.8s",
+          "realtime": "381ms",
+          "%cpu": "100.3%",
+          "peak_rss": "13.5 MB",
+          "peak_vmem": "18.5 MB",
+          "rchar": "3.8 MB",
+          "wchar": "1 KB"
+        },
+        {
+          "task_id": "15",
+          "hash": "ca/a720df",
+          "native_id": "3858839",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQ_REPAIR_WIPERTOOLS:WIPERTOOLS_REPORTGATHER (paired_control_recovered_1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:24.308",
+          "duration": "4s",
+          "realtime": "384ms",
+          "%cpu": "99.9%",
+          "peak_rss": "14.4 MB",
+          "peak_vmem": "20 MB",
+          "rchar": "3.8 MB",
+          "wchar": "1 KB"
+        },
+        {
+          "task_id": "19",
+          "hash": "29/583dc0",
+          "native_id": "3860148",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:BBMAP_REPAIR (paired_control)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:27.884",
+          "duration": "4.9s",
+          "realtime": "3.6s",
+          "%cpu": "22.2%",
+          "peak_rss": "56.2 MB",
+          "peak_vmem": "7.2 GB",
+          "rchar": "2 MB",
+          "wchar": "81.3 KB"
+        },
+        {
+          "task_id": "21",
+          "hash": "27/f0c5b2",
+          "native_id": "3860739",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQC (test_30reads_2)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:32.798",
+          "duration": "7.7s",
+          "realtime": "7s",
+          "%cpu": "61.3%",
+          "peak_rss": "176 MB",
+          "peak_vmem": "7.1 GB",
+          "rchar": "11.1 MB",
+          "wchar": "2.3 MB"
+        },
+        {
+          "task_id": "20",
+          "hash": "d0/446aa1",
+          "native_id": "3860747",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:FASTQC (paired_control)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:32.806",
+          "duration": "10.8s",
+          "realtime": "10s",
+          "%cpu": "123.3%",
+          "peak_rss": "229.5 MB",
+          "peak_vmem": "7.1 GB",
+          "rchar": "12.5 MB",
+          "wchar": "4.6 MB"
+        },
+        {
+          "task_id": "22",
+          "hash": "b6/b82b29",
+          "native_id": "3862091",
+          "name": "NFCORE_FASTQREPAIR:FASTQREPAIR:MULTIQC (fastqrepair)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 01:34:43.685",
+          "duration": "25.1s",
+          "realtime": "23.3s",
+          "%cpu": "97.2%",
+          "peak_rss": "812.9 MB",
+          "peak_vmem": "26 GB",
+          "rchar": "110.6 MB",
+          "wchar": "13.6 MB"
+        }
+      ],
+      "repaired_publications": [
+        "paired_control.repair.sh.log",
+        "paired_control_1.fastq.gz",
+        "paired_control_2.fastq.gz",
+        "paired_control_singleton.fastq.gz",
+        "reports/paired_control/paired_control_recovered_1.report",
+        "reports/paired_control/paired_control_recovered_2.report",
+        "test_30reads_2.fastq.gz",
+        "test_30reads_2.report"
+      ]
+    }
+  ],
+  "scope": "Exact pinned four-row demo and fresh recorded replay. Genuine 646-pair conservation plus original 24 valid single-end records; damaged pair/empty case explicitly excluded. No arbitrary damaged-read recovery claim."
+}

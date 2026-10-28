@@ -64,13 +64,13 @@ class FakeHandler:
 class Session:
     """A client on the other end of a pipe pair, with a reader thread so reads can time out."""
 
-    def __init__(self, handler=None):
+    def __init__(self, handler=None, **server_options):
         self.handler = handler or FakeHandler()
         r1, w1 = os.pipe()
         r2, w2 = os.pipe()
         self._to_server = os.fdopen(w1, "wb")
         self.server = Server(self.handler, name="test", version="9.9", instructions="read me",
-                             title="Test")
+                             title="Test", **server_options)
         self.thread = threading.Thread(target=self.server.run,
                                        args=(os.fdopen(r1, "rb"), os.fdopen(w2, "wb")), daemon=True)
         self.thread.start()
@@ -324,3 +324,113 @@ def test_both_eras_are_served_by_one_process(session):
     assert "resultType" not in legacy and "title" not in legacy["tools"][0]
     modern = session.request(3, "tools/list", {"_meta": MODERN})["result"]
     assert modern["resultType"] == "complete" and modern["tools"][0]["title"] == "Echo"
+
+
+@pytest.mark.parametrize('token', ['9007199254740993.0', '0.1000000000000000000001',
+                                 '1e-9999', '1e9999'])
+def test_wire_numbers_reach_pipeline_flags_and_response_without_rounding(tmp_path, token):
+    from decimal import Decimal
+    from runner import exact_json, mcp_tools
+
+    class NumericHandler(FakeHandler):
+        def call_tool(self, name, arguments, ctx):
+            flags = mcp_tools.NfclawTools(ROOT, cwd=str(tmp_path)).run_argv({
+                'pipeline': 'demo', 'outdir': 'out', 'params': arguments})
+            return tool_result('numeric flags', {'flags': flags, 'values': arguments})
+
+    class NumericSession(Session):
+        def _read(self, reader):
+            for line in iter(reader.readline, b""):
+                self.messages.put(json.loads(line, parse_float=Decimal))
+
+    client = NumericSession(NumericHandler())
+    try:
+        client.initialize()
+        client.send(('{"jsonrpc":"2.0","id":1,"method":"tools/call",'
+                     '"params":{"name":"echo","arguments":{"ratio":' + token + '}}}')
+                    .encode())
+        reply = client.recv()
+        assert 'error' not in reply, reply
+        result = reply['result']['structuredContent']
+        flag = next(v for v in result['flags'] if v.startswith('--ratio='))
+        assert Decimal(flag.split('=', 1)[1]) == Decimal(token)
+        # Check serialization independently of the client's ordinary float decoder.
+        assert exact_json.loads(exact_json.dumps(result['values']))['ratio'] == \
+            exact_json.number(token)
+    finally:
+        client.close()
+
+
+def test_eight_long_polls_leave_ping_status_and_cancellation_responsive():
+    class PollingHandler(FakeHandler):
+        def __init__(self):
+            super().__init__()
+            self.ready = threading.Condition()
+            self.started = 0
+
+        def list_tools(self, ctx):
+            return [{"name": name, "inputSchema": {"type": "object"}}
+                    for name in ("get_job", "cancel_job")]
+
+        def call_tool(self, name, arguments, ctx):
+            if name == 'get_job' and arguments.get('wait_seconds'):
+                with self.ready:
+                    self.started += 1
+                    self.ready.notify_all()
+                ctx.cancelled.wait(30)
+            return tool_result(name)
+
+    handler = PollingHandler()
+    client = Session(handler)
+    try:
+        client.initialize()
+        for rid in range(10, 18):
+            client.send({'jsonrpc': '2.0', 'id': rid, 'method': 'tools/call',
+                         'params': {'name': 'get_job', 'arguments': {'wait_seconds': 30}}})
+        with handler.ready:
+            assert handler.ready.wait_for(lambda: handler.started == 8, timeout=5)
+        assert client.request(20, 'ping', timeout=1)['result'] == {}
+        for rid, name in [(21, 'get_job'), (22, 'cancel_job')]:
+            reply = client.request(rid, 'tools/call',
+                                   {'name': name, 'arguments': {'wait_seconds': 0}}, timeout=1)
+            assert reply['result']['content'][0]['text'] == name
+    finally:
+        client.close()
+
+
+def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
+        tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from runner import jobs, mcp_tools
+    handler = mcp_tools.NfclawTools(ROOT, cwd=str(tmp_path))
+    ready = threading.Condition()
+    started = []
+    job = SimpleNamespace(id='fixture')
+    monkeypatch.setattr(jobs, 'load', lambda _id: job)
+    monkeypatch.setattr(jobs, 'cancel', lambda _job: True)
+
+    def wait(job_id, seconds, ctx):
+        if seconds:
+            with ready:
+                started.append(job_id)
+                ready.notify_all()
+            ctx.cancelled.wait(30)
+        return job
+
+    monkeypatch.setattr(handler, '_wait', wait)
+    monkeypatch.setattr(handler, '_job_result', lambda *a, **k: tool_result('stop requested'))
+    client = Session(handler, waiting_tools=('run_pipeline', 'run_chain', 'replay_run'),
+                     control_tools=('cancel_job',))
+    try:
+        client.initialize()
+        for rid in range(10, 18):
+            client.send({'jsonrpc': '2.0', 'id': rid, 'method': 'tools/call',
+                         'params': {'name': 'cancel_job', 'arguments': {'job_id': 'fixture'}}})
+        with ready:
+            assert ready.wait_for(lambda: len(started) == 8, timeout=5)
+        assert client.request(20, 'ping', timeout=1)['result'] == {}
+        reply = client.request(21, 'tools/call', {'name': 'cancel_job', 'arguments': {
+            'job_id': 'fixture', 'wait_seconds': 0}}, timeout=1)
+        assert reply['result']['content'][0]['text'] == 'stop requested'
+    finally:
+        client.close()

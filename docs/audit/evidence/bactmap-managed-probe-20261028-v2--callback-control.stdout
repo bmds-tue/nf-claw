@@ -1,0 +1,32 @@
+[
+    {
+        "case": "preview",
+        "getVal_calls": 0,
+        "expected": 0,
+        "email_address": null
+    },
+    {
+        "case": "real",
+        "getVal_calls": 1,
+        "expected": 1,
+        "email_address": null
+    },
+    {
+        "case": "legacy",
+        "getVal_calls": 1,
+        "expected": 1,
+        "email_address": null
+    },
+    {
+        "case": "failed",
+        "getVal_calls": 0,
+        "expected": 0,
+        "email_address": null
+    },
+    {
+        "case": "real_delayed_future",
+        "waited_ms": 484.934486,
+        "bound": true,
+        "email_address": null
+    }
+]

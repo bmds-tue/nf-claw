@@ -1,0 +1,34 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import random,hashlib,json,sys,subprocess,os
+import pysam
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028')
+root.mkdir(mode=0o700,exist_ok=False)
+seed=20261028;length=1_000_000;rng=random.Random(seed)
+sequence=''.join(rng.choice('ACGT') for _ in range(length))
+fasta=root/'audit.fasta'
+fasta.write_text('>chrAudit\n'+''.join(sequence[i:i+60]+'\n' for i in range(0,length,60)))
+pysam.faidx(str(fasta))
+record={'version':1,'created_at':datetime.now(UTC).isoformat(),'generator':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'seed':seed,'reference':{'name':'chrAudit','length':length,'bases':'ACGT'},'python':sys.version,'pysam':pysam.__version__,'samtools_library':pysam.__samtools_version__,'samples':{},'targets':[{'chromosome':'chrAudit','start':10000,'end':11000,'gene':'targetA'},{'chromosome':'chrAudit','start':30000,'end':31000,'gene':'targetB'}],'scope':'Deterministic synthetic interval/count oracle. No CNV calling accuracy or real-cohort biological validation claim.'}
+header={'HD':{'VN':'1.6','SO':'coordinate'},'SQ':[{'SN':'chrAudit','LN':length}]}
+for copies in (1,2):
+ sample='normal_a' if copies==1 else 'normal_b'
+ bam=root/(sample+'.bam');count=0
+ with pysam.AlignmentFile(str(bam),'wb',header={**header,'RG':[{'ID':sample,'SM':sample}]}) as stream:
+  for start in range(0,length,100):
+   for copy in range(copies):
+    read=pysam.AlignedSegment();read.query_name=f'{sample}_{start}_{copy}';read.query_sequence=sequence[start:start+100];read.flag=0;read.reference_id=0;read.reference_start=start;read.mapping_quality=60;read.cigar=[(0,100)];read.query_qualities=pysam.qualitystring_to_array('I'*100);read.set_tag('RG',sample);stream.write(read);count+=1
+ pysam.index(str(bam))
+ # Inspect the serialized BAM independently before seeing pipeline outputs.
+ with pysam.AlignmentFile(str(bam),'rb') as stream:
+  actual=sum(1 for read in stream if read.cigarstring=='100M' and read.reference_start%100==0 and read.mapping_quality==60 and read.flag==0)
+ assert actual==count==10000*copies
+ record['samples'][sample]={'reads':count,'aligned_bases':count*100,'uniform_expected_depth':copies,'bam':str(bam),'bai':str(bam)+'.bai'}
+(root/'targets.bed').write_text('chrAudit\t10000\t11000\ttargetA\nchrAudit\t30000\t31000\ttargetB\n')
+(root/'samples.csv').write_text('sample,bam,bai\n'+''.join(f'{s},{v["bam"]},{v["bai"]}\n' for s,v in record['samples'].items()))
+(root/'hybrid.config').write_text('process {\n    withName: ".*:CNVKIT_BATCH" {\n        ext.args = { "--method hybrid --output-reference ${meta.id}.cnn" }\n    }\n}\n')
+params={'input':str(root/'samples.csv'),'tools':'cnvkit','genome':None,'igenomes_ignore':True,'fasta':str(fasta),'fai':str(fasta)+'.fai','cnvkit_targets':str(root/'targets.bed'),'cnvkit_pon_name':'audit_panel'}
+(root/'params.json').write_text(json.dumps(params,indent=2)+'\n')
+record['input_files']={str(p):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(root.iterdir()) if p.is_file()}
+(root/'fixture.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps(record,indent=2),flush=True)

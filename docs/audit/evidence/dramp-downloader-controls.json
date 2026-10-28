@@ -1,0 +1,26 @@
+{
+  "tool": "AMPcombi 3.0.0",
+  "image": "quay.io/biocontainers/ampcombi@sha256:53a73be7a84bb1e921c2bbbd81d6d48453b0b3ab5d0ae1e6709c0d6dd662c237",
+  "raw": {
+    "bytes": 13221293,
+    "sha256": "4e044b3a4d9fcfc24cff81cbcf9fdb48184b41d8773837c697a2f205c1ab9dd5"
+  },
+  "independent_rows": {
+    "read": 12784,
+    "retained": 10565,
+    "missing_sequence": 0,
+    "noncanonical_sequence": 2219
+  },
+  "scope": "Actual released downloader; requests response replaced by complete retained official response bytes, no network. No downloader code modification.",
+  "current_complete_download_succeeded": true,
+  "current_download_has_missing_sequences": false,
+  "missing_sequence_failure": {
+    "type": "TypeError",
+    "message": "expected string or bytes-like object, got 'float'"
+  },
+  "missing_sequence_failure_reproduced": true,
+  "missing_sequence_fixture": {
+    "sha256": "761130bcb1255822ceca32f0ebdf9f05c73bbd0a2bdb45229296a6b813c5a609",
+    "construction": "First two complete official rows; first Sequence cell explicitly blanked. All other fields/headers preserved. Synthetic fault control, not current data."
+  }
+}

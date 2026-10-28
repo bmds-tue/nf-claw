@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-10-28T09:59:51.651560+00:00",
+  "scope": "Remove only the identified never-started parser from our failed 30-second assessment, then stop only the private daemon we started. Preserve caches and all global engine/containerd state.",
+  "containerd_note": "Private dockerd automatically used /run/containerd/containerd.sock with default moby namespace, so it observed other-engine events. No shared-daemon setting was modified. Future private starts must use separate containerd namespaces.",
+  "worker_sha256": "4a8a1e834efa507a5c0ea62638c3fb40d5ae099211591c5a01844e5592135d0f",
+  "removed_owned_created_parser": "988daaa5b64bff9e71811a1bb8007fb48062c7809823050baa0209237ea29808",
+  "private_container_inventory_empty": true,
+  "private_daemon_pid": 3979407,
+  "private_daemon_command": [
+    "dockerd",
+    "--config-file",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/daemon.json"
+  ],
+  "private_daemon_stopped": true,
+  "original_engine_id": "7063a8f4-79d2-4cab-a2b3-17f9f89dfec6",
+  "original_data_root": "/mnt/volume/docker",
+  "original_identity_preserved": true,
+  "future_config_validation": "",
+  "future_config_started": false,
+  "finished_at": "2026-10-28T09:59:51.975797+00:00"
+}

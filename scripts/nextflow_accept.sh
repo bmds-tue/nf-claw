@@ -5,7 +5,8 @@
 #
 # For each pipeline this initialises the pinned submodule and runs
 # `nextflow run <upstream> -profile test,docker -preview` with the Nextflow
-# version the release declares (a release declaring an engine older than 22.10.0
+# version and managed source/demo corrections, where registered for that exact release. The
+# version is the one the release declares (a release declaring an engine older than 22.10.0
 # is checked on 24.10.5, a -preview-capable lenient-parser version). "Accepted" means Nextflow compiled the
 # pipeline, resolved its config/profile and validated its parameters, and the
 # preview exited successfully. Every nonzero exit fails this gate. A clearly
@@ -29,7 +30,7 @@
 # Env:
 #   NFCLAW_RESULT_FILE      if set, write "<name>\t<verdict>" per line: accepted, staging-unverified,
 #                           rejected, stale-exception, or known-(rejected|staging-unverified|timeout)
-#   NFCLAW_KEEP_SUBMODULES  if "1", do not deinit submodules after checking
+#   Initialized source checkouts are retained; only disposable preview files are removed.
 #   NFCLAW_LOG_DIR         if set, retain console and engine logs per pipeline
 #   NFCLAW_ACCEPT_EXCEPTIONS  the exceptions file (default: beside this script)
 #   NFCLAW_ACCEPT_RETRY_DELAY seconds before the first retry of an unreachable remote file (30);
@@ -84,6 +85,8 @@ if [ "${#names[@]}" -eq 0 ]; then
 fi
 
 exceptions="${NFCLAW_ACCEPT_EXCEPTIONS:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_accept_exceptions.tsv}"
+preview_helper="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_preview.py"
+repo_root="$(pwd -P)"
 tmp=$(mktemp -d "${RUNNER_TEMP:-/tmp}/nfclaw-accept.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$tmp"' EXIT
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
@@ -116,7 +119,7 @@ for name in "${names[@]}"; do
   up="pipelines/$name/upstream"
   out="$tmp/prev-$name"
   work="$tmp/work-$name"
-  if ! git submodule update --init --depth 1 "$up" >"$tmp/$name-submodule.out" 2>&1; then
+  if [ ! -e "$up/.git" ] && ! git submodule update --init --depth 1 "$up" >"$tmp/$name-submodule.out" 2>&1; then
     cat "$tmp/$name-submodule.out"
     if [ -n "$logs" ]; then
       cp -- "$tmp/$name-submodule.out" "$logs/$name-submodule.log" || exit 1
@@ -135,6 +138,13 @@ for name in "${names[@]}"; do
   fi
   # The documented exception for exactly this commit, if any (blank and `#` lines are comments).
   commit=$(git -C "$up" rev-parse HEAD 2>/dev/null || true)
+  pin=$(git ls-files --stage -- "$up" 2>/dev/null | awk '$1 == "160000" {print $2}')
+  if [ -n "$pin" ] && [ "$commit" != "$pin" ]; then
+    echo "::error::$name checkout differs from the pinned commit; preserving it unchanged"
+    printf '%s\trejected\n' "$name" >> "$result"
+    fail=1
+    continue
+  fi
   expected=""
   evidence=""
   reason=""
@@ -156,8 +166,11 @@ for name in "${names[@]}"; do
   attempt=1
   while :; do
     rm -rf -- "$work" "$out" "$engine_log"
-    NXF_VER="$ver" _run_with_timeout "$budget" nextflow -log "$engine_log" run "$up" -profile test,docker \
-      -c "$cfg" --outdir "$out" -work-dir "$work" -preview > "$log" 2>&1 && rc=0 || rc=$?
+    NXF_VER="$ver" _run_with_timeout "$budget" python3 "$preview_helper" \
+      --name "$name" --commit "$commit" --version "$ver" --repo-root "$repo_root" \
+      --upstream "$up" --config "$cfg" --outdir "$out" --work "$work" \
+      --engine-log "$engine_log" --scratch "$tmp/prepared-$name-$attempt" \
+      > "$log" 2>&1 && rc=0 || rc=$?
     transient=""
     if [ "$rc" != 0 ] && [ "$attempt" -lt 3 ]; then
       if _remote_failure "$log"; then
@@ -226,9 +239,6 @@ for name in "${names[@]}"; do
     fail=1
   fi
   echo "::endgroup::"
-  if [ "${NFCLAW_KEEP_SUBMODULES:-}" != "1" ]; then
-    git submodule deinit -f "$up" >/dev/null 2>&1 || true
-  fi
   rm -rf "$work" "$out"
 done
 

@@ -18,11 +18,14 @@ nf-core/funcscan is a bioinformatics best-practice analysis pipeline for the scr
 ```bash
 git submodule update --init pipelines/funcscan/upstream   # first time only
 nfclaw run funcscan --input samplesheet.csv --outdir results -profile docker
-# raw equivalent (the submodule is already pinned to this release, so no -r is needed):
+# direct upstream execution (omits nfclaw's recorded workflow correction):
 nextflow run pipelines/funcscan/upstream -profile docker --input samplesheet.csv --outdir results
 ```
 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions funcscan` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show funcscan --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show funcscan --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
+
+## Runtime corrections
+For this exact commit, `nfclaw run` applies `funcscan-hmm-metadata-v1` in a separate verified working copy. HMM search retains sample metadata so all HMM results reach AMPcombi. The original pinned checkout stays unchanged. The direct Nextflow command omits this correction. The actual corrected bytes, recipe, source archive and executable modes are recorded for replay; resume refuses missing or changed source identity. Use `NFCLAW_SOURCE_CACHE` to select another writable user cache. [Recorded source corrections](../../docs/source-corrections.md) explains the exact scope and validation.
 
 ## Inputs
 | column | type | required | allowed values | constraints |
@@ -55,6 +58,9 @@ Any of the optional columns above may be appended to the header when your data n
 |---|---|---|---|---|---|
 | `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing sample names and paths to corresponding FASTA files, and optional annotation files. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
+
+## Reference database
+The bundled demo selects APD. For DRAMP, this release uses AMPcombi 3.0.0, whose downloader crashes on missing sequence cells. Prepare a complete local DRAMP TSV with `nfclaw prepare-dramp RAW.tsv --outdir /refs/amp_DRAMP_database`, inspect its recorded exclusions, then build `mmseqs2/ref_DB` before analysis. Supply both `--amp-ampcombi-db-id DRAMP` and `--amp-ampcombi-db /refs/amp_DRAMP_database`. The helper preserves retained sequences and annotations, excludes missing IDs and noncanonical/missing sequences, and refuses an existing output. [DRAMP reference preparation](../../docs/dramp-reference.md) gives the pinned-image index recipe and validation scope.
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

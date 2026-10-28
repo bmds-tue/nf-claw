@@ -12,7 +12,7 @@
 
 # nf-claw
 
-A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree.
+A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree. Exact pinned Bactmap, Createtaxdb and Funcscan releases use [recorded, independently copied workflow corrections](docs/source-corrections.md), with the actual corrected source bound to execution, resume and replay.
 
 **🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and automation status captured at build time), rebuilt from the repository on deployment.
 
@@ -56,6 +56,7 @@ The repository is structured into four functional zones, plus the catalogs, docu
 | **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
+| **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked/deferred/unsupported validations, the schema subset, and the 95-pipeline samplesheet generation matrix. |
 | **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
 | **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: tools, detached jobs, chains. |
 | **Agent Guidance** | [`AGENTS.md`](AGENTS.md) | Authoritative reference for autonomous coding assistants and LLM agents; [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
@@ -127,7 +128,7 @@ nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' 
 ```
 
 The pinned schema decides the columns, sample names come unaltered from file names, and gaps,
-ambiguous or stray files are refused; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
+ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
 and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
 releases whose contracts were corrected from their pinned source.
 
@@ -271,8 +272,9 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 ```
 
 - **`auto-update.yml`** (daily) and **`discover-pipelines.yml`** (weekly) bump pinned releases and
-  onboard new DSL2 pipelines. Each validates its update first, then publishes it by a checked
-  fast-forward of `main`, which needs no pull-request permission ([docs/updating.md](docs/updating.md)).
+  onboard new DSL2 pipelines. Each fixed candidate must pass the full Ubuntu/macOS Python
+  3.11–3.15 matrix and real bundled tasks for every changed pin before a separate publisher
+  can fast-forward `main` ([publication policy](docs/maintenance.md)).
 - **`smoke.yml`**, **`nextflow-validate.yml`**, **`tests.yml`**, **`drift-check.yml`**,
   **`demo-validation.yml`**, **`fastqrepair-validation.yml`** and **`pipeline-execution.yml`**
   validate every change; [docs/compatibility.md](docs/compatibility.md#3-automated-continuous-validation)
@@ -283,6 +285,12 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
 ---
 
 ## Scientific Validation & Limitations
+
+Use `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]` to require declared scientific
+outputs and sample coverage, and compare their parsed content. The
+[output-contract guide](docs/scientific-output-contracts.md) defines the supported tables,
+BAM/VCF/FASTA and selected H5AD matrix scope, exact comparisons, explicit tolerances and exclusions.
+Two source-bound demo contracts are supplied; other pipelines/branches still need their own.
 
 > [!WARNING]
 > **Analytical Rigor & Validation Caveats:**

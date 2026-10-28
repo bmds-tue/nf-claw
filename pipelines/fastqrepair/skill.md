@@ -96,4 +96,6 @@ Full list with references: https://github.com/nf-core/fastqrepair/blob/1.1.1/CIT
 nfclaw run fastqrepair --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This pinned bundled test excludes its damaged pair after gzip recovery, so its original three rows never exercise BBMap paired repair. For a bare demo, nfclaw retains those damage cases at immutable test-datasets commit `f72c633f2547fdfaf475c7f05423437a7eac0bbf` and adds `paired_control`, 646 genuine pairs from `800330ec8f47c93caabe8157e20dd23e243de4e1`. The four-row CSV and row roles are bundled in provenance and rebased for replay. The damaged pair and empty sample remain excluded; the original single-end case has 24 complete valid reads. This adds paired execution coverage without claiming recovery of irreparable data. The intended `num_splits=2` default is recorded; explicit values win. User input/data-base selectors, extra profiles or `--config` disable the fixture. Other releases retain their own defaults.
+
 <!-- Generated from nf-core/fastqrepair@70a38209407b9367a9ff7ab8b26d84cb1983ea18. Do not edit by hand. -->

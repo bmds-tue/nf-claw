@@ -1,0 +1,61 @@
+Oct-28 09:05:04.076 [main] DEBUG nextflow.cli.Launcher - $> nextflow -log /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/nextflow.log run /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/main.nf -work-dir /dev/shm/nfclaw-bactmap-sorting-control-20261028-v2/work -ansi-log false
+Oct-28 09:05:04.211 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 24.10.5
+Oct-28 09:05:04.265 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ubuntu/.nextflow/plugins; core-plugins: nf-amazon@2.9.2,nf-azure@1.10.2,nf-cloudcache@0.4.2,nf-codecommit@0.2.2,nf-console@1.1.4,nf-google@1.15.4,nf-tower@1.9.3,nf-wave@1.7.4
+Oct-28 09:05:04.300 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Oct-28 09:05:04.301 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Oct-28 09:05:04.307 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Oct-28 09:05:04.349 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Oct-28 09:05:04.475 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 from script declaration
+Oct-28 09:05:04.499 [main] INFO  nextflow.cli.CmdRun - Launching `/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/main.nf` [shrivelled_cantor] DSL2 - revision: 7022d10c05
+Oct-28 09:05:04.502 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Oct-28 09:05:04.502 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+Oct-28 09:05:04.588 [main] DEBUG nextflow.Session - Session UUID: b47c4e32-587d-4ecd-9caf-cabfde427b20
+Oct-28 09:05:04.589 [main] DEBUG nextflow.Session - Run name: shrivelled_cantor
+Oct-28 09:05:04.589 [main] DEBUG nextflow.Session - Executor pool size: 28
+Oct-28 09:05:04.604 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Oct-28 09:05:04.617 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Oct-28 09:05:04.657 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 24.10.5 build 5935
+  Created: 04-03-2025 17:55 UTC 
+  System: Linux 6.8.0-147-generic
+  Runtime: Groovy 4.0.23 on OpenJDK 64-Bit Server VM 17.0.20.1+1-1-24.04-Ubuntu
+  Encoding: UTF-8 (UTF-8)
+  Process: 273790@danilo-instance [2001:7c0:801:181:f816:3eff:fe29:64ae]
+  CPUs: 28 - Mem: 62.8 GB (14.8 GB) - Swap: 0 (0)
+Oct-28 09:05:04.698 [main] DEBUG nextflow.Session - Work-dir: /dev/shm/nfclaw-bactmap-sorting-control-20261028-v2/work [tmpfs]
+Oct-28 09:05:04.699 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/bin
+Oct-28 09:05:04.721 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Oct-28 09:05:04.744 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Oct-28 09:05:04.797 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Oct-28 09:05:04.813 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 29; maxThreads: 1000
+Oct-28 09:05:05.313 [main] DEBUG nextflow.Session - Session start
+Oct-28 09:05:06.189 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Oct-28 09:05:06.218 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ubuntu/.nextflow/secrets/store.json
+Oct-28 09:05:06.231 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@6088451e] - activable => nextflow.secret.LocalSecretsProvider@6088451e
+Oct-28 09:05:06.553 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 09:05:06.554 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 09:05:06.563 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Oct-28 09:05:06.576 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=28; memory=62.8 GB; capacity=28; pollInterval=100ms; dumpInterval=5m
+Oct-28 09:05:06.580 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Oct-28 09:05:06.751 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: ORDER
+Oct-28 09:05:06.751 [main] DEBUG nextflow.Session - Igniting dataflow network (2)
+Oct-28 09:05:06.753 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > ORDER
+Oct-28 09:05:06.754 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_7fc91d51cd52a97b: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/main.nf
+Oct-28 09:05:06.754 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+Oct-28 09:05:06.754 [main] DEBUG nextflow.Session - Session await
+Oct-28 09:05:07.032 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Oct-28 09:05:07.036 [Task submitter] INFO  nextflow.Session - [b7/e44ac5] Submitted process > ORDER (2)
+Oct-28 09:05:07.055 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Oct-28 09:05:07.060 [Task submitter] INFO  nextflow.Session - [ee/e75b28] Submitted process > ORDER (1)
+Oct-28 09:05:07.074 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: ORDER (2); status: COMPLETED; exit: 0; error: -; workDir: /dev/shm/nfclaw-bactmap-sorting-control-20261028-v2/work/b7/e44ac5fe3ffe1832379a8617449fc1]
+Oct-28 09:05:07.076 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Oct-28 09:05:07.159 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: ORDER (1); status: COMPLETED; exit: 0; error: -; workDir: /dev/shm/nfclaw-bactmap-sorting-control-20261028-v2/work/ee/e75b28ad03d0e482c88d0c26c5917d]
+Oct-28 09:05:07.171 [main] DEBUG nextflow.Session - Session await > all processes finished
+Oct-28 09:05:07.259 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Oct-28 09:05:07.262 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Oct-28 09:05:07.267 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'TaskFinalizer' shutdown completed (hard=false)
+Oct-28 09:05:07.278 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=2; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=13ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=1; peakCpus=1; peakMemory=0; ]
+Oct-28 09:05:07.287 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Oct-28 09:05:07.307 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
+Oct-28 09:05:07.307 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

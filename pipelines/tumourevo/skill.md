@@ -117,4 +117,6 @@ Full list with references: https://github.com/nf-core/tumourevo/blob/1.0.0/CITAT
 nfclaw run tumourevo --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This pinned test profile misspells `sparsesignatures_K`; the declared parameter is `sparsesignatures_k`. For its bundled tiny input, nfclaw supplies the intended `2:3` grid and records it in params/provenance. Explicit CLI or params-file values win. Your own input, test-data base, extra profiles or `--config` disable this demo default. A native original and fresh replay completed with a 24 GiB task ceiling; an 8 GiB task was killed. Allocate sufficient memory for SparseSignatures. Other releases retain their own defaults.
+
 <!-- Generated from nf-core/tumourevo@180ae5447d0eb0214f650b6fcf7dabed0c77b5a2. Do not edit by hand. -->

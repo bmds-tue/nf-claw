@@ -46,7 +46,7 @@ class Comparison:
         return self.environment is None or self.environment["status"] == "identical"
 
 
-def _environment(original: Path, replay: Path) -> dict | None:
+def _environment(original: Path, replay: Path, *, require: bool = False) -> dict | None:
     records = []
     for outdir in (original, replay):
         try:
@@ -54,10 +54,28 @@ def _environment(original: Path, replay: Path) -> dict | None:
                 (outdir / "provenance"
                  / environment_record.RECORD_NAME).read_text(encoding="utf-8")))
         except (OSError, ValueError):
-            return None
+            if not require:
+                return None
+            records.append(None)
+    if require:
+        sides = zip(("original", "replay"), records, strict=True)
+        gaps = [f"{side}: {issue}" for side, record in sides
+                for issue in environment_record.completeness_issues(record)]
+        if gaps:
+            return {"version": environment_record.VERSION, "status": "unverified",
+                    "mismatches": [], "unverified": gaps, "notes": []}
     if not all(isinstance(record, dict) for record in records):
         return None
-    return environment_record.compare(*records)
+    result = environment_record.compare(*records)
+    if require:
+        for field in ("nextflow_build", "nextflow_runtime", "container_engine", "host"):
+            if records[0][field] != records[1][field]:
+                result["mismatches"].append(f"{field} differs between the recorded runs")
+        if records[0]["processes"].keys() != records[1]["processes"].keys():
+            result["mismatches"].append("the process inventories differ")
+        if result["mismatches"]:
+            result["status"] = "differs"
+    return result
 
 
 def _read(outdir: Path, *, recorded: bool) -> tuple[dict[str, str], dict[str, dict] | None]:
@@ -124,7 +142,7 @@ def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, 
                   if len(before[key]) == 1 and len(after[key]) == 1)
 
 
-def compare(original: Path, replay: Path) -> Comparison:
+def compare(original: Path, replay: Path, *, require_environment: bool = False) -> Comparison:
     """Compare a replay's outputs against the run it reproduces, by path.
 
     Comparing the raw `outputs.sha256` lines instead — the obvious thing to do — is misleading: a
@@ -173,7 +191,7 @@ def compare(original: Path, replay: Path) -> Comparison:
         if original_inventory is not None else [],
         changed_links=sorted(changed_links),
         unverified_structure=original_inventory is None,
-        environment=_environment(original, replay),
+        environment=_environment(original, replay, require=require_environment),
     )
 
 

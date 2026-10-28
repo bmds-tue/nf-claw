@@ -576,3 +576,18 @@ def test_require_values_fails_the_handoff_for_rows_the_downstream_cannot_take(li
         handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
     assert err.value.code is ErrorCode.HANDOFF_FAILED
     assert "row 3 (B)" in str(err.value)
+
+
+@pytest.mark.parametrize('files,source', [
+    ({'a.tsv': 'first', 'b.tsv': 'second'}, {'file': '*.tsv'}),
+    ({'bad.csv': 'sample,sample,fastq_1\nA,B,/data/a.fq.gz\n'},
+     {'samplesheet': 'bad.csv', 'provides': ['sample', 'fastq_1']}),
+])
+def test_optional_handoff_does_not_discard_invalid_present_data(
+        library, finished_run, tmp_path, files, source):
+    _, down = _trees(library('mini_up', 'mini'))
+    up = finished_run(tmp_path / 'up', files)
+    rule = _rule({'params': {'input': {**source, 'optional': True}}})
+    with pytest.raises(NfclawError):
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                            dest=tmp_path / 'handoff')

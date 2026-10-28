@@ -1,0 +1,6 @@
+{
+  "custom_config_version": "19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20",
+  "input": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv",
+  "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out",
+  "reference": "https://raw.githubusercontent.com/nf-core/test-datasets/02195cfa96ca496173e9d63dd58e34bf02fcf55a/genome/NCTC13799.fna"
+}

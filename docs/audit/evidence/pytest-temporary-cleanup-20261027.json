@@ -1,0 +1,78 @@
+[
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/c7109f4/tmp",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ],
+    "reason": "completed earlier pytest temporary fixtures; validation logs and result records retained"
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/d4a3e0d/tmp",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ],
+    "reason": "completed earlier pytest temporary fixtures; validation logs and result records retained"
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/156c39e/tmp",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ],
+    "reason": "completed earlier pytest temporary fixtures; validation logs and result records retained"
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ],
+    "reason": "completed earlier pytest temporary fixtures; validation logs and result records retained"
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/e0ec4c5/tmp",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ],
+    "reason": "completed earlier pytest temporary fixtures; validation logs and result records retained"
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/31ef6fe/tmp",
+    "at": "2026-10-27T21:20:26.992439+00:00",
+    "reason": "completed pytest synthetic fixtures; failed ENOSPC and successful retry records/logs retained",
+    "children": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14",
+      "3.15"
+    ]
+  },
+  {
+    "path": "/mnt/volume/nfclaw-remediation-python-matrix/31ef6fe-retry-space/tmp",
+    "at": "2026-10-27T21:24:47.543198+00:00",
+    "reason": "completed pytest synthetic fixtures; failed ENOSPC and successful retry records/logs retained",
+    "children": [
+      "3.11",
+      "3.12"
+    ]
+  }
+]

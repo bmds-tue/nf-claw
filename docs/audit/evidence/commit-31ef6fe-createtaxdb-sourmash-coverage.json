@@ -1,0 +1,346 @@
+{
+  "version": 1,
+  "source_commit": "31ef6fe17b17afff0c45ed36a86f2a0fad4c2577",
+  "data_commit": "9248a89ada220333b7bc3c7c07af5eb229c16d5b",
+  "checked_at": "2026-10-27T21:46:11.312700+00:00",
+  "case_records": [
+    {
+      "file": "commit-31ef6fe-createtaxdb-sourmash-ram-map.json",
+      "sha256": "1c466ef885be8f7ebfa24563d5b0085a5f4cd856b26167f1c013d606810429a6"
+    },
+    {
+      "file": "commit-31ef6fe-createtaxdb-sourmash-ram-map-replay.json",
+      "sha256": "62f6bb423255b00bb3d093e8eff49109865a0f579ba24fd6f6dd08217bfe0604"
+    }
+  ],
+  "task_counts": [
+    31,
+    31
+  ],
+  "tasks": [
+    [
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "ca/7499d7"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "0d/19c264"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "8e/690b2c"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_AA (database)",
+        "status": "COMPLETED",
+        "hash": "0a/76d153"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "b2/5983b6"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_AA (database)",
+        "status": "COMPLETED",
+        "hash": "b3/8140c3"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "93/f0bad0"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "4f/f65084"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "f1/ecf8b4"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_AA (database)",
+        "status": "COMPLETED",
+        "hash": "17/e21345"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SYLPH_SKETCHGENOMES (database)",
+        "status": "COMPLETED",
+        "hash": "77/63441b"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "85/ab1be5"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_PROTEIN:SOURMASH_SKETCH (database_1)",
+        "status": "COMPLETED",
+        "hash": "c9/a8f1ee"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KMCP_CREATE:KMCP_COMPUTE (database)",
+        "status": "COMPLETED",
+        "hash": "79/82b6dd"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_DNA:SOURMASH_SKETCH (database_1)",
+        "status": "COMPLETED",
+        "hash": "0a/054def"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:METACACHE_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "f4/1843b4"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_PROTEIN:SOURMASH_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "1c/0c3234"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_DNA:SOURMASH_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "45/082179"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:MALT_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "02/bc0a27"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_AA_KAIJU (database)",
+        "status": "COMPLETED",
+        "hash": "cc/dd72fe"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:DIAMOND_MAKEDB (database)",
+        "status": "COMPLETED",
+        "hash": "23/7c2733"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:GANON_BUILDCUSTOM (database)",
+        "status": "COMPLETED",
+        "hash": "ca/154e6a"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:KRAKEN2_ADD (database)",
+        "status": "COMPLETED",
+        "hash": "dc/a76695"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:CENTRIFUGE_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "c4/917534"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:CENTRIFUGER_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "1e/722a98"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KRAKENUNIQ_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "19/b4a79f"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KMCP_CREATE:KMCP_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "7d/81e7a5"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KAIJU_MKFMI (database)",
+        "status": "COMPLETED",
+        "hash": "e5/fd48ef"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:KRAKEN2_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "8f/1ef991"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:BRACKEN_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "c1/623141"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:MULTIQC (createtaxdb)",
+        "status": "COMPLETED",
+        "hash": "1a/c95b50"
+      }
+    ],
+    [
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "41/d31123"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "cb/72ef66"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "08/ba408d"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_AA (database)",
+        "status": "COMPLETED",
+        "hash": "a0/d59ee0"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "79/a8aef1"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "1a/67060b"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:UNPIGZ_AA (database)",
+        "status": "COMPLETED",
+        "hash": "8c/7fe9e1"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "90/f852d9"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:SEQKIT_BATCHRENAME (database)",
+        "status": "COMPLETED",
+        "hash": "ec/0a8333"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_DNA (database)",
+        "status": "COMPLETED",
+        "hash": "9f/fafe9f"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SYLPH_SKETCHGENOMES (database)",
+        "status": "COMPLETED",
+        "hash": "b8/116368"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KMCP_CREATE:KMCP_COMPUTE (database)",
+        "status": "COMPLETED",
+        "hash": "99/15ef4f"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_AA (database)",
+        "status": "COMPLETED",
+        "hash": "c7/576cf3"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_DNA:SOURMASH_SKETCH (database_1)",
+        "status": "COMPLETED",
+        "hash": "26/70851b"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:PREPROCESSING:FIND_CONCATENATE_AA_KAIJU (database)",
+        "status": "COMPLETED",
+        "hash": "08/006271"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_PROTEIN:SOURMASH_SKETCH (database_1)",
+        "status": "COMPLETED",
+        "hash": "06/bd69d1"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_DNA:SOURMASH_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "38/7813f1"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:SOURMASH_CREATE_PROTEIN:SOURMASH_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "5e/ab5c3b"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KRAKENUNIQ_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "79/a2aafb"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:GANON_BUILDCUSTOM (database)",
+        "status": "COMPLETED",
+        "hash": "08/cbd7cf"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:MALT_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "5d/514845"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:METACACHE_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "54/9a79be"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:KRAKEN2_ADD (database)",
+        "status": "COMPLETED",
+        "hash": "d4/6605cd"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:CENTRIFUGE_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "69/18263d"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KMCP_CREATE:KMCP_INDEX (database)",
+        "status": "COMPLETED",
+        "hash": "26/758ebf"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:DIAMOND_MAKEDB (database)",
+        "status": "COMPLETED",
+        "hash": "0c/c71a9c"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:CENTRIFUGER_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "b8/650619"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:KAIJU_MKFMI (database)",
+        "status": "COMPLETED",
+        "hash": "9b/936cf2"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:KRAKEN2_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "01/6bba76"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:FASTA_BUILD_ADD_KRAKEN2_BRACKEN:BRACKEN_BUILD (database)",
+        "status": "COMPLETED",
+        "hash": "92/1f4e62"
+      },
+      {
+        "name": "NFCORE_CREATETAXDB:CREATETAXDB:MULTIQC (createtaxdb)",
+        "status": "COMPLETED",
+        "hash": "cb/97763d"
+      }
+    ]
+  ],
+  "source_and_original_pipeline_unchanged": true,
+  "environment": {
+    "version": 1,
+    "status": "identical",
+    "mismatches": [],
+    "unverified": [],
+    "notes": []
+  },
+  "structural_verification_passed": false,
+  "scope": "All configured test builders, including DNA/protein Sourmash, executed in original and fresh replay. Predecompressed MALT map held in private tmpfs after storage failures; original archive retained. Symlink publication. Exact missing/extra library filenames and changed database bytes remain in structural report; scientific assessment is separate."
+}

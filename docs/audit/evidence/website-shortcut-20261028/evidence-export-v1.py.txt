@@ -1,0 +1,20 @@
+from pathlib import Path
+from datetime import datetime, UTC
+import json,hashlib,subprocess,shutil
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');out=root/'shortcut-validation-20261028';out.mkdir(exist_ok=False)
+repo=Path('/mnt/volume/nfclaw-remediation-20261026');commit='4912bc78142ad2ee8c8d736c92101fa1e2e70563'
+files={'website/src/components/layout/command-palette.tsx':'0ba96b53ff952feb801836a13637a9fc61a068b7e13e2a0d8e9390e167247573','website/tests/operations.spec.ts':'4854c57b72e4a3d3ab467348d8b6c12f66bce1de8859f05bf2688830c70e4b4b'}
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+for name,h in files.items():assert sha(repo/name)==h
+assert set(subprocess.check_output(['git','diff','--name-only','HEAD'],cwd=repo,text=True).splitlines())==set(files)
+paths=[Path('/mnt/volume/nfclaw-shortcut-typecheck.log'),Path('/mnt/volume/nfclaw-shortcut-build.log'),Path('/mnt/volume/nfclaw-shortcut-browser.json'),Path('/mnt/volume/nfclaw-shortcut-browser.stderr'),Path('/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnostic-repeats.json'),Path('/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnosis-red.log'),Path('/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnosis.spec.ts')]
+paths+=list((root/'commit-8db1cbb-browser-failure').rglob('error-context.md'))
+paths+=list(Path('/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/test-results').rglob('event-record*'))
+entries=[]
+for n,p in enumerate(paths):
+ assert p.is_file(),p
+ name=f'{n:02d}-'+p.name;shutil.copyfile(p,out/name);entries.append({'path':str(p),'bytes':p.stat().st_size,'sha256':sha(p),'retained_copy':name})
+report=json.loads(Path('/mnt/volume/nfclaw-shortcut-browser.json').read_text());assert report['stats']['expected']==13 and report['stats']['unexpected']==0 and not report['errors']
+repeats=json.loads(Path('/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnostic-repeats.json').read_text());assert repeats['stats']['expected']==80 and repeats['stats']['unexpected']==0
+record={'generated_at':datetime.now(UTC).isoformat(),'source_commit':commit,'validation_source':{'base_commit':'8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3','changed_files_sha256':files,'scope':'Server working bytes tested before their identical local commit; no Python/runtime source changed.'},'commands':[{'command':'npm run typecheck','exit_code':0},{'command':'npm run build','exit_code':0},{'command':'npm run test:browser -- --reporter=json --output=/mnt/volume/nfclaw-shortcut-browser-results','exit_code':0}],'browser_stats':report['stats'],'original_build_diagnostic_repeat_stats':repeats['stats'],'original_build_diagnostic_transport_note':'All 80 cases reported passed; the remote runner was subsequently absent, but SSH did not return. Only that local owned SSH process was terminated after 10 minutes. No remote exit code is inferred from this interrupted transport. The separate 13-case corrected-build run exited zero.','root_cause_limit':'The reproducible held-key repeat closes the search without the guard. It does not explain the earlier intermittent single-press failure; 20 unchanged original-test repeats and 80 instrumented original/precondition repeats did not reproduce it. The original failure is retained.','red_control':'diagnosis.spec.ts:60 failed on second keyboard.down(k): input absent. Initial opening and first press succeeded.','review':'Existing independent reviewer found no blockers; no edits or tests run by reviewer.','entries':entries}
+(out/'website-validation-4912bc7.json').write_text(json.dumps(record,indent=2)+'\n');print(json.dumps(record['browser_stats']))

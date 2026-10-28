@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-sorting-control.py",
+    "sha256": "2616fea87053af9d00b28847e406c716b6bf5bf3a0d3f09fd42f951c8e6894f7"
+  },
+  "recipe_fingerprint": "add66c80cd0c8d73746b13290da165d3bdb063949f61f9358acce52b2e69fd05",
+  "command": [
+    "nextflow",
+    "-log",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/nextflow.log",
+    "run",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/main.nf",
+    "-work-dir",
+    "/dev/shm/nfclaw-bactmap-sorting-control-20261028/work",
+    "-ansi-log",
+    "false"
+  ],
+  "source_statement": "    def ordered_pseudogenomes = (pseudogenomes instanceof Collection ? pseudogenomes :\n                                [pseudogenomes]).sort(false) { it.name }",
+  "workflow_sha256": "a6e8ef9750da495544092aff825a653e3c84147c807516aa434eb49c1db02d27",
+  "exit_code": 1,
+  "stdout": "N E X T F L O W  ~  version 24.10.5\nLaunching `/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/main.nf` [shrivelled_goldstine] DSL2 - revision: 88ace287ef\n[1c/65c071] Submitted process > ORDER (2)\n[db/317d6a] Submitted process > ORDER (1)\nERROR ~ Error executing process > 'ORDER (2)'\n\nCaused by:\n  Process `ORDER (2)` terminated with an error exit status (1)\n\n\nCommand executed:\n\n  for pseudogenome in [z.fas]\n  do\n      cat ${pseudogenome} >> ordered.txt\n  done\n\nCommand exit status:\n  1\n\nCommand output:\n  (empty)\n\nCommand error:\n  cat: '[z.fas]': No such file or directory\n\nWork dir:\n  /dev/shm/nfclaw-bactmap-sorting-control-20261028/work/1c/65c07178a16a9fbbebb52042699199\n\nTip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`\n\n -- Check '/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/nextflow.log' file for details\nWARN: Got an interrupted exception while taking agent result | java.lang.InterruptedException\n",
+  "stderr": "Nextflow 26.10.4 is available - Please consider updating your version to it\n"
+}

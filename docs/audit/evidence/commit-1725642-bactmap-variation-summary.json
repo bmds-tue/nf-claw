@@ -1,0 +1,476 @@
+{
+  "version": 1,
+  "observed_at": "2026-10-28T09:21:17.572531+00:00",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-variation-summary.py",
+    "sha256": "50a3e9f717a61f060ee96957117171d11a694e17b4535718a6c6571aba3ae1a7"
+  },
+  "scope": "Characterization of retained failed scientific-comparison controls. No differences are ignored, accepted as accurate, or converted into successful full-replay evidence.",
+  "controls": {
+    "demo": {
+      "native_record": {
+        "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo.json",
+        "sha256": "d54df4ac928f08509284000604c08a734e7d31955f0ef7cfc199ad4f7413dfba"
+      },
+      "failed_assessment": {
+        "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-assessment.json",
+        "sha256": "3560f7fc88ce9f0f6d16ee7e816a5dabd0e600d7d3b3d4aee8a487c294be72cf"
+      },
+      "replay_comparison": {
+        "identical": [
+          "bwa/index/NCTC13799.amb",
+          "bwa/index/NCTC13799.ann",
+          "bwa/index/NCTC13799.bwt",
+          "bwa/index/NCTC13799.pac",
+          "bwa/index/NCTC13799.sa",
+          "fastp/log/ERR2172265.fastp.log",
+          "fasttree/fasttree_phylogeny.tre",
+          "gubbins/aligned_pseudogenomes.branch_base_reconstruction.embl",
+          "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.fasta",
+          "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.phylip",
+          "gubbins/aligned_pseudogenomes.final_tree.tre",
+          "gubbins/aligned_pseudogenomes.node_labelled.final_tree.tre",
+          "gubbins/aligned_pseudogenomes.summary_of_snp_distribution.vcf",
+          "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile",
+          "mash/ERR2172265.mash_stats",
+          "mash/ERR2172265.msh",
+          "mash/ERR2172266.mash_stats",
+          "mash/ERR2172266.msh",
+          "mash/ERR2172267.mash_stats",
+          "mash/ERR2172267.msh",
+          "multiqc/multiqc_data/mqc_bcftools-stats-subtypes_1.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_indel-lengths_1.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Indels.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_SNP.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transitions.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transversions.yaml",
+          "multiqc/multiqc_data/mqc_fastp-duprates-plot_1.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp_filtered_reads_plot_1.yaml",
+          "multiqc/multiqc_data/mqc_samtools_alignment_plot_1.yaml",
+          "pipeline_info/samplesheet.valid.csv",
+          "pseudogenomes/low_quality_pseudogenomes.tsv",
+          "rapidnj/alignment.sth",
+          "rapidnj/rapidnj_phylogeny.tre",
+          "samtools/ERR2172265.sorted.bam.flagstat",
+          "samtools/ERR2172265.sorted.bam.idxstats",
+          "samtools/ERR2172266.sorted.bam.flagstat",
+          "samtools/ERR2172266.sorted.bam.idxstats",
+          "samtools/ERR2172267.sorted.bam.flagstat",
+          "samtools/ERR2172267.sorted.bam.idxstats",
+          "snpsites/constant.sites.txt",
+          "snpsites/filtered_alignment.fas"
+        ],
+        "changed": [
+          "fastp/ERR2172265.fastp.html",
+          "fastp/ERR2172265.fastp.json",
+          "fastp/ERR2172266.fastp.html",
+          "fastp/ERR2172266.fastp.json",
+          "fastp/ERR2172267.fastp.html",
+          "fastp/ERR2172267.fastp.json",
+          "fastp/log/ERR2172266.fastp.log",
+          "fastp/log/ERR2172267.fastp.log",
+          "gubbins/aligned_pseudogenomes.per_branch_statistics.csv",
+          "gubbins/aligned_pseudogenomes.recombination_predictions.embl",
+          "gubbins/aligned_pseudogenomes.recombination_predictions.gff",
+          "multiqc/multiqc_data/mqc_bcftools_stats_depth_1.yaml",
+          "multiqc/multiqc_data/mqc_fastp-insert-size-plot_1.yaml",
+          "multiqc/multiqc_data/multiqc.log",
+          "multiqc/multiqc_data/multiqc_bcftools_stats_bcftools.yaml",
+          "multiqc/multiqc_data/multiqc_data.json",
+          "multiqc/multiqc_data/multiqc_fastp.yaml",
+          "multiqc/multiqc_data/multiqc_general_stats.yaml",
+          "multiqc/multiqc_data/multiqc_samtools_stats_samtools.yaml",
+          "multiqc/multiqc_data/multiqc_sources.yaml",
+          "multiqc/multiqc_report.html",
+          "pipeline_info/execution_report_2026-10-28_05-00-45.html -> pipeline_info/execution_report_2026-10-28_05-03-15.html",
+          "pipeline_info/execution_timeline_2026-10-28_05-00-45.html -> pipeline_info/execution_timeline_2026-10-28_05-03-15.html",
+          "pipeline_info/execution_trace_2026-10-28_05-00-45.txt -> pipeline_info/execution_trace_2026-10-28_05-03-15.txt",
+          "pipeline_info/pipeline_dag_2026-10-28_05-00-45.dot -> pipeline_info/pipeline_dag_2026-10-28_05-03-15.dot",
+          "pipeline_info/pipeline_report.html",
+          "pipeline_info/pipeline_report.txt",
+          "pseudogenomes/ERR2172265.fas",
+          "pseudogenomes/ERR2172266.fas",
+          "pseudogenomes/ERR2172267.fas",
+          "pseudogenomes/aligned_pseudogenomes.fas",
+          "rasusa/ERR2172265_1.fastq.gz",
+          "rasusa/ERR2172265_2.fastq.gz",
+          "rasusa/ERR2172266_1.fastq.gz",
+          "rasusa/ERR2172266_2.fastq.gz",
+          "rasusa/ERR2172267_1.fastq.gz",
+          "rasusa/ERR2172267_2.fastq.gz",
+          "raxmlng/output.raxml.bestTree",
+          "raxmlng/output.raxml.support",
+          "samtools/ERR2172265.sorted.bam",
+          "samtools/ERR2172265.sorted.bam.bai",
+          "samtools/ERR2172265.sorted.bam.stats",
+          "samtools/ERR2172266.sorted.bam",
+          "samtools/ERR2172266.sorted.bam.bai",
+          "samtools/ERR2172266.sorted.bam.stats",
+          "samtools/ERR2172267.sorted.bam",
+          "samtools/ERR2172267.sorted.bam.bai",
+          "samtools/ERR2172267.sorted.bam.stats",
+          "variants/ERR2172265.bcftools_stats.txt",
+          "variants/ERR2172265.filtered.vcf.gz",
+          "variants/ERR2172265.vcf.gz",
+          "variants/ERR2172265.vcf.gz.tbi",
+          "variants/ERR2172266.bcftools_stats.txt",
+          "variants/ERR2172266.filtered.vcf.gz",
+          "variants/ERR2172266.vcf.gz",
+          "variants/ERR2172266.vcf.gz.tbi",
+          "variants/ERR2172267.bcftools_stats.txt",
+          "variants/ERR2172267.filtered.vcf.gz",
+          "variants/ERR2172267.vcf.gz",
+          "variants/ERR2172267.vcf.gz.tbi"
+        ],
+        "missing": [],
+        "extra": [],
+        "missing_directories": [],
+        "extra_directories": [],
+        "changed_links": [],
+        "unverified_structure": false,
+        "renamed": [
+          "pipeline_info/execution_report_2026-10-28_05-00-45.html -> pipeline_info/execution_report_2026-10-28_05-03-15.html",
+          "pipeline_info/execution_timeline_2026-10-28_05-00-45.html -> pipeline_info/execution_timeline_2026-10-28_05-03-15.html",
+          "pipeline_info/execution_trace_2026-10-28_05-00-45.txt -> pipeline_info/execution_trace_2026-10-28_05-03-15.txt",
+          "pipeline_info/pipeline_dag_2026-10-28_05-00-45.dot -> pipeline_info/pipeline_dag_2026-10-28_05-03-15.dot"
+        ],
+        "environment": {
+          "version": 1,
+          "status": "identical",
+          "mismatches": [],
+          "unverified": [],
+          "notes": []
+        },
+        "structurally_equal": true
+      },
+      "samples": {
+        "ERR2172265": {
+          "differing_pseudogenome_positions": 802,
+          "base_transition_counts": {
+            "-->N": 232,
+            "N->-": 187,
+            "N->a": 27,
+            "N->c": 27,
+            "N->g": 24,
+            "N->t": 33,
+            "a->N": 66,
+            "c->N": 77,
+            "g->N": 63,
+            "t->N": 66
+          },
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        },
+        "ERR2172266": {
+          "differing_pseudogenome_positions": 334,
+          "base_transition_counts": {
+            "-->N": 92,
+            "N->-": 33,
+            "N->a": 8,
+            "N->c": 7,
+            "N->g": 7,
+            "N->t": 3,
+            "a->N": 54,
+            "c->N": 36,
+            "g->N": 39,
+            "t->N": 55
+          },
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        },
+        "ERR2172267": {
+          "differing_pseudogenome_positions": 1415,
+          "base_transition_counts": {
+            "-->N": 620,
+            "N->-": 196,
+            "N->a": 122,
+            "N->c": 94,
+            "N->g": 111,
+            "N->t": 92,
+            "a->N": 34,
+            "c->N": 58,
+            "g->N": 44,
+            "t->N": 44
+          },
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        }
+      },
+      "tree_unrooted_bipartitions_equal": {
+        "fasttree/fasttree_phylogeny.tre": true,
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": true,
+        "rapidnj/rapidnj_phylogeny.tre": true,
+        "raxmlng/output.raxml.bestTree": true
+      }
+    },
+    "singlecpu": {
+      "native_record": {
+        "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu.json",
+        "sha256": "6a5cb6f8a93976d664e67932469120afbeba4ce964a5ef7634bcf280ec0f343c"
+      },
+      "failed_assessment": {
+        "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-assessment.json",
+        "sha256": "6814b2e4a751fe572217dcfc0df4909b94c94fe76ab7242fdc58fef8896d2982"
+      },
+      "replay_comparison": {
+        "identical": [
+          "bwa/index/NCTC13799.amb",
+          "bwa/index/NCTC13799.ann",
+          "bwa/index/NCTC13799.bwt",
+          "bwa/index/NCTC13799.pac",
+          "bwa/index/NCTC13799.sa",
+          "fastp/ERR2172265.fastp.json",
+          "fastp/ERR2172266.fastp.json",
+          "fastp/ERR2172267.fastp.json",
+          "fastp/log/ERR2172265.fastp.log",
+          "fastp/log/ERR2172266.fastp.log",
+          "fastp/log/ERR2172267.fastp.log",
+          "fasttree/fasttree_phylogeny.tre",
+          "gubbins/aligned_pseudogenomes.recombination_predictions.embl",
+          "gubbins/aligned_pseudogenomes.recombination_predictions.gff",
+          "mash/ERR2172265.mash_stats",
+          "mash/ERR2172265.msh",
+          "mash/ERR2172266.mash_stats",
+          "mash/ERR2172266.msh",
+          "mash/ERR2172267.mash_stats",
+          "mash/ERR2172267.msh",
+          "multiqc/multiqc_data/mqc_bcftools-stats-subtypes_1.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_depth_1.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_indel-lengths_1.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Indels.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_SNP.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transitions.yaml",
+          "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transversions.yaml",
+          "multiqc/multiqc_data/mqc_fastp-duprates-plot_1.yaml",
+          "multiqc/multiqc_data/mqc_fastp-insert-size-plot_1.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_After_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_Before_filtering.yaml",
+          "multiqc/multiqc_data/mqc_fastp_filtered_reads_plot_1.yaml",
+          "multiqc/multiqc_data/mqc_samtools_alignment_plot_1.yaml",
+          "multiqc/multiqc_data/multiqc_bcftools_stats_bcftools.yaml",
+          "multiqc/multiqc_data/multiqc_fastp.yaml",
+          "multiqc/multiqc_data/multiqc_general_stats.yaml",
+          "multiqc/multiqc_data/multiqc_samtools_stats_samtools.yaml",
+          "pipeline_info/samplesheet.valid.csv",
+          "pseudogenomes/ERR2172265.fas",
+          "pseudogenomes/ERR2172266.fas",
+          "pseudogenomes/ERR2172267.fas",
+          "pseudogenomes/low_quality_pseudogenomes.tsv",
+          "rasusa/ERR2172265_1.fastq.gz",
+          "rasusa/ERR2172265_2.fastq.gz",
+          "rasusa/ERR2172266_1.fastq.gz",
+          "rasusa/ERR2172266_2.fastq.gz",
+          "rasusa/ERR2172267_1.fastq.gz",
+          "rasusa/ERR2172267_2.fastq.gz",
+          "samtools/ERR2172265.sorted.bam",
+          "samtools/ERR2172265.sorted.bam.bai",
+          "samtools/ERR2172265.sorted.bam.flagstat",
+          "samtools/ERR2172265.sorted.bam.idxstats",
+          "samtools/ERR2172265.sorted.bam.stats",
+          "samtools/ERR2172266.sorted.bam",
+          "samtools/ERR2172266.sorted.bam.bai",
+          "samtools/ERR2172266.sorted.bam.flagstat",
+          "samtools/ERR2172266.sorted.bam.idxstats",
+          "samtools/ERR2172266.sorted.bam.stats",
+          "samtools/ERR2172267.sorted.bam",
+          "samtools/ERR2172267.sorted.bam.bai",
+          "samtools/ERR2172267.sorted.bam.flagstat",
+          "samtools/ERR2172267.sorted.bam.idxstats",
+          "samtools/ERR2172267.sorted.bam.stats",
+          "snpsites/constant.sites.txt",
+          "variants/ERR2172265.bcftools_stats.txt",
+          "variants/ERR2172265.vcf.gz.tbi",
+          "variants/ERR2172266.bcftools_stats.txt",
+          "variants/ERR2172267.bcftools_stats.txt"
+        ],
+        "changed": [
+          "fastp/ERR2172265.fastp.html",
+          "fastp/ERR2172266.fastp.html",
+          "fastp/ERR2172267.fastp.html",
+          "gubbins/aligned_pseudogenomes.branch_base_reconstruction.embl",
+          "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.fasta",
+          "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.phylip",
+          "gubbins/aligned_pseudogenomes.final_tree.tre",
+          "gubbins/aligned_pseudogenomes.node_labelled.final_tree.tre",
+          "gubbins/aligned_pseudogenomes.per_branch_statistics.csv",
+          "gubbins/aligned_pseudogenomes.summary_of_snp_distribution.vcf",
+          "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile",
+          "multiqc/multiqc_data/multiqc.log",
+          "multiqc/multiqc_data/multiqc_data.json",
+          "multiqc/multiqc_data/multiqc_sources.yaml",
+          "multiqc/multiqc_report.html",
+          "pipeline_info/execution_report_2026-10-28_05-22-16.html -> pipeline_info/execution_report_2026-10-28_05-25-01.html",
+          "pipeline_info/execution_timeline_2026-10-28_05-22-16.html -> pipeline_info/execution_timeline_2026-10-28_05-25-01.html",
+          "pipeline_info/execution_trace_2026-10-28_05-22-16.txt -> pipeline_info/execution_trace_2026-10-28_05-25-01.txt",
+          "pipeline_info/pipeline_dag_2026-10-28_05-22-16.dot -> pipeline_info/pipeline_dag_2026-10-28_05-25-01.dot",
+          "pipeline_info/pipeline_report.html",
+          "pipeline_info/pipeline_report.txt",
+          "pseudogenomes/aligned_pseudogenomes.fas",
+          "rapidnj/alignment.sth",
+          "rapidnj/rapidnj_phylogeny.tre",
+          "raxmlng/output.raxml.bestTree",
+          "raxmlng/output.raxml.support",
+          "snpsites/filtered_alignment.fas",
+          "variants/ERR2172265.filtered.vcf.gz",
+          "variants/ERR2172265.vcf.gz",
+          "variants/ERR2172266.filtered.vcf.gz",
+          "variants/ERR2172266.vcf.gz",
+          "variants/ERR2172266.vcf.gz.tbi",
+          "variants/ERR2172267.filtered.vcf.gz",
+          "variants/ERR2172267.vcf.gz",
+          "variants/ERR2172267.vcf.gz.tbi"
+        ],
+        "missing": [],
+        "extra": [],
+        "missing_directories": [],
+        "extra_directories": [],
+        "changed_links": [],
+        "unverified_structure": false,
+        "renamed": [
+          "pipeline_info/execution_report_2026-10-28_05-22-16.html -> pipeline_info/execution_report_2026-10-28_05-25-01.html",
+          "pipeline_info/execution_timeline_2026-10-28_05-22-16.html -> pipeline_info/execution_timeline_2026-10-28_05-25-01.html",
+          "pipeline_info/execution_trace_2026-10-28_05-22-16.txt -> pipeline_info/execution_trace_2026-10-28_05-25-01.txt",
+          "pipeline_info/pipeline_dag_2026-10-28_05-22-16.dot -> pipeline_info/pipeline_dag_2026-10-28_05-25-01.dot"
+        ],
+        "environment": {
+          "version": 1,
+          "status": "identical",
+          "mismatches": [],
+          "unverified": [],
+          "notes": []
+        },
+        "structurally_equal": true
+      },
+      "samples": {
+        "ERR2172265": {
+          "differing_pseudogenome_positions": 0,
+          "base_transition_counts": {},
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172266",
+              "ERR2172265",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        },
+        "ERR2172266": {
+          "differing_pseudogenome_positions": 0,
+          "base_transition_counts": {},
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172266",
+              "ERR2172265",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        },
+        "ERR2172267": {
+          "differing_pseudogenome_positions": 0,
+          "base_transition_counts": {},
+          "uppercase_called_SNP_maps_equal": true,
+          "alignment_rows": [
+            [
+              "ERR2172265",
+              "ERR2172266",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ],
+            [
+              "ERR2172266",
+              "ERR2172265",
+              "ERR2172267",
+              "NZ_LT906437.1"
+            ]
+          ]
+        }
+      },
+      "tree_unrooted_bipartitions_equal": {
+        "fasttree/fasttree_phylogeny.tre": true,
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": true,
+        "rapidnj/rapidnj_phylogeny.tre": true,
+        "raxmlng/output.raxml.bestTree": false
+      }
+    }
+  },
+  "order_record": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-order-control.json",
+    "sha256": "50e476ed5b965659a9b724c42bec1246207ab04b142bc008a8ebce428fa0fae0"
+  }
+}

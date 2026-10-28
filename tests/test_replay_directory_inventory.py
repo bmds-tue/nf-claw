@@ -406,3 +406,49 @@ def test_resume_hashes_shared_file_targets_once_and_reuses_snapshot(tmp_path, mo
     calls.clear()
     assert orchestration._input_file_digests(namespace, hashes) == hashes
     assert calls == []
+
+
+@pytest.mark.parametrize('recorded', [False, True])
+@pytest.mark.parametrize('alias', ['direct', 'symlink', 'hardlink'])
+def test_replay_refuses_effective_log_alias_before_any_writes(tmp_path, monkeypatch,
+                                                             recorded, alias):
+    source = tmp_path / 'reads.txt'
+    source.write_text('irreplaceable scientific data\n')
+    log = source
+    if alias != 'direct':
+        log = tmp_path / 'engine.log'
+        if alias == 'symlink':
+            log.symlink_to(source)
+        else:
+            import os
+            os.link(source, log)
+    env = {'NXF_LOG_FILE': str(log)}
+    bundle = provenance.write(outdir=tmp_path / 'out', pipeline='fixture',
+        command_str='printf damaged > "$NXF_LOG_FILE"',
+        submodule=SubmoduleStatus('fixture', tmp_path / 'up', True, True, '1', 'deadbeef', ()),
+        input_paths=[source], env_extra=env if recorded else {})
+    if not recorded:
+        monkeypatch.setenv('NXF_LOG_FILE', str(log))
+    target = tmp_path / 'replay'
+    result = subprocess.run([str(bundle / 'commands.sh'), str(target)],
+                            capture_output=True, text=True, timeout=15)
+    assert result.returncode != 0
+    assert source.read_text() == 'irreplaceable scientific data\n'
+    assert not target.exists(), result.stderr
+    assert 'overlaps' in result.stderr
+
+
+@pytest.mark.parametrize('name', ['NXF_WORK', 'NXF_CACHE_DIR', 'NXF_HOME', 'NXF_TEMP'])
+def test_replay_refuses_engine_directory_inside_consumed_data_before_creation(
+        tmp_path, monkeypatch, name):
+    source = tmp_path / 'data'
+    source.mkdir()
+    (source / 'sample.txt').write_text('reads\n')
+    bundle = record(tmp_path, source)
+    monkeypatch.setenv(name, str(source / 'engine-files'))
+    target = tmp_path / 'replay'
+    result = subprocess.run([str(bundle / 'commands.sh'), str(target)],
+                            capture_output=True, text=True, timeout=15)
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not target.exists() and not (source / 'engine-files').exists()
+    assert 'overlaps' in result.stderr

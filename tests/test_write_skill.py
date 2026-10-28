@@ -63,6 +63,46 @@ def test_affected_fastqrepair_docs_distinguish_corrected_runs_from_direct_source
     assert "**Runtime corrections.**" not in text
 
 
+def test_funcscan_dramp_recipe_is_visible_and_bound_to_the_tested_consumer(tmp_path):
+    pdir = _seed(tmp_path, "mini")
+    st = SubmoduleStatus("funcscan", pdir / "mini" / "upstream", True, True,
+                         "4.0.0", "aee3dc965eb0c77267435544dda30da858763913", ())
+    for version in (None, '4.0.0', 'dev'):
+        text, _ = write_skill.render_status(st, pipeline_version=version)
+        assert '## Reference database' in text
+        assert 'prepare-dramp' in text
+        assert '--amp-ampcombi-db' in text
+        assert 'mmseqs2/ref_DB' in text
+    other = SubmoduleStatus('funcscan', st.path, True, True, '4.1.0', 'different', ())
+    text, _ = write_skill.render_status(other)
+    assert 'prepare-dramp' not in text
+
+
+@pytest.mark.parametrize('name,commit,recipe', [
+    ('createtaxdb', 'b01a0f8ed96a5990d15470828dfa92a22cf08bba',
+     'createtaxdb-sourmash-copy-sort-v1'),
+    ('funcscan', 'aee3dc965eb0c77267435544dda30da858763913', 'funcscan-hmm-metadata-v1'),
+    ('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210',
+     'bactmap-demo-order-preview-v2')])
+def test_workflow_correction_docs_distinguish_direct_upstream_execution(
+        tmp_path, name, commit, recipe):
+    pdir = _seed(tmp_path, 'mini')
+    st = SubmoduleStatus(name, pdir / 'mini/upstream', True, True, 'fixture', commit, ())
+    for version in (None, 'fixture', 'dev'):
+        text, _ = write_skill.render_status(st, pipeline_version=version)
+        if name == 'bactmap':
+            assert 'preserves module defaults' in text
+            assert 'HMM search retains' not in text
+        assert '## Runtime corrections' in text
+        assert recipe in text
+        assert '# raw equivalent' not in text
+        assert 'NFCLAW_SOURCE_CACHE' in text
+        assert 'docs/source-corrections.md' in text
+    other = SubmoduleStatus(name, st.path, True, True, 'future', 'different', ())
+    text, _ = write_skill.render_status(other)
+    assert '## Runtime corrections' not in text
+
+
 def _seed(tmp_path, name):
     up = tmp_path / name / "upstream"
     up.mkdir(parents=True)

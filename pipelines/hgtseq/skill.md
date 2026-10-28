@@ -105,4 +105,6 @@ Full list with references: https://github.com/nf-core/hgtseq/blob/1.1.0/CITATION
 nfclaw run hgtseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This pinned consumer requires `input1`/`input2`, but its moving demo sheet now uses newer columns. For a bare bundled demo, nfclaw stages a three-sample historical CSV with immutable read/GFF URLs from test-datasets commit `800330ec8f47c93caabe8157e20dd23e243de4e1` and matched immutable FASTA/Kraken/Krona inputs from `56591d0269db196203af3b0cb2191da22384d24a`. The CSV is bundled in provenance and rebased for replay; no remote sheet is rescanned. Explicit input, reference/database/data-base selectors, extra profiles or `--config` disable this entire recipe so reference choices are not mixed. Other releases retain their own defaults.
+
 <!-- Generated from nf-core/hgtseq@683daaf41bb396839445e603152b45daa141ced4. Do not edit by hand. -->

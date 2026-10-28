@@ -123,6 +123,22 @@ def test_run_summary_names_the_run_log(tmp_path, monkeypatch, capsys):
     assert "log: /o/provenance/logs/run.log" in capsys.readouterr().out
 
 
+def test_check_exposes_checked_deferred_and_unsupported_validation(tmp_path, monkeypatch, capsys):
+    result = orchestration.RunResult('CMD', tmp_path / 'out', True, None)
+    result.validation_scope = {'version': 1, 'checks': [
+        {'id': 'source_identity', 'status': 'checked', 'scope': 'selected source'},
+        {'id': 'remote_inputs', 'status': 'deferred', 'scope': 'runtime staging'},
+        {'id': 'scientific_completeness', 'status': 'unsupported',
+         'scope': 'scientific contracts'}]}
+    monkeypatch.setattr(orchestration, 'run_pipeline', lambda *a, **k: result)
+    monkeypatch.setattr(cli, '_repo_root', lambda: tmp_path)
+    assert cli.main(['run', 'x', '--outdir', str(tmp_path / 'out'), '--check']) == 0
+    text = capsys.readouterr().out
+    assert 'preflight checked: source_identity' in text
+    assert 'preflight deferred: remote_inputs' in text
+    assert 'preflight unsupported: scientific_completeness' in text
+
+
 def test_versions_command_lists_tags_and_marks_pin(tmp_path, monkeypatch, capsys):
     root = _seed(tmp_path)
     monkeypatch.setattr(cli, "_repo_root", lambda: root)

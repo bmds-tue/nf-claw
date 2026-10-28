@@ -1,0 +1,95 @@
+{
+  "source_commit": "8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3",
+  "started_at": "2026-10-28T11:01:26.231996+00:00",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-raw-vcf-comparison.py",
+    "sha256": "1f1b4f7b7458ea7e32ff14feb06130b613aa27acda0853bd48fa6baf8d72c66b"
+  },
+  "assessment": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-assessment-v2.json",
+    "sha256": "037334896ba1eb0a3f0c35277052309d876bde051d635859bf8de754f503712b"
+  },
+  "scope": "Exact decompressed non-header VCF record bytes and order, with no pysam parsing/numeric reformatting or numeric tolerance. Both filtered and unfiltered VCFs; headers/compression remain separately represented by full-output verification.",
+  "runs": [
+    {
+      "kind": "original",
+      "files": {
+        "variants/ERR2172265.vcf.gz": {
+          "records": 2156371,
+          "uncompressed_record_bytes": 276976775,
+          "raw_record_stream_sha256": "f632d2e9fd5682d4deea1f35e79a428c76c49612ca0d584b9a8951f193de492f"
+        },
+        "variants/ERR2172265.filtered.vcf.gz": {
+          "records": 2156371,
+          "uncompressed_record_bytes": 283774889,
+          "raw_record_stream_sha256": "beb59e4a752a4164ae73f034e600c6fbf2d6e05aabdce582dc4fcc50b32a7292"
+        },
+        "variants/ERR2172266.vcf.gz": {
+          "records": 2150957,
+          "uncompressed_record_bytes": 274199090,
+          "raw_record_stream_sha256": "2359620fa6bdfb36b33ff00039d766e847a798cdb68d1110e8903a8c7c3d73de"
+        },
+        "variants/ERR2172266.filtered.vcf.gz": {
+          "records": 2150957,
+          "uncompressed_record_bytes": 280963289,
+          "raw_record_stream_sha256": "36fbde3d897da8847ee59a40bc0b1d04e4bcff5e698c02141462b6d70e853087"
+        },
+        "variants/ERR2172267.vcf.gz": {
+          "records": 2160636,
+          "uncompressed_record_bytes": 280100774,
+          "raw_record_stream_sha256": "8b4acd081c0f425828c17a9ad2062d0b803ab6315df5fdbb73a992b18d493172"
+        },
+        "variants/ERR2172267.filtered.vcf.gz": {
+          "records": 2160636,
+          "uncompressed_record_bytes": 286908689,
+          "raw_record_stream_sha256": "c3dbad632ba0dfcd5c9e95d57c182874c9635f51a7054d39b87cbfae9a5edbf7"
+        }
+      }
+    },
+    {
+      "kind": "replay",
+      "files": {
+        "variants/ERR2172265.vcf.gz": {
+          "records": 2156371,
+          "uncompressed_record_bytes": 276976775,
+          "raw_record_stream_sha256": "f632d2e9fd5682d4deea1f35e79a428c76c49612ca0d584b9a8951f193de492f"
+        },
+        "variants/ERR2172265.filtered.vcf.gz": {
+          "records": 2156371,
+          "uncompressed_record_bytes": 283774889,
+          "raw_record_stream_sha256": "beb59e4a752a4164ae73f034e600c6fbf2d6e05aabdce582dc4fcc50b32a7292"
+        },
+        "variants/ERR2172266.vcf.gz": {
+          "records": 2150957,
+          "uncompressed_record_bytes": 274199090,
+          "raw_record_stream_sha256": "2359620fa6bdfb36b33ff00039d766e847a798cdb68d1110e8903a8c7c3d73de"
+        },
+        "variants/ERR2172266.filtered.vcf.gz": {
+          "records": 2150957,
+          "uncompressed_record_bytes": 280963289,
+          "raw_record_stream_sha256": "36fbde3d897da8847ee59a40bc0b1d04e4bcff5e698c02141462b6d70e853087"
+        },
+        "variants/ERR2172267.vcf.gz": {
+          "records": 2160636,
+          "uncompressed_record_bytes": 280100774,
+          "raw_record_stream_sha256": "8b4acd081c0f425828c17a9ad2062d0b803ab6315df5fdbb73a992b18d493172"
+        },
+        "variants/ERR2172267.filtered.vcf.gz": {
+          "records": 2160636,
+          "uncompressed_record_bytes": 286908689,
+          "raw_record_stream_sha256": "c3dbad632ba0dfcd5c9e95d57c182874c9635f51a7054d39b87cbfae9a5edbf7"
+        }
+      }
+    }
+  ],
+  "comparisons": {
+    "variants/ERR2172265.vcf.gz": true,
+    "variants/ERR2172265.filtered.vcf.gz": true,
+    "variants/ERR2172266.vcf.gz": true,
+    "variants/ERR2172266.filtered.vcf.gz": true,
+    "variants/ERR2172267.vcf.gz": true,
+    "variants/ERR2172267.filtered.vcf.gz": true
+  },
+  "all_raw_record_streams_identical": true,
+  "finished_at": "2026-10-28T11:02:35.154205+00:00"
+}

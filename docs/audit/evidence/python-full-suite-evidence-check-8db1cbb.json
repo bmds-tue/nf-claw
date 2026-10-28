@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "candidate": "8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3",
+  "os": "ubuntu-latest",
+  "python": "3.12",
+  "passed": 3396,
+  "skipped": [
+    {
+      "module": "tests.test_legacy_sheet_paths",
+      "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+      "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+    }
+  ],
+  "report_sha256": "dbab8a89ca04e75f6d52f59269926df3d45e6688efea3159be799e3ca060fadd"
+}

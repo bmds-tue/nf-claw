@@ -1,0 +1,50 @@
+
+> nf-claw-website@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.28
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 12.8s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/122) ...
+   Generating static pages (30/122) 
+   Generating static pages (60/122) 
+   Generating static pages (91/122) 
+ ✓ Generating static pages (122/122)
+   Finalizing page optimization ...
+   Collecting build traces ...
+   Exporting (0/2) ...
+ ✓ Exporting (2/2)
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    27.3 kB         188 kB
+├ ○ /_not-found                            136 B         103 kB
+├ ○ /docs                                  559 B         147 kB
+├ ● /docs/[slug]                           984 B         206 kB
+├   ├ /docs/readme
+├   ├ /docs/contributing
+├   ├ /docs/agents
+├   └ [+14 more paths]
+├ ○ /llms.txt                              136 B         103 kB
+├ ○ /pipelines                           6.71 kB         162 kB
+├ ● /pipelines/[name]                    7.35 kB         212 kB
+├   ├ /pipelines/airrflow
+├   ├ /pipelines/ampliseq
+├   ├ /pipelines/atacseq
+├   └ [+92 more paths]
+├ ○ /robots.txt                            136 B         103 kB
+├ ○ /search/params.json                    136 B         103 kB
+└ ○ /sitemap.xml                           136 B         103 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/255-1f92380adbc6ec99.js       46.7 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+

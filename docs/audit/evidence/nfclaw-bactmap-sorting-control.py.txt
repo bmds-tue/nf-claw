@@ -1,0 +1,38 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import sys,os,re,json,hashlib
+source=Path('/mnt/volume/nfclaw-remediation-20261026');sys.path.insert(0,str(source))
+from runner import source_corrections,submodule
+from runner.probes import capture
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028');root.mkdir(exist_ok=False)
+plan=source_corrections.plan(submodule.resolve('bactmap',source/'pipelines'))
+text=plan.patched_files['modules/local/alignpseudogenomes.nf'].decode();match=re.search(r'    def ordered_pseudogenomes = (.*?)\n    """',text,re.S);assert match
+statement='    def ordered_pseudogenomes = '+match.group(1)
+(root/'a.fas').write_text('a\n');(root/'z.fas').write_text('z\n')
+workflow='''nextflow.enable.dsl=2
+process ORDER {
+ input:
+ tuple val(label), path(pseudogenomes)
+ output:
+ tuple val(label), path('ordered.txt')
+ script:
+STATEMENT
+ """
+ for pseudogenome in ${ordered_pseudogenomes}
+ do
+     cat \${pseudogenome} >> ordered.txt
+ done
+ """
+}
+workflow {
+ ORDER(Channel.of(['multi',[file("${baseDir}/z.fas"),file("${baseDir}/a.fas")]],['single',[file("${baseDir}/z.fas")]]))
+ ORDER.out.view { label, path -> "${label}:${path.text.trim().replace('\\n', ',')}" }
+}
+'''.replace('STATEMENT',statement)
+(root/'main.nf').write_text(workflow)
+command=['nextflow','-log',str(root/'nextflow.log'),'run',str(root/'main.nf'),'-work-dir','/dev/shm/nfclaw-bactmap-sorting-control-20261028/work','-ansi-log','false']
+p=capture(command,timeout=90,cwd=root,env={**os.environ,'NXF_VER':'24.10.5','NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true'})
+(root/'stdout.txt').write_text(p.stdout);(root/'stderr.txt').write_text(p.stderr)
+r={'version':1,'worker':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'recipe_fingerprint':plan.fingerprint,'command':command,'source_statement':statement,'workflow_sha256':hashlib.sha256(workflow.encode()).hexdigest(),'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr}
+(root/'record.json').write_text(json.dumps(r,indent=2)+'\n');print(p.returncode,p.stdout,p.stderr)
+assert p.returncode==0 and 'multi:a,z' in p.stdout and 'single:z' in p.stdout

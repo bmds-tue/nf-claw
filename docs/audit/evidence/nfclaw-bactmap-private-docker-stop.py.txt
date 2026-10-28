@@ -1,0 +1,34 @@
+from pathlib import Path
+from datetime import datetime, UTC
+import subprocess,json,hashlib,time
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028')
+receipt=root/'shutdown.json';assert not receipt.exists()
+def run(args):
+ p=subprocess.run(args,capture_output=True,text=True,timeout=30)
+ assert p.returncode==0,(args,p.returncode,p.stderr)
+ return p.stdout
+initial=json.loads((root/'record.json').read_text());docker=['docker','--host',initial['socket']]
+record={'started_at':datetime.now(UTC).isoformat(),'scope':'Remove only the identified never-started parser from our failed 30-second assessment, then stop only the private daemon we started. Preserve caches and all global engine/containerd state.','containerd_note':'Private dockerd automatically used /run/containerd/containerd.sock with default moby namespace, so it observed other-engine events. No shared-daemon setting was modified. Future private starts must use separate containerd namespaces.','worker_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+save()
+ident='988daaa5b64bff9e71811a1bb8007fb48062c7809823050baa0209237ea29808'
+container=json.loads(run([*docker,'inspect',ident]))[0]
+assert container['Id']==ident and container['State']['Status']=='created' and not container['State']['Running']
+assert container['Path']=='python' and 'from Bio import Phylo' in container['Args'][1]
+assert all('/commit-8db1cbb-bactmap-demo-replay/' in x for x in container['Args'][2:])
+assert len(container['Mounts'])==1 and not container['Mounts'][0]['RW'] and container['Mounts'][0]['Source'].endswith('/commit-8db1cbb-bactmap-demo-replay')
+record['removed_owned_created_parser']=run([*docker,'rm',ident]).strip();assert not run([*docker,'ps','--all','--quiet']).strip()
+record['private_container_inventory_empty']=True
+pid=int(Path('/dev/shm/nfc-d28/dockerd.pid').read_text());command=Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0');assert command[:3]==[b'dockerd',b'--config-file',str(root/'daemon.json').encode()]
+record['private_daemon_pid']=pid;record['private_daemon_command']=[x.decode() for x in command if x];save()
+run(['sudo','-n','kill','-TERM',str(pid)])
+for _ in range(100):
+ if not Path(f'/proc/{pid}').exists():break
+ time.sleep(.1)
+record['private_daemon_stopped']=not Path(f'/proc/{pid}').exists()
+original=json.loads(run(['docker','info','--format','{{json .}}']))
+record['original_engine_id']=original['ID'];record['original_data_root']=original['DockerRootDir'];record['original_identity_preserved']=original['ID']==initial['original_engine_id'] and original['DockerRootDir']==initial['original_data_root']
+future=json.loads((root/'daemon.json').read_text());future.update({'containerd-namespace':'nfclaw-bactmap-20261028','containerd-plugins-namespace':'nfclaw-bactmap-plugins-20261028'})
+future_path=root/'daemon-future-namespaced.json';future_path.write_text(json.dumps(future,indent=2)+'\n')
+record['future_config_validation']=run(['dockerd','--validate','--config-file',str(future_path)]).strip();record['future_config_started']=False
+record['finished_at']=datetime.now(UTC).isoformat();save();print(json.dumps(record,indent=2));assert record['private_daemon_stopped'] and record['original_identity_preserved']

@@ -1,0 +1,25 @@
+from pathlib import Path
+import os,subprocess,json,time,hashlib
+from datetime import datetime,UTC
+base=Path('/dev/shm/nfc-d28');state=Path('/run/nfc-d28');evidence=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028')
+assert not base.exists() and not state.exists() and not evidence.exists()
+evidence.mkdir();base.mkdir(mode=0o700)
+original=json.loads(subprocess.check_output(['docker','info','--format','{{json .}}'],text=True))
+config=evidence/'daemon.json';config.write_text(json.dumps({'features':{'containerd-snapshotter':False},'data-root':str(base/'data'),'exec-root':str(state),'pidfile':str(base/'dockerd.pid'),'hosts':['unix://'+str(base/'docker.sock')],'bridge':'none','iptables':False,'ip6tables':False,'ip-forward':False,'ip-masq':False,'storage-driver':'overlay2','max-concurrent-downloads':1},indent=2)+'\n')
+command=['sudo','-n','dockerd','--config-file',str(config)]
+with (evidence/'daemon.log').open('x') as log:
+ proc=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+record={'version':1,'started_at':datetime.now(UTC).isoformat(),'worker':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'command':command,'launcher_pid':proc.pid,'socket':'unix://'+str(base/'docker.sock'),'config_sha256':hashlib.sha256(config.read_bytes()).hexdigest(),'original_engine_id':original['ID'],'original_data_root':original['DockerRootDir'],'scope':'Private ephemeral RAM-backed Docker cache, bridge/firewall/IP forwarding disabled; no original engine reconfiguration or image cleanup.'}
+(evidence/'record.json').write_text(json.dumps(record,indent=2)+'\n')
+for _ in range(30):
+ if proc.poll() is not None:break
+ p=subprocess.run(['docker','--host',record['socket'],'info','--format','{{json .}}'],capture_output=True,text=True)
+ if p.returncode==0:
+  record['private_info']=json.loads(p.stdout);record['ready']=True;break
+ time.sleep(1)
+else:record['ready']=False
+record['original_info_after']=json.loads(subprocess.check_output(['docker','info','--format','{{json .}}'],text=True))
+record['original_identity_preserved']=record['original_info_after']['ID']==original['ID'] and record['original_info_after']['DockerRootDir']==original['DockerRootDir']
+(evidence/'record.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps({k:record.get(k) for k in ['socket','ready','original_identity_preserved']},indent=2))
+assert record.get('ready') and record['original_identity_preserved']

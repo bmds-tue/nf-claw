@@ -581,6 +581,71 @@ def _same_image(original: dict, replay: dict) -> bool | None:
     return None
 
 
+def completeness_issues(record) -> list[str]:
+    """Gaps that prohibit a claim of complete recorded environment evidence.
+
+    This does not discover undeclared dependencies or prove continuous input immutability.
+    """
+    if not isinstance(record, dict):
+        return ["no readable environment object was recorded"]
+    issues = []
+    if type(record.get("version")) is not int or record["version"] != VERSION:
+        issues.append("missing or unsupported environment record version")
+    for field in ("nextflow_build", "nextflow_runtime"):
+        if not isinstance(record.get(field), str) or not record[field].strip():
+            issues.append(f"{field} was not recorded")
+    for field, keys in (("container_engine", ("name", "version")),
+                        ("host", ("system", "machine"))):
+        value = record.get(field)
+        if not isinstance(value, dict) or any(
+                not isinstance(value.get(key), str) or not value[key].strip() for key in keys):
+            issues.append(f"complete {field} evidence was not recorded")
+    plugins = record.get("nextflow_plugins")
+    if not isinstance(plugins, list) or any(not isinstance(p, str) for p in plugins):
+        issues.append("the plugin inventory was not recorded")
+    problems = record.get("issues")
+    if not isinstance(problems, list) or problems:
+        issues.append("the environment recorder reported gaps or has no issue inventory")
+    processes, images = record.get("processes"), record.get("images")
+    if not isinstance(processes, dict) or not processes:
+        issues.append("no complete process inventory was recorded")
+    elif not isinstance(images, dict):
+        issues.append("no image inventory was recorded")
+    else:
+        for name, process in processes.items():
+            containers = process.get("containers") if isinstance(process, dict) else None
+            if (not isinstance(name, str) or not isinstance(containers, list) or not containers
+                    or any(not isinstance(image, str) for image in containers)
+                    or type(process.get("tasks")) is not int or process["tasks"] <= 0
+                    or type(process.get("without_container")) is not int
+                    or process["without_container"] != 0):
+                issues.append(f"{name}: incomplete or containerless process evidence")
+                continue
+            for reference in containers:
+                image = images.get(reference)
+                valid = isinstance(image, dict) and (
+                    image.get("kind") == "registry"
+                    and any(image.get(key) for key in ("digest", "id"))
+                    and all(image.get(key) is None or isinstance(image[key], str)
+                            and _DIGEST.fullmatch(image[key]) for key in ("digest", "id"))
+                    or image.get("kind") == "file" and isinstance(image.get("sha256"), str)
+                    and re.fullmatch(r"[0-9a-f]{64}", image["sha256"]))
+                if not valid:
+                    issues.append(f"{name}: {reference} has no immutable image identity")
+    remote = record.get("remote_inputs")
+    if not isinstance(remote, dict):
+        issues.append("the remote input inventory was not recorded")
+    else:
+        for source, entry in remote.items():
+            if (not isinstance(entry, dict) or not isinstance(entry.get("sha256"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"])):
+                issues.append(f"remote input {source}: consumed-byte hash was not recorded")
+            elif entry.get("read_by"):
+                issues.append(f"remote input {source}: refetched bytes do not establish "
+                              "the bytes originally consumed")
+    return issues
+
+
 def compare(original: dict, replay: dict) -> dict:
     """What differs between a recorded execution environment and a replay's."""
     mismatches, unverified, notes = [], [], []

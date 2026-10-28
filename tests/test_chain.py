@@ -926,3 +926,41 @@ def test_chain_status_names_each_stages_completion_caveats(tmp_path):
     assert ("      caveat: [nf-core/rnaseq] Pipeline completed successfully with skipped sampl(es)"
             in text)
     assert chain._caveats({"completion_caveats": "not a list"}) == []
+
+
+def test_chain_records_redact_environment_secrets_and_require_them_for_resume(
+        library, fake_runs, tmp_path, monkeypatch):
+    import stat
+    root = library('mini_up')
+    spec = chain.parse_spec({'nxf_env': {'NXF_TOKEN': 'private-token-value'},
+        'stages': [{'pipeline': 'mini_up',
+                    'nxf_env': {'NXF_JVM_ARGS': '-Dpassword=private-password-value'}}]})
+    out = tmp_path / 'private-chain'
+    chain.run_chain(spec, repo_root=root, outdir=out)
+    for path in (out / 'chain').rglob('*'):
+        if path.is_file():
+            text = path.read_text()
+            assert 'private-token-value' not in text and 'private-password-value' not in text
+    record = out / 'chain/chain.json'
+    assert stat.S_IMODE(record.stat().st_mode) == 0o600
+    assert stat.S_IMODE(record.parent.stat().st_mode) == 0o700
+    with pytest.raises(NfclawError, match='redacted') as refused:
+        chain.run_chain(None, repo_root=root, outdir=out, resume=True)
+    # One spec prefix: the refusal is not re-wrapped by the option parser's own handler.
+    assert refused.value.message.count('chain spec:') == 1
+    monkeypatch.setenv('NXF_TOKEN', 'private-token-value')
+    monkeypatch.setenv('NXF_JVM_ARGS', '-Dpassword=private-password-value')
+    assert chain.run_chain(None, repo_root=root, outdir=out, resume=True).outcome == 'success'
+
+
+def test_resume_refuses_failed_regeneration_with_new_unpaired_sample(
+        library, fake_runs, tmp_path):
+    data = tmp_path / 'reads'
+    pair(data, 'A_R1.fastq.gz', 'A_R2.fastq.gz')
+    root, spec, out = _generated_stage(library, tmp_path, fake_runs, str(data))
+    pair(data, 'B_R1.fastq.gz', 'B_R2.fastq.gz')
+    (data / 'B_R2.fastq.gz').unlink()
+    before = len(fake_runs.calls)
+    with pytest.raises(NfclawError, match='cannot verify'):
+        chain.run_chain(spec, repo_root=root, outdir=out, resume=True)
+    assert len(fake_runs.calls) == before

@@ -1,0 +1,553 @@
+{
+  "version": 1,
+  "assessment_source_commit": "156c39e1b1ed0dc3d5108fb5bdf038ca1c531749",
+  "source_files_sha256_before": {
+    "runner/scientific.py": "7a661f2a045118aa8fc2cfcd2e8b4b66d7e15f4bb8693040f560a4ed8c765c48",
+    "runner/scientific_h5ad.py": "8ab7c87b49af3ab69c5f424989423e3563b0721e5e4afe9b1b34dfd8ea3615e7",
+    "runner/scientific_hts.py": "95d4a4d99882b408fa5e17f0374965788b494daf5e552c38ac782933b5d9af30",
+    "runner/cli.py": "70af10751230f6298afad0dcd0d08e422bdadc7d2bbead60bbb752fd7aa4fe9d",
+    "runner/replay_guard.py": "922e7f510a1d9d0ff47359bed271f6a4c17c97a040918fe06a753a65bdef58e3"
+  },
+  "source_files_sha256_after": {
+    "runner/scientific.py": "7a661f2a045118aa8fc2cfcd2e8b4b66d7e15f4bb8693040f560a4ed8c765c48",
+    "runner/scientific_h5ad.py": "8ab7c87b49af3ab69c5f424989423e3563b0721e5e4afe9b1b34dfd8ea3615e7",
+    "runner/scientific_hts.py": "95d4a4d99882b408fa5e17f0374965788b494daf5e552c38ac782933b5d9af30",
+    "runner/cli.py": "70af10751230f6298afad0dcd0d08e422bdadc7d2bbead60bbb752fd7aa4fe9d",
+    "runner/replay_guard.py": "922e7f510a1d9d0ff47359bed271f6a4c17c97a040918fe06a753a65bdef58e3"
+  },
+  "assessment": {
+    "version": 1,
+    "comparator": "nfclaw.scientific/1",
+    "assessed_at": "2026-10-27T12:34:40.065776+00:00",
+    "contract": "Tumourevo 1.0.0 tiny demo: filtered variants and PyClone input counts",
+    "contract_sha256": "f4ed23c0f8424fff5a34f0afc55eb0586c831649cba3ca5f960337c55f88546b",
+    "original": "/mnt/volume/nfclaw-remediation-evidence-20261026/tumourevo-bare-demo",
+    "replay": "/mnt/volume/nfclaw-remediation-evidence-20261026/tumourevo-corrected-replay",
+    "scope": "Only declared artifacts, record expectations and comparisons are assessed. Agreement does not establish biological accuracy, reference-byte identity or continuous immutability.",
+    "issues": [],
+    "artifacts": [
+      {
+        "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_MS/SCOUT_SPN01_MS_pyclone_input.tsv",
+        "format": "table",
+        "issues": [],
+        "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check",
+        "tolerances": {},
+        "ignore_columns": {
+          "": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"
+        },
+        "original": {
+          "records": 630,
+          "columns": [
+            "",
+            "patient_id",
+            "alt_counts",
+            "ref_counts",
+            "driver_label",
+            "sample_id",
+            "tumour_content",
+            "mutation_id",
+            "minor_cn",
+            "major_cn",
+            "is_driver",
+            "normal_cn"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "65c83ffb4fb9afbde07832d34662ee0d6b808da5c62a332f0597a501f7a208f0"
+        },
+        "replay": {
+          "records": 630,
+          "columns": [
+            "",
+            "sample_id",
+            "is_driver",
+            "normal_cn",
+            "ref_counts",
+            "minor_cn",
+            "major_cn",
+            "alt_counts",
+            "tumour_content",
+            "driver_label",
+            "patient_id",
+            "mutation_id"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "87fd2c47e11a66dc3881f932e7aa381007038a8ae41ca91d0b9894e108f88659"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_SS/SCOUT_SPN01_SS_pyclone_input.tsv",
+        "format": "table",
+        "issues": [],
+        "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check",
+        "tolerances": {},
+        "ignore_columns": {
+          "": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"
+        },
+        "original": {
+          "records": 626,
+          "columns": [
+            "",
+            "patient_id",
+            "sample_id",
+            "tumour_content",
+            "normal_cn",
+            "driver_label",
+            "alt_counts",
+            "minor_cn",
+            "is_driver",
+            "ref_counts",
+            "mutation_id",
+            "major_cn"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "05c4ebcc88ed058e7a1d6b2221f71d697bdcd6e6469523082a7ce258dd26821a"
+        },
+        "replay": {
+          "records": 626,
+          "columns": [
+            "",
+            "is_driver",
+            "major_cn",
+            "normal_cn",
+            "ref_counts",
+            "minor_cn",
+            "alt_counts",
+            "patient_id",
+            "mutation_id",
+            "driver_label",
+            "tumour_content",
+            "sample_id"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "632272d48bb8be541fbe041c7659a3b6efa15dfacb00c1bc50e9276795c01c5d"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_SS_nobam/SCOUT_SPN01_SS_nobam_pyclone_input.tsv",
+        "format": "table",
+        "issues": [],
+        "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check",
+        "tolerances": {},
+        "ignore_columns": {
+          "": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"
+        },
+        "original": {
+          "records": 429,
+          "columns": [
+            "",
+            "driver_label",
+            "mutation_id",
+            "ref_counts",
+            "is_driver",
+            "normal_cn",
+            "tumour_content",
+            "alt_counts",
+            "minor_cn",
+            "major_cn",
+            "patient_id",
+            "sample_id"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "6875e2861fbb82c90d6e5f6be683d1c10695889760534c10be97f5979ec31d7c"
+        },
+        "replay": {
+          "records": 429,
+          "columns": [
+            "",
+            "patient_id",
+            "ref_counts",
+            "major_cn",
+            "driver_label",
+            "alt_counts",
+            "minor_cn",
+            "tumour_content",
+            "mutation_id",
+            "is_driver",
+            "sample_id",
+            "normal_cn"
+          ],
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C"
+          ],
+          "sha256": "1928e145338894fd494a903f05fb4631eb759a752424b895b3bc34233ac2ceca"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_B.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 319,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_A",
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "e8b586abdba32230d152ff6c2d33a086dfd464d2c40ff8f3995511cca22b167c",
+            "canonical_bytes": 191268
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "7a5deaa71f045df420b280840541190e4a89aa372346f840d9d6e2a91c549a48"
+        },
+        "replay": {
+          "records": 319,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_A",
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "e8b586abdba32230d152ff6c2d33a086dfd464d2c40ff8f3995511cca22b167c",
+            "canonical_bytes": 191268
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "4daa885f8c4c91c993806cc6eb910fb3aa5be93f6446f16bcead61abbf32a6a4"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_C.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 319,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_A",
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "e8b586abdba32230d152ff6c2d33a086dfd464d2c40ff8f3995511cca22b167c",
+            "canonical_bytes": 191268
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "e6162a6ffecfc3646e4eda65dc00bc6e34dd61abb30c8b634a9ae607231e8071"
+        },
+        "replay": {
+          "records": 319,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_A",
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "e8b586abdba32230d152ff6c2d33a086dfd464d2c40ff8f3995511cca22b167c",
+            "canonical_bytes": 191268
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "68cf58828a0b946cba300287e510515e866239d8dfcd59d6bccf69fe46bb37f5"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_B.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 217,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "58deb3a66e298a28a44881b84c6c1b0708b12041c6ffed63cb9540a9e8dd38fe",
+            "canonical_bytes": 191356
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "7586a03b261bfcbcf45ef2442e598a40448921fb23b5af1250bd94812b85ce0e"
+        },
+        "replay": {
+          "records": 217,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "58deb3a66e298a28a44881b84c6c1b0708b12041c6ffed63cb9540a9e8dd38fe",
+            "canonical_bytes": 191356
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "249b4e90f8fd10aaadaff6213b0fd907d9130e29e54ae98ae1e21b3b140f5011"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_C.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 219,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "0852893d3116d0e0f5652d669b2736dc898d6a174e5e54e84cf3564b7be6801f",
+            "canonical_bytes": 191353
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "7954322508cce2f6c24ab15264b2ee90bce0771a9afbd0536fe1c28ab2617e4d"
+        },
+        "replay": {
+          "records": 219,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "0852893d3116d0e0f5652d669b2736dc898d6a174e5e54e84cf3564b7be6801f",
+            "canonical_bytes": 191353
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "faddf4215cded051821af4dac715a1f56abc0df9715b8c5781571510b4b9df4e"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_B.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 217,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "58deb3a66e298a28a44881b84c6c1b0708b12041c6ffed63cb9540a9e8dd38fe",
+            "canonical_bytes": 191356
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "e8b3c9c47258e1e9313e25680c8660d3f58af81e0e59c6a11ec8c6e170f87d7f"
+        },
+        "replay": {
+          "records": 217,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_B",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "58deb3a66e298a28a44881b84c6c1b0708b12041c6ffed63cb9540a9e8dd38fe",
+            "canonical_bytes": 191356
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "8fb239ba18ffd80c3d0c5861934472ce93835eab032faa1f83bcf1fc52519f92"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_C.vcf.gz",
+        "format": "vcf",
+        "issues": [],
+        "coordinates": "1-based, closed",
+        "tolerances": {},
+        "ignored_header_fields": {
+          "bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"
+        },
+        "field_encodings": {
+          "INFO/AS_SB_TABLE": "gatk-strand-counts"
+        },
+        "original": {
+          "records": 219,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "0852893d3116d0e0f5652d669b2736dc898d6a174e5e54e84cf3564b7be6801f",
+            "canonical_bytes": 191353
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "24e4afaf77a346baa3dbb056ff122d7f304b6ebe8438d1dd7622e35a878fc9b9"
+        },
+        "replay": {
+          "records": 219,
+          "samples": [
+            "SPN01_100X_0.9p_Sample_C",
+            "SPN01_normal_sample"
+          ],
+          "header": {
+            "sha256": "0852893d3116d0e0f5652d669b2736dc898d6a174e5e54e84cf3564b7be6801f",
+            "canonical_bytes": 191353
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Exact HTSlib-decoded variant records and spans, all INFO/FORMAT values, sample associations and phase separators; SHA-256 multiset. BCF numeric precision applies; arbitrary textual-decimal identity, normalization and biological equivalence are not established.",
+          "sha256": "f18e4ea65eda7099868d273d53779fcae24a67ffeece3b22892e73fcb07dec2b"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      }
+    ],
+    "pipeline_binding_scope": "recorded original only; candidate source and parameters are unverified",
+    "unassessed_files": {
+      "count": 207,
+      "examples": [
+        "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_B.vcf.gz.tbi",
+        "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_C.vcf.gz.tbi",
+        "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_B.vcf.gz.tbi",
+        "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_C.vcf.gz.tbi",
+        "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_B.vcf.gz.tbi",
+        "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_C.vcf.gz.tbi",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_B_driver.rds",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_C_driver.rds",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_B_driver.rds",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_C_driver.rds",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_B_driver.rds",
+        "driver_annotation/annotate_driver/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_C_driver.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_B_cna.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_C_cna.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_B_cna.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_C_cna.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_B_cna.rds",
+        "formatter/cna2cnaqc/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_C_cna.rds",
+        "formatter/cnaqc2tsv/SCOUT/SPN01_MS/SCOUT_SPN01_MS_joint_table.tsv",
+        "formatter/cnaqc2tsv/SCOUT/SPN01_SS/SCOUT_SPN01_SS_joint_table.tsv"
+      ],
+      "unexpanded_links": 0,
+      "scope": "Unselected file/link entries; directory symlinks are never traversed."
+    },
+    "passed": true
+  },
+  "platform": {
+    "system": "Linux",
+    "machine": "x86_64"
+  },
+  "contract_path": "/mnt/volume/nfclaw-remediation-matrix-source/runner/output_contracts/tumourevo-1.0.0-demo.json",
+  "assessed_at": "2026-10-27T12:34:41.520329+00:00",
+  "source_scope": "Commit identifies the assessor, not the earlier workflow launch; workflow launch records and retained run manifests are separate.",
+  "stored_report": {
+    "compactor": "nfclaw.audit.header-digests/1",
+    "compactor_sha256": "b4d119d81f976154c691e1dd59d24feb6ec00a096c25d113329e288dccf70328",
+    "raw_record": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-156c39e-tumourevo-replay-assessment.json",
+    "raw_record_sha256": "541ee34c6ff9c8a9e87e5697bc1f74f97b1cbaa41fb413e429718ff7b5186068",
+    "scope": "Lossless assessment conclusions; verbose decoded BAM/VCF header metadata is represented by its sorted compact ASCII JSON SHA-256 and byte length. The original raw assessor record is preserved at the linked server path. This storage transformation is separate from the recorded assessor execution."
+  }
+}

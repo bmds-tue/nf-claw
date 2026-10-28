@@ -26,12 +26,12 @@ const SECTIONS = [
   { id: "how", label: "How it works", hint: "Find, read, run — three commands" },
   { id: "pipelines", label: "Pipeline universe", hint: "Explore the constellation" },
   { id: "skills", label: "Skills explorer", hint: "What an agent reads" },
-  { id: "activity", label: "Live activity", hint: "Commits & automation" },
+  { id: "activity", label: "Repository activity", hint: "Commits & automation" },
   { id: "releases", label: "Release timeline", hint: "Pinned versions" },
   { id: "docs", label: "Documentation hub", hint: "Rendered from the repo" },
 ];
 
-const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
+export const OPEN_PALETTE_EVENT = "nfclaw:open-palette";
 
 /** Open the palette from anywhere (a search button, the header). */
 export function openPalette(): void {
@@ -118,10 +118,12 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       const typing = (e.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable=true]");
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((v) => !v);
+        if (e.repeat) return;
+        if (open) setOpen(false);
+        else openPalette();
       } else if (e.key === "/" && !typing && !open) {
         e.preventDefault();
-        setOpen(true);
+        openPalette();
       }
     };
     const onOpen = () => setOpen(true);

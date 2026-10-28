@@ -1,0 +1,28 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import subprocess,os,json,hashlib,stat,csv
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+commit='eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592';label='commit-eee40ee-bactmap-bare'
+out=root/label;receipt=root/(label+'.json');log=root/(label+'.console.log')
+assert not out.exists() and not receipt.exists()
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()==commit
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+up=source/'pipelines/bactmap/upstream';paths=subprocess.check_output(['git','ls-files','-z'],cwd=up,text=True).split('\0')
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def snapshot():return {p:{'sha256':sha(up/p),'mode':stat.S_IMODE((up/p).stat().st_mode)} for p in paths if p}
+before=snapshot()
+command=['/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python','-m','runner','run','bactmap','--demo','--outdir',str(out),'--nxf-ver','24.10.5','--limit-cpus','2','--limit-memory','4.GB','--limit-time','15.min','--timeout','300','--nxf-env','NXF_WORK=/dev/shm/nfclaw-bactmap-bare-eee40ee/work','--nxf-env','NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true']
+record={'version':1,'source_commit':commit,'pipeline_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=up,text=True).strip(),'worker':{'path':__file__,'sha256':sha(Path(__file__))},'started_at':datetime.now(UTC).isoformat(),'command':command,'outdir':str(out),'console_log':str(log),'pipeline_files_before':before,'scope':'Fresh reproduction of the ordinary pinned bare demo, no scientific completeness claim.'}
+receipt.write_text(json.dumps(record,indent=2)+'\n')
+with log.open('x') as f:result=subprocess.run(command,cwd=source,env={**os.environ,'PYTHONPATH':str(source)},stdout=f,stderr=subprocess.STDOUT)
+record.update(exit_code=result.returncode,finished_at=datetime.now(UTC).isoformat(),console_log_sha256=sha(log),pipeline_files_after=snapshot(),pipeline_unchanged=snapshot()==before)
+p=out/'provenance/run_manifest.json'
+if p.is_file():
+ m=json.loads(p.read_text());record.update({k:m.get(k) for k in ['outcome','completion_caveats','dependency_stability','nextflow']})
+traces=list((out/'pipeline_info').glob('execution_trace*.txt'))
+if len(traces)==1:
+ with traces[0].open() as f:record['tasks']=list(csv.DictReader(f,delimiter='\t'))
+ record['trace']=str(traces[0]);record['trace_sha256']=sha(traces[0])
+receipt.write_text(json.dumps(record,indent=2)+'\n')
+print('bare Bactmap exit',result.returncode,'source unchanged',record['pipeline_unchanged'],flush=True)
+assert record['pipeline_unchanged']

@@ -87,7 +87,7 @@ jobs:
             ${{ runner.temp }}/paired-replay
             work/**/.command.*
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 90
 
   native-wipe:
     strategy:
@@ -134,4 +134,4 @@ jobs:
             ${{ runner.temp }}/wipe-replay
             work/**/.command.*
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 90

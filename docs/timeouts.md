@@ -22,9 +22,9 @@ hard cutoff. A failed or incomplete provenance bundle never certifies success.
 Completion recording can query Nextflow task history and container engines and
 refetch validation-only remote tables. These recorder probes have their own operation
 limits, capped by the remaining execution budget, rather than the `NFCLAW_*` overrides
-below. Institutional-config branch resolution has a separate 30-second lookup limit;
-the execution budget is checked again after preparation, so that lookup may finish
-after a short requested deadline before the run is refused.
+below. Institutional-config branch resolution has a 30-second per-lookup cap, also
+bounded by the remaining active execution budget. Its supervised helper is stopped
+when that budget expires; the normal shutdown/evidence-recording limits still apply.
 
 `--limit-time DURATION` is separate: it caps each task's requested runtime, including
 retry growth, through Nextflow's `process.resourceLimits`. Use it only for a deliberate

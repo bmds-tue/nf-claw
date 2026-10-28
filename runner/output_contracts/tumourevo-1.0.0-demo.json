@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "name": "Tumourevo 1.0.0 tiny demo: filtered variants and PyClone input counts",
+  "pipeline": {
+    "name": "tumourevo",
+    "commit": "180ae5447d0eb0214f650b6fcf7dabed0c77b5a2",
+    "params": {"sparsesignatures_k": "2:3"}
+  },
+  "artifacts": [
+    {
+      "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_MS/SCOUT_SPN01_MS_pyclone_input.tsv",
+      "format": "table",
+      "delimiter": "\t",
+      "key": ["mutation_id", "sample_id"],
+      "columns": ["", "patient_id", "sample_id", "mutation_id", "driver_label", "is_driver", "alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "numeric": ["alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "ignore_columns": {"": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"},
+      "sample_column": "sample_id",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_B", "SPN01_100X_0.9p_Sample_C"],
+      "expected_records": 630,
+      "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check"
+    },
+    {
+      "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_SS/SCOUT_SPN01_SS_pyclone_input.tsv",
+      "format": "table",
+      "delimiter": "\t",
+      "key": ["mutation_id", "sample_id"],
+      "columns": ["", "patient_id", "sample_id", "mutation_id", "driver_label", "is_driver", "alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "numeric": ["alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "ignore_columns": {"": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"},
+      "sample_column": "sample_id",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_B", "SPN01_100X_0.9p_Sample_C"],
+      "expected_records": 626,
+      "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check"
+    },
+    {
+      "path": "subclonal_deconvolution/pyclonevi/SCOUT/SPN01_SS_nobam/SCOUT_SPN01_SS_nobam_pyclone_input.tsv",
+      "format": "table",
+      "delimiter": "\t",
+      "key": ["mutation_id", "sample_id"],
+      "columns": ["", "patient_id", "sample_id", "mutation_id", "driver_label", "is_driver", "alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "numeric": ["alt_counts", "ref_counts", "tumour_content", "normal_cn", "minor_cn", "major_cn"],
+      "ignore_columns": {"": "Pandas positional row index; mutation_id plus sample_id is the stable scientific key"},
+      "sample_column": "sample_id",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_B", "SPN01_100X_0.9p_Sample_C"],
+      "expected_records": 429,
+      "coordinates": "mutation_id is an opaque key retaining the pinned formatter's CNAqc from value; no coordinate conversion or genomic validity check"
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_B.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_A", "SPN01_100X_0.9p_Sample_B", "SPN01_100X_0.9p_Sample_C", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_MS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_MS_SPN01_100X_0.9p_Sample_C.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_A", "SPN01_100X_0.9p_Sample_B", "SPN01_100X_0.9p_Sample_C", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_B.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_B", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_SS/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_SPN01_100X_0.9p_Sample_C.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_C", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_B/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_B.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_B", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    },
+    {
+      "path": "bcftools/filter/SCOUT/SPN01_SS_nobam/SPN01_100X_0.9p_Sample_C/SCOUT_SPN01_SS_nobam_SPN01_100X_0.9p_Sample_C.vcf.gz",
+      "format": "vcf",
+      "field_encodings": {"INFO/AS_SB_TABLE": "gatk-strand-counts"},
+      "coordinates": "1-based, closed",
+      "expected_samples": ["SPN01_100X_0.9p_Sample_C", "SPN01_normal_sample"],
+      "min_records": 1,
+      "ignore_header_fields": {"bcftools_viewCommand": "Launch dates in bcftools command provenance vary; command-header records are excluded explicitly, tool-version records and every decoded variant field remain checked"}
+    }
+  ]
+}

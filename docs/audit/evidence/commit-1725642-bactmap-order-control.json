@@ -1,0 +1,446 @@
+{
+  "version": 1,
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-order-control.py",
+    "sha256": "dfbe41b3b5c2fa8b0a0abd24315b1402ef1a7e19879a464100067efe3cecf4e3"
+  },
+  "scope": "Compare actual FASTP/RASUSA decompressed record order and content, and published pseudogenome bytes for the default two-CPU and explicit single-CPU controls. No statistical tolerance or output exclusion.",
+  "demo": {
+    "runs": [
+      {
+        "kind": "original",
+        "intermediates": {
+          "FASTP/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e7/d12598213aa1faa9b95d8598a71e09/ERR2172265_1.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "FASTP/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e7/d12598213aa1faa9b95d8598a71e09/ERR2172265_2.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "FASTP/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/79/bb6650d05f4597e9a9486f79760420/ERR2172266_1.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "5bf753fc66fb4e597e68f540b166a9f727e56c4dcb6a310549398986a52622c6",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "FASTP/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/79/bb6650d05f4597e9a9486f79760420/ERR2172266_2.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "5d822807f1a7a76c268d824ce5bed9a7951ce62b97d243f00dd248d602432857",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "FASTP/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/61/b71f6e75ede001cc40bf194a1cc035/ERR2172267_1.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "4cee5e95f24d3e8734924c82263c03f06a9ad5376b39170121b841164896d346",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "FASTP/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/61/b71f6e75ede001cc40bf194a1cc035/ERR2172267_2.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "9a21448a8663292587bf84354f597c1cfc9029f4a177aa81da3ede05a08a5bbd",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          },
+          "RASUSA/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/da/94584c68dcebd4e3b69172cc73a4ab/ERR2172265_1.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "RASUSA/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/da/94584c68dcebd4e3b69172cc73a4ab/ERR2172265_2.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "RASUSA/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e8/35fc0b140d46b48bb3c5e4cfa5515f/ERR2172266_1.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "5bf753fc66fb4e597e68f540b166a9f727e56c4dcb6a310549398986a52622c6",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "RASUSA/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e8/35fc0b140d46b48bb3c5e4cfa5515f/ERR2172266_2.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "5d822807f1a7a76c268d824ce5bed9a7951ce62b97d243f00dd248d602432857",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "RASUSA/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/3f/1d76ed34c744866bcd5b9915a1a9c4/ERR2172267_1.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "4cee5e95f24d3e8734924c82263c03f06a9ad5376b39170121b841164896d346",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "RASUSA/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/3f/1d76ed34c744866bcd5b9915a1a9c4/ERR2172267_2.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "9a21448a8663292587bf84354f597c1cfc9029f4a177aa81da3ede05a08a5bbd",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          }
+        },
+        "pseudogenomes": {
+          "ERR2172265": "2a654c01b87abf91043535fe62a3ef18f24fa2155f539b15c946b878dbb9d4ba",
+          "ERR2172266": "6a2e13bba8e60399063d9b8bdbbe46602e5dc6aabc968a4d4e88971f90549abf",
+          "ERR2172267": "8775387080dfc36ce140769df662df7ead8bb72839779a6d87ae7fe6e5701f05"
+        }
+      },
+      {
+        "kind": "replay",
+        "intermediates": {
+          "FASTP/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/9d/550ae9834fc7422f89e90674d05da3/ERR2172265_1.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "fc452d7ee2601dfec5bac770298cd8a764349018f326331380f2c9daa792207f",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "FASTP/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/9d/550ae9834fc7422f89e90674d05da3/ERR2172265_2.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3f2e3997a6d666383da08f15888aea814bbfd7400ef95e7a698e350322446b95",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "FASTP/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e8/eddb4a3ca207fbf3887fd03174a987/ERR2172266_1.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "47fbfea7028459156978e8a432d252b1d7c713091523845f3dd712af3680a1b2",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "FASTP/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/e8/eddb4a3ca207fbf3887fd03174a987/ERR2172266_2.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "ee94a5d6fd63ef804d8dff81241524877357fade5e66dbd5608ccfe554cb8df2",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "FASTP/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/32/1b392b257b2550e9fe06acac97c036/ERR2172267_1.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "3f5215fa024d7adc513d639dbd0ab75f5b64cdacba9784c9c77d09b68f36ac3f",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "FASTP/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/32/1b392b257b2550e9fe06acac97c036/ERR2172267_2.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "3c4fb09a0bd2a0b301bf9b562bd7efb508f848e089fef2d0d9c382dd87861ed2",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          },
+          "RASUSA/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/fa/75aca4b94fb3d81a3908740f1fd529/ERR2172265_1.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "fc452d7ee2601dfec5bac770298cd8a764349018f326331380f2c9daa792207f",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "RASUSA/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/fa/75aca4b94fb3d81a3908740f1fd529/ERR2172265_2.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3f2e3997a6d666383da08f15888aea814bbfd7400ef95e7a698e350322446b95",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "RASUSA/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/ce/aa69a1a7109e2177ffa11c93f4a012/ERR2172266_1.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "47fbfea7028459156978e8a432d252b1d7c713091523845f3dd712af3680a1b2",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "RASUSA/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/ce/aa69a1a7109e2177ffa11c93f4a012/ERR2172266_2.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "ee94a5d6fd63ef804d8dff81241524877357fade5e66dbd5608ccfe554cb8df2",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "RASUSA/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/86/19026344dcfb46f71c25630431c319/ERR2172267_1.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "3f5215fa024d7adc513d639dbd0ab75f5b64cdacba9784c9c77d09b68f36ac3f",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "RASUSA/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-demo-1725642/work/86/19026344dcfb46f71c25630431c319/ERR2172267_2.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "3c4fb09a0bd2a0b301bf9b562bd7efb508f848e089fef2d0d9c382dd87861ed2",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          }
+        },
+        "pseudogenomes": {
+          "ERR2172265": "2ed456831ff66d741f7c7135518df3a66d39bb5df626860d889e964765ca3a3e",
+          "ERR2172266": "6fc6dc828104802b174aa291311c0ffaa968bd02704e92d6ce462929d5026efe",
+          "ERR2172267": "dcc6ba2e99019bb366bafd5759e21dbc33980465ce5b6bbab736af3d98be2822"
+        }
+      }
+    ],
+    "intermediate_comparison": {
+      "FASTP/ERR2172265/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172265/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172266/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172266/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172267/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172267/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172265/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172265/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172266/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172266/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172267/1": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172267/2": {
+        "same_ordered_records": false,
+        "same_record_multiset": true
+      }
+    },
+    "pseudogenomes_byte_identical": false
+  },
+  "singlecpu": {
+    "runs": [
+      {
+        "kind": "original",
+        "intermediates": {
+          "FASTP/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/34/6085f7329f0147afe3f5821ba411fa/ERR2172265_1.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "FASTP/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/34/6085f7329f0147afe3f5821ba411fa/ERR2172265_2.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "FASTP/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/61/fe10881bed7d862c2ed49a39736240/ERR2172266_1.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "07c4b820d5544dadd45701b0e08ca2fc98510ca7f8bcbd333b7454b36484c212",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "FASTP/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/61/fe10881bed7d862c2ed49a39736240/ERR2172266_2.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "722e34d8484dcf0d6a73511cae6bf97e30b89de9d0b4f35753dd3511bd8cb6b4",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "FASTP/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/5a/af23903342155508bace678b01f81b/ERR2172267_1.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "1d01fad145136b4c71e6ffce6eed74790fadbef5543ba96281d9a38cf8d076ab",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "FASTP/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/5a/af23903342155508bace678b01f81b/ERR2172267_2.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "04964dc4bef095632e1ee4df660bdde3150ae2e196c7997b90624c7dd0af4266",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          },
+          "RASUSA/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/d3/738c3a57a9f733ba0b2c2481782235/ERR2172265_1.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "RASUSA/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/d3/738c3a57a9f733ba0b2c2481782235/ERR2172265_2.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "RASUSA/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/2e/53193a0e39efba9efa3b36a08ca65b/ERR2172266_1.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "07c4b820d5544dadd45701b0e08ca2fc98510ca7f8bcbd333b7454b36484c212",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "RASUSA/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/2e/53193a0e39efba9efa3b36a08ca65b/ERR2172266_2.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "722e34d8484dcf0d6a73511cae6bf97e30b89de9d0b4f35753dd3511bd8cb6b4",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "RASUSA/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/e1/b57c56be7124aa008bd669b8f440a7/ERR2172267_1.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "1d01fad145136b4c71e6ffce6eed74790fadbef5543ba96281d9a38cf8d076ab",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "RASUSA/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/e1/b57c56be7124aa008bd669b8f440a7/ERR2172267_2.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "04964dc4bef095632e1ee4df660bdde3150ae2e196c7997b90624c7dd0af4266",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          }
+        },
+        "pseudogenomes": {
+          "ERR2172265": "2a654c01b87abf91043535fe62a3ef18f24fa2155f539b15c946b878dbb9d4ba",
+          "ERR2172266": "933f0f3292f21bd285912fe906f4dd2c0d9eb4099c419e41d44d77daf18b6a82",
+          "ERR2172267": "06d0587c3e404ac17bd6355186dac1ac8e09bafed8ae7a6a72475663390a050d"
+        }
+      },
+      {
+        "kind": "replay",
+        "intermediates": {
+          "FASTP/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/27/d86a9bc83fa5fdf72de8e5f443301a/ERR2172265_1.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "FASTP/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/27/d86a9bc83fa5fdf72de8e5f443301a/ERR2172265_2.trim.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "FASTP/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/ea/5d8de5082970cf550eb5679427ca25/ERR2172266_1.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "07c4b820d5544dadd45701b0e08ca2fc98510ca7f8bcbd333b7454b36484c212",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "FASTP/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/ea/5d8de5082970cf550eb5679427ca25/ERR2172266_2.trim.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "722e34d8484dcf0d6a73511cae6bf97e30b89de9d0b4f35753dd3511bd8cb6b4",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "FASTP/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/63/ee7e7a995b9f75361023ab26a13d5b/ERR2172267_1.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "1d01fad145136b4c71e6ffce6eed74790fadbef5543ba96281d9a38cf8d076ab",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "FASTP/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/63/ee7e7a995b9f75361023ab26a13d5b/ERR2172267_2.trim.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "04964dc4bef095632e1ee4df660bdde3150ae2e196c7997b90624c7dd0af4266",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          },
+          "RASUSA/ERR2172265/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/51/e0e200475e5350099191c8dc84d3d0/ERR2172265_1.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "d0cb4fbdec1a531fdbb262b73c89745f822ddfaad05b936118d26893a890f301",
+            "sorted_record_sha256": "7932b29a1da406fe8aa403370bf1c462392c6c43e4cefee27c12b257606af867"
+          },
+          "RASUSA/ERR2172265/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/51/e0e200475e5350099191c8dc84d3d0/ERR2172265_2.fastq.gz",
+            "records": 105614,
+            "ordered_record_sha256": "3ac0e1e82f1143bd151c28fadd8f36117e213346cfb03cd50e751f94a594c625",
+            "sorted_record_sha256": "f9ca6474e6552cb81055e396e32e02973ca661555ff3094e8840342ab9d7143f"
+          },
+          "RASUSA/ERR2172266/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/17/25780e0ca57712c3d8e8c4f0321aab/ERR2172266_1.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "07c4b820d5544dadd45701b0e08ca2fc98510ca7f8bcbd333b7454b36484c212",
+            "sorted_record_sha256": "de65879aa9cb7014e9f9f92c544f551d5ddd7103817841e4488da5fec7435c99"
+          },
+          "RASUSA/ERR2172266/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/17/25780e0ca57712c3d8e8c4f0321aab/ERR2172266_2.fastq.gz",
+            "records": 90611,
+            "ordered_record_sha256": "722e34d8484dcf0d6a73511cae6bf97e30b89de9d0b4f35753dd3511bd8cb6b4",
+            "sorted_record_sha256": "14d402b08c5f5bff0d47048715c6601bfa7b6cfabbbde731a2189c188a309a61"
+          },
+          "RASUSA/ERR2172267/1": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/a9/96d061121a773f16c95d896747be6b/ERR2172267_1.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "1d01fad145136b4c71e6ffce6eed74790fadbef5543ba96281d9a38cf8d076ab",
+            "sorted_record_sha256": "01a7e2f12cf3f880a88b5ac351891f1455d8b64347f936092f2254803cbcbabc"
+          },
+          "RASUSA/ERR2172267/2": {
+            "path": "/dev/shm/nfclaw-bactmap-singlecpu-1725642/work/a9/96d061121a773f16c95d896747be6b/ERR2172267_2.fastq.gz",
+            "records": 120344,
+            "ordered_record_sha256": "04964dc4bef095632e1ee4df660bdde3150ae2e196c7997b90624c7dd0af4266",
+            "sorted_record_sha256": "ad7864760cbe04030081e3fc1fe171465989c61a5a9e2f40069918d8c7dabf55"
+          }
+        },
+        "pseudogenomes": {
+          "ERR2172265": "2a654c01b87abf91043535fe62a3ef18f24fa2155f539b15c946b878dbb9d4ba",
+          "ERR2172266": "933f0f3292f21bd285912fe906f4dd2c0d9eb4099c419e41d44d77daf18b6a82",
+          "ERR2172267": "06d0587c3e404ac17bd6355186dac1ac8e09bafed8ae7a6a72475663390a050d"
+        }
+      }
+    ],
+    "intermediate_comparison": {
+      "FASTP/ERR2172265/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172265/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172266/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172266/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172267/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "FASTP/ERR2172267/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172265/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172265/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172266/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172266/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172267/1": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      },
+      "RASUSA/ERR2172267/2": {
+        "same_ordered_records": true,
+        "same_record_multiset": true
+      }
+    },
+    "pseudogenomes_byte_identical": true
+  }
+}

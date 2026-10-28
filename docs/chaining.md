@@ -297,3 +297,11 @@ from the published results whose original byte and namespace manifests remain
 authoritative. The directory is passed intact. Later changes to either part break
 that boundary's lineage. This observation does not claim that execution records
 were scientific products of the pipeline.
+
+### Sensitive environment values in chain records
+
+Chain records apply the same environment redaction as run provenance. The private chain directory
+uses mode 0700 and its JSON records mode 0600. A recorded `<redacted>` value is never passed to
+Nextflow: resume requires its real value again, either exported in the environment or supplied
+in the original private spec. Succeeded-stage fingerprints still compare the effective values,
+so supplying different credentials does not silently redefine a frozen stage.

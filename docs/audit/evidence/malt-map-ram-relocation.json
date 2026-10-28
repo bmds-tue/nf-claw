@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "at": "2026-10-27T20:52:13.406491+00:00",
+  "original_temporary_path": "/mnt/volume/nfclaw-remediation-matrix-source/work/dd/8692d52e5589e0b145b4abb0af5e17/nucl_acc2tax-Jul2019/nucl_acc2tax-Jul2019.abin",
+  "temporary_ram_path": "/dev/shm/nfclaw-remediation-20261026-malt-map/nucl_acc2tax-Jul2019.abin",
+  "bytes": 4152738778,
+  "sha256": "14c115f4bbcf5889658f5c62253775bba0b1fa2961a5669d468c3000eb96f11f",
+  "retained_archive": "/mnt/volume/nfclaw-remediation-matrix-source/work/stage-edcf8541-00bc-437e-94eb-8e5611bd9672/ba/aef26fb2b51e6331f9871e3174568b/nucl_acc2tax-Jul2019.abin.zip",
+  "retained_archive_bytes": 2225285084,
+  "reason": "Relocate this audits decompressed scratch reference to existing tmpfs to keep original downloaded archive and all images/data/evidence while completing limited-space validation.",
+  "lifetime": "RAM materialization disappears on host reboot; retained archive reconstructs it."
+}

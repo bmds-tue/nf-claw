@@ -1,0 +1,33 @@
+from pathlib import Path
+import importlib.util,subprocess,json,os,hashlib,stat,sys
+from datetime import datetime,UTC
+source=Path('/mnt/volume/nfclaw-remediation-20261026')
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2')
+root.mkdir(exist_ok=False)
+sys.path.insert(0,str(source))
+from runner import submodule,replay_guard
+from runner.probes import capture
+from types import SimpleNamespace
+up=source/'pipelines/bactmap/upstream'
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def snapshot():return {p:{'sha256':digest,'mode':stat.S_IMODE((up/p).stat().st_mode)} for p,digest in replay_guard.hash_pipeline(up).items()}
+before=snapshot()
+spec=importlib.util.spec_from_file_location('preview',source/'scripts/nextflow_preview.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+config=root/'no-reports.config';config.write_text('report.enabled=false\ntimeline.enabled=false\ntrace.enabled=false\ndag.enabled=false\n')
+args=SimpleNamespace(name='bactmap',commit='834642d8ac150ca10d705833223e7bcf15efc210',repo_root=source,upstream=up,config=config,outdir=root/'out',work=Path('/dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work'),engine_log=root/'nextflow.log',scratch=root/'staging',version='24.10.5')
+os.environ['NXF_JVM_ARGS']='-Djava.net.preferIPv6Addresses=true'
+with m.execution.stop_on_signals():command,env,cwd=m.prepare(args)
+actual=Path(command[command.index('run')+1]);params=Path(command[command.index('-params-file')+1])
+records={'started_at':datetime.now(UTC).isoformat(),'worker':{'path':__file__,'sha256':sha(Path(__file__))},'scope':'Precommit managed source/config/preview diagnostic; not scientific execution evidence.','command':command,'params':json.loads(params.read_text()),'source':str(actual),'before':before,'stages':[]}
+(root/'record.json').write_text(json.dumps(records,indent=2)+'\n')
+for label,cmd,timeout in [('config',['nextflow','config',str(actual),'-profile','test,docker','-flat'],90),('preview',command,180)]:
+ try:
+  result=capture(cmd,timeout=timeout,env=env,cwd=str(cwd))
+  (root/(label+'.stdout')).write_text(result.stdout);(root/(label+'.stderr')).write_text(result.stderr)
+  entry={'label':label,'command':cmd,'exit_code':result.returncode,'stdout_sha256':sha(root/(label+'.stdout')),'stderr_sha256':sha(root/(label+'.stderr'))}
+ except subprocess.TimeoutExpired as e:
+  entry={'label':label,'command':cmd,'timeout':timeout,'exception':str(e)}
+ records['stages'].append(entry);print(entry,flush=True)
+ records['after']=snapshot();records['original_unchanged']=before==records['after'];(root/'record.json').write_text(json.dumps(records,indent=2)+'\n')
+assert records['original_unchanged']
+assert all(x.get('exit_code')==0 for x in records['stages']), records['stages']

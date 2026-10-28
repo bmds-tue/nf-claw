@@ -24,7 +24,7 @@ nf-core/funcscan pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--amp-ampcombi-db` | string |  |  |  |  |  | The path to the folder containing the reference database files. |
+| `--amp-ampcombi-db` | string (directory path) |  |  |  |  |  | The path to the folder containing the reference database files. |
 | `--amp-ampcombi-db-id` | string |  |  | `DRAMP`, `APD`, `UniRef100` |  | DRAMP | The name of the database used to classify the AMPs. |
 | `--amp-ampcombi-parsetables-aalength` | integer |  |  |  |  | 120 | Filter out all amino acid fragments shorter than this number. |
 | `--amp-ampcombi-parsetables-ampir` | string |  |  |  |  | .ampir.tsv | Assigns the file extension used to identify AMPIR output. |

@@ -691,3 +691,16 @@ def test_log_facts_list_the_files_validation_read(tmp_path):
                    "x Validation of file 'https://e.org/sheet.csv' passed!\n"
                    "x Validation of file '/local/sheet.csv' passed!\n")
     assert env_record.log_facts(log, None)["validated"] == ["https://e.org/sheet.csv"]
+
+
+def test_an_extracted_source_edited_while_replay_ran_fails_it(tmp_path, fake_tools):
+    st = _git_pipeline(tmp_path)
+    prov = _launch(tmp_path, st)
+    (st.path / 'main.nf').write_text('checkout no longer matches\n')
+    target = tmp_path / 'fresh'
+    result = _replay(prov, target,
+                     FAKE_MUTATE=str(target / 'provenance' / 'pipeline' / 'main.nf'))
+    assert result.returncode == 1
+    log = (target / 'provenance' / 'logs' / 'run.log').read_text()
+    assert log.rstrip().endswith('failed after Nextflow succeeded (local dependencies changed)')
+    assert 'pipeline source content changed' in log

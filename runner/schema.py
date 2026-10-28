@@ -234,13 +234,14 @@ def iter_param_groups(data: dict) -> Iterator[tuple[str, dict]]:
 
 
 def read_param_schema(repo: Path) -> dict:
-    """The pipeline's `nextflow_schema.json`, with its source-audited value parameters applied.
+    """The pipeline's schema with exact-revision source-audited parameter roles applied.
 
     A few releases annotate a plain value as a file: nanoseq 2.0.0-3.0.0 give the `--protocol`
     string (DNA, cDNA or directRNA) a `file-path` format and the input samplesheet's `schema`.
     `param_roles.json` records, by schema digest and exact revision, parameters whose pinned
     source only compares the value with literals; their path annotations are dropped so the value
-    is passed as written. Any other revision keeps the published annotations.
+    is passed as written. Audited input paths missing their format acquire it, so local dependency
+    snapshots, absolute resolution and write boundaries apply. Other revisions keep their schema.
     """
     content = (repo / "nextflow_schema.json").read_bytes()
     data = json.loads(content)
@@ -250,9 +251,14 @@ def read_param_schema(repo: Path) -> dict:
         if submod._own_head(repo) in audited["releases"].values():
             for _, group in iter_param_groups(data):
                 for name, obj in (group.get("properties") or {}).items():
-                    if name in audited["values"] and isinstance(obj, dict):
+                    if not isinstance(obj, dict):
+                        continue
+                    if name in audited.get("values", {}):
                         for key in ("format", "schema", "mimetype", "exists"):
                             obj.pop(key, None)
+                    if role := audited.get("paths", {}).get(name):
+                        obj['format'] = role['format']
+                        obj['exists'] = role['exists']
     return data
 
 

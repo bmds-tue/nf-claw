@@ -29,6 +29,7 @@ export function LiveStatus({
   lastUpdate: string | null;
   repo: string | null;
 }) {
+  const capturedAt = new Date().toISOString();
   const autoUpdate = workflows.find((w) => w.schedule);
   const cron = humanizeCron(autoUpdate?.schedule ?? null);
   const gh = repo ? `https://github.com/${repo}` : null;
@@ -36,11 +37,12 @@ export function LiveStatus({
   return (
     <section id="activity" data-progress="Activity" className="section container-site">
       <SectionHeading
-        eyebrow="Always in sync"
-        title="Live repository status"
-        description="Commits, automation and release activity — read straight from git and GitHub Actions. When the repository changes, this view changes with it."
+        eyebrow="Build snapshot"
+        title="Repository status"
+        description="Commits and automation captured from git and GitHub Actions when this site was built. Rebuild the site to refresh this view."
       />
 
+      <p className="mt-3 text-xs text-fog-dim">Snapshot captured <time dateTime={capturedAt}>{capturedAt}</time></p>
       {/* status strip */}
       <Reveal className="mt-10">
         <div className="grid gap-3 sm:grid-cols-3">

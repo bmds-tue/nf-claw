@@ -406,6 +406,9 @@ def ensure(name: str, version: str | None, *, pipelines_dir: Path,
     base = submod.ensure_initialized(name, pipelines_dir, repo_root)
     if is_dev_request(version):
         return materialize_dev(name, pipelines_dir=pipelines_dir, repo_root=repo_root)
+    if (_RELEASE_TAG.fullmatch(version)
+            and version.lstrip("v") == base.version.lstrip("v")):
+        return base  # ensure_initialized already verified the local documented pin
     tag = resolve(name, version, pipelines_dir=pipelines_dir, repo_root=repo_root)
     if tag.lstrip("v") == base.version.lstrip("v"):
         return base                                            # requested == pin → no cache needed

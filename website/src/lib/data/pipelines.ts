@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { repoPath, readText } from "./paths";
 import {
   splitFrontmatter,
+  sectionLines,
   tableUnder,
   parseTableAt,
   codeBlockUnder,
@@ -267,7 +268,12 @@ export function getPipelines(): Pipeline[] {
       const { data: fm, content: skillBody } = splitFrontmatter(skillRaw);
       const reference = referenceRaw ? splitFrontmatter(referenceRaw).content : "";
 
-      const groups = parseReference(reference);
+      // Schema descriptions use links relative to upstream docs/usage.md.
+      const sourceBase = `https://github.com/nf-core/${name}/blob/${String(fm.commit)}/docs/usage.md`;
+      const linkedReference = reference.replace(/(\[[^\]]+\]\()([^\s)]+)(\))/g,
+        (whole, prefix, href, suffix) => /^[a-z][a-z0-9+.-]*:|^[#/]/i.test(href)
+          ? whole : `${prefix}${new URL(href, sourceBase).href}${suffix}`);
+      const groups = parseReference(linkedReference);
       const parameterCount = groups.reduce((n, g) => n + g.parameters.length, 0);
       const commit = String(fm.commit ?? "");
       const { run, raw } = runCommands(skillBody, name);
@@ -285,6 +291,10 @@ export function getPipelines(): Pipeline[] {
         runCommand: run,
         rawCommand: raw,
         demoCommand: demoCommand(skillBody),
+        operatingGuidance: ["Runtime corrections", "Inputs", "Reference genome", "Reference database", "Secrets",
+          "Resources", "Nextflow engine", "Demo"]
+          .map((title) => ({ title, content: sectionLines(skillBody, title).join("\n").trim() }))
+          .filter((section) => section.content),
         samplesheet: parseSamplesheet(skillBody),
         samplesheetHeaders: parseSamplesheetHeaders(skillBody),
         requiredParams: parseRequired(skillBody),

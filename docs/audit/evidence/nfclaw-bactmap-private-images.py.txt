@@ -1,0 +1,23 @@
+from pathlib import Path
+import os,re,subprocess,json,time,hashlib
+from datetime import datetime,UTC
+source=Path('/mnt/volume/nfclaw-remediation-20261026/pipelines/bactmap/upstream')
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028')
+record=root/'bactmap-images.json';assert not record.exists()
+images=sorted({v for p in source.rglob('*.nf') for v in re.findall(r'["\x27](quay.io/[^"\x27]+)["\x27]',p.read_text())})
+socket='unix:///dev/shm/nfc-d28/docker.sock'
+results={'version':1,'worker':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'socket':socket,'images':[]}
+def save():record.write_text(json.dumps(results,indent=2)+'\n')
+for i,image in enumerate(images):
+ free=os.statvfs('/dev/shm');free=free.f_bavail*free.f_frsize
+ assert free>8*1024**3,'Less than 8GiB RAM filesystem headroom; preserve prior results and stop.'
+ row={'image':image,'started_at':datetime.now(UTC).isoformat(),'free_bytes_before':free,'log':str(root/f'image-{i:02d}.log')};results['images'].append(row);save()
+ with Path(row['log']).open('x') as log:
+  process=subprocess.run(['docker','--host',socket,'pull',image],stdout=log,stderr=subprocess.STDOUT,timeout=300)
+ row.update(exit_code=process.returncode,finished_at=datetime.now(UTC).isoformat(),log_sha256=hashlib.sha256(Path(row['log']).read_bytes()).hexdigest())
+ if process.returncode==0:
+  row['inspection']=json.loads(subprocess.check_output(['docker','--host',socket,'image','inspect',image],text=True))[0]
+ save();print(image,'exit',process.returncode,flush=True)
+ if process.returncode:break
+assert len(results['images'])==len(images) and all(row['exit_code']==0 for row in results['images'])
+print('All exact Bactmap image tags available in private RAM-backed engine',flush=True)

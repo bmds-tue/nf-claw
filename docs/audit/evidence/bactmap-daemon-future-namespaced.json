@@ -1,0 +1,20 @@
+{
+  "features": {
+    "containerd-snapshotter": false
+  },
+  "data-root": "/dev/shm/nfc-d28/data",
+  "exec-root": "/run/nfc-d28",
+  "pidfile": "/dev/shm/nfc-d28/dockerd.pid",
+  "hosts": [
+    "unix:///dev/shm/nfc-d28/docker.sock"
+  ],
+  "bridge": "none",
+  "iptables": false,
+  "ip6tables": false,
+  "ip-forward": false,
+  "ip-masq": false,
+  "storage-driver": "overlay2",
+  "max-concurrent-downloads": 1,
+  "containerd-namespace": "nfclaw-bactmap-20261028",
+  "containerd-plugins-namespace": "nfclaw-bactmap-plugins-20261028"
+}

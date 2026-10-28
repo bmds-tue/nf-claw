@@ -1,0 +1,1138 @@
+{
+  "started_at": "2026-10-28T04:38:24.118585+00:00",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-managed-probe-v2.py",
+    "sha256": "4e6f17191a57de80a04693b3a678f55a945c03aec2486bc62d24ecfc896ce9d1"
+  },
+  "scope": "Precommit managed source/config/preview diagnostic; not scientific execution evidence.",
+  "command": [
+    "nextflow",
+    "-log",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/nextflow.log",
+    "run",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline",
+    "-profile",
+    "test,docker",
+    "-params-file",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/params.json",
+    "-work-dir",
+    "/dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work",
+    "--input",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv",
+    "-c",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config",
+    "--outdir",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out",
+    "-preview"
+  ],
+  "params": {
+    "custom_config_version": "19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20",
+    "input": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv",
+    "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out",
+    "reference": "https://raw.githubusercontent.com/nf-core/test-datasets/02195cfa96ca496173e9d63dd58e34bf02fcf55a/genome/NCTC13799.fna"
+  },
+  "source": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline",
+  "before": {
+    ".editorconfig": {
+      "sha256": "dd306bd5d532bb82747e2ba9c9434796017e399fe4793205022aee72e061887d",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "e338759ab75cb11f1deede242b9c910fda5f0b1ca05f389700b81a02ca0ac560",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/CONTRIBUTING.md": {
+      "sha256": "9e6ccaac8b391736730336ea0a64d1c7ac11cdd436892b65531dec8497ea0f64",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.md": {
+      "sha256": "a8e4da5432154777042db7ebfed48dcc98dcb07989f4bbc77358168694189bd8",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "a340ae391c8d44765052de17a0ec7560bdaff1cc83341d599c81505cff95acce",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.md": {
+      "sha256": "8eb338e2806e44f2445e4e5410a32677c75954b19855592e7938aa48340ac990",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "efa39fade499d6c0f28efdffe4ca145410d7ba8418fa8382f303f4d1fcc013b7",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "716d5edc46779fd534afda77b90da08183aea2f70be38ee43f840731ea146110",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "36d0ecfe5de43a58355600727fece27044f68b6a56d1f947d3b9346a4302de69",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "f4cb7076305fc98424ff6c4645481a80735d196892644cd3fe84b3672d9f199a",
+      "mode": 436
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "c49bbe1edba79719e635e1a050d50ec81fb948f95c36f52780ca3be2edfffcf2",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e067f6185389a8b4b12f568d14bfa752616f9442b5f17d53eccebd7a57cf045c",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "6217bd65230bdecce3dbc0cb2e67261f53cfd2b9e42fcc2bf5295d172e684f3f",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "2951a235c2fdc85f1a8bf0a53c1fe94a475de51ea2d6202f887010d061e90cce",
+      "mode": 436
+    },
+    ".markdownlint.yml": {
+      "sha256": "f5a831528d73b59e370fe3f53ea525f6378944501371ba86bfbba573234951cd",
+      "mode": 509
+    },
+    ".nf-core-lint.yml": {
+      "sha256": "036cc890454a3fa89504c69de514080fdb881646b3a7a834897b067a4c010968",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "bfa87bce61f6b78503eaec1b154daec6107b27b3178596538fae11c8302164a4",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "d375fe03d76dc5bb459be4e08b7e0360a6e599eeb07e11a3c2d0c3e714a8e402",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "8b850e0cf10fa53b7e366ec1a3f7ca65e84b79836137a413461394e6695bbc48",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "ccf1a04be6154c0d184c8dce61518be1fa940ef6722cd71c8afbbab7ba66db3f",
+      "mode": 436
+    },
+    "assets/adapters.fas": {
+      "sha256": "42bf334278ae112b50564696833e40386990e789e39571ac1109a5be5f48b17f",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "0d6f858755dd5f11d3ab19d22bc46ce7869f82f25dfab9b750c263363ac87de7",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "1df378bb66b963255a8550479528440c8ae4af1285c36d919522a1b3f2557c2a",
+      "mode": 436
+    },
+    "assets/multiqc_config.yaml": {
+      "sha256": "803e2bea469c3062725fe1332d8417f6b0c0b8542e776226b4662adf67039eda",
+      "mode": 436
+    },
+    "assets/nf-core-bactmap_logo.png": {
+      "sha256": "86a94278830367ebb4293856402b43ee922f511a35a167d1cece1f35d4fe5247",
+      "mode": 436
+    },
+    "assets/nihr_logos_funded_by.jpg": {
+      "sha256": "a4b4d555faee4eb73b2af5aa80792cf8b2fa9745140dbf4f77348fcbc7fe3885",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "d7b0a959143ddd28fc15598f585276cb0706c1356eea45d8649cb0d428f7047b",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "cdd454acd5e6cf5951a358c0b7b82e9d36fc9f50a0da158e1ec5dbbf10495420",
+      "mode": 436
+    },
+    "bin/calculate_fraction_of_non_GATC_bases.py": {
+      "sha256": "b25ee78d05330ac6b30de6dc380c3c40506db5de01253f48e2ede31778c55d37",
+      "mode": 509
+    },
+    "bin/check_samplesheet.py": {
+      "sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54",
+      "mode": 509
+    },
+    "bin/reference2single_sequence.py": {
+      "sha256": "10c9c370dd810a4e04fdea9d402d34426c929e0f91b23e7ea53b374ac0532fc7",
+      "mode": 509
+    },
+    "bin/scrape_software_versions.py": {
+      "sha256": "442749fd7771af1b1c85ff5219224b7e25e874ad1fafce55004f663ab7df6ccf",
+      "mode": 509
+    },
+    "bin/vcf2pseudogenome.py": {
+      "sha256": "ce9b364f55837cb6e2cd80b9013083010c11ec92c8a983f9fbfcf159dfd4880e",
+      "mode": 509
+    },
+    "conf/base.config": {
+      "sha256": "3ca02b0a22aa2d59c6123340a8c98956e734bef43a5b7f879d964dd0c9cf709e",
+      "mode": 436
+    },
+    "conf/modules.config": {
+      "sha256": "c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "082119ce8bf494ff81a32479277dbbcbf93dc2c8396a15300e061c15d44ca72e",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "2773a12075a16a64581db7d48134488a91e8f1e1786018601370c7804cd82e94",
+      "mode": 436
+    },
+    "docs/fixing_resource_errors.md": {
+      "sha256": "78502b010f317cc888d4c74d15fa2556e07bb4ba9e92758c8685be57767da1ec",
+      "mode": 436
+    },
+    "docs/images/Bactmap_pipeline.png": {
+      "sha256": "a7852914f5edb6d9746fd95d2fc7bcf54f4fb4be969facc8084bf67cd27a2810",
+      "mode": 436
+    },
+    "docs/images/multiqc_fastp.png": {
+      "sha256": "771f13a3e83b2afe3636ab8c91b69d8985620e1bec6631eb614548515b7ecef6",
+      "mode": 436
+    },
+    "docs/images/multiqc_general_stats.png": {
+      "sha256": "8c5fbaf1d1af13efdfbd9c5a4392b5e2e67808d9fa5aacddd7ce7085085e37a0",
+      "mode": 436
+    },
+    "docs/images/multiqc_mapping_stats.png": {
+      "sha256": "d4c262254d0004f7e3774d12f1c87d1b8a5620d217b312a81938370aade3cd94",
+      "mode": 436
+    },
+    "docs/images/multiqc_variants_stats.png": {
+      "sha256": "d370c456f1072ff60d063e77a2bae38ec7e24a09ff1398e0f06b027485349aab",
+      "mode": 436
+    },
+    "docs/images/nf-core-bactmap_logo.png": {
+      "sha256": "60f1f2e4425b09cfa5426d5624ba0769776b9c5f0a195dc83f1112c0818d5368",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "3e5b48c768bd3fe35aef2d9b7681b60e7a3c5aa6f19fd292da422922959b15ab",
+      "mode": 436
+    },
+    "docs/tool-specific_option_configuration.md": {
+      "sha256": "3c7a393207e55d40b91c8e37a9f13091951677efe97621f1464f9e2f3e6ce14c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "707650f3b8141991601022f05a663e8c8415b75a68c570d01ef3ab838a4c6de7",
+      "mode": 436
+    },
+    "lib/NfcoreSchema.groovy": {
+      "sha256": "05bdf46dea2961294bd5ac8cd7b9e4bd7ce89c24a93871dfa3949ae68e9937de",
+      "mode": 509
+    },
+    "lib/NfcoreTemplate.groovy": {
+      "sha256": "dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2",
+      "mode": 509
+    },
+    "lib/Utils.groovy": {
+      "sha256": "31fe917ba0613e6f7bf7ab86ef4289973bd90f6d56c5e62d6351899970c257f0",
+      "mode": 509
+    },
+    "lib/WorkflowBactmap.groovy": {
+      "sha256": "55a61779a485d63823ae9d8cbf38b5df7db4c5ebb9595ddd9f05d71decd31f6f",
+      "mode": 509
+    },
+    "lib/WorkflowMain.groovy": {
+      "sha256": "e62810ef5ac8737c320ee3906304a4af0ac1ae7b984f8843eb5a97583bba4dd7",
+      "mode": 509
+    },
+    "lib/nfcore_external_java_deps.jar": {
+      "sha256": "7c176a55f60b157519d88a06aa03daa2955dd9e8dfd1a118c9ea4dcb3a62bad6",
+      "mode": 509
+    },
+    "main.nf": {
+      "sha256": "2ad203954a1dda7783dd561c6bf17757e85db445221e653f3644ff385c1c26f5",
+      "mode": 436
+    },
+    "modules/local/alignpseudogenomes.nf": {
+      "sha256": "691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e",
+      "mode": 436
+    },
+    "modules/local/functions.nf": {
+      "sha256": "c34b87949d2687c723d689cab0c1b3515d5d00d43643c8b4567f9bd9b3216aef",
+      "mode": 436
+    },
+    "modules/local/get_software_versions.nf": {
+      "sha256": "184e68077df1e50bf156fafdeb8a80e927d3874a8db5f5de44276d4960fb4237",
+      "mode": 436
+    },
+    "modules/local/multiqc.nf": {
+      "sha256": "1145272f323fdec61d50243b888252c104c2b055a4506a35e1f400d55146e1d5",
+      "mode": 436
+    },
+    "modules/local/samplesheet_check.nf": {
+      "sha256": "6f9ddb15b06db335097aef649733e914c9226f44e3314145be840b6a1197b1f1",
+      "mode": 436
+    },
+    "modules/local/vcf2pseudogenome.nf": {
+      "sha256": "6f63b8390683dc584ff0b4b38198ca56c771333181f3428d95c69ac1e2613747",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/functions.nf": {
+      "sha256": "8bd3f0d7f6c7b6893b71c6f69e82e1c165cff43f820478d3b8ef913440cbcd43",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/main.nf": {
+      "sha256": "88fe9a79497a4fd733e8fd3c0375af63bbe3f626c72a092e7a0d3d8a9168d82b",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/meta.yml": {
+      "sha256": "21336b6fdd3b91011d5540852e270ea1e8ab82c5c70b87afa0e6d5a4496423c8",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/functions.nf": {
+      "sha256": "c88692848791d7a4fcb57f0fa0fbbbc5243fedc982b7ba0aae488df83505f545",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/main.nf": {
+      "sha256": "7bdd221c4b07c5449535d377e101d9833b24f8d2c8364b1078f8ec6b3b8b2193",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/meta.yml": {
+      "sha256": "70db37e9dd1e9ffb8e6d25eaf3923849ae9c3eb07f3a7c9fa81fc060ab775361",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/main.nf": {
+      "sha256": "16a537ef18e314861720fcfaebb7dcfb861fbe2a4849402f05eb1a5ce828c00d",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/meta.yml": {
+      "sha256": "9f8ec72070fe04115ef88ffc71875e86e4f7f04e044f3e7e64647ee7cb7ec9db",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/main.nf": {
+      "sha256": "1f5fa0bdc8da48269ab8f843da4daf9101e2e77a84fcaba5c33bfd99e604b8de",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/meta.yml": {
+      "sha256": "89ae8d5a64097fd23ff9da584d5faba1b5aa3556964ba53dfae60b9bf75964ee",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/main.nf": {
+      "sha256": "c0e8717893d4ee213035b1357571d5adfdeeac366241a154c66669aae3b472f2",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/meta.yml": {
+      "sha256": "128eb8fa5d1d7d25e8501126845de3e121a149d62feaf7f9db89056f4aed44ea",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/main.nf": {
+      "sha256": "978641d5f5efac930fe600fa45b073e636c719c0e5823de7c8ed61427b06d957",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/meta.yml": {
+      "sha256": "f5576504925b438a1a35b6dc3b884060eba553643c0c938699b9d603e0e572d6",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/main.nf": {
+      "sha256": "bf4a9d220cfc508e952a4624b4d0d357563e35133bbfe3d44d2ccda2158fbfa9",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/meta.yml": {
+      "sha256": "6c6c2805a07fee76c24443e69568e60010d3b1e7e0672f177f5faeba20daac83",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/main.nf": {
+      "sha256": "5262ad6637ee2ec5aec65a231f48e1ceb615708ab645a3d19b7bec4062b7b743",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/meta.yml": {
+      "sha256": "5896df748eeecbd6e659c0aa4db7bc721bbfa9a315a3c8c99d2c064f3a0ee406",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/main.nf": {
+      "sha256": "d896ef75851403a104f03d93120bc415d3aad565e8b613ccf5c27704baaa50e4",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/meta.yml": {
+      "sha256": "268db923356471ed38c6f335b4e0408fab5f989f0e4ec7886c2a85e9dbb46353",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/main.nf": {
+      "sha256": "9dbc1dd945b12094715182a070726e5e327c0d83822d55d4200e26bfc9f098b6",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/meta.yml": {
+      "sha256": "e0ba1df3a4965b97e7281b31d490f2a355c99e2c8453ea207644ed0cafc1063d",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/main.nf": {
+      "sha256": "d59ca0c6157c1516f630b1990065ab34b8c3f18f81fe6723f959b44884f95f79",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/meta.yml": {
+      "sha256": "6d8e1355ac00f06ca3c2b189d8dbfc3739274de8653b3909300060c03d3dd4e3",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/main.nf": {
+      "sha256": "443b8ee50c24b87e5ab792cda925a7a8bd3111a0b3aa0e85aefce398a970a5d5",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/meta.yml": {
+      "sha256": "d2d747d67fe80730b5a18c660da2bdcb1994a687070c7600df79e878eb3c1f42",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/main.nf": {
+      "sha256": "341ef268d1da1378f74f2664a7358b3b9beca3770a3573b9df5d9cb41f5ee2cd",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/meta.yml": {
+      "sha256": "995b7a804ec870bb93141a9e3c45033de1ae3768d5f9be1d405b4c3e82b51dd3",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/main.nf": {
+      "sha256": "b1f5969384b36d8062faa1b063587bece44ea98ae6a557965e42ffb86ba5aa79",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/meta.yml": {
+      "sha256": "86a10826378877a11cd5f857a1010d2a51d6885bcf41c39525bc9d96e7a0a1b7",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/main.nf": {
+      "sha256": "264e8cbdc1d4ba342822c73816771c6b76c48a9de1c9faa6a62ac1ecf9119d30",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/meta.yml": {
+      "sha256": "07331b2a80d3e37daeb5978ed9a1b30c3b2939ed1bb0246ae544de7953ba5dcb",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/main.nf": {
+      "sha256": "62df48d975d5038787f948ad7b4d9851da7dd75684f5e421438b8d6ba9159673",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/meta.yml": {
+      "sha256": "1bcb4f84986cd0a5cfe53f0f37afa6ee9742fb5c513733b370349122f97fde1e",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/main.nf": {
+      "sha256": "215b434730af8d3de252404943b50a1b1a5b1c0cda0434af158e81aac7998efc",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/meta.yml": {
+      "sha256": "1dd25746e7756b158074166d6bb5f25647869de5bfa87374fa8f00e8e4b5cc57",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/main.nf": {
+      "sha256": "c95d7fbfd3155da1ad5efce9b5393d00205a0490cc45f7fffc935dd2c53410e8",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/meta.yml": {
+      "sha256": "55aef2deae9fa1a3006389ea04543ad8d700946eb728001552af54e0f7a38ea0",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/main.nf": {
+      "sha256": "dedc80ec809c8e8684b9855e283993c5ba5952659b9d451cfc5f726c08fe8560",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/meta.yml": {
+      "sha256": "0c5259b72855add940f20e5fbf20e29c2bd0a1600bc4dff561beac75f7111a61",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/main.nf": {
+      "sha256": "dad37eec712653893400c238adbc987aa2bfc4575bb1db6f1d923f1da02f56f1",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/meta.yml": {
+      "sha256": "bfdb3af77556fcce11af7cc5241df5db2a4774276f87367d09c8c071c287678f",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "a34b9ab6307a774c4e68380d839f3c77da0c653c68761ef959330f83b556cb36",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "mode": 436
+    },
+    "subworkflows/bam_sort_samtools.nf": {
+      "sha256": "aa2e7519102226d93aaf5fe14e9a7d6b4119d71bdb666f33acd5f7d7c2c053f0",
+      "mode": 436
+    },
+    "subworkflows/bam_stats_samtools.nf": {
+      "sha256": "ffe26db6b8000c4cdf00e5e423653d819ad70a608501fec090f4b211631a30fb",
+      "mode": 436
+    },
+    "subworkflows/create_phylogeny.nf": {
+      "sha256": "3cbb47bd0706b2bf405d76ec15e632fff3b81d46939ed8fc56a9234fd8cd3b95",
+      "mode": 509
+    },
+    "subworkflows/input_check.nf": {
+      "sha256": "1e085f64f6643273df6bff3c84029d12e6ad17f2a80de03cc56a39cae0fc0bd1",
+      "mode": 436
+    },
+    "subworkflows/sub_sampling.nf": {
+      "sha256": "5db7c41c19653e8aafe78c3d96cf345339467c67233faf63fbdc83fb171259da",
+      "mode": 509
+    },
+    "subworkflows/variants_bcftools.nf": {
+      "sha256": "4345886c5761009421651cf95302daec0ed32aa00cb2ed6d449d6a28126a1cb7",
+      "mode": 509
+    },
+    "workflows/bactmap.nf": {
+      "sha256": "4ce6fe68bb0925e059cc7c03bbc6d1a42bfe62116360518dfb4ae4f6f99c9e2d",
+      "mode": 436
+    }
+  },
+  "stages": [
+    {
+      "label": "config",
+      "command": [
+        "nextflow",
+        "config",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline",
+        "-profile",
+        "test,docker",
+        "-flat"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "522d8b2375a0aa645bb3ec7385296c1cda9d04ad3ca83c90bdefb000264c2041",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "preview",
+      "command": [
+        "nextflow",
+        "-log",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/nextflow.log",
+        "run",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline",
+        "-profile",
+        "test,docker",
+        "-params-file",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/params.json",
+        "-work-dir",
+        "/dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work",
+        "--input",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv",
+        "-c",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config",
+        "--outdir",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out",
+        "-preview"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "6e9b34ebbef66191db01842b8749325029ff89ea00835535eddaa1b48b034782",
+      "stderr_sha256": "1e5cd00951cab5f6613f6de943910726e646b0f7b9570c183e29273a844ef9f1"
+    }
+  ],
+  "after": {
+    ".editorconfig": {
+      "sha256": "dd306bd5d532bb82747e2ba9c9434796017e399fe4793205022aee72e061887d",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "e338759ab75cb11f1deede242b9c910fda5f0b1ca05f389700b81a02ca0ac560",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/CONTRIBUTING.md": {
+      "sha256": "9e6ccaac8b391736730336ea0a64d1c7ac11cdd436892b65531dec8497ea0f64",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.md": {
+      "sha256": "a8e4da5432154777042db7ebfed48dcc98dcb07989f4bbc77358168694189bd8",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "a340ae391c8d44765052de17a0ec7560bdaff1cc83341d599c81505cff95acce",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.md": {
+      "sha256": "8eb338e2806e44f2445e4e5410a32677c75954b19855592e7938aa48340ac990",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "efa39fade499d6c0f28efdffe4ca145410d7ba8418fa8382f303f4d1fcc013b7",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "716d5edc46779fd534afda77b90da08183aea2f70be38ee43f840731ea146110",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "36d0ecfe5de43a58355600727fece27044f68b6a56d1f947d3b9346a4302de69",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "f4cb7076305fc98424ff6c4645481a80735d196892644cd3fe84b3672d9f199a",
+      "mode": 436
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "c49bbe1edba79719e635e1a050d50ec81fb948f95c36f52780ca3be2edfffcf2",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e067f6185389a8b4b12f568d14bfa752616f9442b5f17d53eccebd7a57cf045c",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "6217bd65230bdecce3dbc0cb2e67261f53cfd2b9e42fcc2bf5295d172e684f3f",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "2951a235c2fdc85f1a8bf0a53c1fe94a475de51ea2d6202f887010d061e90cce",
+      "mode": 436
+    },
+    ".markdownlint.yml": {
+      "sha256": "f5a831528d73b59e370fe3f53ea525f6378944501371ba86bfbba573234951cd",
+      "mode": 509
+    },
+    ".nf-core-lint.yml": {
+      "sha256": "036cc890454a3fa89504c69de514080fdb881646b3a7a834897b067a4c010968",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "bfa87bce61f6b78503eaec1b154daec6107b27b3178596538fae11c8302164a4",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "d375fe03d76dc5bb459be4e08b7e0360a6e599eeb07e11a3c2d0c3e714a8e402",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "8b850e0cf10fa53b7e366ec1a3f7ca65e84b79836137a413461394e6695bbc48",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "ccf1a04be6154c0d184c8dce61518be1fa940ef6722cd71c8afbbab7ba66db3f",
+      "mode": 436
+    },
+    "assets/adapters.fas": {
+      "sha256": "42bf334278ae112b50564696833e40386990e789e39571ac1109a5be5f48b17f",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "0d6f858755dd5f11d3ab19d22bc46ce7869f82f25dfab9b750c263363ac87de7",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "1df378bb66b963255a8550479528440c8ae4af1285c36d919522a1b3f2557c2a",
+      "mode": 436
+    },
+    "assets/multiqc_config.yaml": {
+      "sha256": "803e2bea469c3062725fe1332d8417f6b0c0b8542e776226b4662adf67039eda",
+      "mode": 436
+    },
+    "assets/nf-core-bactmap_logo.png": {
+      "sha256": "86a94278830367ebb4293856402b43ee922f511a35a167d1cece1f35d4fe5247",
+      "mode": 436
+    },
+    "assets/nihr_logos_funded_by.jpg": {
+      "sha256": "a4b4d555faee4eb73b2af5aa80792cf8b2fa9745140dbf4f77348fcbc7fe3885",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "d7b0a959143ddd28fc15598f585276cb0706c1356eea45d8649cb0d428f7047b",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "cdd454acd5e6cf5951a358c0b7b82e9d36fc9f50a0da158e1ec5dbbf10495420",
+      "mode": 436
+    },
+    "bin/calculate_fraction_of_non_GATC_bases.py": {
+      "sha256": "b25ee78d05330ac6b30de6dc380c3c40506db5de01253f48e2ede31778c55d37",
+      "mode": 509
+    },
+    "bin/check_samplesheet.py": {
+      "sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54",
+      "mode": 509
+    },
+    "bin/reference2single_sequence.py": {
+      "sha256": "10c9c370dd810a4e04fdea9d402d34426c929e0f91b23e7ea53b374ac0532fc7",
+      "mode": 509
+    },
+    "bin/scrape_software_versions.py": {
+      "sha256": "442749fd7771af1b1c85ff5219224b7e25e874ad1fafce55004f663ab7df6ccf",
+      "mode": 509
+    },
+    "bin/vcf2pseudogenome.py": {
+      "sha256": "ce9b364f55837cb6e2cd80b9013083010c11ec92c8a983f9fbfcf159dfd4880e",
+      "mode": 509
+    },
+    "conf/base.config": {
+      "sha256": "3ca02b0a22aa2d59c6123340a8c98956e734bef43a5b7f879d964dd0c9cf709e",
+      "mode": 436
+    },
+    "conf/modules.config": {
+      "sha256": "c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "082119ce8bf494ff81a32479277dbbcbf93dc2c8396a15300e061c15d44ca72e",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "2773a12075a16a64581db7d48134488a91e8f1e1786018601370c7804cd82e94",
+      "mode": 436
+    },
+    "docs/fixing_resource_errors.md": {
+      "sha256": "78502b010f317cc888d4c74d15fa2556e07bb4ba9e92758c8685be57767da1ec",
+      "mode": 436
+    },
+    "docs/images/Bactmap_pipeline.png": {
+      "sha256": "a7852914f5edb6d9746fd95d2fc7bcf54f4fb4be969facc8084bf67cd27a2810",
+      "mode": 436
+    },
+    "docs/images/multiqc_fastp.png": {
+      "sha256": "771f13a3e83b2afe3636ab8c91b69d8985620e1bec6631eb614548515b7ecef6",
+      "mode": 436
+    },
+    "docs/images/multiqc_general_stats.png": {
+      "sha256": "8c5fbaf1d1af13efdfbd9c5a4392b5e2e67808d9fa5aacddd7ce7085085e37a0",
+      "mode": 436
+    },
+    "docs/images/multiqc_mapping_stats.png": {
+      "sha256": "d4c262254d0004f7e3774d12f1c87d1b8a5620d217b312a81938370aade3cd94",
+      "mode": 436
+    },
+    "docs/images/multiqc_variants_stats.png": {
+      "sha256": "d370c456f1072ff60d063e77a2bae38ec7e24a09ff1398e0f06b027485349aab",
+      "mode": 436
+    },
+    "docs/images/nf-core-bactmap_logo.png": {
+      "sha256": "60f1f2e4425b09cfa5426d5624ba0769776b9c5f0a195dc83f1112c0818d5368",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "3e5b48c768bd3fe35aef2d9b7681b60e7a3c5aa6f19fd292da422922959b15ab",
+      "mode": 436
+    },
+    "docs/tool-specific_option_configuration.md": {
+      "sha256": "3c7a393207e55d40b91c8e37a9f13091951677efe97621f1464f9e2f3e6ce14c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "707650f3b8141991601022f05a663e8c8415b75a68c570d01ef3ab838a4c6de7",
+      "mode": 436
+    },
+    "lib/NfcoreSchema.groovy": {
+      "sha256": "05bdf46dea2961294bd5ac8cd7b9e4bd7ce89c24a93871dfa3949ae68e9937de",
+      "mode": 509
+    },
+    "lib/NfcoreTemplate.groovy": {
+      "sha256": "dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2",
+      "mode": 509
+    },
+    "lib/Utils.groovy": {
+      "sha256": "31fe917ba0613e6f7bf7ab86ef4289973bd90f6d56c5e62d6351899970c257f0",
+      "mode": 509
+    },
+    "lib/WorkflowBactmap.groovy": {
+      "sha256": "55a61779a485d63823ae9d8cbf38b5df7db4c5ebb9595ddd9f05d71decd31f6f",
+      "mode": 509
+    },
+    "lib/WorkflowMain.groovy": {
+      "sha256": "e62810ef5ac8737c320ee3906304a4af0ac1ae7b984f8843eb5a97583bba4dd7",
+      "mode": 509
+    },
+    "lib/nfcore_external_java_deps.jar": {
+      "sha256": "7c176a55f60b157519d88a06aa03daa2955dd9e8dfd1a118c9ea4dcb3a62bad6",
+      "mode": 509
+    },
+    "main.nf": {
+      "sha256": "2ad203954a1dda7783dd561c6bf17757e85db445221e653f3644ff385c1c26f5",
+      "mode": 436
+    },
+    "modules/local/alignpseudogenomes.nf": {
+      "sha256": "691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e",
+      "mode": 436
+    },
+    "modules/local/functions.nf": {
+      "sha256": "c34b87949d2687c723d689cab0c1b3515d5d00d43643c8b4567f9bd9b3216aef",
+      "mode": 436
+    },
+    "modules/local/get_software_versions.nf": {
+      "sha256": "184e68077df1e50bf156fafdeb8a80e927d3874a8db5f5de44276d4960fb4237",
+      "mode": 436
+    },
+    "modules/local/multiqc.nf": {
+      "sha256": "1145272f323fdec61d50243b888252c104c2b055a4506a35e1f400d55146e1d5",
+      "mode": 436
+    },
+    "modules/local/samplesheet_check.nf": {
+      "sha256": "6f9ddb15b06db335097aef649733e914c9226f44e3314145be840b6a1197b1f1",
+      "mode": 436
+    },
+    "modules/local/vcf2pseudogenome.nf": {
+      "sha256": "6f63b8390683dc584ff0b4b38198ca56c771333181f3428d95c69ac1e2613747",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/functions.nf": {
+      "sha256": "8bd3f0d7f6c7b6893b71c6f69e82e1c165cff43f820478d3b8ef913440cbcd43",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/main.nf": {
+      "sha256": "88fe9a79497a4fd733e8fd3c0375af63bbe3f626c72a092e7a0d3d8a9168d82b",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/meta.yml": {
+      "sha256": "21336b6fdd3b91011d5540852e270ea1e8ab82c5c70b87afa0e6d5a4496423c8",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/functions.nf": {
+      "sha256": "c88692848791d7a4fcb57f0fa0fbbbc5243fedc982b7ba0aae488df83505f545",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/main.nf": {
+      "sha256": "7bdd221c4b07c5449535d377e101d9833b24f8d2c8364b1078f8ec6b3b8b2193",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/meta.yml": {
+      "sha256": "70db37e9dd1e9ffb8e6d25eaf3923849ae9c3eb07f3a7c9fa81fc060ab775361",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/main.nf": {
+      "sha256": "16a537ef18e314861720fcfaebb7dcfb861fbe2a4849402f05eb1a5ce828c00d",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/meta.yml": {
+      "sha256": "9f8ec72070fe04115ef88ffc71875e86e4f7f04e044f3e7e64647ee7cb7ec9db",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/main.nf": {
+      "sha256": "1f5fa0bdc8da48269ab8f843da4daf9101e2e77a84fcaba5c33bfd99e604b8de",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/meta.yml": {
+      "sha256": "89ae8d5a64097fd23ff9da584d5faba1b5aa3556964ba53dfae60b9bf75964ee",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/main.nf": {
+      "sha256": "c0e8717893d4ee213035b1357571d5adfdeeac366241a154c66669aae3b472f2",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/meta.yml": {
+      "sha256": "128eb8fa5d1d7d25e8501126845de3e121a149d62feaf7f9db89056f4aed44ea",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/main.nf": {
+      "sha256": "978641d5f5efac930fe600fa45b073e636c719c0e5823de7c8ed61427b06d957",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/meta.yml": {
+      "sha256": "f5576504925b438a1a35b6dc3b884060eba553643c0c938699b9d603e0e572d6",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/main.nf": {
+      "sha256": "bf4a9d220cfc508e952a4624b4d0d357563e35133bbfe3d44d2ccda2158fbfa9",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/meta.yml": {
+      "sha256": "6c6c2805a07fee76c24443e69568e60010d3b1e7e0672f177f5faeba20daac83",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/main.nf": {
+      "sha256": "5262ad6637ee2ec5aec65a231f48e1ceb615708ab645a3d19b7bec4062b7b743",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/meta.yml": {
+      "sha256": "5896df748eeecbd6e659c0aa4db7bc721bbfa9a315a3c8c99d2c064f3a0ee406",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/main.nf": {
+      "sha256": "d896ef75851403a104f03d93120bc415d3aad565e8b613ccf5c27704baaa50e4",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/meta.yml": {
+      "sha256": "268db923356471ed38c6f335b4e0408fab5f989f0e4ec7886c2a85e9dbb46353",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/main.nf": {
+      "sha256": "9dbc1dd945b12094715182a070726e5e327c0d83822d55d4200e26bfc9f098b6",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/meta.yml": {
+      "sha256": "e0ba1df3a4965b97e7281b31d490f2a355c99e2c8453ea207644ed0cafc1063d",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/main.nf": {
+      "sha256": "d59ca0c6157c1516f630b1990065ab34b8c3f18f81fe6723f959b44884f95f79",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/meta.yml": {
+      "sha256": "6d8e1355ac00f06ca3c2b189d8dbfc3739274de8653b3909300060c03d3dd4e3",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/main.nf": {
+      "sha256": "443b8ee50c24b87e5ab792cda925a7a8bd3111a0b3aa0e85aefce398a970a5d5",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/meta.yml": {
+      "sha256": "d2d747d67fe80730b5a18c660da2bdcb1994a687070c7600df79e878eb3c1f42",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/main.nf": {
+      "sha256": "341ef268d1da1378f74f2664a7358b3b9beca3770a3573b9df5d9cb41f5ee2cd",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/meta.yml": {
+      "sha256": "995b7a804ec870bb93141a9e3c45033de1ae3768d5f9be1d405b4c3e82b51dd3",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/main.nf": {
+      "sha256": "b1f5969384b36d8062faa1b063587bece44ea98ae6a557965e42ffb86ba5aa79",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/meta.yml": {
+      "sha256": "86a10826378877a11cd5f857a1010d2a51d6885bcf41c39525bc9d96e7a0a1b7",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/main.nf": {
+      "sha256": "264e8cbdc1d4ba342822c73816771c6b76c48a9de1c9faa6a62ac1ecf9119d30",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/meta.yml": {
+      "sha256": "07331b2a80d3e37daeb5978ed9a1b30c3b2939ed1bb0246ae544de7953ba5dcb",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/main.nf": {
+      "sha256": "62df48d975d5038787f948ad7b4d9851da7dd75684f5e421438b8d6ba9159673",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/meta.yml": {
+      "sha256": "1bcb4f84986cd0a5cfe53f0f37afa6ee9742fb5c513733b370349122f97fde1e",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/main.nf": {
+      "sha256": "215b434730af8d3de252404943b50a1b1a5b1c0cda0434af158e81aac7998efc",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/meta.yml": {
+      "sha256": "1dd25746e7756b158074166d6bb5f25647869de5bfa87374fa8f00e8e4b5cc57",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/main.nf": {
+      "sha256": "c95d7fbfd3155da1ad5efce9b5393d00205a0490cc45f7fffc935dd2c53410e8",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/meta.yml": {
+      "sha256": "55aef2deae9fa1a3006389ea04543ad8d700946eb728001552af54e0f7a38ea0",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/main.nf": {
+      "sha256": "dedc80ec809c8e8684b9855e283993c5ba5952659b9d451cfc5f726c08fe8560",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/meta.yml": {
+      "sha256": "0c5259b72855add940f20e5fbf20e29c2bd0a1600bc4dff561beac75f7111a61",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/main.nf": {
+      "sha256": "dad37eec712653893400c238adbc987aa2bfc4575bb1db6f1d923f1da02f56f1",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/meta.yml": {
+      "sha256": "bfdb3af77556fcce11af7cc5241df5db2a4774276f87367d09c8c071c287678f",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "a34b9ab6307a774c4e68380d839f3c77da0c653c68761ef959330f83b556cb36",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "mode": 436
+    },
+    "subworkflows/bam_sort_samtools.nf": {
+      "sha256": "aa2e7519102226d93aaf5fe14e9a7d6b4119d71bdb666f33acd5f7d7c2c053f0",
+      "mode": 436
+    },
+    "subworkflows/bam_stats_samtools.nf": {
+      "sha256": "ffe26db6b8000c4cdf00e5e423653d819ad70a608501fec090f4b211631a30fb",
+      "mode": 436
+    },
+    "subworkflows/create_phylogeny.nf": {
+      "sha256": "3cbb47bd0706b2bf405d76ec15e632fff3b81d46939ed8fc56a9234fd8cd3b95",
+      "mode": 509
+    },
+    "subworkflows/input_check.nf": {
+      "sha256": "1e085f64f6643273df6bff3c84029d12e6ad17f2a80de03cc56a39cae0fc0bd1",
+      "mode": 436
+    },
+    "subworkflows/sub_sampling.nf": {
+      "sha256": "5db7c41c19653e8aafe78c3d96cf345339467c67233faf63fbdc83fb171259da",
+      "mode": 509
+    },
+    "subworkflows/variants_bcftools.nf": {
+      "sha256": "4345886c5761009421651cf95302daec0ed32aa00cb2ed6d449d6a28126a1cb7",
+      "mode": 509
+    },
+    "workflows/bactmap.nf": {
+      "sha256": "4ce6fe68bb0925e059cc7c03bbc6d1a42bfe62116360518dfb4ae4f6f99c9e2d",
+      "mode": 436
+    }
+  },
+  "original_unchanged": true
+}

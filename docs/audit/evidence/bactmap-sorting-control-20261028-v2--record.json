@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-sorting-control-v2.py",
+    "sha256": "063c4511ac936047431a80204acba739272728b9fc0c4d7ebd1a6ec9c6ce72f2"
+  },
+  "recipe_fingerprint": "8b4918c1ee687dfbb933337843da7f7090e429ff795e84b11a66d8602f26c08f",
+  "command": [
+    "nextflow",
+    "-log",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/nextflow.log",
+    "run",
+    "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/main.nf",
+    "-work-dir",
+    "/dev/shm/nfclaw-bactmap-sorting-control-20261028-v2/work",
+    "-ansi-log",
+    "false"
+  ],
+  "source_statement": "    def ordered_pseudogenomes = new nextflow.util.BlankSeparatedList(\n        (pseudogenomes instanceof Collection ? pseudogenomes : [pseudogenomes])\n            .sort(false) { it.name })",
+  "workflow_sha256": "776d96777dd5455d1bcfd36c8e7ae34d9a1cb071f395175886800e6f07378c81",
+  "exit_code": 0,
+  "stdout": "N E X T F L O W  ~  version 24.10.5\nLaunching `/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/main.nf` [shrivelled_cantor] DSL2 - revision: 7022d10c05\n[b7/e44ac5] Submitted process > ORDER (2)\n[ee/e75b28] Submitted process > ORDER (1)\nsingle:z\nmulti:a,z\n",
+  "stderr": "Nextflow 26.10.4 is available - Please consider updating your version to it\n"
+}

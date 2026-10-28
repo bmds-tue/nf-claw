@@ -1,0 +1,73 @@
+[
+  {
+    "profile": "docker",
+    "command": [
+      "nextflow",
+      "config",
+      "/mnt/volume/nfclaw-remediation-matrix-source/pipelines/bactmap/upstream",
+      "-profile",
+      "docker",
+      "-flat"
+    ],
+    "exit_code": 0,
+    "flat": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028/docker.config.flat",
+    "sha256": "b777778434391c2cad28349932ab23edd9a78c68a7dcdc8b8d04a0afadc46d6e",
+    "module_options": [
+      "params.modules.fastp.args = '--cut_front --cut_tail --trim_poly_x --cut_mean_quality 30 --qualified_quality_phred 30 --unqualified_percent_limit 10 --length_required 50'",
+      "params.modules.fastp.publish_files = [json:'', html:'', log:'log']",
+      "params.modules.mash_sketch.args = '-k 32 -m 3'",
+      "params.modules.rasusa.args = '--seed 23032021'",
+      "params.modules.bwa_index.args = ''",
+      "params.modules.bwa_mem.args = ''",
+      "params.modules.bwa_mem.args2 = '-F 4'",
+      "params.modules.bwa_mem.publish_files = false",
+      "params.modules.samtools_sort.args = ''",
+      "params.modules.samtools_sort.suffix = '.sorted'",
+      "params.modules.samtools_index.args = ''",
+      "params.modules.bam_stats.args = ''",
+      "params.modules.bcftools_mpileup.args = '--min-BQ 20 --annotate FORMAT/AD,FORMAT/ADF,FORMAT/ADR,FORMAT/DP,FORMAT/SP,INFO/AD,INFO/ADF,INFO/ADR'",
+      "params.modules.bcftools_mpileup.args2 = '--ploidy 1 --multiallelic-caller'",
+      "params.modules.bcftools_mpileup.args3 = ''",
+      "params.modules.bcftools_mpileup.publish_files = [gz:'', 'gz.tbi':'', 'stats.txt':'']",
+      "params.modules.bcftools_mpileup.publish_dir = 'variants'",
+      "params.modules.bcftools_filter.args = '--soft-filter LowQual --exclude \"%QUAL<25 || FORMAT/DP<10 || MAX(FORMAT/ADF)<2 || MAX(FORMAT/ADR)<2 || MAX(FORMAT/AD)/SUM(FORMAT/DP)<0.9 || MQ<30 || MQ0F>0.1\" --output-type z'",
+      "params.modules.bcftools_filter.suffix = '.filtered'",
+      "params.modules.bcftools_filter.publish_dir = 'variants'",
+      "params.modules.gubbins.args = '-v -t hybrid'",
+      "params.modules.snpsites.args = ''",
+      "params.modules.vcf2pseudogenome.publish_dir = 'pseudogenomes'",
+      "params.modules.alignpseudogenomes.publish_dir = 'pseudogenomes'",
+      "params.modules.rapidnj.args = '-t d -b 1000 -n'",
+      "params.modules.rapidnj.publish_dir = 'rapidnj'",
+      "params.modules.fasttree.args = '-gtr -gamma -fastest'",
+      "params.modules.fasttree.publish_dir = 'fasttree'",
+      "params.modules.iqtree.args = '-alrt 1000 -B 1000 -m MFP -czb'",
+      "params.modules.iqtree.publish_dir = 'iqtree'",
+      "params.modules.raxmlng.args = '--all --model GTR+G --bs-trees 1000'",
+      "params.modules.raxmlng.publish_dir = 'raxmlng'",
+      "params.modules.multiqc.args = ''",
+      "params.modules.multiqc.publish_files = [_data:'', html:'']",
+      "params.modules.multiqc.publish_dir = 'multiqc'"
+    ]
+  },
+  {
+    "profile": "test,docker",
+    "command": [
+      "nextflow",
+      "config",
+      "/mnt/volume/nfclaw-remediation-matrix-source/pipelines/bactmap/upstream",
+      "-profile",
+      "test,docker",
+      "-flat"
+    ],
+    "exit_code": 0,
+    "flat": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028/test-docker.config.flat",
+    "sha256": "d7f2e3f779ae91b25236d574aa1222c32fd0e1afadc7f6e668336f4f3177de40",
+    "module_options": [
+      "params.modules.bcftools_filter.args = '--soft-filter LowQual --exclude \\'%QUAL<25 || FORMAT/DP<1 || MQ<30 || MQ0F>0.1\\' --output-type z'",
+      "params.modules.bcftools_filter.suffix = '.filtered'",
+      "params.modules.bcftools_filter.publish_dir = 'variants'",
+      "params.modules.alignpseudogenomes.non_GATC_threshold = 0.8"
+    ]
+  }
+]

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    resources, runlog, sheetgen, verify, versions)
+                    exact_json, preflight, resources, runlog, sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -244,6 +244,18 @@ def build_parser() -> argparse.ArgumentParser:
                                "differ, or when the runs' recorded execution environments "
                                "(container images, plugins, staged remote inputs) do not match; "
                                "inspect timestamped reports separately from analytical results")
+    p_verify.add_argument("--require-environment", action="store_true",
+                          help="require complete matching recorded environment evidence; refuse "
+                               "missing observations, containerless tasks and refetched inputs")
+    p_assess = sub.add_parser("assess", help="check an explicit scientific output contract")
+    p_assess.add_argument("outdir", help="run output directory to assess")
+    p_assess.add_argument("--contract", required=True, help="versioned JSON output contract")
+    p_assess.add_argument("--against", help="original run with recorded output checksums")
+    p_dramp = sub.add_parser("prepare-dramp",
+                             help="prepare a recorded DRAMP reference for AMPcombi 3")
+    p_dramp.add_argument("table", help="complete local DRAMP general_amps TSV download")
+    p_dramp.add_argument("--outdir", required=True,
+                         help="fresh reference directory whose name contains DRAMP")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
     p_chain = sub.add_parser("chain")
@@ -363,6 +375,25 @@ def _main(argv: list[str] | None = None) -> int:
     # typo that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if args.cmd == "prepare-dramp":
+        from runner import dramp
+        try:
+            result = dramp.prepare(Path(args.table), Path(args.outdir))
+        except NfclawError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(exact_json.dumps(result, indent=2))
+        return 0
+    if args.cmd == "assess":
+        from runner import scientific
+        try:
+            result = scientific.assess(Path(args.outdir), Path(args.contract),
+                                       against=Path(args.against) if args.against else None)
+        except NfclawError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(exact_json.dumps(result, indent=2))
+        return 0 if result['passed'] else 1
     try:
         root = _repo_root()
     except NfclawError as exc:
@@ -425,7 +456,8 @@ def _main(argv: list[str] | None = None) -> int:
     if args.cmd == "verify":
         try:
             cmp = verify.compare(Path(args.against).expanduser().resolve(),
-                                 Path(args.replay).expanduser().resolve())
+                                 Path(args.replay).expanduser().resolve(),
+                                 require_environment=args.require_environment)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
@@ -433,8 +465,11 @@ def _main(argv: list[str] | None = None) -> int:
         # The default compares file presence. Strict verification additionally checks every byte and
         # recorded link identity; neither comparison by itself establishes analytical accuracy.
         # --strict also requires the same execution environment where both runs recorded one.
-        return 0 if ((cmp.byte_identical and cmp.same_environment) if args.strict
-                     else cmp.structurally_equal) else 1
+        outputs_match = ((cmp.byte_identical and cmp.same_environment) if args.strict
+                         else cmp.structurally_equal)
+        evidence_matches = not args.require_environment or (
+            cmp.environment is not None and cmp.environment["status"] == "identical")
+        return 0 if outputs_match and evidence_matches else 1
 
     if args.cmd == "status":
         log = _run_log_path(args.outdir)
@@ -517,6 +552,8 @@ def _main(argv: list[str] | None = None) -> int:
             if w not in shown:
                 warn(w)
         print(nextflow_command.shell_line(res.command, res.env))
+        if res.checked_only and res.validation_scope:
+            print(preflight.format_scope(res.validation_scope))
         if res.generated_samplesheet is not None:
             print(f"samplesheet: {res.generated_samplesheet} (generated from --input)")
         rep = res.outputs_report

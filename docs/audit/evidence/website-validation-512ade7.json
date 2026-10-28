@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+  "observed_at": "2026-10-28T00:47:32.673043+00:00",
+  "platform": "Linux amd64, Chromium",
+  "commands": [
+    "ruff check .",
+    "actionlint -shellcheck=",
+    "python -m librarian.check_drift",
+    "npm run typecheck",
+    "npm run build",
+    "npm run test:browser"
+  ],
+  "exit_code": 0,
+  "browser_tests_passed": 12,
+  "browser_duration_seconds": 13.8,
+  "log": "/mnt/volume/nfclaw-website-512ade7.log",
+  "log_sha256": "2a7b72f9449fc0ff8886a30cf59299a42d27f28d81e34e8a59e84d0dd7197da1",
+  "tracked_checkout_clean_after": true,
+  "scope": "Production export/browser checks; no macOS or GitHub-hosted execution claim."
+}

@@ -23,9 +23,12 @@ function load(): Promise<ParamIndex> {
  * The every-pipeline parameter index, fetched once — when `enabled` first turns true (a search
  * starts, or the search box gains focus) — and shared by every caller after that.
  */
-export function useParamIndex(enabled: boolean): { index: ParamIndex | null; failed: boolean } {
+export function useParamIndex(enabled: boolean): {
+  index: ParamIndex | null; failed: boolean; retry: () => void;
+} {
   const [index, setIndex] = useState<ParamIndex | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!enabled || index) return;
     let live = true;
@@ -35,6 +38,7 @@ export function useParamIndex(enabled: boolean): { index: ParamIndex | null; fai
     return () => {
       live = false;
     };
-  }, [enabled, index]);
-  return { index, failed };
+  }, [enabled, index, attempt]);
+  const retry = () => { setFailed(false); setAttempt((value) => value + 1); };
+  return { index, failed, retry };
 }

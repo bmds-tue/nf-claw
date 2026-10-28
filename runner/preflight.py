@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -91,13 +92,15 @@ def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | N
     """Why `--outdir` cannot take this run, or None.
 
     Every probe here can meet a directory the caller may not search (`--outdir /root/x` as another
-    user), where Path.exists()/is_dir() raise PermissionError instead of answering; that is reported
+    user). Stat errors other than missing/not-a-directory must be reported, including on Python
+    versions whose Path.exists()/is_dir() suppress all OSError exceptions. That is reported
     as an issue like the others, never a traceback."""
     try:
-        is_dir = output_dir.is_dir()
+        metadata = _stat_if_exists(output_dir)
+        is_dir = metadata is not None and stat.S_ISDIR(metadata.st_mode)
         # An --outdir that exists but is a file can never work — nfclaw creates it and writes the
         # provenance bundle under it.
-        if not is_dir and output_dir.exists():
+        if not is_dir and metadata is not None:
             return f"--outdir exists but is not a directory: {output_dir}"
         if (unwritable := _unwritable(output_dir, "--outdir")) is not None:
             return unwritable
@@ -113,6 +116,13 @@ def outdir_issue(output_dir: Path, *, resume: bool, check_only: bool) -> str | N
     return None
 
 
+def _stat_if_exists(path: Path):
+    try:
+        return path.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+
+
 def _unwritable(path: Path, label: str) -> str | None:
     """Why the run could not write the directory `path` (or create it), or None.
 
@@ -122,9 +132,9 @@ def _unwritable(path: Path, label: str) -> str | None:
     ancestor when it does not exist yet — the one `mkdir` would have to write into. May raise
     OSError for a path whose ancestors cannot be searched; callers report that."""
     target = path
-    while not target.exists() and target != target.parent:
+    while (metadata := _stat_if_exists(target)) is None and target != target.parent:
         target = target.parent
-    if target != path and not target.is_dir():
+    if target != path and (metadata is None or not stat.S_ISDIR(metadata.st_mode)):
         return f"{label} cannot be created: {target} is not a directory"
     if not os.access(target, os.W_OK | os.X_OK):
         return (f"{label} is not writable: {path}" if target == path else
@@ -137,7 +147,8 @@ def _work_dir_issue(work_dir: Path) -> str | None:
     to whoever ran first, so on a clone shared by several users the others cannot write it."""
     fix = "set a writable one with --nxf-env NXF_WORK=/a/writable/dir"
     try:
-        if work_dir.exists() and not work_dir.is_dir():
+        metadata = _stat_if_exists(work_dir)
+        if metadata is not None and not stat.S_ISDIR(metadata.st_mode):
             return f"the Nextflow work directory is not a directory: {work_dir} — {fix}"
         issue = _unwritable(work_dir, "the Nextflow work directory")
     except OSError as exc:
@@ -169,3 +180,52 @@ def _space_issues(*, repo_root: Path, output_dir: Path, work_dir: Path | None,
                       f"work directory mishandle spaces (Docker on macOS fails outright). "
                       f"{fix}, or pass --allow-spaces to run anyway.")
     return issues
+
+
+def scope_report(*, local_samplesheets: int, deferred_params: frozenset[str],
+                 local_bytes_hashed: bool) -> dict:
+    """Scope of a successfully completed wrapper preflight, before any workflow tasks run.
+
+    This inventory describes only the validations the wrapper performs. Deferred/unsupported
+    checks must not turn a successful preparation into a claim of complete runtime validation.
+    """
+    checks = [
+        ('source_identity', 'checked',
+         'Selected revision, tracked modifications and required files.'),
+        ('explicit_parameters', 'checked', 'Known names and supported scalar constraints; '
+         'not the complete JSON Schema language.'),
+        ('local_samplesheets', 'checked' if local_samplesheets else 'deferred',
+         f'{local_samplesheets} local table(s) validated with the supported input-schema subset; '
+         'profile-supplied and remote tables remain for runtime validation.'),
+        ('local_dependencies', 'checked', 'Declared local paths, types and table dependencies; '
+         'does not discover every implicit index or task download.'),
+        ('local_data_bytes', 'checked' if local_bytes_hashed else 'deferred',
+         'Declared local input bytes were hashed before launch.' if local_bytes_hashed else
+         'Preparation inspects paths; full input byte hashing is deferred to a real run.'),
+        ('write_boundaries', 'checked',
+         'Declared inputs separated from output/work/cache/log writes.'),
+        ('host_requirements', 'checked', 'Required executable presence and writable launch paths; '
+         'not a container daemon, scheduler or task execution test.'),
+        ('profile_config', 'deferred', 'Nextflow resolves profiles and config at launch, '
+         'including included configs and their parameter values.'),
+        ('complete_schema', 'deferred', 'The pinned pipeline/plugin validates nested, conditional '
+         'and complex constraints not covered by the wrapper subset.'),
+        ('remote_inputs', 'deferred', 'Remote inventory, availability, bytes and validation occur '
+         'during workflow staging/validation; no complete remote-input preflight is claimed.'),
+        ('implicit_dependencies', 'unsupported', 'Comprehensive discovery of implicit references, '
+         'indexes, Conda environments and task-managed downloads.'),
+        ('scientific_completeness', 'unsupported', 'Expected-versus-processed sample/output '
+         'contracts and biological accuracy are not established by wrapper preflight.'),
+        ('executor_recovery', 'unsupported', 'Detached containers, scheduler jobs and host-crash '
+         'reconciliation are not tested by preparation.'),
+    ]
+    return {'version': 1, 'local_samplesheets': local_samplesheets,
+            'deferred_parameters': sorted(deferred_params),
+            'checks': [{'id': name, 'status': status, 'scope': scope}
+                       for name, status, scope in checks]}
+
+
+def format_scope(report: dict) -> str:
+    return '\n'.join(f"preflight {status}: " + ', '.join(
+        row['id'] for row in report['checks'] if row['status'] == status)
+        for status in ('checked', 'deferred', 'unsupported'))

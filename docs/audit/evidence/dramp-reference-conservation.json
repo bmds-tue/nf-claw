@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "tool": "AMPcombi 3.0.0",
+  "image": "quay.io/biocontainers/ampcombi@sha256:53a73be7a84bb1e921c2bbbd81d6d48453b0b3ab5d0ae1e6709c0d6dd662c237",
+  "conservation": {
+    "raw_rows": 12784,
+    "retained_rows": 10564,
+    "all_retained_annotations_equal": true,
+    "all_fasta_ids_sequences_equal": true
+  },
+  "reference_sha256": {
+    "general_amps.fasta": "124fa8367dd4d711cc5757c6b0a1eba0ed4b2490e23c8d0de69d041641d1de84",
+    "general_amps.txt": "b920f8c0c1965c7fa12eeaf3d23402340cd0175402daad867c4cd9d31bdb7457",
+    "mmseqs2/ref_DB": "6e4b34b40450d7c59b324860371b9034060363fb0b28fb2d2c7b51272a55f7bc",
+    "mmseqs2/ref_DB.dbtype": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "mmseqs2/ref_DB.index": "9fa9829a4f75e873cc8dc99158f3b419548d4c69512f440a7fc8abbf34957ba8",
+    "mmseqs2/ref_DB.lookup": "c510d31a527d7150128846ebf5a968b1e1e3b3bef1def4daa993481b593aad1a",
+    "mmseqs2/ref_DB.source": "102379745b34291dea2002bf949c81d795ec5cf8e23ada30265a6fcb988b1410",
+    "mmseqs2/ref_DB_h": "7e60241171abc0510b0c9e24e306ee1a48c09a47d50dad14151830275ebca59e",
+    "mmseqs2/ref_DB_h.dbtype": "42f4aeb81c1ef81f771f3de8abca9dcf66901c575530e7672e4b1146474ae650",
+    "mmseqs2/ref_DB_h.index": "243921d5e25460d5b2e06a60a01b161a87f59022dd309c92cd4dc1fc6bb2dd58",
+    "preparation.json": "c16fbdab3dd8f64c218b0072d42c1d599bf585388d18a74888fb194b380b7780"
+  },
+  "reference_unchanged_by_consumer": true,
+  "known_answer": {
+    "query_source_id": "DRAMP00222",
+    "length": 84,
+    "hits": 1,
+    "exact_sequence_hits": 1,
+    "exact_target_ids": [
+      "DRAMP00222"
+    ]
+  },
+  "scope": "Reference preparation conservation, MMseqs index creation and actual released MMseqs search/DRAMP annotation merge. Not a benchmark of AMP prediction accuracy."
+}

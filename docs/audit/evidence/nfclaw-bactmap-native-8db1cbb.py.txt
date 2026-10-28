@@ -1,0 +1,36 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import subprocess,os,json,hashlib,stat,csv,sys
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+commit='8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3';label='commit-8db1cbb-bactmap-demo'
+out=root/label;replay=root/(label+'-replay');receipt=root/(label+'.json')
+assert all(not p.exists() for p in [out,replay,receipt])
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()==commit
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+py='/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python'
+env={**os.environ,'PYTHONPATH':str(source),'PATH':str(Path(py).parent)+os.pathsep+os.environ['PATH'],'NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true','DOCKER_HOST':'unix:///dev/shm/nfc-d28/docker.sock'}
+up=source/'pipelines/bactmap/upstream';paths=subprocess.check_output(['git','ls-files','-z'],cwd=up,text=True).split('\0')
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def snapshot():return {p:{'sha256':sha(up/p),'mode':stat.S_IMODE((up/p).stat().st_mode)} for p in paths if p}
+before=snapshot();record={'version':1,'source_commit':commit,'pipeline_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=up,text=True).strip(),'worker':{'path':__file__,'sha256':sha(Path(__file__))},'pipeline_files_before':before,'runs':[],'docker_host':env['DOCKER_HOST'],'private_engine_info':json.loads(subprocess.check_output(['docker','info','--format','{{json .}}'],env=env,text=True)),'oracle':{'path':str(root/'bactmap-fixture-oracle-20261028/oracle.json'),'sha256':sha(root/'bactmap-fixture-oracle-20261028/oracle.json')},'scope':'Actual bare managed Bactmap demo plus fresh recorded replay. Task completion is recorded here; separate output assessment is required for scientific claims.'}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+def execute(kind,target,command):
+ log=root/(target.name+'.console.log');row={'kind':kind,'outdir':str(target),'command':command,'started_at':datetime.now(UTC).isoformat(),'console_log':str(log)};record['runs'].append(row);save()
+ with log.open('x') as stream:result=subprocess.run(['timeout','--kill-after=20s','1900',*command],cwd=source,env=env,stdout=stream,stderr=subprocess.STDOUT)
+ row.update(exit_code=result.returncode,finished_at=datetime.now(UTC).isoformat(),console_log_sha256=sha(log));save();print(kind,'exit',result.returncode,flush=True)
+ trace=list((target/'pipeline_info').glob('execution_trace*.txt'))
+ if len(trace)==1:
+  with trace[0].open() as f:row['tasks']=list(csv.DictReader(f,delimiter='\t'))
+  row.update(trace=str(trace[0]),trace_sha256=sha(trace[0]))
+ manifest=target/'provenance/run_manifest.json'
+ if manifest.is_file():
+  m=json.loads(manifest.read_text());row.update({k:m.get(k) for k in ['outcome','completion_caveats','dependency_stability','nextflow','generated_samplesheet','source_corrections']})
+ row['original_source_unchanged']=snapshot()==before;save()
+ assert result.returncode==0,str(log)
+ assert row['tasks'] and all(t['status']=='COMPLETED' and t['exit']=='0' for t in row['tasks'])
+ assert row['original_source_unchanged']
+execute('original',out,[py,'-m','runner','run','bactmap','--demo','--outdir',str(out),'--nxf-ver','24.10.5','--limit-cpus','2','--limit-memory','4.GB','--limit-time','15.min','--timeout','1800','--nxf-env','NXF_WORK=/dev/shm/nfclaw-bactmap-demo-8db1cbb/work','--nxf-env','NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true'])
+execute('replay',replay,['bash',str(out/'provenance/commands.sh'),str(replay)])
+record.update(pipeline_files_after=snapshot(),original_source_unchanged=snapshot()==before)
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+save();print('Native original and replay tasks completed; assessment still required.',flush=True)

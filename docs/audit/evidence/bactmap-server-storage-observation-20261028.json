@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "observed_at": "2026-10-28T08:45:21.126231+00:00",
+  "df": "Filesystem        1B-blocks         Used    Available Use% Mounted on\n/dev/vda1       19682557952  17165271040   2500509696  88% /\n/dev/vdb       844362571776 477625974784 323770146816  60% /mnt/volume\ntmpfs           33710092288  12950183936  20759908352  39% /dev/shm\n",
+  "note": "Free space increased between observations without a cleanup action by this worker. Cause not established. Private Docker setup and Bactmap tests have not pruned shared images or deleted historical scientific inputs/outputs."
+}

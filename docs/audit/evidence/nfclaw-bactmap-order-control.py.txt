@@ -1,0 +1,24 @@
+from pathlib import Path
+import csv,gzip,json,hashlib,collections
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');record=root/'commit-1725642-bactmap-order-control.json';assert not record.exists()
+def sha(value):return hashlib.sha256(value).hexdigest()
+results={'version':1,'worker':{'path':__file__,'sha256':sha(Path(__file__).read_bytes())},'scope':'Compare actual FASTP/RASUSA decompressed record order and content, and published pseudogenome bytes for the default two-CPU and explicit single-CPU controls. No statistical tolerance or output exclusion.'}
+for variant in ['demo','singlecpu']:
+ native=json.loads((root/f'commit-1725642-bactmap-{variant}.json').read_text());rows=[]
+ work=Path('/dev/shm/nfclaw-bactmap-'+variant+'-1725642/work')
+ for run in native['runs']:
+  r={'kind':run['kind'],'intermediates':{},'pseudogenomes':{}}
+  for t in run['tasks']:
+   process=t['name'].split(' (')[0].split(':')[-1]
+   if process not in ['FASTP','RASUSA']:continue
+   sample=t['name'].split(' (')[1].rstrip(')');prefix,suffix=t['hash'].split('/');dirs=list((work/prefix).glob(suffix+'*'));assert len(dirs)==1
+   for mate in [1,2]:
+    path=dirs[0]/(f'{sample}_{mate}'+('.trim.fastq.gz' if process=='FASTP' else '.fastq.gz'))
+    with gzip.open(path,'rb') as f:lines=f.read().splitlines(keepends=True)
+    assert len(lines)%4==0;records=[b''.join(lines[i:i+4]) for i in range(0,len(lines),4)]
+    r['intermediates'][f'{process}/{sample}/{mate}']={'path':str(path),'records':len(records),'ordered_record_sha256':sha(b''.join(records)),'sorted_record_sha256':sha(b''.join(sorted(records)))}
+  for sample in ['ERR2172265','ERR2172266','ERR2172267']:
+   p=Path(run['outdir'])/f'pseudogenomes/{sample}.fas';r['pseudogenomes'][sample]=sha(p.read_bytes())
+  rows.append(r)
+ results[variant]={'runs':rows,'intermediate_comparison':{key:{'same_ordered_records':rows[0]['intermediates'][key]['ordered_record_sha256']==rows[1]['intermediates'][key]['ordered_record_sha256'],'same_record_multiset':rows[0]['intermediates'][key]['sorted_record_sha256']==rows[1]['intermediates'][key]['sorted_record_sha256']} for key in rows[0]['intermediates']},'pseudogenomes_byte_identical':rows[0]['pseudogenomes']==rows[1]['pseudogenomes']}
+ record.write_text(json.dumps(results,indent=2)+'\n');print(variant,json.dumps({k:v for k,v in results[variant].items() if k!='runs'},indent=2),flush=True)

@@ -13,6 +13,7 @@ import math
 import os
 import re
 import select
+import shlex
 import signal
 import socket
 import stat
@@ -21,8 +22,9 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from pathlib import Path
 
 
@@ -72,14 +74,38 @@ def _recorded_stub_sources(original: str) -> tuple[list[str], list[str]]:
     return names("stub_profiles", r"\w+"), names("stub_configs", r"[\w.+-]+")
 
 
+def _effective_replay_env(manifest: dict) -> dict:
+    redacted = manifest.get("redacted_nextflow_env", [])
+    return {**os.environ, **{key: value for key, value in
+                            manifest.get("nextflow_env", {}).items() if key not in redacted}}
+
+
+def _replay_engine_log(manifest: dict, target: Path, env: dict) -> Path:
+    args = shlex.split(manifest.get("command", ""))
+    raw = env.get("NXF_LOG_FILE") or ".nextflow.log"
+    for i, arg in enumerate(args):
+        if arg == "-log" and i + 1 < len(args):
+            raw = args[i + 1]
+            break
+        if arg.startswith("-log="):
+            raw = arg.split("=", 1)[1]
+            break
+    path = Path(raw).expanduser()
+    return path if path.is_absolute() else target / path
+
+
 def start_replay_log(log: Path, original: str, pid: str) -> None:
     """Write trusted replay controls independently of arbitrary path text."""
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     stub_profiles, stub_configs = _recorded_stub_sources(original)  # a replay runs the same stubs
+    manifest = json.loads((Path(original) / "provenance/run_manifest.json").read_text())
+    engine_log = _replay_engine_log(manifest, log.parent.parent.parent,
+                                    _effective_replay_env(manifest))
+    engine_path = str(engine_log).replace("\r", "\\r").replace("\n", "\\n")
     original = original.replace("\r", "\\r").replace("\n", "\\n")
     host = socket.gethostname().replace("\r", "\\r").replace("\n", "\\n")
     lines = [f"==> nfclaw replay started {stamp}", "    console format: prefixed",
-             f"    replay of: {original}", f"    host: {host}"]
+             f"    replay of: {original}", f"    nextflow log: {engine_path}", f"    host: {host}"]
     if identity := host_identity():
         lines.append(f"    host id: {identity}")
     if not pid.isdigit():
@@ -135,10 +161,17 @@ def checksum_text(checksums: dict[str, str]) -> str:
 
 def read_checksums(path: Path, *, relative: bool = True) -> dict[str, str]:
     """Read a manifest; malformed/duplicate paths raise ValueError, I/O retains OSError."""
-    out: dict[str, str] = {}
-    # Only LF separates records. Unicode line separators are valid filesystem characters.
     with path.open(encoding="utf-8", newline="") as stream:
-        records = stream.read().split("\n")
+        return parse_checksums(stream.read(), source=str(path), relative=relative)
+
+
+def parse_checksums(text: str, *, source: str = 'checksum record',
+                    relative: bool = True) -> dict[str, str]:
+    """Parse the bytes already read from a held file, without reopening a mutable path."""
+    out: dict[str, str] = {}
+    path = source
+    # Only LF separates records. Unicode line separators are valid filesystem characters.
+    records = text.split("\n")
     if records and records[-1] == "":
         records.pop()
     for number, line in enumerate(records, start=1):
@@ -328,16 +361,160 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
     return data
 
 
+def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
+                           writes: list[tuple[str, Path, bool]]) -> None:
+    """Refuse writes beneath any consumed directory, including nested directory aliases.
+
+    The boolean also refuses dependencies inside a destination that can publish arbitrary
+    results. Work/cache trees use False: previously computed files there are legitimate
+    inputs for a later task, but a whole consumed directory must never acquire new work.
+    Inspect metadata only; prelaunch content snapshots remain the source of byte evidence.
+    """
+    if not sources:
+        return
+    destinations = [(label, path.expanduser().resolve(), contains)
+                    for label, path, contains in writes]
+    cached_trees = [destination for _, destination, contains in destinations if not contains]
+    physical_writes: dict[tuple[int, int], tuple[str, Path]] = {}
+    inspected: set[Path] = set()
+
+    def inspect_writer(label: str, path: Path, recursive: bool) -> None:
+        try:
+            metadata = path.stat()
+        except (FileNotFoundError, NotADirectoryError):
+            return  # Missing output slots, including broken links, can be repaired by the run.
+        if stat.S_ISREG(metadata.st_mode):
+            if metadata.st_nlink > 1 or path.is_symlink():
+                physical_writes[(metadata.st_dev, metadata.st_ino)] = label, path
+        elif recursive and stat.S_ISDIR(metadata.st_mode):
+            root = path.resolve()
+            excluded = [cache for cache in cached_trees
+                        if cache != root and cache.is_relative_to(root)]
+            pending = [root]
+            while pending:
+                directory = pending.pop()
+                resolved = directory.resolve()
+                if resolved in inspected:
+                    continue
+                inspected.add(resolved)
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        child = Path(entry.path)
+                        target = child.resolve()
+                        # Nextflow stages inputs in its work/cache trees. Those declared trees
+                        # have a narrower write policy; publication scans must not reinterpret
+                        # their existing read aliases as output files.
+                        if any(child.is_relative_to(cache) for cache in excluded):
+                            continue
+                        try:
+                            metadata = entry.stat(follow_symlinks=True)
+                        except (FileNotFoundError, NotADirectoryError):
+                            continue
+                        if stat.S_ISDIR(metadata.st_mode):
+                            if entry.is_symlink():
+                                destinations.append((label, target, True))
+                            pending.append(child)
+                        elif stat.S_ISREG(metadata.st_mode) and (
+                                metadata.st_nlink > 1 or entry.is_symlink()):
+                            physical_writes[(metadata.st_dev, metadata.st_ino)] = label, child
+
+    try:
+        for label, path, contains in writes:
+            inspect_writer(label, path.expanduser(), contains)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Cannot inspect execution destination boundaries: {exc}") from exc
+
+    def refuse(label: str, destination: Path, path: Path, dependency: Path):
+        raise ValueError(
+            f"{label} {destination} overlaps local dependency {path} "
+            f"(resolved to {dependency}). Execution writes would change its input data.")
+
+    @lru_cache(maxsize=1024)
+    def route_parents(parent: Path) -> frozenset[Path]:
+        # Retain the containing output slot even when a later directory symlink redirects
+        # it elsewhere. Resolving each ancestor also handles OS aliases such as /var on macOS.
+        return frozenset(part.resolve() for part in (parent, *parent.parents))
+
+    def check(path: Path):
+        dependency = path.resolve()
+        logical = Path(os.path.abspath(path.expanduser()))
+        parents = route_parents(path.expanduser().absolute().parent)
+        directory = path.is_dir()
+        for label, destination, contains in destinations:
+            if (dependency == destination
+                    or directory and destination.is_relative_to(dependency)
+                    or contains and (dependency.is_relative_to(destination)
+                                     or logical.is_relative_to(destination)
+                                     or destination in parents)):
+                refuse(label, destination, path, dependency)
+        if physical_writes:
+            try:
+                metadata = path.stat()
+            except FileNotFoundError:
+                return
+            if alias := physical_writes.get((metadata.st_dev, metadata.st_ino)):
+                refuse(*alias, path, dependency)
+
+    for source in sources:
+        # Judge the named path even if absent; a mandatory missing input must not become an
+        # execution destination. Missing optional path parameters retain upstream semantics.
+        try:
+            check(source)
+            inspect_input_paths([source], check)
+        except MissingInputSource:
+            continue
+        except (OSError, RuntimeError) as exc:
+            raise ValueError(
+                f"Cannot inspect local dependency boundaries: {source}: {exc}") from exc
+
+
 def check_replay_destination(bundle: Path, target: Path) -> None:
-    """Refuse writing locks, logs or results into a recorded scientific input directory."""
-    inventory = read_input_inventory(bundle / "inputs.inventory.json")
+    """Check effective engine writes before creating even the replay's parent or lock."""
+    manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))
+    env = _effective_replay_env(manifest)
     target = target.expanduser().resolve()
-    for name, entry in inventory.items():
-        if entry["type"] == "directory":
-            roots = {Path(entry.get("resolved_path", name)), Path(name).resolve()}
-            if any(target.is_relative_to(root) for root in roots):
-                raise ValueError(f"replay output directory {target} overlaps recorded input "
-                                 f"directory {name}; choose a separate output directory")
+    sources = [bundle]
+    for kind in ("inputs", "configs"):
+        inventory = read_input_inventory(bundle / f"{kind}.inventory.json")
+        if kind == "inputs":
+            for name, entry in inventory.items():
+                if entry["type"] == "directory":
+                    roots = {Path(entry.get("resolved_path", name)), Path(name).resolve()}
+                    if any(target.is_relative_to(root) for root in roots):
+                        raise ValueError(f"replay output directory {target} overlaps recorded "
+                                         f"input directory {name}; choose a separate directory")
+                    sources.extend(roots)
+        # Inspect each root once, retaining nested symlinks and hard-link aliases.
+        sources.extend(Path(name) for name in inventory if not any(
+            str(parent) in inventory and inventory[str(parent)]["type"] == "directory"
+            for parent in Path(name).parents))
+    if manifest.get("pipeline_path"):
+        sources.append(Path(manifest["pipeline_path"]))
+
+    def local(value):
+        path = Path(value).expanduser()
+        return path if path.is_absolute() else target / path
+
+    args = shlex.split(manifest.get("command", ""))
+    def option(names, default):
+        return next((args[i + 1] for i, arg in enumerate(args[:-1]) if arg in names), default)
+
+    log = _replay_engine_log(manifest, target, env)
+    writes = [("replay output directory", target, True),
+              ("replay writer lock", target.parent / f".{target.name}.nfclaw.lock", True),
+              ("Nextflow state directory", target / ".nextflow", True),
+              ("Nextflow log", log, True),
+              ("Nextflow work directory", local(option(("-work-dir", "-w"),
+                  env.get("NXF_WORK") or "work")), False)]
+    # Nextflow rotates existing logs before opening the new log.
+    writes.extend(("Nextflow rotated log", Path(str(log) + f".{i}"), True)
+                  for i in range(1, 10))
+    for name in ("NXF_HOME", "NXF_DIST", "NXF_TEMP", "NXF_CACHE_DIR", "CAPSULE_CACHE_DIR"):
+        value = env.get(name) or (str(Path.home() / ".nextflow") if name == "NXF_HOME" else
+                                 env.get("TMPDIR", "") if name == "NXF_TEMP" else "")
+        if value:
+            writes.append((f"Nextflow {name}", local(value), False))
+    check_write_boundaries(sources, writes)
 
 
 def pipeline_head(repo: Path) -> str | None:
@@ -369,10 +546,118 @@ def hash_pipeline(repo: Path) -> dict[str, str]:
     return {path.relative_to(repo).as_posix(): _sha256(path) for path in sorted(set(paths))}
 
 
+@contextmanager
+def open_source_directory(path: Path, *, create: bool = False):
+    """Hold a directory through no-follow ancestor traversal, including during cache writes."""
+    if not path.is_absolute() or '..' in path.parts:
+        raise ValueError(f'source directory must be an absolute canonical path: {path}')
+    fd = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in path.parts[1:]:
+            if create:
+                try:
+                    os.mkdir(part, 0o700, dir_fd=fd)
+                except FileExistsError:
+                    pass
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        yield fd
+    finally:
+        os.close(fd)
+
+
+def corrected_source_inventory(record: dict) -> tuple[dict, dict, set[str]]:
+    """Validate the portable corrected-source record before using any recorded pathname."""
+    if (not isinstance(record, dict) or type(record.get('version')) is not int
+            or record['version'] != 1 or record.get('kind') != 'corrected_working_copy'
+            or record.get('mode_policy') != 'regular-files-644-755-v1'
+            or not isinstance(record.get('fingerprint'), str)
+            or not re.fullmatch(r'[a-f0-9]{64}', record['fingerprint'])
+            or not isinstance(record.get('upstream_commit'), str)
+            or not re.fullmatch(r'[a-f0-9]{40}', record['upstream_commit'])):
+        raise ValueError('invalid corrected source identity or mode policy')
+    files, modes = record.get('files'), record.get('modes')
+    if not isinstance(files, dict) or not files or not isinstance(modes, dict) \
+            or files.keys() != modes.keys():
+        raise ValueError('invalid corrected source file inventory')
+    directories = {'.'}
+    for name, digest in files.items():
+        if (not isinstance(name, str) or not name or '\x00' in name
+                or any(part in ('', '.', '..') for part in name.split('/'))
+                or not isinstance(digest, str) or not re.fullmatch(r'[a-f0-9]{64}', digest)
+                or type(modes[name]) is not int or modes[name] not in (0o644, 0o755)):
+            raise ValueError('invalid corrected source path, hash or mode')
+        directories.update(parent.as_posix() for parent in Path(name).parents)
+    if files.keys() & directories:
+        raise ValueError('corrected source file/directory inventory conflict')
+    return files, modes, directories
+
+
+def check_corrected_source(path: Path, record: dict) -> None:
+    """Check exact files, directories, modes and bytes without following namespace aliases."""
+    files, modes, expected_directories = corrected_source_inventory(record)
+    seen_files, seen_directories = set(), {'.'}
+
+    def walk(fd, relative):
+        directory_info = os.fstat(fd)
+        if stat.S_IMODE(directory_info.st_mode) != 0o700:
+            raise ValueError(f'corrected source directory mode changed: {relative}')
+        entries = sorted(os.listdir(fd))
+        for name in entries:
+            key = name if relative == '.' else f'{relative}/{name}'
+            info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+            if stat.S_ISDIR(info.st_mode) and key in expected_directories:
+                child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                try:
+                    if not os.path.samestat(info, os.fstat(child)):
+                        raise ValueError(f'corrected source directory changed: {key}')
+                    seen_directories.add(key)
+                    walk(child, key)
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(info.st_mode) and key in files:
+                child = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+                try:
+                    opened = os.fstat(child)
+                    if (not os.path.samestat(info, opened) or not stat.S_ISREG(opened.st_mode)
+                            or stat.S_IMODE(opened.st_mode) != modes[key]):
+                        raise ValueError(f'corrected source file identity or mode changed: {key}')
+                    digest = hashlib.sha256()
+                    while block := os.read(child, 1024 * 1024):
+                        digest.update(block)
+                    after = os.fstat(child)
+                    if (digest.hexdigest() != files[key]
+                            or (opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) !=
+                            (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
+                        raise ValueError(f'corrected source content changed: {key}')
+                    seen_files.add(key)
+                finally:
+                    os.close(child)
+            else:
+                raise ValueError(f'corrected source namespace or inventory changed: {key}')
+            if not os.path.samestat(info, os.stat(name, dir_fd=fd, follow_symlinks=False)):
+                raise ValueError(f'corrected source entry changed during verification: {key}')
+        after = os.fstat(fd)
+        if (sorted(os.listdir(fd)) != entries
+                or (directory_info.st_mtime_ns, directory_info.st_ctime_ns) !=
+                (after.st_mtime_ns, after.st_ctime_ns)):
+            raise ValueError(f'corrected source directory changed during verification: {relative}')
+
+    with open_source_directory(path) as root:
+        walk(root, '.')
+        if seen_files != files.keys() or seen_directories != expected_directories:
+            raise ValueError('corrected source inventory is incomplete')
+        with open_source_directory(path) as named:
+            if not os.path.samestat(os.fstat(root), os.fstat(named)):
+                raise ValueError('corrected source root changed during verification')
+
+
 PIPELINE_ARCHIVE = "pipeline-source.tar.gz"
 # Bundle files written after the run whose bytes the manifest records: the execution environment
 # (container identities, plugins, remote inputs) and the container pins a replay passes with `-c`.
-RECORDED_FILES = {"environment_record": "environment.json", "container_pins": "containers.config"}
+RECORDED_FILES = {"environment_record": "environment.json", "container_pins": "containers.config",
+                  'source_corrections': 'source-corrections.json'}
 
 
 def write_pipeline_archive(repo: Path, checksums: dict[str, str], destination: Path) -> str:
@@ -445,21 +730,25 @@ def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | Non
     if archive is None:
         raise ValueError("the bundle holds no pipeline source archive")
     expected = read_checksums(bundle / "pipeline.sha256")
+    correction = corrected_source_record(bundle, manifest)
     if destination is not None:
-        destination.mkdir(parents=True)
+        destination.mkdir(parents=True, mode=0o700)
     seen = set()
     with tarfile.open(archive, mode="r:gz") as tar:
         for member in tar:
             name = member.name
             if not member.isreg() or name not in expected or name in seen:
                 raise ValueError(f"unexpected entry in the pipeline source archive: {name!r}")
+            if correction is not None and member.mode != correction['modes'][name]:
+                raise ValueError(f'archived corrected source mode differs: {name}')
             stream = tar.extractfile(member)
             digest = hashlib.sha256()
             target = None
             output = None
             if destination is not None:
                 target = destination / name
-                target.parent.mkdir(parents=True, exist_ok=True)
+                for parent in reversed(target.relative_to(destination).parents):
+                    (destination / parent).mkdir(mode=0o700, exist_ok=True)
                 output = open(target, "xb")
             try:
                 for chunk in iter(partial(stream.read, 1024 * 1024), b""):
@@ -476,6 +765,25 @@ def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | Non
             seen.add(name)
     if missing := sorted(expected.keys() - seen):
         raise ValueError(f"the pipeline source archive is incomplete; missing: {missing[:5]}")
+    if correction is not None and destination is not None:
+        check_corrected_source(destination, correction)
+
+
+def corrected_source_record(bundle: Path, manifest: dict) -> dict | None:
+    """The independent record is checksum-bound to the bundle and its actual source inventory."""
+    path = _recorded_file(bundle, manifest, 'source_corrections', 'source-corrections.json')
+    if path is None:
+        return None
+    record = json.loads(path.read_text())
+    files, _, _ = corrected_source_inventory(record)
+    if (files != read_checksums(bundle / 'pipeline.sha256')
+            or record.get('pipeline') != manifest.get('pipeline')
+            or record['upstream_commit'] != manifest.get('commit')
+            or record.get('path') != manifest.get('pipeline_path')):
+        raise ValueError('corrected source record differs from the pipeline snapshot')
+    if manifest.get('pipeline_git_head') is not None:
+        raise ValueError('a corrected working copy cannot claim an upstream Git HEAD')
+    return record
 
 
 def _bundled_configs(manifest: dict) -> dict[str, dict]:
@@ -501,6 +809,13 @@ def check_pipeline_checkout(bundle: Path, manifest: dict) -> None:
             and pipeline_head(repo) != expected_head:
         raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
     expected = read_checksums(bundle / "pipeline.sha256")
+    if correction := corrected_source_record(bundle, manifest):
+        try:
+            check_corrected_source(repo, correction)
+        except OSError as exc:
+            raise ValueError(f'corrected source is unreadable or has changed: '
+                             f'{repo}: {exc}') from exc
+        return
     try:
         current = hash_pipeline(repo)
     except (OSError, subprocess.SubprocessError) as exc:
@@ -596,8 +911,24 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
     # After a replay: the source it ran must still be the recorded source.
     if replay_target is not None:
         used = replay_pipeline_source(replay_target)
-        if used is not None and used.get("from") == "checkout":
-            check_pipeline_checkout(bundle, manifest)
+        if used is None and manifest.get('source_corrections') is not None:
+            raise ValueError('the corrected replay source record is missing or invalid')
+        if used is not None:
+            if used.get("from") == "checkout":
+                check_pipeline_checkout(bundle, manifest)
+            elif used.get("from") == "archive":
+                source = replay_target / "provenance" / "pipeline"
+                if correction := corrected_source_record(bundle, manifest):
+                    check_corrected_source(source, correction)
+                expected = read_checksums(bundle / "pipeline.sha256")
+                current = hash_pipeline(source)
+                if current.keys() != expected.keys():
+                    raise ValueError(f"pipeline source inventory changed: {source}")
+                for name, digest in expected.items():
+                    if current[name] != digest:
+                        raise ValueError(f"pipeline source content changed: {source / name}")
+            else:
+                raise ValueError("invalid replay pipeline source record")
     for kind in ("inputs", "configs"):
         expected = read_checksums(bundle / f"{kind}.sha256", relative=False)
         sources = json.loads((bundle / f"{kind}.sources.json").read_text(encoding="utf-8"))

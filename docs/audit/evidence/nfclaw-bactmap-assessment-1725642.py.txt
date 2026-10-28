@@ -1,0 +1,135 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import os,sys,json,hashlib,csv,collections,gzip,subprocess,copy
+import pysam
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');sys.path.insert(0,str(source))
+from runner import verify,environment_record
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');base='commit-1725642-bactmap-demo'
+native=json.loads((root/(base+'.json')).read_text());oracle_path=root/'bactmap-fixture-oracle-20261028/oracle.json'
+oracle=json.loads(oracle_path.read_text());receipt=root/(base+'-assessment.json');assert not receipt.exists()
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+def fasta(path):
+ result={};key=None
+ for line in path.read_text().splitlines():
+  if line.startswith('>'):
+   key=line[1:].split()[0];assert key not in result;result[key]=''
+  else:
+   assert key is not None;result[key]+=line
+ return result
+refpath=Path(oracle['files']['genome/NCTC13799.fna']['path']);assert sha(refpath)==oracle['files']['genome/NCTC13799.fna']['sha256']
+refs=fasta(refpath);assert len(refs)==1
+ref_id,reference=next(iter(refs.items()));length=len(reference)
+assert length==2172222 and hashlib.sha256(reference.encode()).hexdigest()==oracle['reference'][ref_id]['sequence_sha256']
+samples=tuple(oracle['samples']);leaves=set(samples)|{ref_id}
+expected_processes={name:3 for name in ['FASTP','MASH_SKETCH','RASUSA','BWA_MEM','SAMTOOLS_SORT','SAMTOOLS_INDEX','SAMTOOLS_IDXSTATS','SAMTOOLS_FLAGSTAT','SAMTOOLS_STATS','BCFTOOLS_MPILEUP','BCFTOOLS_FILTER','VCF2PSEUDOGENOME']}
+expected_processes.update({name:1 for name in ['SAMPLESHEET_CHECK','BWA_INDEX','ALIGNPSEUDOGENOMES','SNPSITES','GUBBINS','FASTTREE','RAPIDNJ','RAXMLNG','IQTREE','GET_SOFTWARE_VERSIONS','MULTIQC']})
+def route(tasks):
+ assert tasks and all(t['status']=='COMPLETED' and t['exit']=='0' for t in tasks)
+ assert collections.Counter(t['name'].split(' (')[0].split(':')[-1] for t in tasks)==expected_processes
+
+def leaf_check(names):assert len(names)==4 and len(set(names))==4 and set(names)==leaves,'tree leaf identity differs'
+def pseudo_check(actual,wanted):assert actual==wanted,'pseudogenome differs from independent position-based variant projection'
+def allele_check(position,allele):assert reference[position-1:position-1+len(allele)].upper()==allele.upper(),'VCF REF differs from matched reference'
+def read_truth(record,original):
+ mate=1 if record.is_read1 else 2;assert record.is_read1 != record.is_read2
+ key=(record.query_name,mate);assert key in original,'alignment read does not belong to its named input mate'
+ seq,qual=original[key];observed=record.get_forward_sequence();q=''.join(chr(v+33) for v in record.get_forward_qualities())
+ starts=[i for i in range(len(seq)-len(observed)+1) if seq.startswith(observed,i)]
+ assert observed and any(qual[i:i+len(observed)]==q for i in starts),'trimmed alignment sequence/quality is not an original read substring'
+ return key
+record={'version':1,'source_commit':native['source_commit'],'worker':{'path':__file__,'sha256':sha(Path(__file__))},'started_at':datetime.now(UTC).isoformat(),'native_record':{'path':str(root/(base+'.json')),'sha256':sha(root/(base+'.json'))},'oracle':{'path':str(oracle_path),'sha256':sha(oracle_path)},'scope':'Exact three-sample fixture: input hashes, mapped primary read identity/mate/orientation-normalized trimmed bases and qualities, reference/variant/pseudogenome consistency and four-tree leaf/topology inventories. This is execution/data-consistency evidence, not a mapping/variant-calling accuracy benchmark or phylogenetic ground truth.','runs':[]}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+save()
+for native_run in native['runs']:
+ target=Path(native_run['outdir']);route(native_run['tasks'])
+ row={'kind':native_run['kind'],'outdir':str(target),'all_47_tasks_completed':True,'samples':{},'negative_controls':{}};record['runs'].append(row);save()
+ env=json.loads((target/'provenance/environment.json').read_text())
+ assert not environment_record.completeness_issues(env),environment_record.completeness_issues(env)
+ for data in oracle['files'].values():
+  actual=env['remote_inputs'][data['url']];assert actual['sha256']==data['sha256'] and actual['size']==data['bytes']
+ row['all_seven_consumed_remote_inputs_match_oracle']=True
+ aligned=fasta(target/'pseudogenomes/aligned_pseudogenomes.fas');assert set(aligned)==leaves and aligned[ref_id]==reference
+ for sample in samples:
+  originals={}
+  for mate in (1,2):
+   path=Path(oracle['files'][f'illumina/{sample}_{mate}.fastq.gz']['path']);assert sha(path)==oracle['files'][f'illumina/{sample}_{mate}.fastq.gz']['sha256']
+   with gzip.open(path,'rt',encoding='ascii') as stream:
+    while h:=stream.readline():
+     seq=stream.readline().strip();plus=stream.readline();qual=stream.readline().strip();name=h[1:].split()[0]
+     if name.endswith(('/1','/2')):name=name[:-2]
+     assert h.startswith('@') and plus.startswith('+') and len(seq)==len(qual) and (name,mate) not in originals
+     originals[(name,mate)]=(seq,qual)
+  fastp=json.loads((target/f'fastp/{sample}.fastp.json').read_text())['summary']
+  assert fastp['before_filtering']['total_reads']==2*oracle['samples'][sample]['matched_pair_ids']
+  assert 0<fastp['after_filtering']['total_reads']<=fastp['before_filtering']['total_reads']
+  bam_path=target/f'samtools/{sample}.sorted.bam';rows=[];seen=set();counts=collections.Counter();first=None
+  with pysam.AlignmentFile(bam_path,'rb') as bam:
+   assert tuple(bam.references)==(ref_id,) and tuple(bam.lengths)==(length,)
+   for r in bam.fetch(until_eof=True):
+    assert not r.is_unmapped and r.reference_name==ref_id and 0<=r.reference_start<r.reference_end<=length
+    if r.is_secondary or r.is_supplementary:
+     counts['secondary_or_supplementary']+=1;continue
+    key=read_truth(r,originals);assert key not in seen;seen.add(key);counts[f'primary_mate_{key[1]}']+=1
+    if first is None:first=r
+    rows.append([r.query_name,r.flag,r.reference_id,r.reference_start,r.mapping_quality,r.cigartuples,r.next_reference_id,r.next_reference_start,r.template_length,r.query_sequence,list(r.query_qualities),sorted(r.get_tags())])
+  assert counts['primary_mate_1']>0 and counts['primary_mate_2']>0
+  bam_semantics=digest(sorted(rows,key=lambda r:(r[0],r[1])));del rows
+  wrong=copy.copy(originals);wrong.pop((first.query_name,1 if first.is_read1 else 2))
+  try:read_truth(first,wrong)
+  except AssertionError:row['negative_controls'][sample+'_missing_input_read']=True
+  else:raise AssertionError('missing original read accepted')
+  pseudo=fasta(target/f'pseudogenomes/{sample}.fas');assert set(pseudo)=={sample} and len(pseudo[sample])==length
+  projected=bytearray(b'-'*length);positions=set();filters=collections.Counter();gt_counts=collections.Counter();vh=hashlib.sha256();vcf_count=0;last=0
+  with pysam.VariantFile(target/f'variants/{sample}.filtered.vcf.gz') as variants:
+   assert tuple(variants.header.samples)==(sample,) and set(variants.header.contigs)=={ref_id}
+   for v in variants:
+    assert v.contig==ref_id and last<=v.pos<=length;last=v.pos;allele_check(v.pos,v.ref)
+    gt=v.samples[sample]['GT'];assert len(gt)==1;gt_counts[str(gt[0])]+=1
+    filters.update(v.filter.keys());vh.update(str(v).encode());vcf_count+=1
+    basecall='N'
+    if v.pos not in positions and 'PASS' in v.filter and 'INDEL' not in v.info:
+     if gt[0]==0:
+      assert len(v.ref)==1;basecall=v.ref.lower()
+     elif v.alts is not None and len(v.alts)==1:
+      assert gt[0]==1 and len(v.alts[0])==1;basecall=v.alts[0].upper()
+    projected[v.pos-1]=ord(basecall);positions.add(v.pos)
+  assert vcf_count>0 and gt_counts['0']>0 and gt_counts['1']>0
+  wanted=projected.decode();pseudo_check(pseudo[sample],wanted);assert aligned[sample]==pseudo[sample]
+  try:pseudo_check(('C' if wanted[0]!='C' else 'A')+wanted[1:],wanted)
+  except AssertionError:row['negative_controls'][sample+'_altered_pseudogenome']=True
+  else:raise AssertionError('wrong pseudogenome accepted')
+  row['samples'][sample]={'input_pairs':oracle['samples'][sample]['matched_pair_ids'],'fastp':fastp,'bam':{'path':str(bam_path),'sha256':sha(bam_path),'counts':dict(counts),'primary_semantic_sha256':bam_semantics,'all_primary_reads_match_original_mate_trimmed_sequence_and_quality':True},'filtered_vcf':{'records':vcf_count,'genotypes':dict(gt_counts),'filter_counts':dict(filters),'record_stream_sha256':vh.hexdigest(),'every_REF_matches_reference':True},'pseudogenome':{'length':len(wanted),'sequence_sha256':hashlib.sha256(wanted.encode()).hexdigest(),'base_counts':dict(collections.Counter(wanted)),'independent_projection_matches':True}}
+  save();print(native_run['kind'],sample,'BAM/VCF/pseudogenome checked',flush=True)
+ tree_paths=['rapidnj/rapidnj_phylogeny.tre','fasttree/fasttree_phylogeny.tre','iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile','raxmlng/output.raxml.bestTree']
+ tree_code="""import json,sys,Bio
+from Bio import Phylo
+results={}
+for path in sys.argv[1:]:
+ tree=Phylo.read(path,'newick');leaves=sorted(leaf.name for leaf in tree.get_terminals());splits=set()
+ for clade in tree.find_clades():
+  side=frozenset(leaf.name for leaf in clade.get_terminals());other=frozenset(leaves)-side
+  if len(side)>1 and len(other)>1:splits.add(min(tuple(sorted(side)),tuple(sorted(other))))
+ results[path]={'leaves':leaves,'unrooted_bipartitions':sorted(splits)}
+print(json.dumps({'biopython':Bio.__version__,'trees':results},sort_keys=True))
+"""
+ command=['docker','--host',native['docker_host'],'run','--rm','--network','none','--entrypoint','python','-v',str(target)+':'+str(target)+':ro','quay.io/biocontainers/biopython:1.78','-c',tree_code,*[str(target/p) for p in tree_paths]]
+ trees=json.loads(subprocess.check_output(command,text=True,timeout=30));row['trees']={str(Path(k).relative_to(target)):v for k,v in trees['trees'].items()};row['tree_parser_version']=trees['biopython']
+ for tree in row['trees'].values():leaf_check(tree['leaves'])
+ for label,check in {'missing_tree_leaf':lambda:leaf_check(sorted(leaves)[:-1]),'missing_phylogeny_task':lambda:route([t for t in native_run['tasks'] if ':IQTREE' not in t['name']]),'wrong_reference_allele':lambda:allele_check(1,'C' if reference[0]!='C' else 'A')}.items():
+  try:check()
+  except AssertionError:row['negative_controls'][label]=True
+  else:raise AssertionError('negative control accepted '+label)
+ row['all_data_consistency_checks_passed']=True;save()
+a,b=[Path(r['outdir']) for r in record['runs']];comparison=verify.compare(a,b,require_environment=True)
+record['replay_comparison']={**vars(comparison),'structurally_equal':comparison.structurally_equal,'byte_identical':comparison.byte_identical}
+record['scientific_replay_comparison']={}
+for sample in samples:
+ left,right=[r['samples'][sample] for r in record['runs']]
+ fields={'bam_primary_alignment_semantics':left['bam']['primary_semantic_sha256']==right['bam']['primary_semantic_sha256'],'filtered_vcf_record_stream':left['filtered_vcf']['record_stream_sha256']==right['filtered_vcf']['record_stream_sha256'],'pseudogenome_sequence':left['pseudogenome']['sequence_sha256']==right['pseudogenome']['sequence_sha256']}
+ record['scientific_replay_comparison'][sample]=fields
+ assert all(fields.values()),(sample,fields)
+record['tree_topology_comparison']={p:record['runs'][0]['trees'][p]['unrooted_bipartitions']==record['runs'][1]['trees'][p]['unrooted_bipartitions'] for p in tree_paths}
+assert all(record['tree_topology_comparison'].values())
+assert comparison.structurally_equal and comparison.environment['status']=='identical'
+record['finished_at']=datetime.now(UTC).isoformat();record['all_checks_passed']=True;save();print('Complete Bactmap consistency and replay assessment passed',flush=True)

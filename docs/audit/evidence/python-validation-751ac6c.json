@@ -1,0 +1,219 @@
+[
+  {
+    "source_commit": "751ac6c2ca63ab7bf9753082f38789aa224cbcf4",
+    "scope": "full",
+    "python": "Python 3.12.3",
+    "packages": {
+      "pytest": "9.1.1",
+      "pysam": "0.24.1",
+      "h5py": "3.16.0",
+      "numpy": "2.5.4"
+    },
+    "started_at": "2026-10-27T14:21:39.809797+00:00",
+    "finished_at": "2026-10-27T14:44:24.319684+00:00",
+    "command": [
+      "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-o",
+      "addopts=",
+      "-q",
+      "-rs",
+      "--basetemp",
+      "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp/3.12"
+    ],
+    "exit_code": 0,
+    "environment": {
+      "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+    },
+    "log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.12-full.log",
+    "log_sha256": "960971c713034e51614bc2bd94aef5872ecfd44c2f145511eadc9d3d1bf04b6d",
+    "dependency_install_command": [],
+    "dependency_install_log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.12-dependencies-existing.log"
+  },
+  {
+    "source_commit": "751ac6c2ca63ab7bf9753082f38789aa224cbcf4",
+    "scope": "affected",
+    "python": "Python 3.11.17",
+    "packages": {
+      "pytest": "9.1.1",
+      "pysam": "0.24.1",
+      "h5py": "3.16.0",
+      "numpy": "2.4.6"
+    },
+    "started_at": "2026-10-27T14:21:39.810236+00:00",
+    "finished_at": "2026-10-27T14:23:02.690361+00:00",
+    "command": [
+      "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+      "-m",
+      "pytest",
+      "-o",
+      "addopts=",
+      "-q",
+      "-rs",
+      "--basetemp",
+      "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp/3.11",
+      "tests/test_scientific.py",
+      "tests/test_scientific_hts.py",
+      "tests/test_scientific_h5ad.py",
+      "tests/test_checksum_path_format.py",
+      "tests/test_verify.py",
+      "tests/test_verify_integrity.py",
+      "tests/test_provenance.py",
+      "tests/test_provenance_integrity.py",
+      "tests/test_bundle_self_contained.py",
+      "tests/test_cli.py",
+      "tests/test_demo_defaults.py",
+      "tests/test_demo_hgtseq.py",
+      "tests/test_orchestration.py",
+      "tests/test_workflows.py"
+    ],
+    "exit_code": 0,
+    "environment": {
+      "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+    },
+    "log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.11-affected.log",
+    "log_sha256": "afd7a636a28a20cae6aa66f1758cb39fe8da3c3ae6f8a37bdc01fd82209fccd8",
+    "dependency_install_command": [],
+    "dependency_install_log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.11-dependencies-existing.log"
+  },
+  {
+    "source_commit": "751ac6c2ca63ab7bf9753082f38789aa224cbcf4",
+    "scope": "affected",
+    "python": "Python 3.13.17",
+    "packages": {
+      "pytest": "9.1.1",
+      "pysam": "0.24.1",
+      "h5py": "3.16.0",
+      "numpy": "2.5.4"
+    },
+    "started_at": "2026-10-27T14:23:02.691023+00:00",
+    "finished_at": "2026-10-27T14:24:17.830443+00:00",
+    "command": [
+      "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+      "-m",
+      "pytest",
+      "-o",
+      "addopts=",
+      "-q",
+      "-rs",
+      "--basetemp",
+      "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp/3.13",
+      "tests/test_scientific.py",
+      "tests/test_scientific_hts.py",
+      "tests/test_scientific_h5ad.py",
+      "tests/test_checksum_path_format.py",
+      "tests/test_verify.py",
+      "tests/test_verify_integrity.py",
+      "tests/test_provenance.py",
+      "tests/test_provenance_integrity.py",
+      "tests/test_bundle_self_contained.py",
+      "tests/test_cli.py",
+      "tests/test_demo_defaults.py",
+      "tests/test_demo_hgtseq.py",
+      "tests/test_orchestration.py",
+      "tests/test_workflows.py"
+    ],
+    "exit_code": 0,
+    "environment": {
+      "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+    },
+    "log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.13-affected.log",
+    "log_sha256": "ef7ad018a33ad8dc809fa505dcd737b2375e1b5e5a3d6888b3471a03a258de95",
+    "dependency_install_command": [],
+    "dependency_install_log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.13-dependencies-existing.log"
+  },
+  {
+    "source_commit": "751ac6c2ca63ab7bf9753082f38789aa224cbcf4",
+    "scope": "affected",
+    "python": "Python 3.14.9",
+    "packages": {
+      "pytest": "9.1.1",
+      "pysam": "0.24.1",
+      "h5py": "3.16.0",
+      "numpy": "2.5.4"
+    },
+    "started_at": "2026-10-27T14:24:17.831140+00:00",
+    "finished_at": "2026-10-27T14:25:30.750510+00:00",
+    "command": [
+      "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+      "-m",
+      "pytest",
+      "-o",
+      "addopts=",
+      "-q",
+      "-rs",
+      "--basetemp",
+      "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp/3.14",
+      "tests/test_scientific.py",
+      "tests/test_scientific_hts.py",
+      "tests/test_scientific_h5ad.py",
+      "tests/test_checksum_path_format.py",
+      "tests/test_verify.py",
+      "tests/test_verify_integrity.py",
+      "tests/test_provenance.py",
+      "tests/test_provenance_integrity.py",
+      "tests/test_bundle_self_contained.py",
+      "tests/test_cli.py",
+      "tests/test_demo_defaults.py",
+      "tests/test_demo_hgtseq.py",
+      "tests/test_orchestration.py",
+      "tests/test_workflows.py"
+    ],
+    "exit_code": 0,
+    "environment": {
+      "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+    },
+    "log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.14-affected.log",
+    "log_sha256": "366219721afe53b42ac15c86c09ad0648048e77b802bc5b862b91fd4509a73b4",
+    "dependency_install_command": [],
+    "dependency_install_log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.14-dependencies-existing.log"
+  },
+  {
+    "source_commit": "751ac6c2ca63ab7bf9753082f38789aa224cbcf4",
+    "scope": "affected",
+    "python": "Python 3.15.1",
+    "packages": {
+      "pytest": "9.1.1",
+      "pysam": "0.24.1",
+      "h5py": "3.16.0",
+      "numpy": "2.5.4"
+    },
+    "started_at": "2026-10-27T14:25:30.751143+00:00",
+    "finished_at": "2026-10-27T14:26:47.228819+00:00",
+    "command": [
+      "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+      "-m",
+      "pytest",
+      "-o",
+      "addopts=",
+      "-q",
+      "-rs",
+      "--basetemp",
+      "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/tmp/3.15",
+      "tests/test_scientific.py",
+      "tests/test_scientific_hts.py",
+      "tests/test_scientific_h5ad.py",
+      "tests/test_checksum_path_format.py",
+      "tests/test_verify.py",
+      "tests/test_verify_integrity.py",
+      "tests/test_provenance.py",
+      "tests/test_provenance_integrity.py",
+      "tests/test_bundle_self_contained.py",
+      "tests/test_cli.py",
+      "tests/test_demo_defaults.py",
+      "tests/test_demo_hgtseq.py",
+      "tests/test_orchestration.py",
+      "tests/test_workflows.py"
+    ],
+    "exit_code": 0,
+    "environment": {
+      "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source",
+      "LD_LIBRARY_PATH": "/mnt/volume/nfclaw-remediation-python-matrix/hdf5-private/root/usr/lib/x86_64-linux-gnu"
+    },
+    "log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.15-affected.log",
+    "log_sha256": "722e289cefaf7c3fb45150fe00c9a9199898dfaa4b09a3ce115d57499ae91f33",
+    "dependency_install_command": [],
+    "dependency_install_log": "/mnt/volume/nfclaw-remediation-python-matrix/751ac6c/3.15-dependencies-existing.log"
+  }
+]

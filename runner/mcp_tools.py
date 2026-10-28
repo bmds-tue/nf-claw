@@ -10,17 +10,20 @@ through `show_pipeline`.
 """
 from __future__ import annotations
 
-import json
+import codecs
 import math
 import os
 import re
 import shlex
+import stat
 import subprocess
 import time
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, jobs, settings
+from runner import chain, cli, jobs, parameters, settings
+from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
 
@@ -31,18 +34,22 @@ and a provenance bundle after. Workflow:
 2. show_pipeline(pipeline): its skill.md is authoritative for inputs, required parameters and the \
 reference genome. For any other parameter use show_pipeline(pipeline, document="reference", \
 grep=...). Never invent a parameter or value.
-3. run_pipeline(..., check=true) validates everything and prints the exact command without running \
-it.
+3. run_pipeline(..., check=true) checks supported parameters, declared local input paths and the \
+environment, then prints the command without running the analysis.
 4. run_pipeline(...) starts a detached job and returns its job_id. It keeps running after this \
 session ends; nothing needs to stay connected.
 5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then \
 succeeded, failed, cancelled or lost. On failure, read status_report and output_tail, fix the \
 cause, and resubmit with resume=true to continue from Nextflow's cache.
+Replays: replay_run(original, outdir) uses the recorded guarded replay as a supervised job. \
+Always choose a fresh destination; replay jobs cannot resume in place. \
+read_artifact(job_id, path, max_bytes) previews bounded text from a job's output tree. \
 Chains: chain_edges shows which pipeline can feed which; run_chain(spec) runs stages in order, \
 each started only after the previous one succeeded (spec format: resource nfclaw://docs/chaining). \
-run_status(outdir, chain=true) verifies a chain's lineage. cancel_job stops a job cleanly \
-(Nextflow and its tasks shut down, provenance written). Use absolute paths and one new outdir per \
-run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
+run_status(outdir, chain=true) verifies a chain's lineage. cancel_job requests process-group \
+shutdown and outcome recording. Detached containers, scheduler jobs and host crashes can require \
+executor cleanup; verify they have stopped before resuming. Use absolute paths and one new outdir \
+per run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
 """
 
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -128,7 +135,7 @@ def _tool(name: str, title: str, description: str, properties: dict, required: l
                         "openWorldHint": open_world},
         # Antigravity hides MCP tools behind one generic call tool unless a tool asks to be loaded
         # up front, and its model then guessed their arguments or passed the call tool's own
-        # `toolSummary` among them. All eleven together cost it about 2.7k tokens.
+        # `toolSummary` among them. Load every schema together so clients see the real arguments.
         "_meta": {"antigravity/alwaysLoad": True},
     }
 
@@ -181,7 +188,7 @@ TOOLS = [
            "sheet_set": _o("Samplesheet columns no file determines, when generating it from data "
                            "files: {column: value}; a value may use {sample} or {lane}."),
            "params": _o("Pipeline parameters by their schema name, e.g. {\"genome\": \"GRCh38\", "
-                        "\"skip_trimming\": true}. Scalar values only (string, number, boolean). "
+                        "\"skip_trimming\": true}. Scalars, arrays and objects are accepted. "
                         "Look names and allowed values up with show_pipeline."),
            "params_file": _s("A JSON or YAML parameters file; values in params override it."),
            "profile": _s("Nextflow profile(s), comma-separated. Default: docker."),
@@ -223,6 +230,15 @@ TOOLS = [
            "wait_seconds": {**_WAIT, "description": _WAIT["description"]
                             + f" Default {_DEFAULT_RUN_WAIT}."}},
           ["outdir"], read_only=False, open_world=True),
+    _tool("replay_run", "Replay a recorded run",
+          "Execute a recorded run's guarded provenance/commands.sh into a fresh directory, "
+          "as a detached supervised job. Follow it with get_job and stop it with cancel_job. "
+          "The original bundle and its external dependencies must remain available. A failed "
+          "replay requires a new empty destination; it cannot resume in place.",
+          {"original": _s("The original run directory holding provenance/commands.sh."),
+           "outdir": _s("A new or empty replay destination, absolute path."),
+           "wait_seconds": _WAIT},
+          ["original", "outdir"], read_only=False),
     _tool("get_job", "Follow a job",
           "State of a job started by run_pipeline or run_chain: running (phase 'preparing' = "
           "validating or staging, 'launched' = Nextflow is running), succeeded, failed, cancelled, "
@@ -233,6 +249,16 @@ TOOLS = [
                            "(0-500, default 20).",
                            minimum=0, maximum=500)},
           ["job_id"], read_only=True, idempotent=True),
+    _tool("read_artifact", "Preview a job artifact",
+          "Read a bounded UTF-8 preview of a regular file inside a job's output directory, "
+          "such as a generated samplesheet, run log or text result. Reports truncation and "
+          "size. Rejects traversal, binary files and symlinks outside the output tree. "
+          "A preview of a running job may be incomplete; it is not a scientific validation.",
+          {"job_id": _JOB_ID,
+           "path": _s("A file path relative to this job's outdir, e.g. provenance/logs/run.log."),
+           "max_bytes": _i("Maximum preview bytes (default 16384, maximum 65536).",
+                           minimum=1, maximum=65536)},
+          ["job_id", "path"], read_only=True, idempotent=True),
     _tool("list_jobs", "List jobs",
           "Jobs started through this server, newest first, with their state. Jobs persist across "
           "sessions and server restarts.",
@@ -264,7 +290,9 @@ TOOLS = [
           "also requires identical bytes and environment.",
           {"replay": _s("The replay's output directory."),
            "against": _s("The original run's output directory."),
-           "strict": _b("Also require identical bytes, links and execution environment.")},
+           "strict": _b("Also require identical bytes, links and execution environment."),
+           "require_environment": _b("Require complete matching environment evidence; missing "
+                                      "observations and refetched inputs fail.")},
           ["replay", "against"], read_only=True, idempotent=True),
 ]
 _TOOLS_BY_NAME = {t["name"]: t for t in TOOLS}
@@ -315,6 +343,10 @@ def _flag_value(key: str, value) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
+        return str(value)
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            raise ToolError(f"params.{key}: {value} is not a finite number")
         return str(value)
     if isinstance(value, float):
         if not math.isfinite(value):
@@ -559,7 +591,7 @@ class NfclawTools:
 
     # --- execution ------------------------------------------------------------------------------
 
-    def run_argv(self, args: dict) -> list[str]:
+    def run_argv(self, args: dict, *, allow_structured: bool = False) -> list[str]:
         """The `nfclaw run` command line for run_pipeline's arguments. Every value is one
         `--option=value` token, so a value starting with '-' can never be read as an option."""
         argv = ["run", self._pipeline(args["pipeline"]), f"--outdir={self._path(args['outdir'])}"]
@@ -591,6 +623,8 @@ class NfclawTools:
                                 f"it as the {key.replace('-', '_')!r} argument of run_pipeline")
             if value is None:
                 raise ToolError(f"params.{key} is null; omit a parameter to keep its default")
+            if allow_structured and isinstance(value, (list, dict)):
+                continue  # supplied through the private params file before this argv is launched
             argv.append(f"--{key}={_flag_value(key, value)}")
         return argv
 
@@ -613,12 +647,22 @@ class NfclawTools:
                                 f"get_job, stop it with cancel_job, or use another outdir")
 
     def _tool_run_pipeline(self, args: dict, ctx: Context) -> dict:
-        argv = self.run_argv(args)
+        argv = self.run_argv(args, allow_structured=True)
         outdir = self._path(args["outdir"])
         check = bool(args.get("check"))
         if not check:
             self._refuse_busy_outdir(outdir)
         job_dir = jobs.create_dir(args["pipeline"])
+        supplied = args.get("params") or {}
+        if any(isinstance(value, (list, dict)) for value in supplied.values()):
+            merged = (parameters.load_params_file(Path(self._path(args["params_file"])))
+                      if args.get("params_file") else {})
+            merged.update({key.replace("-", "_"): value for key, value in supplied.items()})
+            path = job_dir / "params.json"
+            parameters.write_params_file(merged, path)
+            path.chmod(0o600)
+            argv = [arg for arg in argv if not arg.startswith("--params-file=")]
+            argv.append(f"--params-file={path}")
         job = jobs.launch(job_dir, kind="run", argv=argv, cwd=self.cwd, outdir=outdir, check=check,
                           pipeline=args["pipeline"],
                           log_path=str(cli._run_log_path(outdir)))
@@ -640,6 +684,20 @@ class NfclawTools:
         log_path = Path(outdir) / chain.RECORD_DIRNAME / "logs" / chain.LOG_NAME
         job = jobs.launch(job_dir, kind="chain", argv=self.chain_argv(args, spec_path),
                           cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path))
+        return self._after_submit(job, args, ctx)
+
+    def _tool_replay_run(self, args: dict, ctx: Context) -> dict:
+        original = Path(self._path(args["original"]))
+        script = original / "provenance" / "commands.sh"
+        if not script.is_file() or not (script.parent / "run_manifest.json").is_file():
+            raise ToolError(f"no recorded replay bundle in {original}")
+        outdir = self._path(args["outdir"])
+        self._refuse_busy_outdir(outdir)
+        job_dir = jobs.create_dir("replay")
+        command = ["bash", str(script), outdir]
+        job = jobs.launch(job_dir, kind="replay", argv=command, command=command,
+                          cwd=self.cwd, outdir=outdir,
+                          log_path=str(cli._run_log_path(outdir)))
         return self._after_submit(job, args, ctx)
 
     def _after_submit(self, job: jobs.Job, args: dict, ctx: Context) -> dict:
@@ -681,13 +739,19 @@ class NfclawTools:
 
     def job_view(self, job: jobs.Job, *, log_lines: int) -> dict:
         state = jobs.state(job)
+        command = job.command if job.kind == "replay" else ["nfclaw", *job.argv]
         view = {"job_id": job.id, "kind": job.kind, "pipeline": job.pipeline, "state": state,
                 "check": job.check, "outdir": job.outdir,
-                "command": shlex.join(["nfclaw", *job.argv]), "cwd": job.cwd,
+                "command": shlex.join(command),
+                "cwd": job.cwd,
                 "created_at": job.created_at, "finished_at": job.finished_at,
                 "exit_code": job.exit_code}
         launched = self._launched(job)
-        if launched:
+        frozen = jobs.run_status(job) if state != "running" else {}
+        if frozen:
+            view.update(frozen)
+            view["log"] = job.log_path
+        elif launched and state == "running":
             res = self._cli(["status", job.outdir])
             view["status_report"] = res.text
             view["run_state"] = {0: "success", 3: "running"}.get(res.code, "not successful")
@@ -718,6 +782,53 @@ class NfclawTools:
         return self._job_result(job, log_lines=(200 if job.check else 20) if lines is None
                                 else lines)
 
+    def _tool_read_artifact(self, args: dict, ctx: Context) -> dict:
+        job = jobs.load(args["job_id"])
+        relative = Path(args["path"])
+        if (relative.is_absolute() or ".." in relative.parts or not relative.parts
+                or "\x00" in args["path"]):
+            raise ToolError("artifact path must be a relative file path inside the job's outdir")
+        root = Path(job.outdir).resolve()
+        limit = args.get("max_bytes") or 16384
+        try:
+            path = (root / relative).resolve(strict=True)
+            if not path.is_relative_to(root):
+                raise ToolError("artifact symlinks must stay inside the job's output tree")
+            # Hold each ancestor open: resolving followed by an absolute-path open permits a
+            # task to swap an ancestor for an external symlink between those operations.
+            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            parent_fd = os.open(path.anchor, directory_flags)
+            try:
+                parts = path.relative_to(path.anchor).parts
+                for part in parts[:-1]:
+                    next_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+                    os.close(parent_fd)
+                    parent_fd = next_fd
+                fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                             dir_fd=parent_fd)
+            finally:
+                os.close(parent_fd)
+            with os.fdopen(fd, "rb") as stream:
+                metadata = os.fstat(stream.fileno())
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise ToolError("artifact previews require a regular text file")
+                data = stream.read(limit + 1)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ToolError(f"cannot read this job artifact: {exc}") from exc
+        truncated = len(data) > limit
+        data = data[:limit]
+        if b"\x00" in data:
+            raise ToolError("binary artifacts cannot be previewed as text")
+        try:
+            content = codecs.getincrementaldecoder("utf-8")().decode(data, final=not truncated)
+        except UnicodeDecodeError as exc:
+            raise ToolError("artifact is not UTF-8 text; binary artifacts cannot be previewed") \
+                from exc
+        result = {"job_id": job.id, "path": str(relative), "size_bytes": metadata.st_size,
+                  "returned_bytes": len(content.encode("utf-8")), "truncated": truncated,
+                  "text": content}
+        return tool_result(content, result)
+
     def _tool_list_jobs(self, args: dict, ctx: Context) -> dict:
         wanted = args.get("state")
         rows = []
@@ -742,8 +853,11 @@ class NfclawTools:
                                "nothing to stop.\n\n"
                                + _render_job(view), view)
         wait = args.get("wait_seconds")
-        job = self._wait(job.id, 15 if wait is None else wait, ctx)
-        return self._job_result(job, log_lines=20)
+        def complete():
+            stopped = self._wait(job.id, 15 if wait is None else wait, ctx)
+            return self._job_result(stopped, log_lines=20)
+
+        return ctx.complete_after(complete) if wait != 0 else complete()
 
     # --- reports --------------------------------------------------------------------------------
 
@@ -762,8 +876,11 @@ class NfclawTools:
         argv = ["verify", self._path(args["replay"]), f"--against={self._path(args['against'])}"]
         if args.get("strict"):
             argv.append("--strict")
+        if args.get("require_environment"):
+            argv.append("--require-environment")
         res = self._cli(argv)
         return tool_result(res.text, {"passed": res.code == 0, "strict": bool(args.get("strict")),
+                                      "require_environment": bool(args.get("require_environment")),
                                       "exit_code": res.code, "report": res.text})
 
 
@@ -811,6 +928,11 @@ def _next_step(view: dict) -> str:
     if state == "running":
         return (f"get_job(job_id={jid!r}, wait_seconds=60) to follow it; "
                 f"cancel_job(job_id={jid!r}) to stop it.")
+    if view["kind"] == "replay":
+        if state == "succeeded":
+            return (f"Replay results are in {view['outdir']}. Retain the original replay bundle "
+                    "and compare the outputs with verify_replay before using them.")
+        return "Inspect this replay's status and logs; retry into a new empty destination."
     if state == "succeeded":
         if view["check"]:
             return "Validation passed: run the same arguments without check to launch it."

@@ -1,0 +1,130 @@
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:04] "GET / HTTP/1.1" 200 -
+
+Running 3 tests using 1 worker
+
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /pipelines/ HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/css/91347c9d6f8b0ec2.css HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /brand/logo-128.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /brand/logo-64.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/webpack-c64dcec3a3d7ecc9.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/467e38fe-e73b59e18b7fac2a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/538-54e44b1048098e47.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/main-app-d94508f0352205ac.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/48-ed2542bcd7dbe922.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/269-1beb82e75dd797ff.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/8-762e9d06d766ec67.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/705-32993295fbbaa5ad.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/406-4223d60a5a3e04f7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/app/layout-c517b953d9ce25e8.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/app/template-5a4eebb3ef01f43a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/app/not-found-985f8a6220e6c639.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/713-3845ed4d7f916acb.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/app/page-dc6f20c534ee8e59.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:05] "GET /_next/static/chunks/app/pipelines/page-7e063e79c1b18de5.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /pipelines/airrflow/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /pipelines/ampliseq/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /_next/static/chunks/860-16c89bfc638afe7a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /_next/static/chunks/560-4b31ccf7bf5722ea.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /_next/static/chunks/app/pipelines/%5Bname%5D/page-dbde72078667bea7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /docs/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /_next/static/chunks/app/docs/page-cfb5b200272f626f.js HTTP/1.1" 200 -
+  ✓  1 diagnosis.spec.ts:35:7 › shortcut original (1.3s)
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:06] "GET /pipelines/ HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /brand/logo-64.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/538-54e44b1048098e47.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /brand/logo-128.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/css/91347c9d6f8b0ec2.css HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/webpack-c64dcec3a3d7ecc9.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/467e38fe-e73b59e18b7fac2a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/main-app-d94508f0352205ac.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/406-4223d60a5a3e04f7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/269-1beb82e75dd797ff.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/layout-c517b953d9ce25e8.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/48-ed2542bcd7dbe922.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/705-32993295fbbaa5ad.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/8-762e9d06d766ec67.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/template-5a4eebb3ef01f43a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/not-found-985f8a6220e6c639.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/page-dc6f20c534ee8e59.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/pipelines/page-7e063e79c1b18de5.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/713-3845ed4d7f916acb.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /pipelines/airrflow/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /pipelines/ampliseq/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/860-16c89bfc638afe7a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/560-4b31ccf7bf5722ea.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/pipelines/%5Bname%5D/page-dbde72078667bea7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /docs/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:07] "GET /_next/static/chunks/app/docs/page-cfb5b200272f626f.js HTTP/1.1" 200 -
+  ✓  2 diagnosis.spec.ts:35:7 › shortcut menu-precondition (1.3s)
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/ HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/css/91347c9d6f8b0ec2.css HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /brand/logo-64.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /brand/logo-128.png HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/webpack-c64dcec3a3d7ecc9.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/538-54e44b1048098e47.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/467e38fe-e73b59e18b7fac2a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/main-app-d94508f0352205ac.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/48-ed2542bcd7dbe922.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/8-762e9d06d766ec67.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/269-1beb82e75dd797ff.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/705-32993295fbbaa5ad.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/406-4223d60a5a3e04f7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/layout-c517b953d9ce25e8.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/not-found-985f8a6220e6c639.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/template-5a4eebb3ef01f43a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/713-3845ed4d7f916acb.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/page-dc6f20c534ee8e59.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/pipelines/page-7e063e79c1b18de5.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/airrflow/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/atacseq/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/ampliseq/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /docs/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/bacass/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/app/pipelines/%5Bname%5D/page-dbde72078667bea7.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/560-4b31ccf7bf5722ea.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /_next/static/chunks/860-16c89bfc638afe7a.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:08] "GET /pipelines/bacmodel/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:09] "GET /pipelines/bactmap/index.txt?_rsc=RxG1bODpQ9SxxZyi HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [28/Oct/2026 09:51:09] "GET /_next/static/chunks/app/docs/page-cfb5b200272f626f.js HTTP/1.1" 200 -
+  ✘  3 diagnosis.spec.ts:48:5 › holding shortcut does not close search (7.0s)
+
+
+  1) diagnosis.spec.ts:48:5 › holding shortcut does not close search ───────────────────────────────
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator: locator('input[role="combobox"]')
+    Expected: focused
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeFocused" locator('input[role="combobox"]') with timeout 5000ms
+      - waiting for locator('input[role="combobox"]')
+
+
+      58 |     await expect(page.locator('input[role="combobox"]')).toBeFocused();
+      59 |     await page.keyboard.down('k');
+    > 60 |     await expect(page.locator('input[role="combobox"]')).toBeFocused();
+         |                                                          ^
+      61 |   } finally { await page.keyboard.up('k'); await page.keyboard.up('Control'); }
+      62 | });
+      63 |
+        at /mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnosis.spec.ts:60:58
+
+    Error Context: test-results/diagnosis-holding-shortcut-does-not-close-search/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/diagnosis-holding-shortcut-does-not-close-search/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/diagnosis-holding-shortcut-does-not-close-search/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    diagnosis.spec.ts:48:5 › holding shortcut does not close search ────────────────────────────────
+  2 passed (10.9s)

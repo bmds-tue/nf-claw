@@ -1,0 +1,23 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import gzip,hashlib,json
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');base='commit-8db1cbb-bactmap-demo';parent=root/(base+'-assessment-v2.json');record=json.loads(parent.read_text());assert record['all_checks_passed']
+receipt=root/(base+'-raw-vcf-comparison.json');assert not receipt.exists()
+result={'source_commit':record['source_commit'],'started_at':datetime.now(UTC).isoformat(),'worker':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'assessment':{'path':str(parent),'sha256':hashlib.sha256(parent.read_bytes()).hexdigest()},'scope':'Exact decompressed non-header VCF record bytes and order, with no pysam parsing/numeric reformatting or numeric tolerance. Both filtered and unfiltered VCFs; headers/compression remain separately represented by full-output verification.','runs':[]}
+def save():receipt.write_text(json.dumps(result,indent=2)+'\n')
+save()
+for run in record['runs']:
+ row={'kind':run['kind'],'files':{}};result['runs'].append(row)
+ for sample in ['ERR2172265','ERR2172266','ERR2172267']:
+  for suffix in ['.vcf.gz','.filtered.vcf.gz']:
+   rel=f'variants/{sample}{suffix}';path=Path(run['outdir'])/rel;h=hashlib.sha256();n=0;size=0
+   with gzip.open(path,'rb') as stream:
+    for line in stream:
+     if line.startswith(b'#'):continue
+     assert line.endswith(b'\n') and len(line.rstrip(b'\n').split(b'\t'))==10
+     h.update(line);n+=1;size+=len(line)
+   assert n>0
+   row['files'][rel]={'records':n,'uncompressed_record_bytes':size,'raw_record_stream_sha256':h.hexdigest()};save();print(run['kind'],rel,n,flush=True)
+result['comparisons']={p:result['runs'][0]['files'][p]==result['runs'][1]['files'][p] for p in result['runs'][0]['files']};save()
+assert all(result['comparisons'].values()),result['comparisons']
+result['all_raw_record_streams_identical']=True;result['finished_at']=datetime.now(UTC).isoformat();save();print('All six raw VCF record streams identical',flush=True)

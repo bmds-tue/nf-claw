@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "assessor_commit": "31ef6fe17b17afff0c45ed36a86f2a0fad4c2577",
+  "structural_and_environment_comparison": {
+    "identical": [
+      "multiqc/multiqc_data/multiqc_citations.txt",
+      "multiqc/multiqc_data/multiqc_software_versions.txt",
+      "multiqc/multiqc_data/multiqc_sources.txt",
+      "pipeline_info/nf_core_funcscan_software_mqc_versions.yml",
+      "reports/ampcombi2/Ampcombi_parse_tables.log",
+      "reports/ampcombi2/amp_DRAMP_database/general_amps.fasta",
+      "reports/ampcombi2/amp_DRAMP_database/general_amps.txt",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB.dbtype",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB.index",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB.lookup",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB.source",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB_h",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB_h.dbtype",
+      "reports/ampcombi2/amp_DRAMP_database/mmseqs2/ref_DB_h.index",
+      "reports/ampcombi2/amp_DRAMP_database/preparation.json",
+      "reports/ampcombi2/sample_1/sample_1_ampcombi.log",
+      "reports/ampcombi2/sample_2/sample_2_ampcombi.log"
+    ],
+    "changed": [
+      "amp/hmmer_hmmsearch/sample_1/sample_1_mybacteriocin.hmmer_hmmsearch.txt.gz",
+      "amp/hmmer_hmmsearch/sample_2/sample_2_mybacteriocin.hmmer_hmmsearch.txt.gz",
+      "multiqc/multiqc_data/llms-full.txt",
+      "multiqc/multiqc_data/multiqc.log",
+      "multiqc/multiqc_data/multiqc.parquet",
+      "multiqc/multiqc_data/multiqc_data.json",
+      "multiqc/multiqc_report.html",
+      "pipeline_info/execution_report_2026-10-27_18-05-03.html",
+      "pipeline_info/execution_timeline_2026-10-27_18-05-03.html",
+      "pipeline_info/execution_trace_2026-10-27_18-05-03.txt",
+      "pipeline_info/params_2026-10-27_18-05-22.json -> pipeline_info/params_2026-10-27_18-07-24.json",
+      "pipeline_info/pipeline_dag_2026-10-27_18-05-03.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "missing_directories": [],
+    "extra_directories": [],
+    "changed_links": [],
+    "unverified_structure": false,
+    "renamed": [
+      "pipeline_info/params_2026-10-27_18-05-22.json -> pipeline_info/params_2026-10-27_18-07-24.json"
+    ],
+    "environment": {
+      "version": 1,
+      "status": "identical",
+      "mismatches": [],
+      "unverified": [],
+      "notes": []
+    }
+  },
+  "structurally_equal": true,
+  "scope": "Selected-task execution and environment identity. Changed scientific outputs require separate assessment; no blanket equivalence allowance."
+}

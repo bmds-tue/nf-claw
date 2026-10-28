@@ -6,9 +6,9 @@ import json
 import re
 from pathlib import Path
 
-from runner import (discovery, engine_version, fastqrepair_compat, handoff, inputs,
+from runner import (demo_defaults, discovery, engine_version, fastqrepair_compat, handoff, inputs,
                     nextflow_command,
-                    sheetgen, versions)
+                    sheetgen, source_corrections, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
@@ -705,6 +705,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
                  "hold no results; `nfclaw status` reports the success with a "
                  "`stub run:` caveat.\n\n"
                  if nextflow_command.stub_profiles(st.path, "test") else "")
+    if correction := demo_defaults.note(name, st.commit):
+        demo_note += correction + "\n\n"
     nfclaw_cmd, raw_cmd = _run_invocation(name, ps, insch, pipeline_version, tree)
     if dev:
         first_line = (f"# nfclaw resolves nf-core/{name}'s {pipeline_version} branch to its "
@@ -769,8 +771,44 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
             "offset alone is insufficient. See [Cock et al. (2010)]"
             "(https://doi.org/10.1093/nar/gkp1137) for the encoding and score definitions.\n\n"
         )
+    correction_block = ''
+    if correction := source_corrections.recipe_identity(name, st.commit):
+        raw_comment = ('# direct upstream execution (omits nfclaw\'s recorded workflow '
+                       'correction):')
+        purpose = {
+            'createtaxdb': 'Sourmash sorts a copy rather than the shared genome list.',
+            'funcscan': 'HMM search retains sample metadata so all HMM results reach AMPcombi.',
+            'bactmap': 'The test profile preserves module defaults and overrides only its '
+                       'intended leaves, with explicit IQ-TREE and RAxML seeds. Pseudogenomes '
+                       'are aligned in sample-name order. Preview skips the unbound MultiQC wait; '
+                       'real execution still waits for its report.',
+        }[name]
+        doc_root = '../..' if pipeline_version is None else '../../../..'
+        correction_block = (
+            '## Runtime corrections\n'
+            f'For this exact commit, `nfclaw run` applies `{correction["recipe"]}` in a '
+            f'separate verified working copy. {purpose} The original pinned checkout stays '
+            'unchanged. The direct Nextflow command omits this correction. '
+            'The actual corrected bytes, recipe, source archive and executable modes are '
+            'recorded for replay; resume refuses missing or changed source identity. '
+            'Use `NFCLAW_SOURCE_CACHE` to select another writable user cache. '
+            f'[Recorded source corrections]({doc_root}/docs/source-corrections.md) explains '
+            'the exact scope and validation.\n\n')
     reference = _reference_section(ps, st.path)
     reference_block = f"## Reference genome\n{reference}\n" if reference else ""
+    if name == 'funcscan' and st.commit == 'aee3dc965eb0c77267435544dda30da858763913':
+        doc_root = '../..' if pipeline_version is None else '../../../..'
+        reference_block += (
+            '## Reference database\n'
+            'The bundled demo selects APD. For DRAMP, this release uses AMPcombi 3.0.0, whose '
+            'downloader crashes on missing sequence cells. Prepare a complete local DRAMP TSV '
+            'with `nfclaw prepare-dramp RAW.tsv --outdir /refs/amp_DRAMP_database`, inspect its '
+            'recorded exclusions, then build `mmseqs2/ref_DB` before analysis. Supply both '
+            '`--amp-ampcombi-db-id DRAMP` and `--amp-ampcombi-db /refs/amp_DRAMP_database`. '
+            'The helper preserves retained sequences and annotations, excludes missing IDs and '
+            'noncanonical/missing sequences, and refuses an existing output. '
+            f'[DRAMP reference preparation]({doc_root}/docs/dramp-reference.md) gives the '
+            'pinned-image index recipe and validation scope.\n\n')
     store_names = _nextflow_store_section(st)
     store_block = f"## Secrets\n{store_names}\n" if store_names else ""
     # The committed skill.md is pipelines/<name>/skill.md; a version's docs are written beside its
@@ -790,6 +828,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{raw_comment}\n"
         f"{raw_cmd}\n```\n\n"
         f"{version_note}"
+        f"{correction_block}"
         f"## Inputs\n{_inputs_section(insch, ps)}\n"
         f"## Required parameters\n{_required_params(ps)}\n"
         f"{mandatory_block}"

@@ -1,0 +1,1248 @@
+{
+  "version": 1,
+  "captured_at": "2026-10-26T23:57:18.767042+00:00",
+  "wrapper_base_commit": "0aa795091ca5b378900bfff9d2eacf6dedd839cd",
+  "classifier_sha256": "dfdb04ca48c48b97a825dba4e2e738cda7840bf5f269e94e44a620adba792a32",
+  "scope": "Schema classification, not execution or scientific input validation.",
+  "counts": {
+    "manual": 12,
+    "direct": 71,
+    "column_selection": 3,
+    "no_schema": 9
+  },
+  "pipelines": [
+    {
+      "pipeline": "airrflow",
+      "pipeline_commit": "601bbe64a4a035b531b70626eeacca9770100e6e",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "ampliseq",
+      "pipeline_commit": "992e6df34065067185b5e34665b5861b6827981d",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "atacseq",
+      "pipeline_commit": "1a1dbe52ffbd82256c941a032b0e22abbd925b8a",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "bacass",
+      "pipeline_commit": "5ed7c2dd9a05d2434d8ba39ace1116368a4ba570",
+      "status": "column_selection",
+      "reason": "the samplesheet takes reads in several column groups (R1 + R2; LongFastQ) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set LongFastQ=",
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "R1",
+          "R2"
+        ],
+        [
+          "LongFastQ"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "bacmodel",
+      "pipeline_commit": "1abf4e28d250edf801c0f671a19f233f18128875",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta",
+        "medium_gapseq_csv",
+        "medium_carveme_tsv"
+      ]
+    },
+    {
+      "pipeline": "bactmap",
+      "pipeline_commit": "834642d8ac150ca10d705833223e7bcf15efc210",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "bamtofastq",
+      "pipeline_commit": "8a295860c0c9221337dec7f2620709a47cea254d",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "mapped",
+        "index"
+      ]
+    },
+    {
+      "pipeline": "callingcards",
+      "pipeline_commit": "20b66e785a822028eaa125583aad0747d55bba61",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "barcode_details"
+      ]
+    },
+    {
+      "pipeline": "chipseq",
+      "pipeline_commit": "76e2382b6d443db4dc2396e6831d1243256d80b0",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "circdna",
+      "pipeline_commit": "8e0e14c84f90c94d975c2bac6bde8e5a1d5bc8ab",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "coproid",
+      "pipeline_commit": "045d569d5b01b2d1572220718e64a6d054ad57eb",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "createpanelrefs",
+      "pipeline_commit": "8ce86a84b5af74facf99abb76216531622b52bc8",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "bam",
+        "bai",
+        "cram",
+        "crai"
+      ]
+    },
+    {
+      "pipeline": "createtaxdb",
+      "pipeline_commit": "b01a0f8ed96a5990d15470828dfa92a22cf08bba",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta_dna",
+        "fasta_aa"
+      ]
+    },
+    {
+      "pipeline": "crisprseq",
+      "pipeline_commit": "0e9f915c4a3c89d02a66ec58e2decbc832323c8b",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "cutandrun",
+      "pipeline_commit": "6e1125d4fee4ea7c8b70ed836bb0e92a89e3305f",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "datasync",
+      "pipeline_commit": "c48b5103cc568d275c7d65a9609771cfb3471931",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "checksum_md5",
+        "checksum_sha"
+      ]
+    },
+    {
+      "pipeline": "demo",
+      "pipeline_commit": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "demultiplex",
+      "pipeline_commit": "daade37c4a75a4c1709ccf12434deb3424141319",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "samplesheet"
+      ]
+    },
+    {
+      "pipeline": "denovotranscript",
+      "pipeline_commit": "9ab0f57785c37f77e05a03c8c327e35c63c8432b",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "detaxizer",
+      "pipeline_commit": "3586921aa3a4c49271f1b2082309bdc33c819749",
+      "status": "column_selection",
+      "reason": "the samplesheet takes reads in several column groups (short_reads_fastq_1 + short_reads_fastq_2; long_reads_fastq_1) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set long_reads_fastq_1=",
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "short_reads_fastq_1",
+          "short_reads_fastq_2"
+        ],
+        [
+          "long_reads_fastq_1"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "differentialabundance",
+      "pipeline_commit": "30ed7741fc392127156c2fb10cfa3d69d216b54b",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "drop",
+      "pipeline_commit": "20388350d242746f8e799b28c3ae80421627b077",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "RNA_BAM_FILE",
+        "RNA_BAI_FILE",
+        "DNA_VCF_FILE",
+        "DNA_TBI_FILE",
+        "GENE_COUNTS_FILE"
+      ]
+    },
+    {
+      "pipeline": "drugresponseeval",
+      "pipeline_commit": "6e420c1cc2f1be2907627d9b2b3aca77bf622603",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "epitopeprediction",
+      "pipeline_commit": "e637bc7c49e6e05a09f5207501a142ec68d8570b",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "filename",
+        "germline_vcf"
+      ]
+    },
+    {
+      "pipeline": "fastqrepair",
+      "pipeline_commit": "70a38209407b9367a9ff7ab8b26d84cb1983ea18",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "fastquorum",
+      "pipeline_commit": "074b201d8ca6a38717da7dca58921a2cae9e21f0",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ],
+        [
+          "fastq_3"
+        ],
+        [
+          "fastq_4"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "fetchngs",
+      "pipeline_commit": "955c892d80927cee633765e6e390f9cc6b7235c9",
+      "status": "manual",
+      "reason": "the samplesheet takes one value per line, not data files",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "funcprofiler",
+      "pipeline_commit": "805e23e866b90142e176d1ae85da6f6a365bf056",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "funcscan",
+      "pipeline_commit": "aee3dc965eb0c77267435544dda30da858763913",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta",
+        "protein",
+        "gbk",
+        "gff"
+      ]
+    },
+    {
+      "pipeline": "genomeassembler",
+      "pipeline_commit": "c608622876dc627020e6627a5ea8cffd0d2e3f3d",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "genomeqc",
+      "pipeline_commit": "bce44e5b558e21b38d4dd2b6521302246b4dae6d",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq"
+        ]
+      ],
+      "data_columns": [
+        "fasta",
+        "gff"
+      ]
+    },
+    {
+      "pipeline": "hadge",
+      "pipeline_commit": "921d3780498d0d6f4da0d3ea8c8416d214a3ff42",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "bam",
+        "barcodes",
+        "vcf"
+      ]
+    },
+    {
+      "pipeline": "hgtseq",
+      "pipeline_commit": "683daaf41bb396839445e603152b45daa141ced4",
+      "status": "manual",
+      "reason": "the pinned consumer accepts mixed FASTQ/alignment roles that require an explicit samplesheet",
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "input2"
+        ]
+      ],
+      "data_columns": [
+        "input1"
+      ]
+    },
+    {
+      "pipeline": "hic",
+      "pipeline_commit": "fe4ac656317d24c37e81e7940a526ed9ea812f8e",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "hicar",
+      "pipeline_commit": "429087d2b13e59c3edd2e71b8005c1adc5bbb7bb",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "hlatyping",
+      "pipeline_commit": "3237d20e7e611d8bbf8c37e637202dfe8a23e996",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "bam"
+      ]
+    },
+    {
+      "pipeline": "isoseq",
+      "pipeline_commit": "6c944831289d4d6e33497026f6b18e8c671705bd",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "seq_data",
+        "pbi"
+      ]
+    },
+    {
+      "pipeline": "longraredisease",
+      "pipeline_commit": "f40870fcbcf2e9fc29b623b848487789d487ed4a",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "file_path"
+      ]
+    },
+    {
+      "pipeline": "lsmquant",
+      "pipeline_commit": "b39ec6e1fb267ab3d2d3b16d05b921aaa679cd1f",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "img_directory",
+        "parameter_file"
+      ]
+    },
+    {
+      "pipeline": "mag",
+      "pipeline_commit": "56abab5b023ce953c9c43fe21090d156ad0e18af",
+      "status": "column_selection",
+      "reason": "the samplesheet takes reads in several column groups (short_reads_1 + short_reads_2; long_reads) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set long_reads=",
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "short_reads_1",
+          "short_reads_2"
+        ],
+        [
+          "long_reads"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "magmap",
+      "pipeline_commit": "839660084e48d682f70bed4e535f2a11a756638a",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "marsseq",
+      "pipeline_commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "mcmicro",
+      "pipeline_commit": "f4400001578642e370a72668966c6602fe172ef6",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "metaboigniter",
+      "pipeline_commit": "55d82547604fcae3b6557fe7a3c442b623184f34",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "msfile"
+      ]
+    },
+    {
+      "pipeline": "metapep",
+      "pipeline_commit": "84feafc9476978c2a1b84849871a553cffd9762a",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "metatdenovo",
+      "pipeline_commit": "e9f8311e9a24278fdaed0f8717eb819532aef55e",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "methylong",
+      "pipeline_commit": "3513e80df682ad20f42d6429a2ee142b606949b5",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "ref"
+      ]
+    },
+    {
+      "pipeline": "methylseq",
+      "pipeline_commit": "5aa56467a85a5e2d6795ea72dfa5a5f0c9babc23",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "mhcquant",
+      "pipeline_commit": "a4b6d51803af0fbde5acd8e9802df76280ba8306",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "ReplicateFileName",
+        "Fasta"
+      ]
+    },
+    {
+      "pipeline": "molkart",
+      "pipeline_commit": "4ec0790d80cf77f2428d33b1a8571ccb498e2170",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "nuclear_image",
+        "spot_table"
+      ]
+    },
+    {
+      "pipeline": "multiplesequencealign",
+      "pipeline_commit": "79724dac3d240b9bb7684532d3fe238b42f6a4b4",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta",
+        "reference",
+        "optional_data",
+        "template"
+      ]
+    },
+    {
+      "pipeline": "nanoseq",
+      "pipeline_commit": "6e563e54362cddb8e48d15c156251708c22d0e8d",
+      "status": "manual",
+      "reason": "group, replicate, barcode, data layout and reference assignments require an explicit samplesheet",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "gtf"
+      ]
+    },
+    {
+      "pipeline": "nanostring",
+      "pipeline_commit": "6f0b2d537a1f06e8fe1d6c63d7c409009141aa62",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "RCC_FILE"
+      ]
+    },
+    {
+      "pipeline": "nascent",
+      "pipeline_commit": "7d4fe61975015f652c271886e661764b05cfd3bf",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "oncoanalyser",
+      "pipeline_commit": "7c74c87a43749952b38c9a18915947570f0595a0",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "pacvar",
+      "pipeline_commit": "20364830237171928c79e59651142460379d1459",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "pbi"
+      ]
+    },
+    {
+      "pipeline": "pairgenomealign",
+      "pipeline_commit": "8ee09a1cdc920fc90cd62358952045e5019e1fe0",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "pangenome",
+      "pipeline_commit": "3d02bd1df79f48b4bfdb4ad95d4ca0d7f6aeb337",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "pathogensurveillance",
+      "pipeline_commit": "13547eaa7345dab4ac97db49775ae8284af4113d",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "path",
+          "path_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "phaseimpute",
+      "pipeline_commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "index"
+      ]
+    },
+    {
+      "pipeline": "phyloplace",
+      "pipeline_commit": "68db179c0f034bd0a6133b62a8a9fa37f8a3c517",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "pixelator",
+      "pipeline_commit": "d7376a8bca8b262b858ed440b6dd49c1853911e8",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "panel_file"
+      ]
+    },
+    {
+      "pipeline": "plasmodiumdrugres",
+      "pipeline_commit": "a333327a245ccb3c0f1a37167a7afe670c35894e",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "proteinannotator",
+      "pipeline_commit": "cbf78d471f62d91af666e8c77bcd580b4743c6be",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "proteinfamilies",
+      "pipeline_commit": "318acd54eb9c679553338b2db46313bb469d03d1",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "proteinfold",
+      "pipeline_commit": "5338c24b2af62cc4c02dcd34bcc49912eebffb3a",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "provenancereport",
+      "pipeline_commit": "89ed44de8da1788e5f00a6dd95bd72c51ff36dff",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "rangeland",
+      "pipeline_commit": "7c5cb9593b80d2a3cdc8bcb14137722351644435",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "raredisease",
+      "pipeline_commit": "83f2699d28bc957e1d3b875da3d96004a818c2c3",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "bam",
+        "bai"
+      ]
+    },
+    {
+      "pipeline": "readsimulator",
+      "pipeline_commit": "0e8805ddbcd0e0fdcdc62105d59c3f29dd985a64",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "reportho",
+      "pipeline_commit": "9e8ae5a07ddb5ccd34bb01c72e70e390d97d1cb7",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "ribomsqc",
+      "pipeline_commit": "3654357ea417c0a52ede22721f584885271fc0e7",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "raw_file"
+      ]
+    },
+    {
+      "pipeline": "riboseq",
+      "pipeline_commit": "11d66a3b8ae1f41f9c385af36bd431c35bf015ab",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "rnadnavar",
+      "pipeline_commit": "8e8debdb0e7208218a4a2f852de7c741a69ca448",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "table",
+        "cram",
+        "crai",
+        "bam",
+        "bai",
+        "vcf",
+        "maf"
+      ]
+    },
+    {
+      "pipeline": "rnafusion",
+      "pipeline_commit": "76ad76e7c39b2ba9edc35aa3602e3dc454d842ec",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "bam",
+        "bai",
+        "cram",
+        "crai",
+        "junctions",
+        "splice_junctions"
+      ]
+    },
+    {
+      "pipeline": "rnaseq",
+      "pipeline_commit": "a1fcdddd3b826fe46eb46f0479f2ff8a7815af05",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "rnasplice",
+      "pipeline_commit": "aceb47ab77cf0edfb290a44035328ed5b7eb0be8",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "rnastructurome",
+      "pipeline_commit": "633ab1d0d12103f9002fe6e781ae1251df2d2656",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "rnavar",
+      "pipeline_commit": "a0e4641409eb7aed4b325e543d20577f9c08e437",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "bam",
+        "bai",
+        "cram",
+        "crai",
+        "vcf",
+        "tbi"
+      ]
+    },
+    {
+      "pipeline": "sarek",
+      "pipeline_commit": "8ccac7ad37b05dd792447763bf9671b719824587",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "table",
+        "cram",
+        "crai",
+        "bam",
+        "bai",
+        "vcf"
+      ]
+    },
+    {
+      "pipeline": "scnanoseq",
+      "pipeline_commit": "83d55ea87eb625a3564d40124fb1fa54c4c63f9e",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "scrnaseq",
+      "pipeline_commit": "3fc17b4f971a89e47c88337de71d0e777ffad8cc",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "seqinspector",
+      "pipeline_commit": "6aa08aabb00cdbb0f5b62adf2749b472e794ba04",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "rundir"
+      ]
+    },
+    {
+      "pipeline": "seqsubmit",
+      "pipeline_commit": "717fd19e7a40099fbe5362ec48ab8ec21f62d3f8",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "smrnaseq",
+      "pipeline_commit": "cb0af579b24cb8d5a3accd87b2f14ea93fe04832",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "sopa",
+      "pipeline_commit": "0b959963a3984ff78725209113d9ecdb78cef0b6",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "spatialaxe",
+      "pipeline_commit": "748d310ac01943c97a15bdbc27ec2525a3ee0a96",
+      "status": "manual",
+      "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "stableexpression",
+      "pipeline_commit": "c4cbf82471391990cae257c0212be86f6b4fb18b",
+      "status": "no_schema",
+      "reason": "No samplesheet schema consumed by this input.",
+      "schema": null,
+      "read_groups": [],
+      "data_columns": []
+    },
+    {
+      "pipeline": "taxprofiler",
+      "pipeline_commit": "70ecc15e49b4f1fcf79d876643b5d14b65c66178",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": [
+        "fasta"
+      ]
+    },
+    {
+      "pipeline": "tumourevo",
+      "pipeline_commit": "180ae5447d0eb0214f650b6fcf7dabed0c77b5a2",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "vcf",
+        "tbi",
+        "tumour_alignment",
+        "tumour_alignment_index"
+      ]
+    },
+    {
+      "pipeline": "variantbenchmarking",
+      "pipeline_commit": "8b21c01749c4447b285d242a198127736f3ffe51",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "test_vcf",
+        "test_regions"
+      ]
+    },
+    {
+      "pipeline": "variantprioritization",
+      "pipeline_commit": "8ba629c53dbdb65057c85a3b0a76a7eb2e8688ef",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [],
+      "data_columns": [
+        "vcf",
+        "cna"
+      ]
+    },
+    {
+      "pipeline": "viralintegration",
+      "pipeline_commit": "70e558aaff836d43f5d662bf9c28414f4e6db642",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "viralmetagenome",
+      "pipeline_commit": "74064a43f4b00c163c22bcfc9cf1d84a2a69e988",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    },
+    {
+      "pipeline": "viralrecon",
+      "pipeline_commit": "395079f1d24dce731ac22e03d7a5e71f110103fc",
+      "status": "direct",
+      "reason": null,
+      "schema": "assets/schema_input.json",
+      "read_groups": [
+        [
+          "fastq_1",
+          "fastq_2"
+        ]
+      ],
+      "data_columns": []
+    }
+  ]
+}

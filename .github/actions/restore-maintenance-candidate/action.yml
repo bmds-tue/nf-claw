@@ -1,0 +1,60 @@
+name: Restore maintenance candidate and pinned sources
+description: Verify an immutable candidate before initializing its approved source registrations.
+inputs:
+  artifact:
+    description: Immutable producing artifact ID; empty for ordinary CI
+    default: ""
+  base:
+    description: Validated base commit
+    default: ""
+  sha:
+    description: Exact candidate commit
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Validate candidate artifact selection
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        CANDIDATE_ARTIFACT: ${{ inputs.artifact }}
+        BASE_SHA: ${{ inputs.base }}
+        CANDIDATE_SHA: ${{ inputs.sha }}
+      run: |
+        set -euo pipefail
+        if [[ -n "$CANDIDATE_SHA" || -n "$CANDIDATE_ARTIFACT" || -n "$BASE_SHA" ]]; then
+          [[ "$CANDIDATE_ARTIFACT" =~ ^[1-9][0-9]*$ && "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Jobs check out the trusted triggering commit; the candidate must build on exactly it.
+          if [[ "$(git rev-parse HEAD)" != "$BASE_SHA" ]]; then
+            echo "::error::The checked-out trusted commit is not the candidate's validated base"
+            exit 1
+          fi
+        fi
+    - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      if: inputs.sha != ''
+      with:
+        artifact-ids: ${{ inputs.artifact }}
+        path: ${{ runner.temp }}/maintenance-candidate
+    - name: Restore the exact verified candidate
+      if: inputs.sha != ''
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        BASE_SHA: ${{ inputs.base }}
+        CANDIDATE_SHA: ${{ inputs.sha }}
+      run: |
+        python3 scripts/maintenance_candidate.py restore --directory "$RUNNER_TEMP/maintenance-candidate" \
+          --base "$BASE_SHA" --sha "$CANDIDATE_SHA"
+    - name: Initialize and verify all pinned sources
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        set -euo pipefail
+        git submodule sync --recursive
+        git submodule update --init --recursive
+        git submodule status --recursive > "$RUNNER_TEMP/maintenance-submodules.txt"
+        test -s "$RUNNER_TEMP/maintenance-submodules.txt"
+        if grep -q '^[^ ]' "$RUNNER_TEMP/maintenance-submodules.txt"; then
+          echo "::error::Missing or mismatched pinned source trees"
+          exit 1
+        fi

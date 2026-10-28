@@ -1,0 +1,1255 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: operations.spec.ts >> mobile menu hands focus to search opened by shortcut
+- Location: tests/operations.spec.ts:58:3
+
+# Error details
+
+```
+Error: expect(locator).toBeFocused() failed
+
+Locator: locator('input[role="combobox"]')
+Expected: focused
+Timeout: 5000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeFocused" locator('input[role="combobox"]') with timeout 5000ms
+  - waiting for locator('input[role="combobox"]')
+
+```
+
+```yaml
+- banner:
+  - link "Skip to content":
+    - /url: "#main"
+  - navigation "Main":
+    - link "nf-claw home":
+      - /url: /
+      - text: nf-claw
+    - button "Search":
+      - img
+    - button "Open menu":
+      - img
+      - img
+- main:
+  - paragraph: The collection
+  - heading "All pipelines" [level=1]
+  - paragraph: 95 nf-core pipelines, each pinned to a release and documented from source. Search by name or tool, or narrow to a research domain.
+  - img
+  - textbox "Search pipelines":
+    - /placeholder: Search by name, description or tool…
+  - combobox "Sort pipelines":
+    - 'option "Sort: Name" [selected]'
+    - 'option "Sort: Domain"'
+    - 'option "Sort: Newest release"'
+    - 'option "Sort: Most parameters"'
+    - 'option "Sort: Most modules"'
+  - img
+  - button "All 95" [pressed]
+  - button "Transcriptomics 12"
+  - button "Single-cell & spatial 11"
+  - button "Variant calling 12"
+  - button "Epigenomics 9"
+  - button "Proteomics & immunology 9"
+  - button "Microbial & metagenomics 17"
+  - button "Genomes & evolution 11"
+  - button "Data & utilities 11"
+  - button "Other 3"
+  - paragraph: 95 pipelines
+  - list:
+    - listitem:
+      - link:
+        - /url: /pipelines/airrflow/
+        - article:
+          - text: airrflow
+          - img
+          - paragraph: nf-core/airrflow
+          - paragraph: B and T cell repertoire analysis pipeline with the Immcantation framework.
+          - text: Proteomics & immunology 110 params 5.1.2
+          - paragraph: Pinned Oct 10, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/ampliseq/
+        - article:
+          - text: ampliseq
+          - img
+          - paragraph: nf-core/ampliseq
+          - paragraph: Amplicon sequencing analysis workflow using DADA2 and QIIME2
+          - text: Microbial & metagenomics 178 params 3.0.0
+          - paragraph: Pinned Oct 9, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/atacseq/
+        - article:
+          - text: atacseq
+          - img
+          - paragraph: nf-core/atacseq
+          - paragraph: ATACSeq peak-calling and differential analysis pipeline.
+          - text: Epigenomics 88 params 2.1.2
+          - paragraph: Pinned Aug 7, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/bacass/
+        - article:
+          - text: bacass
+          - img
+          - paragraph: nf-core/bacass
+          - paragraph: Simple bacterial assembly and annotation
+          - text: Microbial & metagenomics 76 params 2.6.1
+          - paragraph: Pinned Jun 11, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/bacmodel/
+        - article:
+          - text: bacmodel
+          - img
+          - paragraph: nf-core/bacmodel
+          - paragraph: Systems-based bacterial functional modeling pipeline
+          - text: Microbial & metagenomics 46 params 1.0.0
+          - paragraph: Pinned Oct 13, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/bactmap/
+        - article:
+          - text: bactmap
+          - img
+          - paragraph: nf-core/bactmap
+          - paragraph: A mapping-based pipeline for creating a phylogeny from bacterial whole genome sequences
+          - text: Microbial & metagenomics 39 params 1.0.0
+          - paragraph: Pinned Jun 18, 2021
+    - listitem:
+      - link:
+        - /url: /pipelines/bamtofastq/
+        - article:
+          - text: bamtofastq
+          - img
+          - paragraph: nf-core/bamtofastq
+          - paragraph: Workflow converts one or multiple bam/cram files to fastq format
+          - text: Data & utilities 35 params 2.2.1
+          - paragraph: Pinned May 13, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/callingcards/
+        - article:
+          - text: callingcards
+          - img
+          - paragraph: nf-core/callingcards
+          - paragraph: An automated processing pipeline for mammalian bulk calling cards experiments
+          - text: Epigenomics 53 params 1.0.0
+          - paragraph: Pinned May 24, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/chipseq/
+        - article:
+          - text: chipseq
+          - img
+          - paragraph: nf-core/chipseq
+          - paragraph: ChIP-seq peak-calling and differential analysis pipeline.
+          - text: Epigenomics 82 params 2.1.0
+          - paragraph: Pinned Oct 7, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/circdna/
+        - article:
+          - text: circdna
+          - img
+          - paragraph: nf-core/circdna
+          - paragraph: Pipeline for the identification of circular DNAs
+          - text: Genomes & evolution 58 params 1.1.0
+          - paragraph: Pinned Feb 10, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/coproid/
+        - article:
+          - text: coproid
+          - img
+          - paragraph: nf-core/coproid
+          - paragraph: COPROlite host IDentification
+          - text: Microbial & metagenomics 39 params 2.0.1
+          - paragraph: Pinned Feb 16, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/createpanelrefs/
+        - article:
+          - text: createpanelrefs
+          - img
+          - paragraph: nf-core/createpanelrefs
+          - paragraph: Generate Panel of Normals, models or other similar references from lots of samples
+          - text: Variant calling 58 params 1.0.0
+          - paragraph: Pinned Jun 8, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/createtaxdb/
+        - article:
+          - text: createtaxdb
+          - img
+          - paragraph: nf-core/createtaxdb
+          - paragraph: Parallelised and automated creation of metagenomic classifier databases of different tools
+          - text: Microbial & metagenomics 73 params 3.1.0
+          - paragraph: Pinned Jul 3, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/crisprseq/
+        - article:
+          - text: crisprseq
+          - img
+          - paragraph: nf-core/crisprseq
+          - paragraph: Pipeline for the analysis of CRISPR data
+          - text: Genomes & evolution 58 params 2.3.0
+          - paragraph: Pinned Nov 8, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/cutandrun/
+        - article:
+          - text: cutandrun
+          - img
+          - paragraph: nf-core/cutandrun
+          - paragraph: Analysis pipeline for CUT&RUN and CUT&TAG experiments that includes sequencing QC, spike-in normalisation, IgG control normalisation, peak calling and downstream peak analysis.
+          - text: Epigenomics 103 params 3.2.2
+          - paragraph: Pinned Feb 1, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/datasync/
+        - article:
+          - text: datasync
+          - img
+          - paragraph: nf-core/datasync
+          - paragraph: A simple sysops pipeline that can be used to synchronize, integrity check and permanently archive data.
+          - text: Data & utilities 29 params 1.0.2
+          - paragraph: Pinned Oct 6, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/demo/
+        - article:
+          - text: demo
+          - img
+          - paragraph: nf-core/demo
+          - paragraph: An nf-core demo pipeline
+          - text: Data & utilities 30 params 1.2.0
+          - paragraph: Pinned Jun 24, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/demultiplex/
+        - article:
+          - text: demultiplex
+          - img
+          - paragraph: nf-core/demultiplex
+          - paragraph: Demultiplexing pipeline for Illumina sequencing data
+          - text: Data & utilities 44 params 1.8.0
+          - paragraph: Pinned Sep 15, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/denovotranscript/
+        - article:
+          - text: denovotranscript
+          - img
+          - paragraph: nf-core/denovotranscript
+          - paragraph: A pipeline for de novo transcriptome assembly of short reads from bulk RNA-seq
+          - text: Transcriptomics 52 params 1.2.1
+          - paragraph: Pinned Aug 28, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/detaxizer/
+        - article:
+          - text: detaxizer
+          - img
+          - paragraph: nf-core/detaxizer
+          - paragraph: A pipeline to identify (and remove) certain sequences from raw genomic data. Default taxon to identify (and remove) is Homo sapiens. Removal is optional.
+          - text: Microbial & metagenomics 66 params 1.3.0
+          - paragraph: Pinned Nov 14, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/differentialabundance/
+        - article:
+          - text: differentialabundance
+          - img
+          - paragraph: nf-core/differentialabundance
+          - paragraph: Differential abundance analysis
+          - text: Transcriptomics 188 params 2.0.0
+          - paragraph: Pinned Jun 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/drop/
+        - article:
+          - text: drop
+          - img
+          - paragraph: nf-core/drop
+          - paragraph: The detection of RNA Outliers Pipeline (DROP) is an integrative workflow to detect aberrant expression, aberrant splicing, and mono-allelic expression from raw sequencing files.
+          - text: Transcriptomics 83 params 1.0.0
+          - paragraph: Pinned Apr 2, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/drugresponseeval/
+        - article:
+          - text: drugresponseeval
+          - img
+          - paragraph: nf-core/drugresponseeval
+          - paragraph: This pipeline evaluates drug response models in various settings on a variety of datasets.
+          - text: Other 41 params 1.3.0
+          - paragraph: Pinned Oct 12, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/epitopeprediction/
+        - article:
+          - text: epitopeprediction
+          - img
+          - paragraph: nf-core/epitopeprediction
+          - paragraph: A fully reproducible and state of the art epitope prediction pipeline.
+          - text: Proteomics & immunology 49 params 3.2.0
+          - paragraph: Pinned Oct 15, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/fastqrepair/
+        - article:
+          - text: fastqrepair
+          - img
+          - paragraph: nf-core/fastqrepair
+          - paragraph: A pipeline that can be used to recover corrupted FASTQ.gz files, drop or fix uncompliant reads, remove unpaired reads, and settle reads that became disordered
+          - text: Data & utilities 32 params 1.1.1
+          - paragraph: Pinned Aug 31, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/fastquorum/
+        - article:
+          - text: fastquorum
+          - img
+          - paragraph: nf-core/fastquorum
+          - paragraph: fgbio Best Practices FASTQ to Consensus Pipeline
+          - text: Data & utilities 46 params 2.0.0
+          - paragraph: Pinned Jun 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/fetchngs/
+        - article:
+          - text: fetchngs
+          - img
+          - paragraph: nf-core/fetchngs
+          - paragraph: Pipeline to fetch metadata and raw FastQ files from public databases
+          - text: Data & utilities 29 params 1.13.0
+          - paragraph: Pinned Sep 15, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/funcprofiler/
+        - article:
+          - text: funcprofiler
+          - img
+          - paragraph: nf-core/funcprofiler
+          - paragraph: Read-based functional profiling of microbiome sequencing data
+          - text: Microbial & metagenomics 34 params 1.0.0
+          - paragraph: Pinned Sep 21, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/funcscan/
+        - article:
+          - text: funcscan
+          - img
+          - paragraph: nf-core/funcscan
+          - paragraph: Pipeline for screening for functional components of assembled contigs
+          - text: Genomes & evolution 220 params 4.0.0
+          - paragraph: Pinned Jun 27, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/genomeassembler/
+        - article:
+          - text: genomeassembler
+          - img
+          - paragraph: nf-core/genomeassembler
+          - paragraph: Assemble genomes from long ONT or pacbio HiFi reads
+          - text: Genomes & evolution 72 params 2.0.1
+          - paragraph: Pinned Oct 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/genomeqc/
+        - article:
+          - text: genomeqc
+          - img
+          - paragraph: nf-core/genomeqc
+          - paragraph: A pipeline to compare multiple genomes and annotations
+          - text: Genomes & evolution 72 params 1.0.1
+          - paragraph: Pinned Sep 16, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/hadge/
+        - article:
+          - text: hadge
+          - img
+          - paragraph: nf-core/hadge
+          - paragraph: Comprehensive pipeline for donor demultiplexing in single cell
+          - text: Single-cell & spatial 195 params 1.0.0
+          - paragraph: Pinned Sep 28, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/hgtseq/
+        - article:
+          - text: hgtseq
+          - img
+          - paragraph: nf-core/hgtseq
+          - paragraph: A pipeline to investigate horizontal gene transfer from NGS data
+          - text: Microbial & metagenomics 41 params 1.1.0
+          - paragraph: Pinned May 16, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/hic/
+        - article:
+          - text: hic
+          - img
+          - paragraph: nf-core/hic
+          - paragraph: Analysis of Chromosome Conformation Capture data (Hi-C)
+          - text: Epigenomics 73 params 2.1.0
+          - paragraph: Pinned Jun 1, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/hicar/
+        - article:
+          - text: hicar
+          - img
+          - paragraph: nf-core/hicar
+          - paragraph: This pipeline analyses data for HiCAR data, a robust and sensitive multi-omic co-assay for simultaneous measurement of transcriptome, chromatin accessibility and cis-regulatory chromatin contacts.
+          - text: Epigenomics 74 params 1.0.0
+          - paragraph: Pinned May 3, 2022
+    - listitem:
+      - link:
+        - /url: /pipelines/hlatyping/
+        - article:
+          - text: hlatyping
+          - img
+          - paragraph: nf-core/hlatyping
+          - paragraph: Precision HLA typing from next-generation sequencing data.
+          - text: Proteomics & immunology 36 params 2.2.0
+          - paragraph: Pinned Feb 2, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/isoseq/
+        - article:
+          - text: isoseq
+          - img
+          - paragraph: nf-core/isoseq
+          - paragraph: Genes and transcripts annotation with Isoseq using uLTRA and TAMA
+          - text: Transcriptomics 45 params 3.0.1
+          - paragraph: Pinned Sep 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/longraredisease/
+        - article:
+          - text: longraredisease
+          - img
+          - paragraph: nf-core/longraredisease
+          - paragraph: A Nextflow pipeline for rare disease diagnostics from Oxford Nanopore long-read sequencing data. Includes SV, SNV, CNV, and methylation profiling.
+          - text: Variant calling 96 params 1.0.0
+          - paragraph: Pinned Jun 26, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/lsmquant/
+        - article:
+          - text: lsmquant
+          - img
+          - paragraph: nf-core/lsmquant
+          - paragraph: A pipeline for preprocessing and analysis of large-scale light-sheet microscopy images based on the NuMorph toolbox
+          - text: Single-cell & spatial 29 params 1.0.3
+          - paragraph: Pinned Aug 10, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/mag/
+        - article:
+          - text: mag
+          - img
+          - paragraph: nf-core/mag
+          - paragraph: Assembly, binning and annotation of metagenomes
+          - text: Microbial & metagenomics 179 params 5.5.0
+          - paragraph: Pinned Aug 1, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/magmap/
+        - article:
+          - text: magmap
+          - img
+          - paragraph: nf-core/magmap
+          - paragraph: nf-core/magmap is a bioinformatics best-practice analysis pipeline for mapping reads to (large) collections of genomes.
+          - text: Genomes & evolution 59 params 1.3.1
+          - paragraph: Pinned Oct 22, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/marsseq/
+        - article:
+          - text: marsseq
+          - img
+          - paragraph: nf-core/marsseq
+          - paragraph: MARS-seq v2 preprocessing pipeline
+          - text: Single-cell & spatial 38 params 1.0.3
+          - paragraph: Pinned Jul 18, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/mcmicro/
+        - article:
+          - text: mcmicro
+          - img
+          - paragraph: nf-core/mcmicro
+          - paragraph: Whole-slide multiplexed microscopy image analysis
+          - text: Single-cell & spatial 35 params 2.0.0
+          - paragraph: Pinned Jul 1, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/metaboigniter/
+        - article:
+          - text: metaboigniter
+          - img
+          - paragraph: nf-core/metaboigniter
+          - paragraph: Pre-processing of mass spectrometry-based metabolomics data
+          - text: Proteomics & immunology 229 params 2.0.1
+          - paragraph: Pinned Apr 15, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/metapep/
+        - article:
+          - text: metapep
+          - img
+          - paragraph: nf-core/metapep
+          - paragraph: From metagenomes to peptides
+          - text: Microbial & metagenomics 38 params 1.0.0
+          - paragraph: Pinned Nov 22, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/metatdenovo/
+        - article:
+          - text: metatdenovo
+          - img
+          - paragraph: nf-core/metatdenovo
+          - paragraph: Assembly and annotation of metatranscriptomic data, both prokaryotic and eukaryotic
+          - text: Microbial & metagenomics 97 params 2.0.0
+          - paragraph: Pinned Oct 7, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/methylong/
+        - article:
+          - text: methylong
+          - img
+          - paragraph: nf-core/methylong
+          - paragraph: Extract methylation calls from long reads
+          - text: Epigenomics 49 params 2.0.0
+          - paragraph: Pinned Nov 21, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/methylseq/
+        - article:
+          - text: methylseq
+          - img
+          - paragraph: nf-core/methylseq
+          - paragraph: Methylation (Bisulfite-Sequencing) Best Practice analysis pipeline, part of the nf-core community.
+          - text: Epigenomics 88 params 4.2.0
+          - paragraph: Pinned Dec 12, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/mhcquant/
+        - article:
+          - text: mhcquant
+          - img
+          - paragraph: nf-core/mhcquant
+          - paragraph: Identify and quantify peptides from mass spectrometry raw data
+          - text: Proteomics & immunology 78 params 3.3.0
+          - paragraph: Pinned Oct 2, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/molkart/
+        - article:
+          - text: molkart
+          - img
+          - paragraph: nf-core/molkart
+          - paragraph: An analysis pipeline for processing Molecular Cartography data.
+          - text: Single-cell & spatial 62 params 1.2.0
+          - paragraph: Pinned Oct 27, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/multiplesequencealign/
+        - article:
+          - text: multiplesequencealign
+          - img
+          - paragraph: nf-core/multiplesequencealign
+          - paragraph: Pipeline to run and benchmark multiple sequence alignment tools.
+          - text: Genomes & evolution 51 params 1.1.1
+          - paragraph: Pinned May 27, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/nanoseq/
+        - article:
+          - text: nanoseq
+          - img
+          - paragraph: nf-core/nanoseq
+          - paragraph: A pipeline to demultiplex, QC and map Nanopore data
+          - text: Data & utilities 64 params 3.1.0
+          - paragraph: Pinned Mar 10, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/nanostring/
+        - article:
+          - text: nanostring
+          - img
+          - paragraph: nf-core/nanostring
+          - paragraph: Nanostring nCounter analysis pipeline
+          - text: Transcriptomics 35 params 1.3.3
+          - paragraph: Pinned Jan 30, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/nascent/
+        - article:
+          - text: nascent
+          - img
+          - paragraph: nf-core/nascent
+          - paragraph: Global Run-On sequencing analysis pipeline
+          - text: Epigenomics 53 params 2.3.0
+          - paragraph: Pinned May 7, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/oncoanalyser/
+        - article:
+          - text: oncoanalyser
+          - img
+          - paragraph: nf-core/oncoanalyser
+          - paragraph: A comprehensive cancer DNA/RNA analysis and reporting pipeline
+          - text: Variant calling 75 params 3.0.0
+          - paragraph: Pinned Sep 1, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/pacvar/
+        - article:
+          - text: pacvar
+          - img
+          - paragraph: nf-core/pacvar
+          - paragraph: A variant caller for PacBio long read sequencing - also can be used for PureTarget panel analysis, and quantification of repeat expansions
+          - text: Variant calling 60 params 1.1.0
+          - paragraph: Pinned Jun 24, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/pairgenomealign/
+        - article:
+          - text: pairgenomealign
+          - img
+          - paragraph: nf-core/pairgenomealign
+          - paragraph: Pairwise alignment pipeline (genome to genome or reads to genome)
+          - text: Genomes & evolution 54 params 3.0.4
+          - paragraph: Pinned Aug 26, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/pangenome/
+        - article:
+          - text: pangenome
+          - img
+          - paragraph: nf-core/pangenome
+          - paragraph: The pangenome graph construction pipeline renders a collection of sequences into a pangenome graph. Its goal is to build a graph that is locally directed and acyclic while preserving large-scale variation. Maintaining local linearity is important for interpretation, visualization, mapping, comparative genomics, and reuse of pangenome graphs
+          - text: Genomes & evolution 63 params 1.1.3
+          - paragraph: Pinned Feb 9, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/pathogensurveillance/
+        - article:
+          - text: pathogensurveillance
+          - img
+          - paragraph: nf-core/pathogensurveillance
+          - paragraph: Surveillance of pathogens using high-throughput sequencing
+          - text: Microbial & metagenomics 53 params 1.1.0
+          - paragraph: Pinned Feb 13, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/phaseimpute/
+        - article:
+          - text: phaseimpute
+          - img
+          - paragraph: nf-core/phaseimpute
+          - paragraph: Phasing and imputation pipeline
+          - text: Variant calling 58 params 1.1.0
+          - paragraph: Pinned Dec 1, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/phyloplace/
+        - article:
+          - text: phyloplace
+          - img
+          - paragraph: nf-core/phyloplace
+          - paragraph: Performs phylogenetic placement with EPA-NG
+          - text: Genomes & evolution 37 params 2.3.0
+          - paragraph: Pinned Sep 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/pixelator/
+        - article:
+          - text: pixelator
+          - img
+          - paragraph: nf-core/pixelator
+          - paragraph: Pipeline for analysis of Proximity Network Assay data
+          - text: Single-cell & spatial 85 params 5.0.3
+          - paragraph: Pinned Oct 7, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/plasmodiumdrugres/
+        - article:
+          - text: plasmodiumdrugres
+          - img
+          - paragraph: nf-core/plasmodiumdrugres
+          - paragraph: This pipeline takes PMO format and provides key metrics on supplied markers applicable to drug resistance
+          - text: Other 45 params 1.0.0
+          - paragraph: Pinned Oct 9, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/proteinannotator/
+        - article:
+          - text: proteinannotator
+          - img
+          - paragraph: nf-core/proteinannotator
+          - paragraph: Generation of sequence-level annotations for amino acid sequences
+          - text: Proteomics & immunology 50 params 1.1.0
+          - paragraph: Pinned May 7, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/proteinfamilies/
+        - article:
+          - text: proteinfamilies
+          - img
+          - paragraph: nf-core/proteinfamilies
+          - paragraph: Generate protein family level models (Multiple Sequence Alignments (MSAs), Hidden Markov Models (HMMs)) starting from a FASTA amino acid sequence file.
+          - text: Proteomics & immunology 68 params 2.6.0
+          - paragraph: Pinned Oct 1, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/proteinfold/
+        - article:
+          - text: proteinfold
+          - img
+          - paragraph: nf-core/proteinfold
+          - paragraph: Protein 3D structure prediction pipeline
+          - text: Proteomics & immunology 182 params 2.0.0
+          - paragraph: Pinned Mar 27, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/provenancereport/
+        - article:
+          - text: provenancereport
+          - img
+          - paragraph: nf-core/provenancereport
+          - paragraph: Generate reproducible Quarto reports together with an audit trail of inputs, checksums, software versions, runtime environments, and provenance metadata.
+          - text: Other 22 params 1.0.0
+          - paragraph: Pinned Oct 21, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rangeland/
+        - article:
+          - text: rangeland
+          - img
+          - paragraph: nf-core/rangeland
+          - paragraph: Long-term vegetation trend analysis pipeline for rangeland systems using satellite imagery.
+          - text: Single-cell & spatial 40 params 1.0.0
+          - paragraph: Pinned Jan 17, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/raredisease/
+        - article:
+          - text: raredisease
+          - img
+          - paragraph: nf-core/raredisease
+          - paragraph: call and score variants from WGS/WES of rare disease patients
+          - text: Variant calling 150 params 3.1.2
+          - paragraph: Pinned Jul 6, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/readsimulator/
+        - article:
+          - text: readsimulator
+          - img
+          - paragraph: nf-core/readsimulator
+          - paragraph: A workflow to simulate reads
+          - text: Data & utilities 76 params 1.0.1
+          - paragraph: Pinned Apr 26, 2024
+    - listitem:
+      - link:
+        - /url: /pipelines/reportho/
+        - article:
+          - text: reportho
+          - img
+          - paragraph: nf-core/reportho
+          - paragraph: A pipeline for ortholog fetching and analysis
+          - text: Genomes & evolution 51 params 1.1.0
+          - paragraph: Pinned Oct 21, 2025
+    - listitem:
+      - link:
+        - /url: /pipelines/ribomsqc/
+        - article:
+          - text: ribomsqc
+          - img
+          - paragraph: nf-core/ribomsqc
+          - paragraph: QC pipeline that monitors mass spectrometer performance in ribonucleoside analysis
+          - text: Proteomics & immunology 31 params v1.0.0
+          - paragraph: Pinned Mar 13, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/riboseq/
+        - article:
+          - text: riboseq
+          - img
+          - paragraph: nf-core/riboseq
+          - paragraph: Analysis of ribosome profiling, or Ribo-seq (also named ribosome footprinting)
+          - text: Transcriptomics 147 params 2.0.0
+          - paragraph: Pinned Sep 15, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnadnavar/
+        - article:
+          - text: rnadnavar
+          - img
+          - paragraph: nf-core/rnadnavar
+          - paragraph: Pipeline for RNA and DNA integrated analysis for somatic mutation detection
+          - text: Variant calling 126 params 1.0.0
+          - paragraph: Pinned Jun 29, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnafusion/
+        - article:
+          - text: rnafusion
+          - img
+          - paragraph: nf-core/rnafusion
+          - paragraph: Nextflow rnafusion analysis pipeline, part of the nf-core community.
+          - text: Transcriptomics 85 params 4.1.3
+          - paragraph: Pinned Jun 2, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnaseq/
+        - article:
+          - text: rnaseq
+          - img
+          - paragraph: nf-core/rnaseq
+          - paragraph: RNA sequencing analysis pipeline for gene/isoform quantification and extensive quality control.
+          - text: Transcriptomics 136 params 3.27.0
+          - paragraph: Pinned Sep 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnasplice/
+        - article:
+          - text: rnasplice
+          - img
+          - paragraph: nf-core/rnasplice
+          - paragraph: Alternative splicing analysis using RNA-seq.
+          - text: Transcriptomics 127 params 2.0.0
+          - paragraph: Pinned Oct 20, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnastructurome/
+        - article:
+          - text: rnastructurome
+          - img
+          - paragraph: nf-core/rnastructurome
+          - paragraph: This pipeline analyses chemical-based high-throughput RNA structure probing data
+          - text: Transcriptomics 190 params 1.1.0
+          - paragraph: Pinned Oct 23, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/rnavar/
+        - article:
+          - text: rnavar
+          - img
+          - paragraph: nf-core/rnavar
+          - paragraph: GATK4 RNA variant calling pipeline
+          - text: Variant calling 106 params 1.3.0
+          - paragraph: Pinned Jun 3, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/sarek/
+        - article:
+          - text: sarek
+          - img
+          - paragraph: nf-core/sarek
+          - paragraph: An open-source analysis pipeline to detect germline or somatic variants from whole genome or targeted sequencing
+          - text: Variant calling 176 params 3.10.0
+          - paragraph: Pinned Aug 12, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/scnanoseq/
+        - article:
+          - text: scnanoseq
+          - img
+          - paragraph: nf-core/scnanoseq
+          - paragraph: Single-cell/nuclei pipeline for data derived from Oxford Nanopore
+          - text: Single-cell & spatial 58 params 1.3.0
+          - paragraph: Pinned Jun 26, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/scrnaseq/
+        - article:
+          - text: scrnaseq
+          - img
+          - paragraph: nf-core/scrnaseq
+          - paragraph: Pipeline for processing 10x Genomics single cell rnaseq data
+          - text: Single-cell & spatial 69 params 4.2.0
+          - paragraph: Pinned Jul 3, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/seqinspector/
+        - article:
+          - text: seqinspector
+          - img
+          - paragraph: nf-core/seqinspector
+          - paragraph: Pipeline to QC your sequences
+          - text: Data & utilities 51 params 1.1.2
+          - paragraph: Pinned Aug 19, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/seqsubmit/
+        - article:
+          - text: seqsubmit
+          - img
+          - paragraph: nf-core/seqsubmit
+          - paragraph: Submit sequences, assemblies, MAGs, etc., to public archives
+          - text: Data & utilities 39 params 1.0.0
+          - paragraph: Pinned Jul 31, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/smrnaseq/
+        - article:
+          - text: smrnaseq
+          - img
+          - paragraph: nf-core/smrnaseq
+          - paragraph: Small RNA-Seq Best Practice Analysis Pipeline.
+          - text: Transcriptomics 71 params 2.4.1
+          - paragraph: Pinned Jan 7, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/sopa/
+        - article:
+          - text: sopa
+          - img
+          - paragraph: nf-core/sopa
+          - paragraph: Technology-invariant pipeline for spatial omics analysis that scales to millions of cells
+          - text: Single-cell & spatial 90 params 1.0.1
+          - paragraph: Pinned Aug 25, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/spatialaxe/
+        - article:
+          - text: spatialaxe
+          - img
+          - paragraph: nf-core/spatialaxe
+          - paragraph: A pipeline to process spatialomics data from 10x Xenium In Situ or 10x Atera.
+          - text: Single-cell & spatial 103 params 1.0.1
+          - paragraph: Pinned Aug 6, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/stableexpression/
+        - article:
+          - text: stableexpression
+          - img
+          - paragraph: nf-core/stableexpression
+          - paragraph: This pipeline is dedicated to identifying the most stable genes within a single or multiple expression dataset(s). This is particularly useful for identifying the most suitable RT-qPCR reference genes for a specific species.
+          - text: Transcriptomics 60 params 1.1.0
+          - paragraph: Pinned Oct 7, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/taxprofiler/
+        - article:
+          - text: taxprofiler
+          - img
+          - paragraph: nf-core/taxprofiler
+          - paragraph: Taxonomic classification and profiling of shotgun short- and long-read metagenomic data
+          - text: Microbial & metagenomics 133 params 2.0.1
+          - paragraph: Pinned Jun 15, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/tumourevo/
+        - article:
+          - text: tumourevo
+          - img
+          - paragraph: nf-core/tumourevo
+          - paragraph: Analysis pipeline to model tumour clonal evolution from WGS data (driver annotation, quality control of copy number calls, subclonal and mutational signature deconvolution)
+          - text: Variant calling 82 params 1.0.0
+          - paragraph: Pinned Oct 1, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/variantbenchmarking/
+        - article:
+          - text: variantbenchmarking
+          - img
+          - paragraph: nf-core/variantbenchmarking
+          - paragraph: Variant Benchmarking pipeline for germline and somatic variant callers
+          - text: Variant calling 60 params 1.5.0
+          - paragraph: Pinned Apr 22, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/variantprioritization/
+        - article:
+          - text: variantprioritization
+          - img
+          - paragraph: nf-core/variantprioritization
+          - paragraph: pipeline for the functional annotation and translation of somatic SNVs/InDels and copy number abberations for precision cancer medicine
+          - text: Variant calling 111 params 1.0.0
+          - paragraph: Pinned Apr 9, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/viralintegration/
+        - article:
+          - text: viralintegration
+          - img
+          - paragraph: nf-core/viralintegration
+          - paragraph: Integration of viral sequences in genomic data
+          - text: Microbial & metagenomics 37 params 0.1.1
+          - paragraph: Pinned Jul 19, 2023
+    - listitem:
+      - link:
+        - /url: /pipelines/viralmetagenome/
+        - article:
+          - text: viralmetagenome
+          - img
+          - paragraph: nf-core/viralmetagenome
+          - paragraph: A bioinformatics best-practice analysis pipeline for untargeted viral genome reconstruction and to identify intra-host variants from metagenomic sequencing data.
+          - text: Microbial & metagenomics 196 params 1.2.0
+          - paragraph: Pinned Sep 16, 2026
+    - listitem:
+      - link:
+        - /url: /pipelines/viralrecon/
+        - article:
+          - text: viralrecon
+          - img
+          - paragraph: nf-core/viralrecon
+          - paragraph: Assembly and intrahost/low-frequency variant calling for viral samples
+          - text: Microbial & metagenomics 104 params 3.0.0
+          - paragraph: Pinned Oct 28, 2025
+- contentinfo:
+  - text: nf-claw
+  - paragraph: A self-maintaining, token-minimal library of nf-core pipelines for AI agents. The repository is the single source of truth — this interface regenerates itself from it.
+  - link "View on GitHub":
+    - /url: https://github.com/danilomonge/nf-claw
+    - img
+    - text: View on GitHub
+  - heading "Domains" [level=2]
+  - list:
+    - listitem:
+      - link "Transcriptomics 12":
+        - /url: /pipelines/?domain=Transcriptomics
+    - listitem:
+      - link "Single-cell & spatial 11":
+        - /url: /pipelines/?domain=Single-cell%20%26%20spatial
+    - listitem:
+      - link "Variant calling 12":
+        - /url: /pipelines/?domain=Variant%20calling
+    - listitem:
+      - link "Epigenomics 9":
+        - /url: /pipelines/?domain=Epigenomics
+    - listitem:
+      - link "Proteomics & immunology 9":
+        - /url: /pipelines/?domain=Proteomics%20%26%20immunology
+    - listitem:
+      - link "Microbial & metagenomics 17":
+        - /url: /pipelines/?domain=Microbial%20%26%20metagenomics
+    - listitem:
+      - link "Genomes & evolution 11":
+        - /url: /pipelines/?domain=Genomes%20%26%20evolution
+    - listitem:
+      - link "Data & utilities 11":
+        - /url: /pipelines/?domain=Data%20%26%20utilities
+    - listitem:
+      - link "Other 3":
+        - /url: /pipelines/?domain=Other
+  - heading "Explore" [level=2]
+  - list:
+    - listitem:
+      - link "All pipelines":
+        - /url: /pipelines/
+    - listitem:
+      - link "Pipeline universe":
+        - /url: /#pipelines
+    - listitem:
+      - link "Skills explorer":
+        - /url: /#skills
+    - listitem:
+      - link "Live activity":
+        - /url: /#activity
+    - listitem:
+      - link "Release timeline":
+        - /url: /#releases
+    - listitem:
+      - link "Documentation":
+        - /url: /docs/
+  - heading "Resources" [level=2]
+  - list:
+    - listitem:
+      - link "README":
+        - /url: /docs/readme/
+    - listitem:
+      - link "Architecture":
+        - /url: /docs/architecture/
+    - listitem:
+      - link "Known issues":
+        - /url: /docs/known-issues/
+    - listitem:
+      - link "nf-core":
+        - /url: https://nf-co.re
+        - text: nf-core
+        - img
+    - listitem:
+      - link "Nextflow":
+        - /url: https://www.nextflow.io
+        - text: Nextflow
+        - img
+  - paragraph: © 2026 nf-claw · MIT licensed · Pipelines © the nf-core community.
+  - paragraph: Generated from the repository · 95 pipelines
+```
+
+# Test source
+
+```ts
+  1   | import { test, expect } from '@playwright/test';
+  2   | 
+  3   | for (const pipeline of ['createtaxdb', 'funcscan']) {
+  4   |   test(`${pipeline} shows its recorded workflow correction beside run guidance`, async ({ page }) => {
+  5   |     await page.goto(`/pipelines/${pipeline}/`);
+  6   |     await expect(page.getByRole('heading', { name: 'Runtime corrections', exact: true })).toBeVisible();
+  7   |     await expect(page.getByText(/NFCLAW_SOURCE_CACHE/)).toBeVisible();
+  8   |     await expect(page.getByRole('link', { name: 'Recorded source corrections' })).toBeVisible();
+  9   |   });
+  10  | }
+  11  | 
+  12  | test('funcscan shows the prepared DRAMP reference route beside its run guidance', async ({ page }) => {
+  13  |   await page.goto('/pipelines/funcscan/');
+  14  |   await expect(page.getByRole('heading', { name: 'Reference database', exact: true })).toBeVisible();
+  15  |   await expect(page.getByText(/nfclaw prepare-dramp/)).toBeVisible();
+  16  |   await expect(page.getByRole('link', { name: 'DRAMP reference preparation' })).toBeVisible();
+  17  | });
+  18  | 
+  19  | test('proteinfold shows its authoritative demo caveat beside the command', async ({ page }) => {
+  20  |   await page.goto('/pipelines/proteinfold/');
+  21  |   await expect(page.locator('#run')).toContainText(/placeholder|computes nothing/i);
+  22  | });
+  23  | 
+  24  | test('core documentation is visible without JavaScript', async ({ browser }) => {
+  25  |   const context = await browser.newContext({ javaScriptEnabled: false });
+  26  |   try {
+  27  |     const page = await context.newPage();
+  28  |     await page.goto('/docs/agents/');
+  29  |     const heading = page.locator('main h1').first();
+  30  |     await expect(heading).toBeVisible();
+  31  |     const opacity = await heading.evaluate((element) => {
+  32  |       let opacity = 1;
+  33  |       for (let node: Element | null = element; node; node = node.parentElement)
+  34  |         opacity *= Number(getComputedStyle(node).opacity);
+  35  |       return opacity;
+  36  |     });
+  37  |     expect(opacity).toBe(1);
+  38  |   } finally { await context.close(); }
+  39  | });
+  40  | 
+  41  | test('mobile navigation contains keyboard focus and restores it on Escape', async ({ page }) => {
+  42  |   await page.setViewportSize({ width: 390, height: 844 });
+  43  |   await page.goto('/pipelines/');
+  44  |   const toggle = page.getByRole('button', { name: 'Open menu' });
+  45  |   await toggle.click();
+  46  |   await expect(page.locator('#mobile-menu')).toBeVisible();
+  47  |   await expect(page.locator('main')).toHaveAttribute('inert', '');
+  48  |   for (let i = 0; i < 20; i++) {
+  49  |     await page.keyboard.press('Tab');
+  50  |     expect(await page.evaluate(() => Boolean(document.activeElement?.closest('header')))).toBe(true);
+  51  |   }
+  52  |   await page.keyboard.press('Escape');
+  53  |   await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
+  54  |   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+  55  | });
+  56  | 
+  57  | for (const trigger of ['button', 'shortcut']) {
+  58  |   test(`mobile menu hands focus to search opened by ${trigger}`, async ({ page }) => {
+  59  |     await page.setViewportSize({ width: 390, height: 844 });
+  60  |     await page.goto('/pipelines/');
+  61  |     await page.getByRole('button', { name: 'Open menu' }).click();
+  62  |     if (trigger === 'button') await page.getByRole('button', { name: 'Search', exact: true }).click();
+  63  |     else await page.keyboard.press('Control+k');
+  64  |     const input = page.locator('input[role="combobox"]');
+> 65  |     await expect(input).toBeFocused();
+      |                         ^ Error: expect(locator).toBeFocused() failed
+  66  |     await input.fill('rnaseq');
+  67  |     await expect(input).toHaveValue('rnaseq');
+  68  |     await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toHaveCount(0);
+  69  |     await page.keyboard.press('Escape');
+  70  |     await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+  71  |   });
+  72  | }
+  73  | 
+  74  | test('parameter search recovers from an initial network failure', async ({ page }) => {
+  75  |   let requests = 0;
+  76  |   await page.route('**/search/params.json', async route => {
+  77  |     requests++;
+  78  |     if (requests === 1) await route.fulfill({ status: 503, body: 'temporarily unavailable' });
+  79  |     else await route.continue();
+  80  |   });
+  81  |   await page.goto('/#skills');
+  82  |   const search = page.locator('#skills input[type="search"], #skills input').first();
+  83  |   await search.fill('carveme-mediadb');
+  84  |   await expect(page.locator('#skills')).toContainText('parameter search unavailable');
+  85  |   await page.getByRole('button', { name: 'Retry parameter search' }).click();
+  86  |   await expect(page.locator('#skills')).not.toContainText('parameter search unavailable');
+  87  |   await expect(page.locator('#skills')).toContainText('carveme-mediadb');
+  88  |   expect(requests).toBeGreaterThanOrEqual(2);
+  89  | });
+  90  | 
+  91  | test('bacmodel example link points to its pinned upstream source', async ({ page }) => {
+  92  |   await page.goto('/pipelines/bacmodel/');
+  93  |   await page.getByRole('button', { name: /carveme-mediadb/ }).first().click();
+  94  |   const link = page.getByRole('link', { name: 'example file' });
+  95  |   await expect(link).toHaveAttribute('href', /github\.com\/nf-core\/bacmodel\/blob\/[0-9a-f]{40}\/assets\/medium_carveme_mediadb_example\.tsv$/);
+  96  | });
+  97  | 
+  98  | test('copied parameter values preserve spaces and leading dashes through the shell', async ({ page }) => {
+  99  |   const { spawnSync } = await import('node:child_process');
+  100 |   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  101 |   await page.goto('/pipelines/bacmodel/');
+  102 |   await page.getByRole('button', { name: /gapseq-doall-args/ }).first().click();
+  103 |   await page.getByRole('button', { name: /^Copy: --gapseq-doall-args/ }).last().click();
+  104 |   const snippet = await page.evaluate(() => navigator.clipboard.readText());
+  105 |   const parsed = spawnSync('bash', ['-c',
+  106 |     `python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' ${snippet}`], { encoding: 'utf8' });
+  107 |   expect(parsed.status).toBe(0);
+  108 |   expect(JSON.parse(parsed.stdout)).toEqual(['--gapseq-doall-args=-b 200 -A diamond']);
+  109 | });
+  110 | 
+  111 | test('exported local links and fragments resolve to real artifacts', async ({ page }) => {
+  112 |   const fs = await import('node:fs');
+  113 |   const path = await import('node:path');
+  114 |   const root = path.resolve('out');
+  115 |   const files: string[] = [];
+  116 |   function walk(dir: string) {
+  117 |     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  118 |       const file = path.join(dir, entry.name);
+  119 |       if (entry.isDirectory()) walk(file);
+  120 |       else if (entry.name.endsWith('.html')) files.push(file);
+  121 |     }
+  122 |   }
+  123 |   walk(root);
+  124 |   const pages = new Map<string, { links: string[]; ids: string[] }>();
+  125 |   for (const file of files) {
+  126 |     const parsed = await page.evaluate(html => {
+  127 |       const doc = new DOMParser().parseFromString(html, 'text/html');
+  128 |       return { links: Array.from(doc.querySelectorAll('a[href]'), a => a.getAttribute('href')!),
+  129 |                ids: Array.from(doc.querySelectorAll('[id]'), e => e.id) };
+  130 |     }, fs.readFileSync(file, 'utf8'));
+  131 |     pages.set(file, parsed);
+  132 |   }
+  133 |   const broken: string[] = [];
+  134 |   let checked = 0;
+  135 |   for (const [file, content] of pages) {
+  136 |     const relative = path.relative(root, file).split(path.sep).join('/');
+  137 |     const base = 'http://export.test/' + relative.replace(/index\.html$/, '');
+  138 |     for (const href of content.links) {
+  139 |       const url = new URL(href, base);
+  140 |       if (url.origin !== 'http://export.test') continue;
+  141 |       checked++;
+  142 |       let target = path.join(root, decodeURIComponent(url.pathname));
+  143 |       if (fs.existsSync(target) && fs.statSync(target).isDirectory()) target = path.join(target, 'index.html');
+  144 |       if (!fs.existsSync(target)) { broken.push(`${relative}: ${href} (missing file)`); continue; }
+  145 |       const fragment = decodeURIComponent(url.hash.slice(1));
+  146 |       if (fragment && pages.has(target) && !pages.get(target)!.ids.includes(fragment))
+  147 |         broken.push(`${relative}: ${href} (missing fragment)`);
+  148 |     }
+  149 |   }
+  150 |   expect(checked).toBeGreaterThan(1000);
+  151 |   expect(broken).toEqual([]);
+  152 | });
+  153 | 
+```

@@ -44,7 +44,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
   const q = query.trim().toLowerCase();
   // Parameters are not in the page: they load the first time the search box is used.
   const [warm, setWarm] = useState(false);
-  const { index, failed } = useParamIndex(warm || q.length > 0);
+  const { index, failed, retry } = useParamIndex(warm || q.length > 0);
 
   const results = useMemo<Result[]>(() => {
     return skills
@@ -117,6 +117,11 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
         {q && failed && " · parameter search unavailable"}
         {q && totalParamHits > 0 && ` · ${totalParamHits} matching parameter${totalParamHits !== 1 ? "s" : ""}`}
       </p>
+
+      {failed && <button type="button" onClick={retry}
+        className="mt-2 rounded-lg border border-white/20 px-3 py-2 text-sm text-fog">
+        Retry parameter search
+      </button>}
 
       {results.length === 0 ? (
         <div className="glass mt-4 flex flex-col items-center gap-3 py-16 text-center">

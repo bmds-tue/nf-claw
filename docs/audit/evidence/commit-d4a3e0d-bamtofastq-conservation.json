@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-27T10:40:11.830574+00:00",
+  "pipeline_commit": "8a295860c0c9221337dec7f2620709a47cea254d",
+  "wrapper_base_commit": "d4a3e0d77e1d5d65a5d34d0144e3d9be4174c43e",
+  "wrapper_dirty": false,
+  "runtime_source_sha256": {
+    "runner/demo_defaults.py": "08bff8e7d8acd124a3e481f177a2849808e8f86827bf451b8c395782add9587a",
+    "runner/orchestration.py": "8743b1b0ae826b8270aef46fd5246683fae92870a56739b8b8b904bb251ae868"
+  },
+  "samtools_image": "community.wave.seqera.io/library/htslib_samtools@sha256:6df2a43541963ac73551a79c48bf2dbd743b37ab8dd1bdec364de1d6bc8cd7f0",
+  "comparisons": [
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-d4a3e0d-bamtofastq",
+      "sample": "test",
+      "pairs": 2821,
+      "mate_counts": [
+        2821,
+        2821
+      ],
+      "source_bam_sha256": "1ab90e4d913e6078c5c5234322b3db4e0de1f5a09e923c21891b1f9e5a37cc77",
+      "identities_sequences_qualities": "exact match",
+      "secondary_supplementary": "excluded with SAM flag mask 0x900",
+      "strand": "reverse complement and quality reversal when SAM flag 0x10 set"
+    },
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-d4a3e0d-bamtofastq-replay",
+      "sample": "test",
+      "pairs": 2821,
+      "mate_counts": [
+        2821,
+        2821
+      ],
+      "source_bam_sha256": "1ab90e4d913e6078c5c5234322b3db4e0de1f5a09e923c21891b1f9e5a37cc77",
+      "identities_sequences_qualities": "exact match",
+      "secondary_supplementary": "excluded with SAM flag mask 0x900",
+      "strand": "reverse complement and quality reversal when SAM flag 0x10 set"
+    },
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-d4a3e0d-bamtofastq",
+      "sample": "test2",
+      "pairs": 2718,
+      "mate_counts": [
+        2718,
+        2718
+      ],
+      "source_bam_sha256": "19bde1970bef46ef40c5b28e01c34205fde191423108d424fdd602f2820650a9",
+      "identities_sequences_qualities": "exact match",
+      "secondary_supplementary": "excluded with SAM flag mask 0x900",
+      "strand": "reverse complement and quality reversal when SAM flag 0x10 set"
+    },
+    {
+      "run": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-d4a3e0d-bamtofastq-replay",
+      "sample": "test2",
+      "pairs": 2718,
+      "mate_counts": [
+        2718,
+        2718
+      ],
+      "source_bam_sha256": "19bde1970bef46ef40c5b28e01c34205fde191423108d424fdd602f2820650a9",
+      "identities_sequences_qualities": "exact match",
+      "secondary_supplementary": "excluded with SAM flag mask 0x900",
+      "strand": "reverse complement and quality reversal when SAM flag 0x10 set"
+    }
+  ],
+  "status": "passed",
+  "launch_record": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-d4a3e0d-bamtofastq.json",
+  "launch_record_sha256": "b3757df0161eae7abd4c1f57e98c7c46608fac3ec78b2b5d73c6d008945b33a1",
+  "launch_commit": "d4a3e0d77e1d5d65a5d34d0144e3d9be4174c43e"
+}

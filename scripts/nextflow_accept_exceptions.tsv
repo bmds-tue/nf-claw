@@ -5,7 +5,6 @@
 # preview is reported "known-<outcome>", never "accepted". A row whose pipeline now passes fails
 # the gate as stale. Columns are TAB-separated:
 # pipeline	commit	outcome (rejected|staging-unverified|timeout)	evidence ERE	reason
-bactmap	834642d8ac150ca10d705833223e7bcf15efc210	staging-unverified	No such file or directory: https://raw\.githubusercontent\.com/nf-core/test-datasets/bactmap/genome/NCTC13799\.fna	1.0.0 test profile names a reference the moving test-data branch deleted
 createpanelrefs	8ce86a84b5af74facf99abb76216531622b52bc8	timeout	barrier arrives \(monitor: local\)	1.0.0 workflow-output completion waits on values preview never produces (DAG built)
 marsseq	b02ede773092f8a8a5999400acda6894d51b4d26	rejected	Unable to read script: .*marsseq\.nf' -- cause: .*/references/mm10/GRCm39\.fa	1.0.3 analysis preview needs references built first by a separate --build_references run
 multiplesequencealign	79724dac3d240b9bb7684532d3fe238b42f6a4b4	timeout	barrier arrives \(monitor: local\)	1.1.1 completion handler waits on summary_reports.getVal(), which preview never binds (DAG built)

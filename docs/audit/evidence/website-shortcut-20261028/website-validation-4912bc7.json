@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-10-28T10:55:58.413307+00:00",
+  "source_commit": "4912bc78142ad2ee8c8d736c92101fa1e2e70563",
+  "validation_source": {
+    "base_commit": "8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3",
+    "changed_files_sha256": {
+      "website/src/components/layout/command-palette.tsx": "0ba96b53ff952feb801836a13637a9fc61a068b7e13e2a0d8e9390e167247573",
+      "website/tests/operations.spec.ts": "4854c57b72e4a3d3ab467348d8b6c12f66bce1de8859f05bf2688830c70e4b4b"
+    },
+    "scope": "Server working bytes tested before their identical local commit; no Python/runtime source changed."
+  },
+  "commands": [
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:browser -- --reporter=json --output=/mnt/volume/nfclaw-shortcut-browser-results",
+      "exit_code": 0
+    }
+  ],
+  "browser_stats": {
+    "startTime": "2026-10-28T09:56:06.803Z",
+    "duration": 17410.851,
+    "expected": 13,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "original_build_diagnostic_repeat_stats": {
+    "startTime": "2026-10-28T09:52:27.349Z",
+    "duration": 137006.806,
+    "expected": 80,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "original_build_diagnostic_transport_note": "All 80 cases reported passed; the remote runner was subsequently absent, but SSH did not return. Only that local owned SSH process was terminated after 10 minutes. No remote exit code is inferred from this interrupted transport. The separate 13-case corrected-build run exited zero.",
+  "initial_export_failure": "The original evidence collector treated npm stdout as pure JSON and stopped on the npm banner after copying files. Original collector/output directory retained; v2 parses the complete JSON after validating the banner. No product code or browser results changed.",
+  "root_cause_limit": "The reproducible held-key repeat closes the search without the guard. It does not explain the earlier intermittent single-press failure; 20 unchanged original-test repeats and 80 instrumented original/precondition repeats did not reproduce it. The original failure is retained.",
+  "red_control": "diagnosis.spec.ts:60 failed on second keyboard.down(k): input absent. Initial opening and first press succeeded.",
+  "review": "Existing independent reviewer found no blockers; no edits or tests run by reviewer.",
+  "entries": [
+    {
+      "path": "/mnt/volume/nfclaw-shortcut-typecheck.log",
+      "bytes": 51,
+      "sha256": "98bfde48f4dc071d370dfdda435cf71874948e739eecd6ea776d309f55222a32",
+      "retained_copy": "00-nfclaw-shortcut-typecheck.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-shortcut-build.log",
+      "bytes": 1879,
+      "sha256": "42343ba9bc3144185e313ae83f2d85febec12a2443c62e04dec1effa14ecdfd0",
+      "retained_copy": "01-nfclaw-shortcut-build.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-shortcut-browser.json",
+      "bytes": 16509,
+      "sha256": "ed77b5b5789426bc73449e0be9900f483ec71ff732bd56f7273af879154bd5be",
+      "retained_copy": "02-nfclaw-shortcut-browser.stdout.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-shortcut-browser.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "03-nfclaw-shortcut-browser.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnostic-repeats.json",
+      "bytes": 680059,
+      "sha256": "aa562cab6debbe63b06d20bcd547fb70fcbac8c9bcd40d04497516ccbe84a9ac",
+      "retained_copy": "04-diagnostic-repeats.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnosis-red.log",
+      "bytes": 12083,
+      "sha256": "80c8a3c4a0a947e8950a4558561971540731c40ce5f608a5384f25d32984248a",
+      "retained_copy": "05-diagnosis-red.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-browser-diagnosis-8db1cbb/diagnosis.spec.ts",
+      "bytes": 3393,
+      "sha256": "c2b65e80ba3ec9c2240856dce2994840a0409637ef8a83b024a037ceb98bace5",
+      "retained_copy": "06-diagnosis.spec.ts"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-browser-failure/operations-mobile-menu-han-d20bb-o-search-opened-by-shortcut/error-context.md",
+      "bytes": 48690,
+      "sha256": "f3860bd91e64fb63c5847e1fec63cc498ee7126313bac38cacbc955b9473fc7e",
+      "retained_copy": "07-error-context.md.txt"
+    }
+  ],
+  "publication_note": "Raw stdout and error snapshot retain original bytes; local copy extensions distinguish npm stdout from pure JSON and keep a diagnostic snapshot out of generated Markdown documentation."
+}

@@ -1,0 +1,475 @@
+{
+  "version": 1,
+  "source_commit": "67d7203bdedb76ddedc4f2d409d38e84cf65e643",
+  "assessed_at": "2026-10-27T14:06:35.653224+00:00",
+  "original": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-67d7203-hgtseq-bare",
+  "replay": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-67d7203-hgtseq-bare-replay",
+  "scientific": {
+    "version": 1,
+    "comparator": "nfclaw.scientific/1",
+    "assessed_at": "2026-10-27T14:06:35.025647+00:00",
+    "contract": "HGTseq 1.1.0 historical three-sample demo: sorted alignments only",
+    "contract_sha256": "65e22325d123bafc80ef4482bbff7564bb0298b31229bb34cad1d0162c33ecbe",
+    "original": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-67d7203-hgtseq-bare",
+    "replay": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-67d7203-hgtseq-bare-replay",
+    "scope": "Only declared artifacts, record expectations and comparisons are assessed. Agreement does not establish biological accuracy, reference-byte identity or continuous immutability.",
+    "issues": [],
+    "artifacts": [
+      {
+        "path": "preprocess/alignment/testsample01_sorted.bam",
+        "format": "bam",
+        "issues": [],
+        "coordinates": "0-based, half-open",
+        "tolerances": {},
+        "ignored_header_fields": {},
+        "field_encodings": {},
+        "original": {
+          "records": 1220,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample01_1_val_1.fq.gz testsample01_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample01_sorted.bam -T testsample01_sorted testsample01.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample01.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "bfbc4515777b475674288baa5f834387139aa3834f5bd7bd23f0dd96614c4e35"
+        },
+        "replay": {
+          "records": 1220,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample01_1_val_1.fq.gz testsample01_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample01_sorted.bam -T testsample01_sorted testsample01.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample01.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "bfbc4515777b475674288baa5f834387139aa3834f5bd7bd23f0dd96614c4e35"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "preprocess/alignment/testsample02_sorted.bam",
+        "format": "bam",
+        "issues": [],
+        "coordinates": "0-based, half-open",
+        "tolerances": {},
+        "ignored_header_fields": {},
+        "field_encodings": {},
+        "original": {
+          "records": 1340,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample02_1_val_1.fq.gz testsample02_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample02_sorted.bam -T testsample02_sorted testsample02.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample02.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "54c501fa85cc84a7ee5101ec67534370342838bfb018b7cd1ba6da5f9bd33c79"
+        },
+        "replay": {
+          "records": 1340,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample02_1_val_1.fq.gz testsample02_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample02_sorted.bam -T testsample02_sorted testsample02.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample02.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "54c501fa85cc84a7ee5101ec67534370342838bfb018b7cd1ba6da5f9bd33c79"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      },
+      {
+        "path": "preprocess/alignment/testsample03_sorted.bam",
+        "format": "bam",
+        "issues": [],
+        "coordinates": "0-based, half-open",
+        "tolerances": {},
+        "ignored_header_fields": {},
+        "field_encodings": {},
+        "original": {
+          "records": 1465,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample03_1_val_1.fq.gz testsample03_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample03_sorted.bam -T testsample03_sorted testsample03.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample03.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "ba1a8dc5c79c99e7d426b4d1c4d1a6201fb084171fcd682376269d3b77e96bc5"
+        },
+        "replay": {
+          "records": 1465,
+          "samples": [],
+          "header": {
+            "HD": {
+              "VN": "1.6",
+              "SO": "coordinate"
+            },
+            "SQ": [
+              {
+                "SN": "chr21",
+                "LN": 46709983
+              }
+            ],
+            "PG": [
+              {
+                "ID": "bwa",
+                "PN": "bwa",
+                "VN": "0.7.17-r1188",
+                "CL": "bwa mem -t 2 ./bwa/genome testsample03_1_val_1.fq.gz testsample03_2_val_2.fq.gz"
+              },
+              {
+                "ID": "samtools.1",
+                "PN": "samtools",
+                "PP": "samtools",
+                "VN": "1.17",
+                "CL": "samtools sort -@ 2 -m 3072M -o testsample03_sorted.bam -T testsample03_sorted testsample03.bam"
+              },
+              {
+                "ID": "samtools",
+                "PN": "samtools",
+                "PP": "bwa",
+                "VN": "1.16.1",
+                "CL": "samtools view --threads 2 -o testsample03.bam -"
+              }
+            ]
+          },
+          "adapter": "pysam/0.24.1",
+          "semantics": "Every decoded alignment, including unmapped and nonprimary records; reference names, all flags/fields and typed tags; SHA-256 multiset. Reference bytes are not established by the BAM header.",
+          "sha256": "ba1a8dc5c79c99e7d426b4d1c4d1a6201fb084171fcd682376269d3b77e96bc5"
+        },
+        "comparison": {
+          "missing_records": 0,
+          "extra_records": 0,
+          "changed_records": 0,
+          "examples": []
+        },
+        "passed": true
+      }
+    ],
+    "pipeline_binding_scope": "recorded original only; candidate source and parameters are unverified",
+    "unassessed_files": {
+      "count": 301,
+      "examples": [
+        "QC/bamtools/stats/testsample01.bam.stats",
+        "QC/bamtools/stats/testsample02.bam.stats",
+        "QC/bamtools/stats/testsample03.bam.stats",
+        "QC/fastqc_raw/testsample01_1_fastqc.html",
+        "QC/fastqc_raw/testsample01_1_fastqc.zip",
+        "QC/fastqc_raw/testsample01_2_fastqc.html",
+        "QC/fastqc_raw/testsample01_2_fastqc.zip",
+        "QC/fastqc_raw/testsample02_1_fastqc.html",
+        "QC/fastqc_raw/testsample02_1_fastqc.zip",
+        "QC/fastqc_raw/testsample02_2_fastqc.html",
+        "QC/fastqc_raw/testsample02_2_fastqc.zip",
+        "QC/fastqc_raw/testsample03_1_fastqc.html",
+        "QC/fastqc_raw/testsample03_1_fastqc.zip",
+        "QC/fastqc_raw/testsample03_2_fastqc.html",
+        "QC/fastqc_raw/testsample03_2_fastqc.zip",
+        "QC/fastqc_trimmed/testsample01_1_fastqc.html",
+        "QC/fastqc_trimmed/testsample01_1_fastqc.zip",
+        "QC/fastqc_trimmed/testsample01_2_fastqc.html",
+        "QC/fastqc_trimmed/testsample01_2_fastqc.zip",
+        "QC/fastqc_trimmed/testsample02_1_fastqc.html"
+      ],
+      "unexpanded_links": 0,
+      "scope": "Unselected file/link entries; directory symlinks are never traversed."
+    },
+    "passed": true
+  },
+  "namespace": {
+    "structurally_equal": true,
+    "identical_files": 214,
+    "changed_files": [
+      "QC/fastqc_raw/testsample01_1_fastqc.zip",
+      "QC/fastqc_raw/testsample01_2_fastqc.zip",
+      "QC/fastqc_raw/testsample02_1_fastqc.zip",
+      "QC/fastqc_raw/testsample02_2_fastqc.zip",
+      "QC/fastqc_raw/testsample03_1_fastqc.zip",
+      "QC/fastqc_raw/testsample03_2_fastqc.zip",
+      "QC/fastqc_trimmed/testsample01_1_fastqc.zip",
+      "QC/fastqc_trimmed/testsample01_2_fastqc.zip",
+      "QC/fastqc_trimmed/testsample02_1_fastqc.zip",
+      "QC/fastqc_trimmed/testsample02_2_fastqc.zip",
+      "QC/fastqc_trimmed/testsample03_1_fastqc.zip",
+      "QC/fastqc_trimmed/testsample03_2_fastqc.zip",
+      "QC/multiqc/multiqc_data/mqc_fastqc_overrepresented_sequences_plot_1.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_per_base_n_content_plot_1.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_per_base_sequence_quality_plot_1.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_per_sequence_gc_content_plot_Counts.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_per_sequence_gc_content_plot_Percentages.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_per_sequence_quality_scores_plot_1.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_sequence_counts_plot_1.txt",
+      "QC/multiqc/multiqc_data/mqc_fastqc_sequence_length_distribution_plot_1.txt",
+      "QC/multiqc/multiqc_data/multiqc.log",
+      "QC/multiqc/multiqc_data/multiqc_data.json",
+      "QC/multiqc/multiqc_data/multiqc_fastqc.txt",
+      "QC/multiqc/multiqc_data/multiqc_general_stats.txt",
+      "QC/multiqc/multiqc_data/multiqc_sources.txt",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_adapter_content_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_overrepresented_sequences_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_per_base_n_content_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_per_base_sequence_quality_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_per_sequence_gc_content_plot_Counts.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_per_sequence_gc_content_plot_Percentages.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_per_sequence_quality_scores_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_sequence_counts_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_sequence_counts_plot_1_pc.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_sequence_duplication_levels_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_fastqc_sequence_length_distribution_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_qualimap_coverage_histogram_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_qualimap_gc_content_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_qualimap_genome_fraction_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_qualimap_insert_size_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_samtools-idxstats-mapped-reads-plot_Normalised_Counts.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_samtools-idxstats-mapped-reads-plot_Observed_over_Expected_Counts.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_samtools-idxstats-mapped-reads-plot_Raw_Counts.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_samtools_alignment_plot_1.pdf",
+      "QC/multiqc/multiqc_plots/pdf/mqc_samtools_alignment_plot_1_pc.pdf",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_overrepresented_sequences_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_per_base_n_content_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_per_base_sequence_quality_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Counts.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Percentages.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_per_sequence_quality_scores_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_sequence_counts_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_sequence_counts_plot_1_pc.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_sequence_duplication_levels_plot_1.png",
+      "QC/multiqc/multiqc_plots/png/mqc_fastqc_sequence_length_distribution_plot_1.png",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_adapter_content_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_overrepresented_sequences_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_per_base_n_content_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_per_base_sequence_quality_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_per_sequence_gc_content_plot_Counts.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_per_sequence_gc_content_plot_Percentages.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_per_sequence_quality_scores_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_sequence_counts_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_sequence_counts_plot_1_pc.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_sequence_duplication_levels_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_fastqc_sequence_length_distribution_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_qualimap_coverage_histogram_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_qualimap_gc_content_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_qualimap_genome_fraction_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_qualimap_insert_size_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_samtools-idxstats-mapped-reads-plot_Normalised_Counts.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_samtools-idxstats-mapped-reads-plot_Observed_over_Expected_Counts.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_samtools-idxstats-mapped-reads-plot_Raw_Counts.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_samtools_alignment_plot_1.svg",
+      "QC/multiqc/multiqc_plots/svg/mqc_samtools_alignment_plot_1_pc.svg",
+      "QC/multiqc/multiqc_report.html",
+      "QC/qualimap/testsample01/qualimapReport.html",
+      "QC/qualimap/testsample02/qualimapReport.html",
+      "QC/qualimap/testsample03/qualimapReport.html",
+      "pipeline_info/execution_report_2026-10-27_13-55-29.html -> pipeline_info/execution_report_2026-10-27_13-58-06.html",
+      "pipeline_info/execution_timeline_2026-10-27_13-55-29.html -> pipeline_info/execution_timeline_2026-10-27_13-58-06.html",
+      "pipeline_info/execution_trace_2026-10-27_13-55-29.txt -> pipeline_info/execution_trace_2026-10-27_13-58-06.txt",
+      "preprocess/trimming/testsample01_1.fastq.gz_trimming_report.txt",
+      "preprocess/trimming/testsample01_2.fastq.gz_trimming_report.txt",
+      "preprocess/trimming/testsample02_1.fastq.gz_trimming_report.txt",
+      "preprocess/trimming/testsample02_2.fastq.gz_trimming_report.txt",
+      "preprocess/trimming/testsample03_1.fastq.gz_trimming_report.txt",
+      "preprocess/trimming/testsample03_2.fastq.gz_trimming_report.txt",
+      "results/analysis_report/analysis_report.RData",
+      "results/analysis_report/analysis_report.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "renamed": [
+      "pipeline_info/execution_report_2026-10-27_13-55-29.html -> pipeline_info/execution_report_2026-10-27_13-58-06.html",
+      "pipeline_info/execution_timeline_2026-10-27_13-55-29.html -> pipeline_info/execution_timeline_2026-10-27_13-58-06.html",
+      "pipeline_info/execution_trace_2026-10-27_13-55-29.txt -> pipeline_info/execution_trace_2026-10-27_13-58-06.txt",
+      "pipeline_info/pipeline_dag_2026-10-27_13-55-29.html -> pipeline_info/pipeline_dag_2026-10-27_13-58-06.html"
+    ]
+  },
+  "complete_environment": {
+    "version": 1,
+    "status": "identical",
+    "mismatches": [],
+    "unverified": [],
+    "notes": []
+  },
+  "fixture_record": {
+    "generated_samplesheet": {
+      "data_commit": "800330ec8f47c93caabe8157e20dd23e243de4e1",
+      "file": "samplesheet.csv",
+      "files": 0,
+      "kind": "bundled_demo_fixture",
+      "paired_end": 3,
+      "pipeline": "hgtseq",
+      "pipeline_commit": "683daaf41bb396839445e603152b45daa141ced4",
+      "rows": 3,
+      "samples": 3,
+      "sha256": "044a2f330f038b835ff04566875d700c81ea89f01cbaa75d6901bd6d49290bbe",
+      "single_end": 0,
+      "sources": [
+        "bundled:runner.demo_defaults/hgtseq"
+      ],
+      "version": 1
+    }
+  },
+  "original_launch_record_sha256": "6f3eb5cffa1efb02ff9affc57d439cc6c3dca97968b5ee9fb0234a72b1edc8f1",
+  "replay_launch_record_sha256": "48120d755941662dccb2ed9ca3b0398430c087fea2993398b21c95a5dfee83ae"
+}

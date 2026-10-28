@@ -17,8 +17,8 @@ def _executable(path, text):
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
-def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
-            engine_log="engine cause\n", second=None, third=None):
+def _accept(tmp_path, log, exit_code, *, timeout_available=True, timeout_tool='timeout',
+            exceptions="", engine_log="engine cause\n", second=None, third=None):
     """Run the gate on one fake pipeline whose preview prints `log` and exits `exit_code`.
     `second` and `third` are (log, exit_code) for relaunches; `second` also serves later ones."""
     up = tmp_path / "pipelines" / "mini" / "upstream"
@@ -29,7 +29,7 @@ def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
     _executable(fake / "git", '#!/bin/sh\ncase "$*" in\n  submodule*) exit 0 ;;\n'
                 f'  "-C pipelines/mini/upstream rev-parse HEAD") echo {COMMIT} ;;\n'
                 '  *) exit 2 ;;\nesac\n')
-    _executable(fake / "timeout", '#!/bin/sh\n[ "$1" = --kill-after=10s ] || exit 2\n'
+    _executable(fake / timeout_tool, '#!/bin/sh\n[ "$1" = --kill-after=10s ] || exit 2\n'
                 'printf "%s\\n" "$2" >> "$FAKE_TIMEOUTS"\nshift\nshift\nexec "$@"\n')
     _executable(fake / "nextflow", '#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_NXF_ARGS"\n'
                 'n=$(cat "$FAKE_NXF_COUNT" 2>/dev/null || echo 0); n=$((n + 1))\n'
@@ -70,6 +70,12 @@ def _accept(tmp_path, log, exit_code, *, timeout_available=True, exceptions="",
                            '"-v timeout"|"-v gtimeout") return 1 ;;\n'
                            '*) builtin command "$@" ;;\nesac\n}\n')
         env["BASH_ENV"] = str(startup)
+    elif timeout_tool == 'gtimeout':
+        startup = tmp_path / 'bash-startup'
+        startup.write_text('command() {\ncase "$*" in\n'
+                           '"-v timeout") return 1 ;;\n'
+                           '*) builtin command "$@" ;;\nesac\n}\n')
+        env['BASH_ENV'] = str(startup)
     process = subprocess.run(["bash", str(ROOT / "scripts" / "nextflow_accept.sh"), "mini"],
                              cwd=tmp_path, env=env, capture_output=True, text=True)
     return process, result.read_text()
@@ -104,6 +110,16 @@ def test_successful_preview_is_accepted(tmp_path):
     # The gate invokes preview mode, which Nextflow defines as skipping every process.
     args = (tmp_path / "nextflow-args.txt").read_text().splitlines()
     assert "-preview" in args and "-stub-run" not in args
+
+
+@pytest.mark.parametrize('timeout_tool', ['timeout', 'gtimeout'])
+def test_preview_stager_is_bounded_by_either_platform_timeout(tmp_path, timeout_tool):
+    process, verdict = _accept(tmp_path, '* PREVIEW *\n', 0, timeout_tool=timeout_tool)
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert verdict == 'mini\taccepted\n'
+    assert (tmp_path / 'timeouts.txt').read_text() == '900\n'
+    args = (tmp_path / 'nextflow-args.txt').read_text().splitlines()
+    assert args[0] == '-log' and 'run' in args and '-preview' in args
 
 
 def test_unavailable_timeout_cannot_launch_an_unbounded_preview(tmp_path):
@@ -357,3 +373,43 @@ def test_updater_requires_unique_completed_acceptance_before_auto_merge(tmp_path
                              capture_output=True, text=True)
     accepted = inventory_exit == 0 and verdict == "mini\taccepted\n"
     assert (process.returncode == 0) == accepted, process.stdout
+
+
+@pytest.mark.parametrize("diverged", [False, True])
+def test_preview_preserves_existing_submodule_and_untracked_files(tmp_path, diverged):
+    upstream = tmp_path / 'origin'
+    upstream.mkdir()
+    (upstream / 'nextflow.config').write_text("manifest { nextflowVersion = '!>=25.10.4' }\n")
+    (upstream / 'main.nf').write_text('workflow {}\n')
+    def git(where, *args):
+        return subprocess.run(['git', '-C', str(where), *args], check=True,
+                              capture_output=True, text=True)
+    git(upstream, 'init', '-q')
+    git(upstream, 'add', '.')
+    git(upstream, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+        'commit', '-qm', 'fixture')
+    root = tmp_path / 'repo'
+    root.mkdir()
+    git(root, 'init', '-q')
+    git(root, '-c', 'protocol.file.allow=always', 'submodule', 'add', str(upstream),
+        'pipelines/mini/upstream')
+    sentinel = root / 'pipelines/mini/upstream/precious-untracked.txt'
+    sentinel.write_text('existing user data\n')
+    if diverged:
+        git(sentinel.parent, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+            'commit', '--allow-empty', '-qm', 'user-selected release')
+    selected = git(sentinel.parent, 'rev-parse', 'HEAD').stdout.strip()
+    fake = tmp_path / 'bin'
+    fake.mkdir()
+    _executable(fake / 'nextflow', '#!/bin/sh\nexit 0\n')
+    env = {**os.environ, 'PATH': f'{fake}{os.pathsep}{os.environ["PATH"]}',
+           'RUNNER_TEMP': str(tmp_path)}
+    env.pop('NFCLAW_KEEP_SUBMODULES', None)
+    process = subprocess.run(['bash', str(ROOT / 'scripts/nextflow_accept.sh'), 'mini'],
+                             cwd=root, env=env, capture_output=True, text=True, timeout=30)
+    assert process.returncode == (1 if diverged else 0), process.stdout + process.stderr
+    assert sentinel.exists(), 'preview deleted a preexisting untracked file'
+    assert sentinel.read_text() == 'existing user data\n'
+    assert (sentinel.parent / 'main.nf').exists()
+
+    assert git(sentinel.parent, 'rev-parse', 'HEAD').stdout.strip() == selected
