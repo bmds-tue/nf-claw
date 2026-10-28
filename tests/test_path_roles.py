@@ -17,7 +17,7 @@ PINNED_DESTINATIONS = [
     ("pacvar", "outdir_vep_cache", "20364830237171928c79e59651142460379d1459"),
     ("rnadnavar", "outdir_cache", "8e8debdb0e7208218a4a2f852de7c741a69ca448"),
     ("rnavar", "outdir_cache", "a0e4641409eb7aed4b325e543d20577f9c08e437"),
-    ("sarek", "outdir_cache", "8ccac7ad37b05dd792447763bf9671b719824587"),
+    ("sarek", "outdir_cache", "6e9b164daa2a54c98f7dda538645d340c561ac24"),
 ]
 
 
@@ -195,7 +195,7 @@ def test_unverifiable_destination_roles_restore_input_checks(
 
 
 @pytest.mark.parametrize("name,param,commit", [
-    ("sarek", "bwa", "8ccac7ad37b05dd792447763bf9671b719824587"),
+    ("sarek", "bwa", "6e9b164daa2a54c98f7dda538645d340c561ac24"),
     ("ampliseq", "ref_taxonomy_storage", "992e6df34065067185b5e34665b5861b6827981d"),
 ])
 def test_scientific_cache_remains_inspected_and_snapshotted(
