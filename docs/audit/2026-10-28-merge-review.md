@@ -99,6 +99,12 @@ Main's first push-triggered runs after the merge (`9fd2a4c`) found:
   `kraken2-build --add-to-library` generates under `library/added/` (one to one, within their
   directory, bytes compared). Re-verifying the real replay: 0 missing/extra, 7 renamed (6 library
   files and the launch-stamped params file), environment identical.
+- **sarek 3.11.0 lost its source audit.** The bot bump left `outdir_cache` treated as an input
+  (safe, but no longer the audited destination) and six audit tests skipping. At `6e9b164`
+  `download_cache.config` and the SnpSift sheet schema are byte-identical to 3.10.0,
+  `outdir_cache` has no other use, and `main.nf`'s SnpSift block is unchanged; both records now
+  cover 3.11.0 and the tests run again. The remaining rnasplice skip is by design: its record
+  audits the 1.0.4 consumer, while the 2.0.0 pin declares its read paths in its own schema.
 - **Two transient workflow failures**, re-run: `smoke` (a runner's Docker did not respond) and
   `nextflow-validate` shard 7, where sarek 3.11.0's preview stalled for 12 minutes downloading the
   `nf-amazon` plugin from `registry.nextflow.io`. sarek 3.11.0 arrived in bot commit `18331a5`,
