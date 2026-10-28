@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "observed_at": "2026-10-28T02:01:59.129292+00:00",
+  "platform": "Linuxamd64,Chromium",
+  "commands": [
+    "ruff check .",
+    "python -m librarian.check_drift",
+    "npm run typecheck",
+    "npm run build",
+    "npm run test:browser"
+  ],
+  "exit_code": 0,
+  "browser_tests_passed": 12,
+  "browser_duration_seconds": 15.7,
+  "log": "/mnt/volume/nfclaw-website-eee40ee.log",
+  "log_sha256": "cf51c0240f38e68e1762c0b64d42dbadcb021d23715cf12552d356d3b5683598",
+  "tracked_checkout_clean_after": true,
+  "scope": "Commands ran via SSH on denbi_instance. SSH exit0; original console captured locally, then identical log retained here. No macOS/hosted-Actions execution claim."
+}

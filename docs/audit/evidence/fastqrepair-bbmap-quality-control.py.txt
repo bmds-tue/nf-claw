@@ -1,0 +1,29 @@
+from pathlib import Path
+import subprocess,json,hashlib,gzip
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/fastqrepair-demo-oracle-20261028/bbmap-quality-control')
+root.mkdir(exist_ok=False)
+tag='community.wave.seqera.io/library/bbmap_pigz:07416fe99b090fa9'
+identity=json.loads(subprocess.check_output(['docker','image','inspect',tag],text=True))[0]
+image=identity['Id']
+record={'image_id':image,'repo_digests':identity['RepoDigests'],'source_files':{},'runs':[]}
+for rel in ['stream/Read.java','shared/Parser.java','stream/FASTQ.java']:
+ data=subprocess.check_output(['docker','run','--rm','--pull=never','--network=none','--entrypoint','cat',image,'/opt/conda/opt/bbmap-39.18-0/current/'+rel])
+ p=root/(rel.replace('/','_'));p.write_bytes(data)
+ record['source_files'][rel]={'path':str(p),'sha256':hashlib.sha256(data).hexdigest()}
+for mate,seq,qual in [(1,'NACN','#III'),(2,'TNGN','I#II')]:
+ (root/f'input_{mate}.fastq').write_text(f'@control/{mate}\n{seq}\n+\n{qual}\n')
+for mode in ('default','unchanged_diagnostic'):
+ command=['docker','run','--rm','--pull=never','--network=none','--cpus=1','--memory=1g',
+  '--user',str(__import__('os').getuid())+':'+str(__import__('os').getgid()),
+  '--mount',f'type=bind,source={root},target=/test','--workdir','/test','--entrypoint','repair.sh',image,
+  '-Xmx512m','in=input_1.fastq','in2=input_2.fastq',f'out={mode}_1.fastq',f'out2={mode}_2.fastq',f'outs={mode}_single.fastq','threads=1','qin=33']
+ if mode!='default':command.append('changequality=f')
+ log=root/(mode+'.log')
+ with log.open('x') as f:result=subprocess.run(command,stdout=f,stderr=subprocess.STDOUT)
+ values={str(m):(root/f'{mode}_{m}.fastq').read_text().splitlines() for m in (1,2)}
+ expected={'1':'!II!','2':'I!I!'} if mode=='default' else {'1':'#III','2':'I#II'}
+ ok=result.returncode==0 and all(values[m][3]==q for m,q in expected.items())
+ record['runs'].append({'mode':mode,'command':command,'exit_code':result.returncode,'actual':values,'expected_qualities':expected,'passed':ok,'log':str(log)})
+(root/'quality-control.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps(record,indent=2))
+assert all(r['passed'] for r in record['runs'])

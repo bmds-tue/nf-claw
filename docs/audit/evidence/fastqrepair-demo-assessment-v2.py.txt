@@ -1,0 +1,176 @@
+from pathlib import Path
+from datetime import datetime, UTC
+import subprocess, os, json, hashlib, csv, gzip, collections, sys, stat, copy
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source')
+commit=sys.argv[1]
+assert len(commit)==40 and subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()==commit
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+label=f'commit-{commit[:7]}-fastqrepair-demo'
+out=root/label; replay=root/(label+'-replay'); receipt=root/(label+'.assessed-v2.json'); prior_receipt=root/(label+'.json')
+assert out.exists() and prior_receipt.is_file() and not replay.exists() and not receipt.exists()
+prior=json.loads(prior_receipt.read_text())
+assert prior['source_commit']==commit and prior['runs'][0]['exit_code']==0
+py='/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python'
+env={**os.environ,'PYTHONPATH':str(source),'PATH':str(Path(py).parent)+os.pathsep+os.environ['PATH'],
+     'NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true'}
+upstream=source/'pipelines/fastqrepair/upstream'
+paths=subprocess.check_output(['git','ls-files','-z'],cwd=upstream,text=True).split('\0')
+def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+def snapshot():
+ return {p:{'sha256':digest(upstream/p),'mode':stat.S_IMODE((upstream/p).stat().st_mode)} for p in paths if p}
+initial=snapshot()
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+oracle=root/'fastqrepair-demo-oracle-20261028'
+paired=json.loads((oracle/'oracle.json').read_text());damage=json.loads((oracle/'damage-oracle.json').read_text())
+def reads(path):
+ entries=[]
+ with gzip.open(path,'rt',encoding='ascii',newline='') as stream:
+  while h:=stream.readline():
+   seq=stream.readline().rstrip('\r\n');plus=stream.readline();qual=stream.readline().rstrip('\r\n')
+   assert h.startswith('@') and plus.startswith('+') and seq and len(seq)==len(qual),str(path)
+   assert all(33<=ord(c)<=126 for c in qual)
+   entries.append((h[1:].split()[0],seq,qual))
+ return entries
+expected={}
+for m in (1,2):
+ p=oracle/f'testsample01_{m}.fastq.gz'
+ assert digest(p)==paired['mates'][str(m)]['sha256']
+ expected[f'paired_control_{m}.fastq.gz']=reads(p)
+assert len(expected['paired_control_1.fastq.gz'])==len(expected['paired_control_2.fastq.gz'])==646
+r2=oracle/'test_30reads_R2.fastq.gz'
+assert digest(r2)==damage['inputs'][r2.name]['sha256']
+# Parse original R2 independently, preserving only its complete valid four-line groups.
+raw=gzip.decompress(r2.read_bytes()).decode('ascii').splitlines();single=[];invalid=[]
+for i in range(0,len(raw),4):
+ group=raw[i:i+4]
+ if len(group)==4 and group[0].startswith('@') and group[2].startswith('+') and group[1] and len(group[1])==len(group[3]) and all(33<=ord(c)<=126 for c in group[3]):
+  single.append((group[0][1:].split()[0],group[1],group[3]))
+ else:invalid.append(i+1)
+assert len(single)==24 and invalid==[89,101]
+original_paired=copy.deepcopy(expected)
+# Independently source-checked BBMap39.18 default: ambiguous bases get Phred0.
+# All fully called qualities in this fixture lie within its unchanged2..50 interval.
+quality_changes={}
+for name,entries in original_paired.items():
+ assert all(2<=ord(q)-33<=50 for _,_,qual in entries for q in qual)
+ assert all(b in 'ACGTN' for _,seq,_ in entries for b in seq)
+ expected[name]=[(identifier,seq,''.join('!' if base=='N' else q for base,q in zip(seq,qual))) for identifier,seq,qual in entries]
+ quality_changes[name]=sum(b=='N' and q!='!' for _,seq,qual in entries for b,q in zip(seq,qual))
+assert set(quality_changes.values())=={211}
+quality_control=json.loads((oracle/'bbmap-quality-control/quality-control.json').read_text())
+assert all(r['passed'] for r in quality_control['runs'])
+expected['test_30reads_2.fastq.gz']=single
+expected['paired_control_singleton.fastq.gz']=[]
+expected_publications=set(expected)|{'paired_control.repair.sh.log','test_30reads_2.report',
+ 'reports/paired_control/paired_control_recovered_1.report',
+ 'reports/paired_control/paired_control_recovered_2.report'}
+def conserved(actual,wanted):
+ assert set(actual)==set(wanted),'missing or unexpected FASTQ output'
+ for name,entries in wanted.items():
+  assert collections.Counter(actual[name])==collections.Counter(entries),f'read identity/sequence/quality/multiplicity changed: {name}'
+ assert [r[0] for r in actual['paired_control_1.fastq.gz']]==[r[0] for r in actual['paired_control_2.fastq.gz']],'paired order differs'
+def route(tasks):
+ assert tasks and all(t['status']=='COMPLETED' and t['exit']=='0' for t in tasks),'non-completed task'
+ selected=[t for t in tasks if ':BBMAP_REPAIR' in t['name']]
+ assert len(selected)==1 and '(paired_control)' in selected[0]['name'],'paired control repair did not execute'
+ assert not any('(test_30reads)' in t['name'] and ':BBMAP_REPAIR' in t['name'] for t in tasks)
+record={'version':1,'assessment_worker':{'path':__file__,'sha256':digest(Path(__file__))},'assessed_at':datetime.now(UTC).isoformat(),'source_commit':commit,'pipeline_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=upstream,text=True).strip(),
+ 'source':str(source),'upstream_files_before':initial,'oracle':{'paired':paired,
+ 'damage':{**damage,'inputs':{k:{kk:vv for kk,vv in v.items() if kk!='invalid_groups'} for k,v in damage['inputs'].items()}},
+ 'r2_invalid_group_lines':invalid},'runs':[],
+ 'prior_failed_assessment':{'record':str(prior_receipt),'sha256':digest(prior_receipt),'log':str(root.parent/'nfclaw-fastqrepair-demo-native-eee40ee.log'),'reason':'Naive raw-quality conservation is false: upstream BBMap defaults normalize ambiguous-base quality to0. Original failed assertion retained.'},
+ 'bbmap_quality_contract':{'per_mate_normalized_positions':quality_changes,'quality_control':quality_control,'rule':'Only N positions becomePhred0 in this exact fixture; all nonN qualities unchanged. Wipertools preBBMap gathered records must equal unmodified original input.'},
+ 'scope':'Exact pinned four-row demo and fresh recorded replay. Genuine 646-pair conservation with BBMap documented N-quality normalization plus original 24 valid single-end records; damaged pair/empty case explicitly excluded. No arbitrary damaged-read recovery claim.'}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+save()
+def execute(kind,target,command):
+ log=root/(target.name+'.console.log')
+ run={'kind':kind,'outdir':str(target),'command':command,'started_at':datetime.now(UTC).isoformat(),'console_log':str(log)}
+ record['runs'].append(run);save()
+ if kind=='original':
+  run.update(copy.deepcopy(prior['runs'][0]))
+  run['execution_imported_from']=str(prior_receipt)
+  assert run['command']==command and log.is_file() and digest(log)==run['console_log_sha256']
+ else:
+  with log.open('x') as stream:result=subprocess.run(command,cwd=source,env=env,stdout=stream,stderr=subprocess.STDOUT)
+  run.update(exit_code=result.returncode,finished_at=datetime.now(UTC).isoformat(),console_log_sha256=digest(log))
+ save();print(kind,'exit',run['exit_code'],flush=True)
+ assert run['exit_code']==0,str(log)
+ traces=list((target/'pipeline_info').glob('execution_trace*.txt'));assert len(traces)==1
+ with traces[0].open() as stream:tasks=list(csv.DictReader(stream,delimiter='\t'))
+ run.update(trace=str(traces[0]),trace_sha256=digest(traces[0]),tasks=tasks)
+ save();route(tasks)
+ text=log.read_text()
+ assert 'FASTQ files with the following meta.ids are empty: test_30reads, test_empty_file' in text
+ publications={str(p.relative_to(target/'repaired')) for p in (target/'repaired').rglob('*') if p.is_file()}
+ run['repaired_publications']=sorted(publications);save()
+ assert publications==expected_publications,(publications,expected_publications)
+ # Resolve the actual BBMap task directory by its trace hash, then inspect consumed gather links.
+ task=next(t for t in tasks if ':BBMAP_REPAIR' in t['name'])
+ prefix,suffix=task['hash'].split('/')
+ work=Path(f'/dev/shm/nfclaw-fastqrepair-demo-{commit[:7]}/work')
+ candidates=list((work/prefix).glob(suffix+'*'));assert len(candidates)==1
+ gathered={}
+ for mate in (1,2):
+  files=list(candidates[0].glob(f'paired_control_recovered_{mate}_gather__nfclaw_*.fastq.gz'));assert len(files)==1
+  entries=reads(files[0]);name=f'paired_control_{mate}.fastq.gz'
+  assert collections.Counter(entries)==collections.Counter(original_paired[name]),'preBBMap records changed'
+  gathered[name]={'path':str(files[0]),'sha256':digest(files[0]),'original_records_exact':True}
+ run['pre_bbmap_gather']=gathered
+ actual={name:reads(target/'repaired'/name) for name in expected}
+ conserved(actual,expected)
+ quality_observations={}
+ for mate in (1,2):
+  name=f'paired_control_{mate}.fastq.gz'
+  def headers(path):
+   with gzip.open(path,'rt',encoding='ascii') as stream:lines=stream.read().splitlines()
+   return collections.Counter(lines[::4])
+  assert headers(target/'repaired'/name)==headers(oracle/f'testsample01_{mate}.fastq.gz'),'full paired headers changed'
+  original_by_id={r[0]:r for r in original_paired[name]};changes=[]
+  for identifier,seq,qual in actual[name]:
+   old=original_by_id[identifier][2]
+   changes.extend((base,ord(before)-33,ord(after)-33) for base,before,after in zip(seq,old,qual) if before!=after)
+  assert len(changes)==211 and set(changes)=={('N',2,0)}
+  quality_observations[name]={'normalized_positions':len(changes),'only_delta':{'base':'N','from_phred':2,'to_phred':0},'full_headers_unchanged':True,'all_other_qualities_unchanged':True}
+ run['quality_observations']=quality_observations
+ for mate in (1,2):
+  report=(target/'repaired/reports/paired_control'/f'paired_control_recovered_{mate}.report').read_text()
+  assert 'Clean reads: 646\n' in report
+ single_report=(target/'repaired/test_30reads_2.report').read_text()
+ assert 'Clean reads: 24\n' in single_report and 'Reads discarded because len(SEQ) neq len(QUAL): 2\n' in single_report
+ run['read_checks']={name:{'reads':len(entries),'canonical_records_sha256':hashlib.sha256(json.dumps(sorted(entries),separators=(',',':')).encode()).hexdigest(),
+   'compressed_sha256':digest(target/'repaired'/name)} for name,entries in actual.items()}
+ run['original_damage_cases_excluded_explicitly']=True;run['all_expected_read_truth_and_publications_passed']=True
+ if kind=='original':
+  manifest=json.loads((target/'provenance/run_manifest.json').read_text())
+  run.update({k:manifest.get(k) for k in ('outcome','dependency_stability','completion_caveats','generated_samplesheet','nextflow')})
+  assert manifest['generated_samplesheet']['kind']=='bundled_demo_fixture'
+  assert manifest['generated_samplesheet']['data_commits']=={'damage_cases':damage['data_commit'],'paired_control':paired['data_commit']}
+ run['upstream_unchanged']=snapshot()==initial
+ save();assert run['upstream_unchanged']
+ # Independent false-positive controls use modified analysis copies, never result/input files.
+ negatives={}
+ altered=copy.deepcopy(actual);first=altered['paired_control_1.fastq.gz'][0]
+ altered['paired_control_1.fastq.gz'][0]=(first[0],('C' if first[1][0]!='C' else 'A')+first[1][1:],first[2])
+ wrong_quality=copy.deepcopy(actual);key='paired_control_1.fastq.gz';index=next(i for i,r in enumerate(wrong_quality[key]) if 'N' in r[1]);item=wrong_quality[key][index];position=item[1].index('N');qual=item[2];wrong_quality[key][index]=(item[0],item[1],qual[:position]+'#'+qual[position+1:])
+ cases={'wrong_ambiguous_base_quality':lambda:conserved(wrong_quality,expected),'altered_paired_sequence':lambda:conserved(altered,expected),
+        'missing_paired_route':lambda:route([t for t in tasks if ':BBMAP_REPAIR' not in t['name']]),
+        'missing_original_single_end':lambda:conserved({k:v for k,v in actual.items() if k!='test_30reads_2.fastq.gz'},expected)}
+ for name,check in cases.items():
+  try:check()
+  except AssertionError as exc:negatives[name]={'refused':True,'reason':str(exc)}
+  else:raise AssertionError('negative control accepted: '+name)
+ run['negative_controls']=negatives;save()
+execute('original',out,[py,'-m','runner','run','fastqrepair','--demo','--outdir',str(out),
+ '--nxf-ver','25.10.4','--limit-cpus','2','--limit-memory','4.GB','--limit-time','15.min','--timeout','1200',
+ '--nxf-env',f'NXF_WORK=/dev/shm/nfclaw-fastqrepair-demo-{commit[:7]}/work',
+ '--nxf-env','NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true'])
+execute('replay',replay,['bash',str(out/'provenance/commands.sh'),str(replay)])
+from runner import verify
+comparison=verify.compare(out,replay,require_environment=True)
+record['replay_comparison']={'structurally_equal':comparison.structurally_equal,'changed_links':comparison.changed_links,'renamed':comparison.renamed,'identical':comparison.identical,'changed':comparison.changed,'missing':comparison.missing,'extra':comparison.extra,
+ 'environment':comparison.environment,'missing_dirs':comparison.missing_directories,'extra_dirs':comparison.extra_directories}
+record['upstream_files_after']=snapshot();record['upstream_unchanged']=snapshot()==initial
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+save();assert comparison.structurally_equal and comparison.environment and comparison.environment['status']=='identical'
+print('Complete demo conservation passed; environment',comparison.environment,flush=True)

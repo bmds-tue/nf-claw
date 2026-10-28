@@ -1,0 +1,306 @@
+{
+  "version": 1,
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "observed_at": "2026-10-28T02:01:59.128552+00:00",
+  "raw_driver_results": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/results.json",
+  "raw_driver_results_sha256": "2b0535bab02b594d76d555629300b71b1389b889a2f740b077f91bdc079aabb4",
+  "records": [
+    {
+      "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "scope": "full",
+      "started_at": "2026-10-28T01:35:16.591835+00:00",
+      "finished_at": "2026-10-28T01:57:20.758593+00:00",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-rs",
+        "--basetemp",
+        "/dev/shm/nfclaw-maintenance-validation-eee40ee/3.12",
+        "--junitxml",
+        "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.12-full.xml"
+      ],
+      "exit_code": 0,
+      "python": "Python 3.12.3",
+      "packages": {
+        "pytest": "9.1.1",
+        "pysam": "0.24.1",
+        "h5py": "3.16.0",
+        "numpy": "2.5.4"
+      },
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/source-inventory.json",
+      "source_inventory_sha256_before": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "source_inventory_sha256_after": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "editable_fallback_code_bytes_and_execute_bits_match": true,
+      "editable_fallback_unchanged": true,
+      "fallback_initial_inventory_sha256": "4f8b6edba8fc7305a8e2dd6a05337a16caeebfd2dff66bd18231ef4d4f5ccacb",
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.12-full.log",
+      "log_sha256": "1d6c586a737c83cece1d8fbe43557e4f320198eadef2b4c507899fea94f126f1",
+      "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.12-full.xml",
+      "junit_sha256": "aa8a5de00c1201a0e001bdce4675e6d8b09ea3dadd70a1c5fb086865dc3af824",
+      "dependency_install_command": [],
+      "dependency_note": "Existing validated adapter environments",
+      "environment": {
+        "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+      },
+      "full_suite_evidence_check": {
+        "command": [
+          "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+          "scripts/check_maintenance_pytest.py",
+          "--report",
+          "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.12-full.xml",
+          "--os",
+          "ubuntu-latest",
+          "--python",
+          "3.12",
+          "--candidate",
+          "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+          "--output",
+          "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/full-suite-evidence-check.json"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "counts": {
+        "passed": 3341,
+        "skipped": [
+          {
+            "case": "tests.test_legacy_sheet_paths.test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+            "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+          }
+        ]
+      }
+    },
+    {
+      "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "scope": "affected",
+      "started_at": "2026-10-28T01:35:16.592698+00:00",
+      "finished_at": "2026-10-28T01:35:29.216799+00:00",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-rs",
+        "--basetemp",
+        "/dev/shm/nfclaw-maintenance-validation-eee40ee/3.11",
+        "--junitxml",
+        "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.11-affected.xml",
+        "tests/test_demo_fastqrepair.py",
+        "tests/test_demo_defaults.py",
+        "tests/test_demo_hgtseq.py",
+        "tests/test_fastqrepair_compat.py",
+        "tests/test_maintenance_pytest.py",
+        "tests/test_write_skill.py",
+        "tests/test_website_parsing.py",
+        "tests/test_workflows.py"
+      ],
+      "exit_code": 0,
+      "python": "Python 3.11.17",
+      "packages": {
+        "pytest": "9.1.1",
+        "pysam": "0.24.1",
+        "h5py": "3.16.0",
+        "numpy": "2.4.6"
+      },
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/source-inventory.json",
+      "source_inventory_sha256_before": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "source_inventory_sha256_after": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "editable_fallback_code_bytes_and_execute_bits_match": true,
+      "editable_fallback_unchanged": true,
+      "fallback_initial_inventory_sha256": "4f8b6edba8fc7305a8e2dd6a05337a16caeebfd2dff66bd18231ef4d4f5ccacb",
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.11-affected.log",
+      "log_sha256": "044b59db136cd2b6bbf813ff928c166eedfc42556a1aa2c255a15d59093f7d74",
+      "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.11-affected.xml",
+      "junit_sha256": "3b12d8c9839adf8b31915c8bd626a419ababe91264e50b4cd748c3aa714fca0a",
+      "dependency_install_command": [],
+      "dependency_note": "Existing validated adapter environments",
+      "environment": {
+        "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+      },
+      "full_suite_evidence_check": null,
+      "counts": {
+        "passed": 749,
+        "skipped": []
+      }
+    },
+    {
+      "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "scope": "affected",
+      "started_at": "2026-10-28T01:35:29.398658+00:00",
+      "finished_at": "2026-10-28T01:35:46.189867+00:00",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-rs",
+        "--basetemp",
+        "/dev/shm/nfclaw-maintenance-validation-eee40ee/3.13",
+        "--junitxml",
+        "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.13-affected.xml",
+        "tests/test_demo_fastqrepair.py",
+        "tests/test_demo_defaults.py",
+        "tests/test_demo_hgtseq.py",
+        "tests/test_fastqrepair_compat.py",
+        "tests/test_maintenance_pytest.py",
+        "tests/test_write_skill.py",
+        "tests/test_website_parsing.py",
+        "tests/test_workflows.py"
+      ],
+      "exit_code": 0,
+      "python": "Python 3.13.17",
+      "packages": {
+        "pytest": "9.1.1",
+        "pysam": "0.24.1",
+        "h5py": "3.16.0",
+        "numpy": "2.5.4"
+      },
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/source-inventory.json",
+      "source_inventory_sha256_before": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "source_inventory_sha256_after": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "editable_fallback_code_bytes_and_execute_bits_match": true,
+      "editable_fallback_unchanged": true,
+      "fallback_initial_inventory_sha256": "4f8b6edba8fc7305a8e2dd6a05337a16caeebfd2dff66bd18231ef4d4f5ccacb",
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.13-affected.log",
+      "log_sha256": "f35d1645a251c62d8d9d2a0514d857502d7d0cb472a64e61335ab5ddc3c91a96",
+      "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.13-affected.xml",
+      "junit_sha256": "6ddf674991858911a1f4dd0e69eaeae21ba6a3236f4225bcceb7fd28b1945c22",
+      "dependency_install_command": [],
+      "dependency_note": "Existing validated adapter environments",
+      "environment": {
+        "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+      },
+      "full_suite_evidence_check": null,
+      "counts": {
+        "passed": 749,
+        "skipped": []
+      }
+    },
+    {
+      "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "scope": "affected",
+      "started_at": "2026-10-28T01:35:46.364923+00:00",
+      "finished_at": "2026-10-28T01:36:02.756927+00:00",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-rs",
+        "--basetemp",
+        "/dev/shm/nfclaw-maintenance-validation-eee40ee/3.14",
+        "--junitxml",
+        "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.14-affected.xml",
+        "tests/test_demo_fastqrepair.py",
+        "tests/test_demo_defaults.py",
+        "tests/test_demo_hgtseq.py",
+        "tests/test_fastqrepair_compat.py",
+        "tests/test_maintenance_pytest.py",
+        "tests/test_write_skill.py",
+        "tests/test_website_parsing.py",
+        "tests/test_workflows.py"
+      ],
+      "exit_code": 0,
+      "python": "Python 3.14.9",
+      "packages": {
+        "pytest": "9.1.1",
+        "pysam": "0.24.1",
+        "h5py": "3.16.0",
+        "numpy": "2.5.4"
+      },
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/source-inventory.json",
+      "source_inventory_sha256_before": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "source_inventory_sha256_after": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "editable_fallback_code_bytes_and_execute_bits_match": true,
+      "editable_fallback_unchanged": true,
+      "fallback_initial_inventory_sha256": "4f8b6edba8fc7305a8e2dd6a05337a16caeebfd2dff66bd18231ef4d4f5ccacb",
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.14-affected.log",
+      "log_sha256": "4afc5ca871beb7d59dbaa1cc803b7a24b682da46b61f40b53f0a558c33e5defc",
+      "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.14-affected.xml",
+      "junit_sha256": "30c950e50b21990bd04ef1a022c3411cd7123246cc7972fb79c3077d04ee965e",
+      "dependency_install_command": [],
+      "dependency_note": "Existing validated adapter environments",
+      "environment": {
+        "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source"
+      },
+      "full_suite_evidence_check": null,
+      "counts": {
+        "passed": 749,
+        "skipped": []
+      }
+    },
+    {
+      "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "scope": "affected",
+      "started_at": "2026-10-28T01:36:02.970431+00:00",
+      "finished_at": "2026-10-28T01:36:18.802936+00:00",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-rs",
+        "--basetemp",
+        "/dev/shm/nfclaw-maintenance-validation-eee40ee/3.15",
+        "--junitxml",
+        "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.15-affected.xml",
+        "tests/test_demo_fastqrepair.py",
+        "tests/test_demo_defaults.py",
+        "tests/test_demo_hgtseq.py",
+        "tests/test_fastqrepair_compat.py",
+        "tests/test_maintenance_pytest.py",
+        "tests/test_write_skill.py",
+        "tests/test_website_parsing.py",
+        "tests/test_workflows.py"
+      ],
+      "exit_code": 0,
+      "python": "Python 3.15.1",
+      "packages": {
+        "pytest": "9.1.1",
+        "pysam": "0.24.1",
+        "h5py": "3.16.0",
+        "numpy": "2.5.4"
+      },
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "source_inventory": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/source-inventory.json",
+      "source_inventory_sha256_before": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "source_inventory_sha256_after": "abc820a7b797f7c01e34cc226cbd46bb4ea95b11b812bbf224df2125ea6172bf",
+      "editable_fallback_code_bytes_and_execute_bits_match": true,
+      "editable_fallback_unchanged": true,
+      "fallback_initial_inventory_sha256": "4f8b6edba8fc7305a8e2dd6a05337a16caeebfd2dff66bd18231ef4d4f5ccacb",
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.15-affected.log",
+      "log_sha256": "b385dded1f2d5fa86abdaa65a356c3b6268b36afae8ed9254ce3e7c062c1b4d5",
+      "junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/eee40ee/3.15-affected.xml",
+      "junit_sha256": "b08a1babe6d1007f797f3bbd4f754435a115b2d2c1ffd317aeb13376b97fa7b6",
+      "dependency_install_command": [],
+      "dependency_note": "Existing validated adapter environments",
+      "environment": {
+        "PYTHONPATH": "/mnt/volume/nfclaw-remediation-matrix-source",
+        "LD_LIBRARY_PATH": "/mnt/volume/nfclaw-remediation-python-matrix/hdf5-private/root/usr/lib/x86_64-linux-gnu"
+      },
+      "full_suite_evidence_check": null,
+      "counts": {
+        "passed": 749,
+        "skipped": []
+      }
+    }
+  ],
+  "scope": "Complete Python3.12 plus affected tests on3.11/3.13/3.14/3.15, Linuxamd64. All five complete suites also passed on prior runtime512ade7; no new full other-version claim."
+}
