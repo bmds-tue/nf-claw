@@ -5,11 +5,23 @@ Only generated regular context/catalog files, canonical source registrations and
 may change. Unsupported deletions, type changes, executable documents, symlinks and redirected
 repositories are refused. A private index preserves unrelated staging and build output.
 
+---
+
+### Navigation
+
+[Overview](#overview) • [Candidate Verification](#candidate-verification-and-immutable-artifacts) • [Gating Criteria](#publication-gating-criteria) • [Trusted-Base Publisher](#fresh-trusted-base-publisher) • [Verification Boundaries](#verification-boundaries)
+
+---
+
+## Overview
+
 The candidate Git bundle and metadata are uploaded as one immutable artifact. Consumers receive
 its producing artifact ID and exact base/candidate SHAs, including on failed-job reruns. Every
 consumer verifies the candidate's single parent, changed paths, modes and gitlink inventory before
 checking out source or initializing submodules. Artifact IDs refer to the current workflow run;
 see GitHub's [artifact-ID download contract](https://github.com/actions/download-artifact/tree/018cc2cf5baa6db3ef3c5f8a56943fffe632ef53#download-artifacts-by-id).
+
+## Publication gating criteria
 
 Publication requires all of these checks on that same candidate:
 
@@ -35,6 +47,8 @@ remains available for manual investigation; a bounded-host failure is not proof 
 scientifically invalid. Metadata-only candidates require the complete matrix/site/integration/drift
 checks and skip native execution only when the verified changed-gitlink inventory is empty.
 
+## Fresh trusted-base publisher
+
 The publisher runs in a fresh job from the trusted base, with no candidate or upstream code
 execution. It alone has write permissions. It independently parses every lane's raw pytest report
 and each changed pipeline's raw manifest/trace, checks their candidate/pin identities and hashes,
@@ -53,6 +67,8 @@ candidate, the publisher retries all required follow-up workflow dispatches with
 update. This recovers a prior publication whose deployment/test dispatch failed. The publisher never rebases or creates a
 post-validation commit. Successful publication dispatches tests, smoke checks, CodeQL and Pages;
 network, permission, ruleset or dispatch errors remain visible failures.
+
+## Verification boundaries
 
 These gates establish tested wrapper behavior and actual bundled-task execution. They do not
 prove continuous filesystem immutability, honesty of arbitrary upstream executable code,

@@ -4,6 +4,14 @@
 No output-silence watchdog or automatic cancellation is enabled. An analysis may
 legitimately spend hours computing, waiting for a queue or downloading references.
 
+---
+
+### Navigation
+
+[Execution Budgets](#explicit-execution-budgets) • [Safety Margins](#configurable-safety-margins) • [Detached Execution](#detached-execution) • [Monitoring vs Verification](#cheap-progress-versus-verification)
+
+---
+
 ## Explicit execution budgets
 
 `--timeout SECONDS` opts into one monotonic deadline, beginning before preparation.

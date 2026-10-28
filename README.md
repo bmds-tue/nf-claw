@@ -50,14 +50,18 @@ The repository is structured into four functional zones, plus the catalogs, docu
 
 | Topic | Document | Scope & Contents |
 |---|---|---|
-| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | Architectural zones, schema preflight, sibling file locks, and provenance structure. |
+| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | Architectural zones, schema preflight, sibling file locks, provenance structure, and scientific assessment. |
 | **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, Nextflow 25 vs 26 parser transition, and `--nxf-ver` controls. |
 | **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup/shutdown margins, background runs, and quick chain status. |
 | **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
 | **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked/deferred/unsupported validations, the schema subset, and the 95-pipeline samplesheet generation matrix. |
+| **Scientific Output Contracts** | [`docs/scientific-output-contracts.md`](docs/scientific-output-contracts.md) | `nfclaw assess` specifications, parsed format comparisons (BAM, VCF, FASTA, TSV, H5AD), sample coverage, and tolerances. |
+| **Source Corrections** | [`docs/source-corrections.md`](docs/source-corrections.md) | Recorded, independently copied workflow corrections for Createtaxdb, Funcscan, and Bactmap, plus Fastqrepair runtime configs. |
+| **Maintenance Policy** | [`docs/maintenance.md`](docs/maintenance.md) | Automatic-publication evidence policy, immutable candidate verification, full matrix testing, and gated promotion. |
 | **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
+| **DRAMP References** | [`docs/dramp-reference.md`](docs/dramp-reference.md) | Standardized DRAMP antimicrobial peptide reference preparation and pinned-image indexing for Funcscan. |
 | **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: tools, detached jobs, chains. |
 | **Agent Guidance** | [`AGENTS.md`](AGENTS.md) | Authoritative reference for autonomous coding assistants and LLM agents; [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
 | **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map and navigation index for external AI agents (llms.txt standard). |
@@ -144,15 +148,21 @@ are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about c
 # Reproduce a completed run into a fresh target directory
 ./results/provenance/commands.sh                         # -> results.replay/
 
-# Verify structural equivalence against the original run
+# Verify structural equivalence against the original run (pairs random library names, e.g. kraken2-build)
 nfclaw verify results.replay --against results           # structural check (file inventory)
 
 # Require matching bytes, link identities and the compared environment evidence
 nfclaw verify results.replay --against results --strict
+
+# Assess scientific outputs and sample coverage against an explicit contract (BAM, VCF, FASTA, TSV, H5AD)
+nfclaw assess results.replay --contract runner/output_contracts/tumourevo-1.0.0-demo.json
+nfclaw assess results.replay --against results \
+  --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
 ```
 
 What each mode checks, and what it cannot certify, is in
-[the verification engine](docs/architecture.md#27-verification-engine-nfclaw-verify).
+[the verification engine](docs/architecture.md#27-verification-engine-nfclaw-verify) and
+[scientific output contracts](docs/scientific-output-contracts.md).
 
 ### 4. Release Selection & Development Code
 

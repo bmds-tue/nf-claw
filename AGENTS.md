@@ -104,9 +104,19 @@ When a run fails, nfclaw's error quotes what Nextflow reported on stdout and std
 
 ---
 
-## Replaying a run
+## Replaying and verifying a run
 
-Check declared scientific outputs with `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]`.
+Verify output structure and file inventories with:
+```bash
+nfclaw verify results.replay --against results           # pairs timestamped trace files and random library names
+nfclaw verify results.replay --against results --strict   # requires byte identity and matching environment
+```
+
+Check declared scientific outputs and sample coverage against an explicit contract with:
+```bash
+nfclaw assess results.replay --contract runner/output_contracts/tumourevo-1.0.0-demo.json
+nfclaw assess results.replay --against results --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
+```
 This is separate from file/environment verification. The
 [output-contract guide](docs/scientific-output-contracts.md) defines sample coverage, exact parsed
 comparisons, reasoned numeric tolerances and explicit exclusions for tables/BAM/VCF/FASTA and

@@ -5,8 +5,22 @@ NaN values from missing sequence cells to a string regex and crashes. APD is una
 An explicit prepared reference avoids this downloader and records the database actually used.
 The pinned pipeline and container code remain unchanged.
 
+---
+
+### Navigation
+
+[Overview](#overview) • [Download Dataset](#downloading-the-general-amp-dataset) • [Prepare Reference](#preparing-the-reference-directory) • [Build Index](#building-the-mmseqs2-index) • [Run with Funcscan](#execution-with-funcscan)
+
+---
+
+## Overview
+
 Download the complete official general-AMP TSV and retain it beside your records. The endpoint
-is mutable: its URL is not a version or a checksum. For example, with a recent curl:
+is mutable: its URL is not a version or a checksum.
+
+## Downloading the general AMP dataset
+
+For example, with a recent curl:
 
 ```bash
 curl --fail --location --http1.1 --remove-on-error --connect-timeout 15 --max-time 300 \
@@ -19,6 +33,8 @@ Do not prepare a partial download. The server validation snapshot on 2026-10-27 
 bytes, SHA-256 `4e044b3a4d9fcfc24cff81cbcf9fdb48184b41d8773837c697a2f205c1ab9dd5`.
 That snapshot contains no missing sequences, so its downloader succeeds today; an explicit
 blank-cell control reproduces the latent failure in the actual released container.
+
+## Preparing the reference directory
 
 Use a fresh destination under an existing parent:
 
@@ -47,6 +63,8 @@ and 1 missing identifier excluded. All retained annotation values and FASTA iden
 were independently checked against the complete raw file. The raw file is not overwritten.
 Review the counts for your own snapshot rather than assuming these numbers stay current.
 
+## Building the MMseqs2 index
+
 Build the reference index **before** analysis. The preparation record describes the earlier
 FASTA/annotation stage and explicitly says its index is not built. Use the tested image digest:
 
@@ -64,6 +82,8 @@ supply the incomplete directory to analysis: AMPcombi treats the existence of `m
 that indexing is done. Require the command to succeed and the eight nonempty index files:
 `ref_DB`, `ref_DB.dbtype`, `ref_DB.index`, `ref_DB.lookup`, `ref_DB.source`, `ref_DB_h`,
 `ref_DB_h.dbtype`, `ref_DB_h.index` under `mmseqs2/`.
+
+## Execution with Funcscan
 
 Supply your normal input and screening options, selecting DRAMP explicitly:
 

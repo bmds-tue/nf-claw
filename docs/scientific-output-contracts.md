@@ -5,6 +5,16 @@ any declared artifact, sample, format, binding or comparison fails. It does not 
 from the process exit status. Existing `verify`, `verify --strict` and
 `verify --require-environment` keep their separate file/namespace/environment behavior.
 
+---
+
+### Navigation
+
+[Usage & Setup](#usage--setup) • [Contract Specification](#contract-specification) • [Supported Formats](#supported-formats-and-comparison-scope) • [Tolerances & Exclusions](#tolerances-samples-and-exclusions) • [Shipped Contracts](#shipped-contracts-and-coverage)
+
+---
+
+## Usage & Setup
+
 ```bash
 pip install -e '.[scientific]'
 nfclaw assess results/hgtseq.replay --against results/hgtseq \
@@ -22,6 +32,8 @@ explicit HDF5 include/library paths). The server's Python 3.15 adapter tests pas
 HDF5 1.10.10 build environment. CI prepares HDF5 on Linux 3.15; macOS 3.15 tests the runner and
 BAM/VCF adapters, while its H5AD lane awaits an available wheel. Other CI Python versions install
 all adapters. This describes configured CI scope, not a claim that macOS was executed on denbi.
+
+## Contract specification
 
 The version-1 contract contains `name`, `version: 1`, a nonempty `artifacts` list, and an optional
 `pipeline` binding with an exact `name`, 40-character `commit`, and explicit `params` conditions.
@@ -45,6 +57,8 @@ validated. The contract SHA-256 and comparator/adapter versions identify the ass
 Exact BAM/VCF header comparison uses canonical header digests in the report; thousands of
 declarations are not repeated in its JSON. The complete header remains in the selected data file.
 
+## Supported formats and comparison scope
+
 | Format | Required declarations and exact comparison scope |
 | --- | --- |
 | `table` | `delimiter` is comma or tab; `columns` lists the complete unique header; `key` lists unique row-key columns; `numeric` lists finite decimal columns. Header/row ordering may change; keys and every other cell remain exact. |
@@ -52,6 +66,8 @@ declarations are not repeated in its JSON. The complete header remains in the se
 | `bam` | `coordinates: "0-based, half-open"`. All records, including unmapped/nonprimary/duplicate-marked reads; reference names, flags, CIGAR, positions, mate fields, sequence, quality and typed tags. Record order may change, multiplicity may not. Headers are compared; reference-byte identity is unverified. CRAM and indexing/reference downloads are unsupported. |
 | `vcf` | `coordinates: "1-based, closed"`. HTSlib-decoded variants, spans/END, alleles, ID, QUAL, FILTER, typed INFO/FORMAT values, sample association and genotype phase separators. Records may reorder; duplicates remain significant. No allele normalization or biological-equivalence inference. |
 | `h5ad_matrix` | Explicit `matrix: "X"` or `"layers/name"`, `expected_cells`, `expected_genes`, `axis_policy: "exact"` or `"subset"`, and boolean `integer`/`nonnegative` requirements. Dense/CSR/CSC selected matrix values compare exactly by unique cell/gene identity; explicit/implicit zeros agree. All annotations, embeddings, graphs, raw, uns and unselected matrices remain out of scope. |
+
+## Tolerances, samples, and exclusions
 
 Tables can require sample columns with `sample_columns: ["A", "B"]`, or exact row-membership
 with `sample_column: "sample_id", expected_samples: ["A", "B"]`. Every artifact is assessed

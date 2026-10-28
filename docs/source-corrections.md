@@ -2,6 +2,16 @@
 
 Three pinned releases need source changes that a process configuration cannot supply:
 
+---
+
+### Navigation
+
+[Overview](#overview) • [Source Cache & Isolation](#source-cache-and-isolation) • [Preflight & Provenance](#preflight-checks-resume-and-provenance) • [Bactmap Matched Demo](#bactmap-matched-demo-fixture) • [FastQRepair Runtime Corrections](#runtime-configuration-corrections-fastqrepair-111)
+
+---
+
+## Overview
+
 | Release and exact commit | Recorded correction | Effect |
 | --- | --- | --- |
 | Createtaxdb 3.1.0, `b01a0f8ed96a5990d15470828dfa92a22cf08bba` | `createtaxdb-sourmash-copy-sort-v1` | Sort a copy of each shared genome list before Sourmash batching. Other database builders keep their original list. |
@@ -14,6 +24,8 @@ file and bind all edits in one fingerprint. Earlier single-file fingerprints rem
 Each bounded replacement must occur exactly once. Other releases retain
 their original behavior. No upstream checkout or pin is edited. The changed files, original and
 corrected hashes, recipe fingerprint and complete working-source inventory are recorded.
+
+## Source cache and isolation
 
 Real runs use an independently copied source under
 `${XDG_CACHE_HOME:-$HOME/.cache}/nfclaw/working-sources/`. Set `NFCLAW_SOURCE_CACHE` to choose
@@ -28,6 +40,8 @@ held directory descriptors. Checks reject added or removed files/directories, sy
 bytes and changed modes. Execution output, work, log and cache destinations are checked against
 the original and actual working source before launch. These are launch/completion observations,
 not a continuously read-only filesystem or a guarantee against edits restored between checks.
+
+## Preflight checks, resume, and provenance
 
 `--check` stages its runnable corrected source beside its other temporary command files and
 leaves `--outdir` untouched. A real run keeps `provenance/working-source.json` as minimum resume
@@ -51,6 +65,8 @@ retention, chain fingerprints and archive fallback. Native Sourmash-enabled and 
 scientific runs are tracked separately in the [audit progress](audit/2026-10-26-progress.md);
 unit or replay-guard tests alone do not establish scientific task coverage or database accuracy.
 
+## Bactmap matched demo fixture
+
 For Bactmap's bare bundled demo, nfclaw stages all three historical paired samples and the matched
 NCTC13799 reference from test-datasets commit `02195cfa96ca496173e9d63dd58e34bf02fcf55a`.
 Every read URL names that immutable commit. Explicit input/reference values (including null),
@@ -71,7 +87,25 @@ pseudogenome bases. The combined alignment and all four tree files were byte-ide
 pair. Full output byte identity is not claimed. The [audit evidence](audit/2026-10-26-progress.md#u06-bactmap-matched-data-preview-and-replay)
 also retains the earlier failed comparisons and their read-order controls.
 
+## Internal acceptance staging
+
 The internal acceptance stager prepares the same managed source and demo, then appends its
 preview-only reporting config. Ordinary releases retain direct previews. Preparation installs
 signal cleanup for probes with separate process groups, restores handlers before replacing
 itself with Nextflow, and keeps all staged files under the gate's private temporary directory.
+
+---
+
+## Runtime configuration corrections (FastQRepair 1.1.1)
+
+Unlike the three workflow-source corrections above that stage an independently copied working source,
+FastQRepair 1.1.1 receives its corrections through a recorded runtime configuration
+(`provenance/fastqrepair_compat.config`) without altering workflow source:
+- **Record Splitting & Quality Offsets:** A chunk splitter ensures FastQwiper chunks wipe identically to
+  the complete file, and preserves quality offsets (`-s` / `--sanger-offset`) during chunk recombination.
+- **BBMap Shell Continuation:** Fixes the missing line continuation in upstream task shell commands.
+- **Separated Publications:** Distinguishes read, log, and MultiQC report publication channels.
+
+The complete standalone implementation and its digest are recorded in provenance bundles for replay;
+internal recipe prefixes invalidate prior task caches. See [`AGENTS.md`](../AGENTS.md) and
+[`docs/architecture.md`](architecture.md#25-provenance-bundles--dependency-hashing).
