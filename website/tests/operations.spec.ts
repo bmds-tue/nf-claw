@@ -59,6 +59,8 @@ for (const trigger of ['button', 'shortcut']) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/pipelines/');
     await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible();
+    await expect(page.locator('main')).toHaveAttribute('inert', '');
     if (trigger === 'button') await page.getByRole('button', { name: 'Search', exact: true }).click();
     else await page.keyboard.press('Control+k');
     const input = page.locator('input[role="combobox"]');
@@ -70,6 +72,28 @@ for (const trigger of ['button', 'shortcut']) {
     await expect(page.locator('main')).not.toHaveAttribute('inert', '');
   });
 }
+
+test('holding the search shortcut opens once and a new press closes it', async ({ page }) => {
+  await page.goto('/pipelines/');
+  await page.getByRole('button', { name: 'Search (⌘K)' }).click();
+  const input = page.locator('input[role="combobox"]');
+  await expect(input).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(input).toHaveCount(0);
+  await page.keyboard.down('Control');
+  try {
+    await page.keyboard.down('k');
+    await expect(input).toBeFocused();
+    await page.keyboard.down('k');
+    await expect(input).toBeFocused();
+    await page.keyboard.up('k');
+    await page.keyboard.down('k');
+    await expect(input).toHaveCount(0);
+  } finally {
+    await page.keyboard.up('k');
+    await page.keyboard.up('Control');
+  }
+});
 
 test('parameter search recovers from an initial network failure', async ({ page }) => {
   let requests = 0;

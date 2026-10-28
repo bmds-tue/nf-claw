@@ -118,6 +118,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       const typing = (e.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable=true]");
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        if (e.repeat) return;
         if (open) setOpen(false);
         else openPalette();
       } else if (e.key === "/" && !typing && !open) {
