@@ -12,7 +12,7 @@
 
 # nf-claw
 
-A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree. Exact pinned Createtaxdb and Funcscan releases use [recorded, independently copied workflow corrections](docs/source-corrections.md), with the actual corrected source bound to execution, resume and replay.
+A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree. Exact pinned Bactmap, Createtaxdb and Funcscan releases use [recorded, independently copied workflow corrections](docs/source-corrections.md), with the actual corrected source bound to execution, resume and replay.
 
 **🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and automation status captured at build time), rebuilt from the repository on deployment.
 
