@@ -132,6 +132,59 @@ def test_dated_scientific_results_preserve_their_exact_paths(tmp_path):
     assert not cmp.structurally_equal
 
 
+def _kraken2_library(names):
+    """createtaxdb 3.1.0's real layout: kraken2-build's mktemp names in both databases."""
+    fna, map_id = names
+    return {f"{db}/library/added/{path}": content
+            for db in ("kraken2/database-kraken2", "bracken/database-bracken")
+            for path, content in ((f"{fna}.fna", ">seq\nACGT\n"),
+                                  (f"{fna}.fna.masked", ">seq\nACGT\n"),
+                                  (f"prelim_map_{map_id}.txt", "TAXID\tseq\t1\n"),
+                                  ("prelim_map.txt", "TAXID\tseq\t1\n"))}
+
+
+def test_kraken2_random_library_names_are_paired_within_their_directory(tmp_path):
+    # Observed on a real createtaxdb 3.1.0 demo replay: h2BIGuIQjw.* became vaERbZCE81.* and
+    # prelim_map_IbZtfb07hl.txt became prelim_map_VVgNyPEldn.txt, with identical bytes.
+    orig = _bundle(tmp_path, "orig", _kraken2_library(("h2BIGuIQjw", "IbZtfb07hl")))
+    replay = _bundle(tmp_path, "replay", _kraken2_library(("vaERbZCE81", "VVgNyPEldn")))
+    cmp = verify.compare(orig, replay)
+    assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
+    assert len(cmp.renamed) == 6 and cmp.byte_identical
+    assert ("kraken2/database-kraken2/library/added/h2BIGuIQjw.fna.masked -> "
+            "kraken2/database-kraken2/library/added/vaERbZCE81.fna.masked") in cmp.renamed
+    # A pair never crosses databases: each library is matched inside its own directory.
+    assert all(old.split("/library/")[0] == new.split("/library/")[0]
+               for old, new in (pair.split(" -> ") for pair in cmp.renamed))
+
+
+def test_kraken2_pairs_still_compare_bytes_and_refuse_ambiguity(tmp_path):
+    orig = _bundle(tmp_path, "orig", {"db/library/added/h2BIGuIQjw.fna": "A",
+                                      "db/library/added/Ab3dE6gH9k.fna": "B"})
+    replay = _bundle(tmp_path, "replay", {"db/library/added/vaERbZCE81.fna": "A"})
+    cmp = verify.compare(orig, replay)
+    # Two candidates on one side: nothing is paired by guess, the difference stays visible.
+    assert not cmp.renamed and not cmp.structurally_equal
+    orig = _bundle(tmp_path, "orig2", {"db/library/added/h2BIGuIQjw.fna": "A"})
+    replay = _bundle(tmp_path, "replay2", {"db/library/added/vaERbZCE81.fna": "changed"})
+    cmp = verify.compare(orig, replay)
+    pair = "db/library/added/h2BIGuIQjw.fna -> db/library/added/vaERbZCE81.fna"
+    assert cmp.renamed == [pair] and cmp.changed == [pair] and not cmp.byte_identical
+
+
+@pytest.mark.parametrize("before,after", [
+    ("db/library/added/sampleA.fna", "db/library/added/sampleB.fna"),        # not mktemp names
+    ("db/library/h2BIGuIQjw.fna", "db/library/vaERbZCE81.fna"),              # not library/added
+    ("db/library/added/h2BIGuIQjw.fasta", "db/library/added/vaERbZCE81.fasta"),
+    ("a/library/added/h2BIGuIQjw.fna", "b/library/added/vaERbZCE81.fna"),    # other directory
+])
+def test_other_differently_named_results_keep_their_exact_paths(tmp_path, before, after):
+    orig = _bundle(tmp_path, "orig", {before: "A"})
+    replay = _bundle(tmp_path, "replay", {after: "A"})
+    cmp = verify.compare(orig, replay)
+    assert cmp.missing == [before] and cmp.extra == [after] and not cmp.renamed
+
+
 def test_unreadable_run_is_a_clean_error(tmp_path, monkeypatch):
     # verify hashes a replay directory it did not write; one unreadable file raised a raw OSError.
     orig, replay = tmp_path / "orig", tmp_path / "replay"

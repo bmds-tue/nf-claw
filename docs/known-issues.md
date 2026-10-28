@@ -596,7 +596,7 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`epitopeprediction` 3.1.1 replays meet the same BioMart replies** — The [BioMart lookups](#pipeline-specific-run-notes) above happen in the replay too, so a replay can fail where its original succeeded. Pass the retry config as `--config` when the run starts: the bundle keeps a copy of it, and the replay retries the same way. A replay with it reproduced the run's environment exactly.
 - **Outputs that differ between a run and its replay by design** — `nfclaw verify` compares outputs by path. Some releases name or include outputs nondeterministically, so a faithful replay (identical images, plugins, source and inputs) still reports files as missing or extra:
   - `longraredisease` 1.0.0 names its MultiQC report after the output directory (`<outdir basename>-pipeline-report_multiqc_report.html`), so a replay into `<outdir>.replay` names it differently.
-  - `createtaxdb` 3.1.0: `kraken2-build` gives the files it adds to `library/added/` random names.
+  - `createtaxdb` 3.1.0: `kraken2-build` gives the files it adds to `library/added/` random names. `nfclaw verify` pairs exactly these names one to one within their directory, lists them under `renamed` and compares their bytes, so a faithful replay no longer reports them as missing and extra.
   - `hicar` 1.0.0: across runs, its MultiQC report included different samtools sections (`flagstat` once, `stats` and the alignment plots another time), and one `.hic` file under `cooler/MAPS/` was published under different names.
   - `nanoseq` 3.1.0: NanoPlot names its log by the minute it ran (`NanoPlot_<date>_<time>.log`).
   - `nanostring` 1.3.3: MultiQC exported four plots in one run and not in its replay.

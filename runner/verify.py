@@ -22,8 +22,8 @@ class Comparison:
     extra_directories: list[str] = field(default_factory=list)
     changed_links: list[str] = field(default_factory=list)
     unverified_structure: bool = False
-    # "original -> replay" pairs whose paths differ only by an nf-core launch timestamp; each is
-    # also listed under identical or changed by its bytes.
+    # "original -> replay" pairs whose paths differ only by an nf-core launch timestamp or a
+    # kraken2-build random library name; each is also listed under identical or changed by bytes.
     renamed: list[str] = field(default_factory=list)
     # The two runs' recorded execution environments compared (runner.environment_record), or None
     # when either run predates the record.
@@ -125,16 +125,33 @@ _LAUNCH_STAMPED = re.compile(
     r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.(json|html|txt|svg|dot|mmd|pdf|png)$")
 
 
-def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, str]]:
-    """(original, replay) launch-stamped run-metadata files, paired one to one.
+# `kraken2-build --add-to-library` (createtaxdb's Kraken2 and Bracken databases) copies each input
+# into library/added/ under a random mktemp name: XXXXXXXXXX.fna, its .fna.masked copy and
+# prelim_map_XXXXXXXXXX.txt. Only these exact names are paired, within their own directory.
+_KRAKEN2_ADDED = re.compile(
+    r"^(?P<dir>(?:.+/)?library/added)/(?:(?P<map>prelim_map_)[A-Za-z0-9]{10}\.txt"
+    r"|[A-Za-z0-9]{10}(?P<ext>\.fna(?:\.masked)?))$")
 
-    Only an unambiguous pair is matched: when several files share a stamped name on either side
+
+def _name_key(path: str) -> tuple | None:
+    """The logical identity of a file whose name the tool, not the analysis, chose."""
+    if m := _LAUNCH_STAMPED.match(path):
+        return ("launch", m.group(1), m.group(3))
+    if m := _KRAKEN2_ADDED.match(path):
+        return ("kraken2-added", m.group("dir"), m.group("map") or m.group("ext"))
+    return None
+
+
+def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, str]]:
+    """(original, replay) files named by the clock or a tool's random name, paired one to one.
+
+    Only an unambiguous pair is matched: when several files share a logical name on either side
     (an earlier attempt's report beside a resumed one), none of them is paired by guess."""
     def keys(paths):
         groups = defaultdict(list)
         for path in paths:
-            if m := _LAUNCH_STAMPED.match(path):
-                groups[(m.group(1), m.group(3))].append(path)
+            if (key := _name_key(path)) is not None:
+                groups[key].append(path)
         return groups
 
     before, after = keys(missing), keys(extra)
@@ -168,8 +185,9 @@ def compare(original: Path, replay: Path, *, require_environment: bool = False) 
     # classification, never silently equated with an identical directory structure.
     for path in sorted(before.keys() & after.keys()):
         (identical if after.pop(path) == before.pop(path) else changed).append(path)
-    # A file named by the clock at launch is the same logical result under a new name: pair it
-    # explicitly and compare its bytes, rather than reporting a faithful replay as missing a file.
+    # A file named by the clock at launch, or by a tool's random name, is the same logical result
+    # under a new name: pair it explicitly and compare its bytes, rather than reporting a faithful
+    # replay as missing a file.
     renamed = []
     for old_path, new_path in _launch_time_pairs(sorted(before), sorted(after)):
         label = f"{old_path} -> {new_path}"
@@ -218,9 +236,10 @@ def report(cmp: Comparison) -> str:
         lines.append("The replay produced the same set of files and directories as "
                      "the original run.")
         if cmp.renamed:
-            lines.append(f"{len(cmp.renamed)} nf-core run-metadata file(s) are named by their "
-                         "launch time; each is paired with its counterpart and compared by bytes, "
-                         "as listed under renamed.")
+            lines.append(f"{len(cmp.renamed)} file(s) are named by their launch time (nf-core run "
+                         "metadata) or by a tool's random name (kraken2-build library files); each "
+                         "is paired with its counterpart and compared by bytes, as listed under "
+                         "renamed.")
         if cmp.changed or cmp.changed_links:
             lines.append(
                 "Changed bytes may reflect timestamps or metadata, but may also reflect different "
