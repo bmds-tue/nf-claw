@@ -236,6 +236,20 @@ def test_edited_params_cannot_turn_another_branch_into_a_matching_contract(tmp_p
         'name': 'demo', 'commit': '1' * 40, 'params': {'aligner': 'bwa'}}))['passed']
 
 
+def test_oversized_run_manifest_is_reported_instead_of_parsed_truncated(tmp_path):
+    root = run_dir(tmp_path, 'a', {'counts.tsv': 'gene\tsample_A\tsample_B\ng\t1\t2\n'})
+    (root / 'provenance/run_manifest.json').write_text(json.dumps({
+        'pipeline': 'demo', 'commit': '1' * 40, 'padding': 'x' * (1024 * 1024)}))
+    params = root / 'provenance/params.json'
+    params.write_text(json.dumps({'aligner': 'bwa'}))
+    (root / 'provenance/configs.sha256').write_text(
+        f'{hashlib.sha256(params.read_bytes()).hexdigest()}  {params}\n')
+    result = assess(root, contract(tmp_path, [table()], pipeline={
+        'name': 'demo', 'commit': '1' * 40, 'params': {'aligner': 'bwa'}}))
+    assert not result['passed']
+    assert any('run manifest exceeds 1 MiB' in issue for issue in result['issues'])
+
+
 def test_cli_can_report_exact_json_numeric_tolerances(tmp_path, capsys):
     root = run_dir(tmp_path, 'a', {'counts.tsv': 'gene\tsample_A\tsample_B\ng\t1\t2\n'})
     path = contract(tmp_path, [table(tolerances={'sample_A': {

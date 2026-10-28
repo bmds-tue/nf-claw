@@ -402,7 +402,10 @@ def _binding(root, binding):
         return []
     try:
         with _open(root, 'provenance/run_manifest.json') as stream:
-            manifest = _json(stream.read(1024 * 1024))
+            data = stream.read(1024 * 1024 + 1)
+            if len(data) > 1024 * 1024:
+                raise ValueError('run manifest exceeds 1 MiB')
+            manifest = _json(data)
         with _open(root, 'provenance/params.json') as stream:
             data = stream.read(1024 * 1024 + 1)
             if len(data) > 1024 * 1024:
