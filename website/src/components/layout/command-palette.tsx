@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CornerDownLeft, FileText, Hash, Search, X } from "lucide-react";
@@ -53,6 +53,12 @@ function score(item: Item, q: string): number {
 
 export function CommandPalette({ data }: { data: PaletteData }) {
   const [open, setOpen] = useState(false);
+  // The global shortcut reads this, not a closure: the input autofocuses during commit, so a
+  // key can arrive before a passive effect would re-register a listener that saw `open`.
+  const openRef = useRef(open);
+  useLayoutEffect(() => {
+    openRef.current = open;
+  }, [open]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,9 +125,9 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         if (e.repeat) return;
-        if (open) setOpen(false);
+        if (openRef.current) setOpen(false);
         else openPalette();
-      } else if (e.key === "/" && !typing && !open) {
+      } else if (e.key === "/" && !typing && !openRef.current) {
         e.preventDefault();
         openPalette();
       }
@@ -133,7 +139,7 @@ export function CommandPalette({ data }: { data: PaletteData }) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
     };
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
