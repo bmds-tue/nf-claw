@@ -1,5 +1,8 @@
 """Publication refuses incomplete reports and undeclared skipped coverage."""
 import importlib.util
+import platform
+import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -81,3 +84,55 @@ def test_h5ad_exception_applies_only_to_macos_python315_and_its_module(tmp_path)
         check(path, 'macos-latest', '3.14')
     with pytest.raises(ValueError):
         check(path, 'ubuntu-latest', '3.15')
+
+
+def test_obsolete_fastqrepair_recipe_skip_is_scoped_to_exact_module_and_reason(tmp_path):
+    reason = 'requires the audited fastqrepair 1.1.1 source'
+    path = report(tmp_path, ('tests.test_demo_fastqrepair', 'test_bare_demo', reason))
+    assert check(path)['skipped'][0]['reason'] == reason
+    with pytest.raises(ValueError):
+        check(report(tmp_path, ('tests.test_example', 'test_bare_demo', reason)))
+    with pytest.raises(ValueError):
+        check(report(tmp_path, ('tests.test_demo_fastqrepair', 'test_bare_demo',
+                               'requires initialized pinned pipeline source')))
+
+
+def test_receipt_refuses_a_deleted_source_file_even_at_the_registered_pin(tmp_path, monkeypatch):
+    def git(path, *args):
+        return subprocess.check_output([
+            'git', '-c', 'user.name=Audit test', '-c', 'user.email=audit@example.org',
+            '-c', 'commit.gpgsign=false', '-c', 'protocol.file.allow=always', *args],
+            cwd=path, text=True, stderr=subprocess.DEVNULL).strip()
+
+    upstream, repo = tmp_path / 'upstream', tmp_path / 'repo'
+    upstream.mkdir()
+    repo.mkdir()
+    git(upstream, 'init')
+    (upstream / 'nextflow_schema.json').write_text('{}')
+    git(upstream, 'add', '.')
+    git(upstream, 'commit', '-m', 'source')
+    git(repo, 'init')
+    git(repo, 'submodule', 'add', str(upstream), 'pipelines/mini/upstream')
+    git(repo, 'commit', '-am', 'pin')
+    candidate = git(repo, 'rev-parse', 'HEAD')
+    path = report(repo)
+    output = repo / 'receipt.json'
+    spec = importlib.util.spec_from_file_location('maintenance_pytest',
+        ROOT / 'scripts/check_maintenance_pytest.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(sys, 'argv', ['check', '--report', str(path), '--os',
+        'ubuntu-latest' if platform.system() == 'Linux' else 'macos-latest', '--python',
+        f'{sys.version_info.major}.{sys.version_info.minor}', '--candidate', candidate,
+        '--output', str(output)])
+    module.main()
+    assert output.is_file()
+    output.unlink()
+    (repo / 'pipelines/mini/upstream/nextflow_schema.json').unlink()
+    # Submodule status still reports the expected concrete HEAD with a leading space.
+    assert git(repo, 'submodule', 'status').split()[0] == git(upstream, 'rev-parse', 'HEAD')
+    with pytest.raises(SystemExit) as exc:
+        module.main()
+    assert exc.value.code == 1
+    assert not output.exists()

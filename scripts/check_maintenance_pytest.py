@@ -23,6 +23,9 @@ def allowed_skip(module: str, name: str, reason: str, os_name: str, python: str)
         return True
     if module == 'tests.test_demo_hgtseq' and reason == 'requires the audited hgtseq 1.1.0 source':
         return True
+    if (module == 'tests.test_demo_fastqrepair'
+            and reason == 'requires the audited fastqrepair 1.1.1 source'):
+        return True
     if os_name == 'macos-latest' and module == 'tests.test_execution':
         if (name == 'test_teardown_kills_a_task_that_outlives_sigterm'
                 and reason == 'reads process state from /proc'):
@@ -83,6 +86,9 @@ def main():
         sources = subprocess.check_output(['git', 'submodule', 'status', '--recursive'], text=True)
         if not sources.strip() or any(line[0] != ' ' for line in sources.splitlines()):
             raise ValueError('Full-suite source trees are missing or at different pins')
+        # Submodule status reports HEAD even when a tracked schema was deleted. A skipped
+        # fixture must not turn a damaged candidate/source checkout into full-suite evidence.
+        subprocess.run(['git', 'diff', '--quiet', '--ignore-submodules=none', 'HEAD'], check=True)
         value = {'version': 1, 'candidate': args.candidate, 'os': args.os, 'python': args.python,
                  **check_report(args.report, args.os, args.python)}
         args.output.write_text(json.dumps(value, indent=2) + '\n')

@@ -1,4 +1,4 @@
-"""Audited missing defaults for a release's bundled demo; never change upstream task code."""
+"""Audited fixtures/defaults for a release's bundled demo; never change upstream task code."""
 from __future__ import annotations
 
 import csv
@@ -7,6 +7,8 @@ import io
 _BAMTOFASTQ = ('bamtofastq', '8a295860c0c9221337dec7f2620709a47cea254d')
 _TUMOUREVO = ('tumourevo', '180ae5447d0eb0214f650b6fcf7dabed0c77b5a2')
 _HGTSEQ = ('hgtseq', '683daaf41bb396839445e603152b45daa141ced4')
+_FASTQREPAIR = ('fastqrepair', '70a38209407b9367a9ff7ab8b26d84cb1983ea18')
+_FASTQ_DAMAGE = 'f72c633f2547fdfaf475c7f05423437a7eac0bbf'
 _HGT_DATA = '800330ec8f47c93caabe8157e20dd23e243de4e1'
 _HGT_BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_HGT_DATA}/testdata/'
 _MODULE_DATA = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
@@ -16,12 +18,14 @@ _REFERENCE = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
               'data/genomics/homo_sapiens/genome/genome.fasta')
 _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
                _TUMOUREVO: {'sparsesignatures_k': '2:3'},
+               _FASTQREPAIR: {'num_splits': 2},
                _HGTSEQ: {'gff': _HGT_BASE + 'reference/Homo_sapiens.hg38.chr21.gff3',
                         'fasta': _MODULE_DATA + 'homo_sapiens/genome/chr21/sequence/genome.fasta',
                         'krakendb': _MODULE_DATA + 'sarscov2/genome/db/kraken2.tar.gz',
                         'kronadb': _MODULE_DATA + 'sarscov2/metagenome/krona_taxonomy.tab'}}
 _DATA_SELECTORS = {_BAMTOFASTQ: {'input', 'genome', 'pipelines_testdata_base_path'},
                    _TUMOUREVO: {'input', 'pipelines_testdata_base_path'},
+                   _FASTQREPAIR: {'input', 'pipelines_testdata_base_path'},
                    _HGTSEQ: {'input', 'genome', 'pipelines_testdata_base_path',
                              'fasta', 'gff', 'krakendb', 'kronadb', 'bwaindex', 'bwamem2index',
                              'igenomes_base'}}
@@ -48,7 +52,18 @@ _NOTES = {_BAMTOFASTQ:
     '`56591d0269db196203af3b0cb2191da22384d24a`. The CSV is bundled in provenance and rebased '
     'for replay; no remote sheet is rescanned. Explicit input, reference/database/data-base '
     'selectors, extra profiles or `--config` disable this entire recipe so reference choices '
-    'are not mixed. Other releases retain their own defaults.'}
+    'are not mixed. Other releases retain their own defaults.',
+    _FASTQREPAIR:
+    'This pinned bundled test excludes its damaged pair after gzip recovery, so its original '
+    'three rows never exercise BBMap paired repair. For a bare demo, nfclaw retains those damage '
+    'cases at immutable test-datasets commit `f72c633f2547fdfaf475c7f05423437a7eac0bbf` and adds '
+    '`paired_control`, 646 genuine pairs from `800330ec8f47c93caabe8157e20dd23e243de4e1`. The '
+    'four-row CSV and row roles are bundled in provenance and rebased for replay. The damaged '
+    'pair and empty sample remain excluded; the original single-end case has 24 complete valid '
+    'reads. This adds paired execution coverage without claiming recovery of irreparable data. '
+    'The intended `num_splits=2` default is recorded; explicit values win. User input/data-base '
+    'selectors, extra profiles or `--config` disable the fixture. Other releases retain their '
+    'own defaults.'}
 
 
 def bundled_profile(profile: str) -> bool:
@@ -73,6 +88,8 @@ def samplesheet(name: str, commit: str | None):
     Eligibility/override checks belong to the same caller as parameters(); this function only
     constructs immutable CSV bytes. No input-role or biological choice is inferred from filenames.
     """
+    if (name, commit) == _FASTQREPAIR:
+        return _fastqrepair_sheet(name, commit)
     if (name, commit) != _HGTSEQ:
         return None
     from runner.sheetgen import Generated
@@ -93,3 +110,35 @@ def samplesheet(name: str, commit: str | None):
                              'pipeline_commit': commit, 'data_commit': _HGT_DATA,
                              'samples': 3, 'rows': 3, 'paired_end': 3, 'single_end': 0,
                              'files': 0, 'sources': ['bundled:runner.demo_defaults/hgtseq']})
+
+
+def _fastqrepair_sheet(name: str, commit: str):
+    from runner.sheetgen import Generated
+
+    base = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_FASTQ_DAMAGE}/testdata/'
+    header = ('sample', 'fastq_1', 'fastq_2')
+    rows = (
+        {'sample': 'test_30reads', 'fastq_1': base + 'test_30reads_R1.fastq.gz',
+         'fastq_2': base + 'test_30reads_R2.fastq.gz'},
+        {'sample': 'test_empty_file', 'fastq_1': base + 'empty_file.fastq', 'fastq_2': ''},
+        {'sample': 'test_30reads_2', 'fastq_1': base + 'test_30reads_R2.fastq.gz', 'fastq_2': ''},
+        {'sample': 'paired_control', 'fastq_1': _HGT_BASE + 'fastq/testsample01_1.fastq.gz',
+         'fastq_2': _HGT_BASE + 'fastq/testsample01_2.fastq.gz'})
+    stream = io.StringIO()
+    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
+    writer.writeheader()
+    writer.writerows(rows)
+    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+                     id_column='sample', summary='Prepared the immutable FastQRepair demo '
+                     'samplesheet: 3 original damage cases plus a genuine paired control.',
+                     notes=(), record={
+                         'version': 1, 'kind': 'bundled_demo_fixture', 'pipeline': name,
+                         'pipeline_commit': commit,
+                         'data_commits': {'damage_cases': _FASTQ_DAMAGE,
+                                          'paired_control': _HGT_DATA},
+                         'samples': 4, 'rows': 4, 'paired_end': 2, 'single_end': 2, 'files': 0,
+                         'row_roles': {'test_30reads': 'damaged_pair',
+                                       'test_empty_file': 'empty_single_end',
+                                       'test_30reads_2': 'damaged_single_end',
+                                       'paired_control': 'paired_conservation_control'},
+                         'sources': ['bundled:runner.demo_defaults/fastqrepair']})
