@@ -20,7 +20,9 @@ import {
   Terminal,
   Wrench,
 } from "lucide-react";
-import { getPipeline, getPipelines, githubRepoPath, pipelineNames } from "@/lib/data";
+import { getDefaultBranch, getDocs, getPipeline, getPipelines, getRemote, githubRepoPath,
+  pipelineNames } from "@/lib/data";
+import type { LinkContext } from "@/lib/links";
 import { toSkill, categorize, colorForCategory } from "@/lib/derive";
 import { Markdown } from "@/components/ui/markdown";
 import { CodeBlock } from "@/components/ui/code-block";
@@ -66,6 +68,13 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
   const gh = githubRepoPath(pipeline.url);
   const schema = gh ? `https://github.com/${gh}/blob/${pipeline.version}/nextflow_schema.json` : null;
   const upstream = gh ? `https://github.com/${gh}/tree/${pipeline.version}` : null;
+  // skill.md links to repository docs by relative path: this site's doc page, else the file on GitHub.
+  const remote = getRemote();
+  const guidanceLinks: LinkContext = {
+    source: `pipelines/${pipeline.name}/skill.md`,
+    docs: Object.fromEntries(getDocs().map((d) => [d.source, d.slug])),
+    repoBlobBase: remote ? `https://github.com/${remote}/blob/${getDefaultBranch()}` : null,
+  };
 
   // The header(s) exactly as skill.md gives them; the intro states the rule that goes with them.
   const headers = pipeline.samplesheetHeaders;
@@ -241,10 +250,7 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
           {pipeline.operatingGuidance.map((section) => (
             <div key={section.title} className="glass p-5">
               <h3 className="text-lg font-semibold text-fog">{section.title}</h3>
-              <Markdown content={section.content} links={{
-                source: `pipelines/${pipeline.name}/skill.md`, docs: {},
-                repoBlobBase: "https://github.com/danilomonge/nf-claw/blob/main",
-              }} />
+              <Markdown content={section.content} links={guidanceLinks} />
             </div>
           ))}
         </div>
