@@ -1,0 +1,71 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import os,sys,json,hashlib,copy,collections
+import pysam
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');sys.path.insert(0,str(source))
+from runner import verify,environment_record
+from runner.probes import capture
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');base='commit-8db1cbb-bactmap-demo'
+previous=root/(base+'-assessment.json');receipt=root/(base+'-assessment-v2.json');assert not receipt.exists()
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def fasta(p):
+ result={};name=None
+ for line in p.read_text().splitlines():
+  if line.startswith('>'):name=line[1:].split()[0];assert name not in result;result[name]=''
+  else:result[name]+=line
+ return result
+old=json.loads(previous.read_text());record=copy.deepcopy(old);record.update(worker={'path':__file__,'sha256':sha(Path(__file__))},prior_assessment={'path':str(previous),'sha256':sha(previous),'outcome':'All six sample checks checkpointed; replay tree-parser Docker launch exceeded its 30-second observation budget.'},started_at=datetime.now(UTC).isoformat());record.pop('finished_at',None);record.pop('all_checks_passed',None)
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+save();paths=[];samples=['ERR2172265','ERR2172266','ERR2172267'];reference='NZ_LT906437.1';leaves=set(samples)|{reference}
+tree_paths=['rapidnj/rapidnj_phylogeny.tre','fasttree/fasttree_phylogeny.tre','iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile','raxmlng/output.raxml.bestTree']
+for run in record['runs']:
+ target=Path(run['outdir']);assert set(run['samples'])==set(samples);checks={}
+ for sample in samples:
+  s=run['samples'][sample];assert sha(target/f'samtools/{sample}.sorted.bam')==s['bam']['sha256']
+  fa=fasta(target/f'pseudogenomes/{sample}.fas');assert set(fa)=={sample} and hashlib.sha256(fa[sample].encode()).hexdigest()==s['pseudogenome']['sequence_sha256']
+  h=hashlib.sha256()
+  with pysam.VariantFile(target/f'variants/{sample}.filtered.vcf.gz') as variants:
+   for v in variants:h.update(str(v).encode())
+  assert h.hexdigest()==s['filtered_vcf']['record_stream_sha256'];checks[sample]={'bam_bytes_unchanged':True,'pseudogenome_identity_and_bases_unchanged':True,'all_filtered_VCF_record_bytes_unchanged':True}
+ run['checkpoint_artifacts_revalidated']=checks
+ alignment=fasta(target/'pseudogenomes/aligned_pseudogenomes.fas');assert list(alignment)==samples+[reference]
+ run['alignment_rows']=list(alignment);paths.extend(str(target/p) for p in tree_paths)
+ save();print(run['kind'],'all earlier scientific-check artifacts revalidated',flush=True)
+script="""import json,sys,Bio
+from Bio import Phylo
+results={}
+for path in sys.argv[1:]:
+ tree=Phylo.read(path,'newick');leaves=sorted(leaf.name for leaf in tree.get_terminals());splits=set()
+ for clade in tree.find_clades():
+  side=frozenset(leaf.name for leaf in clade.get_terminals());other=frozenset(leaves)-side
+  if len(side)>1 and len(other)>1:splits.add(min(tuple(sorted(side)),tuple(sorted(other))))
+ results[path]={'leaves':leaves,'unrooted_bipartitions':sorted(splits)}
+print(json.dumps({'biopython':Bio.__version__,'trees':results},sort_keys=True))
+"""
+name='nfclaw-bactmap-tree-assessment-8db1cbb-v2';docker=['docker','--host','unix:///dev/shm/nfc-d28/docker.sock'];log=root/(base+'-tree-parser-v2.json')
+cmd=[*docker,'run','--name',name,'--label','nfclaw.audit=bactmap-8db1cbb-v2','--rm','--network','none','--cpus','1','--memory','256m','--entrypoint','python','-v',str(root)+':'+str(root)+':ro','quay.io/biocontainers/biopython:1.78','-c',script,*paths]
+try:
+ p=capture(cmd,timeout=120);log.write_text(json.dumps({'command':cmd,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr},indent=2)+'\n');assert p.returncode==0,p.stderr
+ trees=json.loads(p.stdout)
+finally:
+ cleanup=capture([*docker,'rm','-f',name],timeout=15)
+ record['owned_parser_cleanup']={'container_name':name,'exit_code':cleanup.returncode,'stdout':cleanup.stdout,'stderr':cleanup.stderr};save()
+record['tree_parser']={'log':str(log),'sha256':sha(log),'version':trees['biopython']}
+def leafcheck(names):assert len(names)==4 and set(names)==leaves
+for run in record['runs']:
+ target=Path(run['outdir']);run['trees']={p:trees['trees'][str(target/p)] for p in tree_paths}
+ for tree in run['trees'].values():leafcheck(tree['leaves'])
+ try:leafcheck(samples)
+ except AssertionError:run['negative_controls']['missing_tree_leaf']=True
+ else:raise AssertionError('negative leaf control accepted')
+ run['all_data_consistency_checks_passed']=True
+left,right=[Path(r['outdir']) for r in record['runs']];comp=verify.compare(left,right,require_environment=True);record['replay_comparison']={**vars(comp),'structurally_equal':comp.structurally_equal,'byte_identical':comp.byte_identical};save()
+record['scientific_replay_comparison']={}
+for sample in samples:
+ a,b=[r['samples'][sample] for r in record['runs']]
+ fields={'bam_primary_alignment_semantics':a['bam']['primary_semantic_sha256']==b['bam']['primary_semantic_sha256'],'filtered_vcf_record_stream':a['filtered_vcf']['record_stream_sha256']==b['filtered_vcf']['record_stream_sha256'],'pseudogenome_sequence':a['pseudogenome']['sequence_sha256']==b['pseudogenome']['sequence_sha256']};record['scientific_replay_comparison'][sample]=fields;save();assert all(fields.values()),fields
+record['aligned_pseudogenomes_byte_identical']=sha(left/'pseudogenomes/aligned_pseudogenomes.fas')==sha(right/'pseudogenomes/aligned_pseudogenomes.fas');assert record['aligned_pseudogenomes_byte_identical']
+record['tree_topology_comparison']={p:record['runs'][0]['trees'][p]['unrooted_bipartitions']==record['runs'][1]['trees'][p]['unrooted_bipartitions'] for p in tree_paths}
+record['tree_byte_comparison']={p:sha(left/p)==sha(right/p) for p in tree_paths};save();assert all(record['tree_topology_comparison'].values())
+assert comp.structurally_equal and comp.environment['status']=='identical'
+record['all_checks_passed']=True;record['finished_at']=datetime.now(UTC).isoformat();save();print('Final scientific replay assessment passed; trees',record['tree_byte_comparison'],flush=True)

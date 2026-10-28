@@ -1,0 +1,737 @@
+{
+  "version": 1,
+  "source_commit": "17256428747a597fc177047ec0c0c712c6c667ff",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-singlecpu-assessment.py",
+    "sha256": "45e6d2d8417347ec00dc8f36c99e09da5fa17e443aca263508606dbbb5d459ba"
+  },
+  "started_at": "2026-10-28T08:21:51.210394+00:00",
+  "native_record": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu.json",
+    "sha256": "6a5cb6f8a93976d664e67932469120afbeba4ce964a5ef7634bcf280ec0f343c"
+  },
+  "oracle": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-fixture-oracle-20261028/oracle.json",
+    "sha256": "51d9379e0b222a81e3009deaf484d9791051b8d3e4525f8da28a2b380cab26f2"
+  },
+  "scope": "Exact three-sample fixture: input hashes, mapped primary read identity/mate/orientation-normalized trimmed bases and qualities, reference/variant/pseudogenome consistency and four-tree leaf/topology inventories. This is execution/data-consistency evidence, not a mapping/variant-calling accuracy benchmark or phylogenetic ground truth.",
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu",
+      "all_47_tasks_completed": true,
+      "samples": {
+        "ERR2172265": {
+          "input_pairs": 183701,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 367402,
+              "total_bases": 36011632,
+              "q20_bases": 35292120,
+              "q30_bases": 32454998,
+              "q20_rate": 0.98002,
+              "q30_rate": 0.901237,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524031
+            },
+            "after_filtering": {
+              "total_reads": 211228,
+              "total_bases": 20667046,
+              "q20_bases": 20640620,
+              "q30_bases": 20300952,
+              "q20_rate": 0.998721,
+              "q30_rate": 0.982286,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.516209
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu/samtools/ERR2172265.sorted.bam",
+            "sha256": "df2e7528cbd6af24c2312539b740b96d00d2e78c6f2f0908b9899190ac32421d",
+            "counts": {
+              "primary_mate_2": 105397,
+              "primary_mate_1": 105397,
+              "secondary_or_supplementary": 238
+            },
+            "primary_semantic_sha256": "4c7504fc6ca6eedc7cd4e8a9201e9c9a908067ee543f1680aae886f8cac9f127",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2156371,
+            "genotypes": {
+              "0": 2156268,
+              "None": 91,
+              "1": 12
+            },
+            "filter_counts": {
+              "PASS": 2046704,
+              "LowQual": 109667
+            },
+            "record_stream_sha256": "beb59e4a752a4164ae73f034e600c6fbf2d6e05aabdce582dc4fcc50b32a7292",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "80cecf37b5af9a5e01e538ad7613cc979a8068553f60584ad359903678fbfeaa",
+            "base_counts": {
+              "a": 482903,
+              "t": 486349,
+              "g": 543647,
+              "c": 533380,
+              "N": 109869,
+              "-": 16068,
+              "G": 1,
+              "T": 2,
+              "C": 1,
+              "A": 2
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172266": {
+          "input_pairs": 177566,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 355132,
+              "total_bases": 34747936,
+              "q20_bases": 33935920,
+              "q30_bases": 30690021,
+              "q20_rate": 0.976631,
+              "q30_rate": 0.883219,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524806
+            },
+            "after_filtering": {
+              "total_reads": 181222,
+              "total_bases": 17817334,
+              "q20_bases": 17790220,
+              "q30_bases": 17397026,
+              "q20_rate": 0.998478,
+              "q30_rate": 0.97641,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.514089
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu/samtools/ERR2172266.sorted.bam",
+            "sha256": "078a89d338a746a915fd765a1afeb763659b23f99b825e83ff2f9603607fd7d9",
+            "counts": {
+              "primary_mate_1": 90436,
+              "primary_mate_2": 90436,
+              "secondary_or_supplementary": 91
+            },
+            "primary_semantic_sha256": "bf4a96be69e87e1f82a7b89791227d0a29eabcdcdbb1cdc21186c6827d480ccc",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2150957,
+            "genotypes": {
+              "None": 111,
+              "0": 2150838,
+              "1": 8
+            },
+            "filter_counts": {
+              "LowQual": 103776,
+              "PASS": 2047181
+            },
+            "record_stream_sha256": "36fbde3d897da8847ee59a40bc0b1d04e4bcff5e698c02141462b6d70e853087",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "dc2542ffb353ce6e4366d151cdc41b1154e1ef9ab2f54187068b8b14870a93fe",
+            "base_counts": {
+              "N": 103968,
+              "c": 533304,
+              "a": 483304,
+              "g": 543566,
+              "t": 486606,
+              "-": 21469,
+              "G": 3,
+              "A": 1,
+              "T": 1
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172267": {
+          "input_pairs": 176002,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 352004,
+              "total_bases": 34675005,
+              "q20_bases": 34084592,
+              "q30_bases": 32030699,
+              "q20_rate": 0.982973,
+              "q30_rate": 0.92374,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.521539
+            },
+            "after_filtering": {
+              "total_reads": 240688,
+              "total_bases": 23792250,
+              "q20_bases": 23760399,
+              "q30_bases": 23390298,
+              "q20_rate": 0.998661,
+              "q30_rate": 0.983106,
+              "read1_mean_length": 99,
+              "read2_mean_length": 98,
+              "gc_content": 0.51514
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu/samtools/ERR2172267.sorted.bam",
+            "sha256": "0d21b74f11787aee906360e1883890b453c5d4deb2684a8fda61b2c32402a3ba",
+            "counts": {
+              "primary_mate_2": 116492,
+              "primary_mate_1": 116491,
+              "secondary_or_supplementary": 171
+            },
+            "primary_semantic_sha256": "3bc18c50120169bc1fbf4766f7cf0edfe86f7b37ae6af49ddeb0b478b5ef2553",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2160636,
+            "genotypes": {
+              "0": 2160438,
+              "None": 102,
+              "1": 96
+            },
+            "filter_counts": {
+              "PASS": 2051967,
+              "LowQual": 108669
+            },
+            "record_stream_sha256": "c3dbad632ba0dfcd5c9e95d57c182874c9635f51a7054d39b87cbfae9a5edbf7",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "9d6558331a2628b8bbbff4edef4e83f97931f7167b729df73483a4a111a570c4",
+            "base_counts": {
+              "a": 483984,
+              "t": 487501,
+              "g": 545109,
+              "c": 534800,
+              "N": 108919,
+              "-": 11840,
+              "T": 18,
+              "A": 11,
+              "G": 20,
+              "C": 20
+            },
+            "independent_projection_matches": true
+          }
+        }
+      },
+      "negative_controls": {
+        "ERR2172265_missing_input_read": true,
+        "ERR2172265_altered_pseudogenome": true,
+        "ERR2172266_missing_input_read": true,
+        "ERR2172266_altered_pseudogenome": true,
+        "ERR2172267_missing_input_read": true,
+        "ERR2172267_altered_pseudogenome": true,
+        "missing_tree_leaf": true,
+        "missing_phylogeny_task": true,
+        "wrong_reference_allele": true
+      },
+      "all_seven_consumed_remote_inputs_match_oracle": true,
+      "trees": {
+        "fasttree/fasttree_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": []
+        },
+        "rapidnj/rapidnj_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "raxmlng/output.raxml.bestTree": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        }
+      },
+      "tree_parser_version": "1.78",
+      "all_data_consistency_checks_passed": true
+    },
+    {
+      "kind": "replay",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-replay",
+      "all_47_tasks_completed": true,
+      "samples": {
+        "ERR2172265": {
+          "input_pairs": 183701,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 367402,
+              "total_bases": 36011632,
+              "q20_bases": 35292120,
+              "q30_bases": 32454998,
+              "q20_rate": 0.98002,
+              "q30_rate": 0.901237,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524031
+            },
+            "after_filtering": {
+              "total_reads": 211228,
+              "total_bases": 20667046,
+              "q20_bases": 20640620,
+              "q30_bases": 20300952,
+              "q20_rate": 0.998721,
+              "q30_rate": 0.982286,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.516209
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-replay/samtools/ERR2172265.sorted.bam",
+            "sha256": "df2e7528cbd6af24c2312539b740b96d00d2e78c6f2f0908b9899190ac32421d",
+            "counts": {
+              "primary_mate_2": 105397,
+              "primary_mate_1": 105397,
+              "secondary_or_supplementary": 238
+            },
+            "primary_semantic_sha256": "4c7504fc6ca6eedc7cd4e8a9201e9c9a908067ee543f1680aae886f8cac9f127",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2156371,
+            "genotypes": {
+              "0": 2156268,
+              "None": 91,
+              "1": 12
+            },
+            "filter_counts": {
+              "PASS": 2046704,
+              "LowQual": 109667
+            },
+            "record_stream_sha256": "beb59e4a752a4164ae73f034e600c6fbf2d6e05aabdce582dc4fcc50b32a7292",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "80cecf37b5af9a5e01e538ad7613cc979a8068553f60584ad359903678fbfeaa",
+            "base_counts": {
+              "a": 482903,
+              "t": 486349,
+              "g": 543647,
+              "c": 533380,
+              "N": 109869,
+              "-": 16068,
+              "G": 1,
+              "T": 2,
+              "C": 1,
+              "A": 2
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172266": {
+          "input_pairs": 177566,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 355132,
+              "total_bases": 34747936,
+              "q20_bases": 33935920,
+              "q30_bases": 30690021,
+              "q20_rate": 0.976631,
+              "q30_rate": 0.883219,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524806
+            },
+            "after_filtering": {
+              "total_reads": 181222,
+              "total_bases": 17817334,
+              "q20_bases": 17790220,
+              "q30_bases": 17397026,
+              "q20_rate": 0.998478,
+              "q30_rate": 0.97641,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.514089
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-replay/samtools/ERR2172266.sorted.bam",
+            "sha256": "078a89d338a746a915fd765a1afeb763659b23f99b825e83ff2f9603607fd7d9",
+            "counts": {
+              "primary_mate_1": 90436,
+              "primary_mate_2": 90436,
+              "secondary_or_supplementary": 91
+            },
+            "primary_semantic_sha256": "bf4a96be69e87e1f82a7b89791227d0a29eabcdcdbb1cdc21186c6827d480ccc",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2150957,
+            "genotypes": {
+              "None": 111,
+              "0": 2150838,
+              "1": 8
+            },
+            "filter_counts": {
+              "LowQual": 103776,
+              "PASS": 2047181
+            },
+            "record_stream_sha256": "36fbde3d897da8847ee59a40bc0b1d04e4bcff5e698c02141462b6d70e853087",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "dc2542ffb353ce6e4366d151cdc41b1154e1ef9ab2f54187068b8b14870a93fe",
+            "base_counts": {
+              "N": 103968,
+              "c": 533304,
+              "a": 483304,
+              "g": 543566,
+              "t": 486606,
+              "-": 21469,
+              "G": 3,
+              "A": 1,
+              "T": 1
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172267": {
+          "input_pairs": 176002,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 352004,
+              "total_bases": 34675005,
+              "q20_bases": 34084592,
+              "q30_bases": 32030699,
+              "q20_rate": 0.982973,
+              "q30_rate": 0.92374,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.521539
+            },
+            "after_filtering": {
+              "total_reads": 240688,
+              "total_bases": 23792250,
+              "q20_bases": 23760399,
+              "q30_bases": 23390298,
+              "q20_rate": 0.998661,
+              "q30_rate": 0.983106,
+              "read1_mean_length": 99,
+              "read2_mean_length": 98,
+              "gc_content": 0.51514
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-replay/samtools/ERR2172267.sorted.bam",
+            "sha256": "0d21b74f11787aee906360e1883890b453c5d4deb2684a8fda61b2c32402a3ba",
+            "counts": {
+              "primary_mate_2": 116492,
+              "primary_mate_1": 116491,
+              "secondary_or_supplementary": 171
+            },
+            "primary_semantic_sha256": "3bc18c50120169bc1fbf4766f7cf0edfe86f7b37ae6af49ddeb0b478b5ef2553",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2160636,
+            "genotypes": {
+              "0": 2160438,
+              "None": 102,
+              "1": 96
+            },
+            "filter_counts": {
+              "PASS": 2051967,
+              "LowQual": 108669
+            },
+            "record_stream_sha256": "c3dbad632ba0dfcd5c9e95d57c182874c9635f51a7054d39b87cbfae9a5edbf7",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "9d6558331a2628b8bbbff4edef4e83f97931f7167b729df73483a4a111a570c4",
+            "base_counts": {
+              "a": 483984,
+              "t": 487501,
+              "g": 545109,
+              "c": 534800,
+              "N": 108919,
+              "-": 11840,
+              "T": 18,
+              "A": 11,
+              "G": 20,
+              "C": 20
+            },
+            "independent_projection_matches": true
+          }
+        }
+      },
+      "negative_controls": {
+        "ERR2172265_missing_input_read": true,
+        "ERR2172265_altered_pseudogenome": true,
+        "ERR2172266_missing_input_read": true,
+        "ERR2172266_altered_pseudogenome": true,
+        "ERR2172267_missing_input_read": true,
+        "ERR2172267_altered_pseudogenome": true,
+        "missing_tree_leaf": true,
+        "missing_phylogeny_task": true,
+        "wrong_reference_allele": true
+      },
+      "all_seven_consumed_remote_inputs_match_oracle": true,
+      "trees": {
+        "fasttree/fasttree_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": []
+        },
+        "rapidnj/rapidnj_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "raxmlng/output.raxml.bestTree": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172267"
+            ]
+          ]
+        }
+      },
+      "tree_parser_version": "1.78",
+      "all_data_consistency_checks_passed": true
+    }
+  ],
+  "replay_comparison": {
+    "identical": [
+      "bwa/index/NCTC13799.amb",
+      "bwa/index/NCTC13799.ann",
+      "bwa/index/NCTC13799.bwt",
+      "bwa/index/NCTC13799.pac",
+      "bwa/index/NCTC13799.sa",
+      "fastp/ERR2172265.fastp.json",
+      "fastp/ERR2172266.fastp.json",
+      "fastp/ERR2172267.fastp.json",
+      "fastp/log/ERR2172265.fastp.log",
+      "fastp/log/ERR2172266.fastp.log",
+      "fastp/log/ERR2172267.fastp.log",
+      "fasttree/fasttree_phylogeny.tre",
+      "gubbins/aligned_pseudogenomes.recombination_predictions.embl",
+      "gubbins/aligned_pseudogenomes.recombination_predictions.gff",
+      "mash/ERR2172265.mash_stats",
+      "mash/ERR2172265.msh",
+      "mash/ERR2172266.mash_stats",
+      "mash/ERR2172266.msh",
+      "mash/ERR2172267.mash_stats",
+      "mash/ERR2172267.msh",
+      "multiqc/multiqc_data/mqc_bcftools-stats-subtypes_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_depth_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_indel-lengths_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Indels.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_SNP.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transitions.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transversions.yaml",
+      "multiqc/multiqc_data/mqc_fastp-duprates-plot_1.yaml",
+      "multiqc/multiqc_data/mqc_fastp-insert-size-plot_1.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp_filtered_reads_plot_1.yaml",
+      "multiqc/multiqc_data/mqc_samtools_alignment_plot_1.yaml",
+      "multiqc/multiqc_data/multiqc_bcftools_stats_bcftools.yaml",
+      "multiqc/multiqc_data/multiqc_fastp.yaml",
+      "multiqc/multiqc_data/multiqc_general_stats.yaml",
+      "multiqc/multiqc_data/multiqc_samtools_stats_samtools.yaml",
+      "pipeline_info/samplesheet.valid.csv",
+      "pseudogenomes/ERR2172265.fas",
+      "pseudogenomes/ERR2172266.fas",
+      "pseudogenomes/ERR2172267.fas",
+      "pseudogenomes/low_quality_pseudogenomes.tsv",
+      "rasusa/ERR2172265_1.fastq.gz",
+      "rasusa/ERR2172265_2.fastq.gz",
+      "rasusa/ERR2172266_1.fastq.gz",
+      "rasusa/ERR2172266_2.fastq.gz",
+      "rasusa/ERR2172267_1.fastq.gz",
+      "rasusa/ERR2172267_2.fastq.gz",
+      "samtools/ERR2172265.sorted.bam",
+      "samtools/ERR2172265.sorted.bam.bai",
+      "samtools/ERR2172265.sorted.bam.flagstat",
+      "samtools/ERR2172265.sorted.bam.idxstats",
+      "samtools/ERR2172265.sorted.bam.stats",
+      "samtools/ERR2172266.sorted.bam",
+      "samtools/ERR2172266.sorted.bam.bai",
+      "samtools/ERR2172266.sorted.bam.flagstat",
+      "samtools/ERR2172266.sorted.bam.idxstats",
+      "samtools/ERR2172266.sorted.bam.stats",
+      "samtools/ERR2172267.sorted.bam",
+      "samtools/ERR2172267.sorted.bam.bai",
+      "samtools/ERR2172267.sorted.bam.flagstat",
+      "samtools/ERR2172267.sorted.bam.idxstats",
+      "samtools/ERR2172267.sorted.bam.stats",
+      "snpsites/constant.sites.txt",
+      "variants/ERR2172265.bcftools_stats.txt",
+      "variants/ERR2172265.vcf.gz.tbi",
+      "variants/ERR2172266.bcftools_stats.txt",
+      "variants/ERR2172267.bcftools_stats.txt"
+    ],
+    "changed": [
+      "fastp/ERR2172265.fastp.html",
+      "fastp/ERR2172266.fastp.html",
+      "fastp/ERR2172267.fastp.html",
+      "gubbins/aligned_pseudogenomes.branch_base_reconstruction.embl",
+      "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.fasta",
+      "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.phylip",
+      "gubbins/aligned_pseudogenomes.final_tree.tre",
+      "gubbins/aligned_pseudogenomes.node_labelled.final_tree.tre",
+      "gubbins/aligned_pseudogenomes.per_branch_statistics.csv",
+      "gubbins/aligned_pseudogenomes.summary_of_snp_distribution.vcf",
+      "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile",
+      "multiqc/multiqc_data/multiqc.log",
+      "multiqc/multiqc_data/multiqc_data.json",
+      "multiqc/multiqc_data/multiqc_sources.yaml",
+      "multiqc/multiqc_report.html",
+      "pipeline_info/execution_report_2026-10-28_05-22-16.html -> pipeline_info/execution_report_2026-10-28_05-25-01.html",
+      "pipeline_info/execution_timeline_2026-10-28_05-22-16.html -> pipeline_info/execution_timeline_2026-10-28_05-25-01.html",
+      "pipeline_info/execution_trace_2026-10-28_05-22-16.txt -> pipeline_info/execution_trace_2026-10-28_05-25-01.txt",
+      "pipeline_info/pipeline_dag_2026-10-28_05-22-16.dot -> pipeline_info/pipeline_dag_2026-10-28_05-25-01.dot",
+      "pipeline_info/pipeline_report.html",
+      "pipeline_info/pipeline_report.txt",
+      "pseudogenomes/aligned_pseudogenomes.fas",
+      "rapidnj/alignment.sth",
+      "rapidnj/rapidnj_phylogeny.tre",
+      "raxmlng/output.raxml.bestTree",
+      "raxmlng/output.raxml.support",
+      "snpsites/filtered_alignment.fas",
+      "variants/ERR2172265.filtered.vcf.gz",
+      "variants/ERR2172265.vcf.gz",
+      "variants/ERR2172266.filtered.vcf.gz",
+      "variants/ERR2172266.vcf.gz",
+      "variants/ERR2172266.vcf.gz.tbi",
+      "variants/ERR2172267.filtered.vcf.gz",
+      "variants/ERR2172267.vcf.gz",
+      "variants/ERR2172267.vcf.gz.tbi"
+    ],
+    "missing": [],
+    "extra": [],
+    "missing_directories": [],
+    "extra_directories": [],
+    "changed_links": [],
+    "unverified_structure": false,
+    "renamed": [
+      "pipeline_info/execution_report_2026-10-28_05-22-16.html -> pipeline_info/execution_report_2026-10-28_05-25-01.html",
+      "pipeline_info/execution_timeline_2026-10-28_05-22-16.html -> pipeline_info/execution_timeline_2026-10-28_05-25-01.html",
+      "pipeline_info/execution_trace_2026-10-28_05-22-16.txt -> pipeline_info/execution_trace_2026-10-28_05-25-01.txt",
+      "pipeline_info/pipeline_dag_2026-10-28_05-22-16.dot -> pipeline_info/pipeline_dag_2026-10-28_05-25-01.dot"
+    ],
+    "environment": {
+      "version": 1,
+      "status": "identical",
+      "mismatches": [],
+      "unverified": [],
+      "notes": []
+    },
+    "structurally_equal": true,
+    "byte_identical": false
+  },
+  "scientific_replay_comparison": {
+    "ERR2172265": {
+      "bam_primary_alignment_semantics": true,
+      "filtered_vcf_record_stream": true,
+      "pseudogenome_sequence": true
+    },
+    "ERR2172266": {
+      "bam_primary_alignment_semantics": true,
+      "filtered_vcf_record_stream": true,
+      "pseudogenome_sequence": true
+    },
+    "ERR2172267": {
+      "bam_primary_alignment_semantics": true,
+      "filtered_vcf_record_stream": true,
+      "pseudogenome_sequence": true
+    }
+  }
+}

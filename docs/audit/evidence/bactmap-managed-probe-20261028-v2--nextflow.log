@@ -1,0 +1,244 @@
+Oct-28 04:38:28.882 [main] DEBUG nextflow.cli.Launcher - $> nextflow -log /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/nextflow.log run /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline -profile test,docker -params-file /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/params.json -work-dir /dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work --input /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv -c /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config --outdir /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out -preview
+Oct-28 04:38:28.979 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 24.10.5
+Oct-28 04:38:29.011 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ubuntu/.nextflow/plugins; core-plugins: nf-amazon@2.9.2,nf-azure@1.10.2,nf-cloudcache@0.4.2,nf-codecommit@0.2.2,nf-console@1.1.4,nf-google@1.15.4,nf-tower@1.9.3,nf-wave@1.7.4
+Oct-28 04:38:29.041 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Oct-28 04:38:29.043 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Oct-28 04:38:29.047 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Oct-28 04:38:29.070 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Oct-28 04:38:30.069 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/nextflow.config
+Oct-28 04:38:30.078 [main] DEBUG nextflow.config.ConfigBuilder - User config file: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config
+Oct-28 04:38:30.082 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/nextflow.config
+Oct-28 04:38:30.083 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config
+Oct-28 04:38:30.114 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ubuntu/.nextflow/secrets/store.json
+Oct-28 04:38:30.123 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@340a8894] - activable => nextflow.secret.LocalSecretsProvider@340a8894
+Oct-28 04:38:30.201 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `test,docker`
+Oct-28 04:38:31.586 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `test,docker`
+Oct-28 04:38:31.606 [main] DEBUG nextflow.config.ConfigBuilder - Available config profiles: [bih, cfc_dev, uzl_omics, ifb_core, embl_hd, mcw_rcc, denbi_qbic, alice, mjolnir_globe, uppmax, giga, verily_workbench, incliva, ilifu, ki_luria, uge, icr_alma, rosalind_uge, lugh, mccleary, unibe_ibu, vai, czbiohub_aws, jax, roslin, iris, tes, unc_longleaf, tigem, tubingen_apg, apollo, ipop_up, vsc_calcua, pdc_kth, saga_sigma2, ceci_nic5, ccga_cau, humantechnopole, stjude, daisybio, eddie, medair, biowulf, mahuika, bi, bigpurple, adcra, cedars, pawsey_setonix, vsc_kul_uhasselt, purdue_gautschi, rki, ucl_myriad, charliecloud, fred_hutch, seattlechildrens, ceres, purdue_negishi, munin, rosalind, hasta, cfc, uzh, shu_bmrc, ebi_codon_slurm, ebc, ccga_dx, crick, ku_sund_danhead, marvin, lrz_cm4, purdue_bell, biohpc_gen, shifter, kelvin2, mana, york_viking, unc_lccc, wehi, awsbatch, arcc, ceci_dragon2, imperial, maestro, cannon, genotoul, nci_gadi, abims, eva_grace, janelia, nu_genomics, googlebatch, oist, sahmri, kaust, alliance_canada, mpcdf, leicester, vsc_ugent, create, sage, cambridge, jex, podman, ebi_codon, cheaha, xanadu, nyu_hpc, test, marjorie, palmetto, computerome, ucd_sonic, seg_globe, mssm, sanger, dkfz, bluebear, pasteur, einstein, ethz_euler, m3c, test_full, imb, ucl_cscluster, tuos_stanage, azurebatch, seadragon, crukmi, csiro_petrichor, naiss, qmul_apocrita, docker, engaging, gis, hypatia, psmn, eva, unity, cropdiversityhpc, nygc, fgcz, conda, crg, singularity, mpcdf_viper, dirac, self_hosted_runner, tufts, uw_hyak_pedslabs, binac2, hki_genie, debug, genouest, cbe, unsw_katana, utd_juno, hazel, phoenix, seawulf, uod_hpc, fub_curta, lovelace, uct_hpc, aws_tower, fsu_draco]
+Oct-28 04:38:31.655 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 from script declaration
+Oct-28 04:38:31.676 [main] DEBUG nextflow.cli.CmdRun - * PREVIEW * null [exotic_swanson] DSL2 - revision: 2e456c2488
+Oct-28 04:38:31.678 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Oct-28 04:38:31.678 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+Oct-28 04:38:31.740 [main] DEBUG nextflow.Session - Session UUID: 38cd6753-70e4-41dd-be2f-9a5f7e2a0147
+Oct-28 04:38:31.741 [main] DEBUG nextflow.Session - Run name: exotic_swanson
+Oct-28 04:38:31.741 [main] DEBUG nextflow.Session - Executor pool size: 28
+Oct-28 04:38:31.751 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Oct-28 04:38:31.758 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Oct-28 04:38:31.781 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 24.10.5 build 5935
+  Created: 04-03-2025 17:55 UTC 
+  System: Linux 6.8.0-147-generic
+  Runtime: Groovy 4.0.23 on OpenJDK 64-Bit Server VM 17.0.20.1+1-1-24.04-Ubuntu
+  Encoding: UTF-8 (UTF-8)
+  Process: 3974741@danilo-instance [2001:7c0:801:181:f816:3eff:fe29:64ae]
+  CPUs: 28 - Mem: 62.8 GB (1.4 GB) - Swap: 0 (0)
+Oct-28 04:38:31.811 [main] DEBUG nextflow.Session - Work-dir: /dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work [tmpfs]
+Oct-28 04:38:31.847 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Oct-28 04:38:31.858 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Oct-28 04:38:31.887 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Oct-28 04:38:31.899 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 29; maxThreads: 1000
+Oct-28 04:38:32.099 [main] DEBUG nextflow.Session - Session start
+Oct-28 04:38:32.105 [main] DEBUG nextflow.Session - Using default localLib path: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/lib
+Oct-28 04:38:32.110 [main] DEBUG nextflow.Session - Adding to the classpath library: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/lib
+Oct-28 04:38:32.111 [main] DEBUG nextflow.Session - Adding to the classpath library: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/lib/nfcore_external_java_deps.jar
+Oct-28 04:38:33.062 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Oct-28 04:38:33.243 [main] INFO  nextflow.Nextflow - 
+
+-[2m----------------------------------------------------[0m-
+                                        [0;32m,--.[0;30m/[0;32m,-.[0m
+[0;34m        ___     __   __   __   ___     [0;32m/,-._.--~'[0m
+[0;34m  |\ | |__  __ /  ` /  \ |__) |__         [0;33m}  {[0m
+[0;34m  | \| |       \__, \__/ |  \ |___     [0;32m\`-._,-`-,[0m
+                                        [0;32m`._,._,'[0m
+[0;35m  nf-core/bactmap v1.0.0[0m
+-[2m----------------------------------------------------[0m-
+[1mCore Nextflow options[0m
+  [0;34mrunName              : [0;32mexotic_swanson[0m
+  [0;34mcontainerEngine      : [0;32mdocker[0m
+  [0;34mlaunchDir            : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out[0m
+  [0;34mworkDir              : [0;32m/dev/shm/nfclaw-bactmap-managed-probe-20261028-v2/work[0m
+  [0;34mprojectDir           : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline[0m
+  [0;34muserName             : [0;32mubuntu[0m
+  [0;34mprofile              : [0;32mtest,docker[0m
+  [0;34mconfigFiles          : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/nextflow.config, /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/no-reports.config[0m
+
+[1mInput/output options[0m
+  [0;34minput                : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/samplesheet.csv[0m
+  [0;34moutdir               : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out[0m
+
+[1mCompulsory parameters[0m
+  [0;34mreference            : [0;32mhttps://raw.githubusercontent.com/nf-core/test-datasets/02195cfa96ca496173e9d63dd58e34bf02fcf55a/genome/NCTC13799.fna[0m
+
+[1mOptional pipeline steps[0m
+  [0;34madapter_file         : [0;32m/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/assets/adapters.fas[0m
+  [0;34mremove_recombination : [0;32mtrue[0m
+  [0;34mrapidnj              : [0;32mtrue[0m
+  [0;34mfasttree             : [0;32mtrue[0m
+  [0;34miqtree               : [0;32mtrue[0m
+  [0;34mraxmlng              : [0;32mtrue[0m
+
+[1mMax job request options[0m
+  [0;34mmax_cpus             : [0;32m2[0m
+  [0;34mmax_memory           : [0;32m2.GB[0m
+  [0;34mmax_time             : [0;32m1.h[0m
+
+[1mInstitutional config options[0m
+  [0;34mcustom_config_version: [0;32m19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20[0m
+  [0;34mcustom_config_base   : [0;32mhttps://raw.githubusercontent.com/nf-core/configs/19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20[0m
+
+!! Only displaying parameters that differ from the pipeline defaults !!
+-[2m----------------------------------------------------[0m-
+If you use nf-core/bactmap for your analysis please cite:
+
+* The nf-core framework
+  https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+  https://github.com/nf-core/bactmap/blob/master/CITATIONS.md
+-[2m----------------------------------------------------[0m-
+Oct-28 04:38:33.845 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.066 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.221 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.312 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.407 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.455 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.536 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.582 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.668 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.747 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.783 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.863 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:34.940 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.019 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.053 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.134 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.211 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.260 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.341 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.444 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.500 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.580 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.651 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.726 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.798 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.901 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:35.963 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:36.033 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:36.187 [main] WARN  nextflow.script.IncludeDef - Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+Oct-28 04:38:36.386 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.387 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.394 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Oct-28 04:38:36.401 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=28; memory=62.8 GB; capacity=28; pollInterval=100ms; dumpInterval=5m
+Oct-28 04:38:36.404 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Oct-28 04:38:36.553 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_high` matches labels `process_high` for process with name NFCORE_BACTMAP:BACTMAP:BWA_INDEX
+Oct-28 04:38:36.556 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withName:BWA_INDEX` matches process NFCORE_BACTMAP:BACTMAP:BWA_INDEX
+Oct-28 04:38:36.558 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.559 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.590 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:FASTP
+Oct-28 04:38:36.596 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.596 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.623 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH
+Oct-28 04:38:36.626 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.626 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.650 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA
+Oct-28 04:38:36.654 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.654 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.671 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:BWA_MEM
+Oct-28 04:38:36.673 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.673 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.690 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT
+Oct-28 04:38:36.691 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withName:SAMTOOLS_SORT` matches process NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT
+Oct-28 04:38:36.693 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.693 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.702 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX
+Oct-28 04:38:36.704 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.704 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.720 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS
+Oct-28 04:38:36.724 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.724 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.732 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT
+Oct-28 04:38:36.734 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.734 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.743 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS
+Oct-28 04:38:36.746 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.746 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.766 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP
+Oct-28 04:38:36.770 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.770 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.781 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER
+Oct-28 04:38:36.784 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.784 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.800 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME
+Oct-28 04:38:36.803 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.803 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.825 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_low` matches labels `process_low` for process with name NFCORE_BACTMAP:BACTMAP:ALIGNPSEUDOGENOMES
+Oct-28 04:38:36.828 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.828 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.851 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:SNPSITES
+Oct-28 04:38:36.854 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.854 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.871 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:GUBBINS
+Oct-28 04:38:36.873 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.873 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.893 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAPIDNJ
+Oct-28 04:38:36.895 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.895 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.904 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:FASTTREE
+Oct-28 04:38:36.907 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.907 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.915 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:IQTREE
+Oct-28 04:38:36.917 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.917 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.926 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_high` matches labels `process_high,process_long` for process with name NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAXMLNG
+Oct-28 04:38:36.927 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_long` matches labels `process_high,process_long` for process with name NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAXMLNG
+Oct-28 04:38:36.929 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.929 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:36.956 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:36.956 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:37.002 [main] DEBUG nextflow.script.ProcessConfig - Config settings `withLabel:process_medium` matches labels `process_medium` for process with name NFCORE_BACTMAP:BACTMAP:MULTIQC
+Oct-28 04:38:37.005 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Oct-28 04:38:37.005 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Oct-28 04:38:37.026 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP, VCF2PSEUDOGENOME, NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAPIDNJ, NFCORE_BACTMAP:BACTMAP:INPUT_CHECK:SAMPLESHEET_CHECK, NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT, NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS, MASH_SKETCH, RAXMLNG, GUBBINS, NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:IQTREE, MULTIQC, NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX, FASTTREE, FASTP, NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME, SAMTOOLS_SORT, BWA_MEM, NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAXMLNG, BCFTOOLS_MPILEUP, BWA_INDEX, NFCORE_BACTMAP:BACTMAP:SNPSITES, SAMTOOLS_STATS, SAMTOOLS_FLAGSTAT, SAMPLESHEET_CHECK, SNPSITES, IQTREE, NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH, NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER, RAPIDNJ, NFCORE_BACTMAP:BACTMAP:ALIGNPSEUDOGENOMES, GET_SOFTWARE_VERSIONS, NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS, NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:FASTTREE, NFCORE_BACTMAP:BACTMAP:GET_SOFTWARE_VERSIONS, NFCORE_BACTMAP:BACTMAP:BWA_MEM, NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA, NFCORE_BACTMAP:BACTMAP:BWA_INDEX, BCFTOOLS_FILTER, RASUSA, SAMTOOLS_IDXSTATS, NFCORE_BACTMAP:BACTMAP:MULTIQC, ALIGNPSEUDOGENOMES, NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT, SAMTOOLS_INDEX, NFCORE_BACTMAP:BACTMAP:FASTP, NFCORE_BACTMAP:BACTMAP:GUBBINS
+Oct-28 04:38:37.031 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_31fc6141fe97f15e: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/bwa/mem/main.nf
+  Script_b01990f1d3b2351f: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/fastp/main.nf
+  Script_5a4c7e3003cdc206: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/./../modules/nf-core/software/samtools/flagstat/main.nf
+  Script_f6b4db3102b4ec63: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/bactmap.nf
+  Script_6f71b6042a0b798d: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/input_check.nf
+  Script_7d6371de39fa0e75: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/bcftools/mpileup/main.nf
+  Script_daaf679fc1aa1918: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/bam_sort_samtools.nf
+  Script_d736cdf036d6b03e: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/./../modules/nf-core/software/samtools/stats/main.nf
+  Script_fac747568d01a38c: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/mash/sketch/main.nf
+  Script_b3ae733e699177a2: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/samtools/index/main.nf
+  Script_5f2a7de04dc0661c: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/./bam_stats_samtools.nf
+  Script_58f31c7f38dadd48: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/main.nf
+  Script_db526d1331a4b289: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/snpsites/main.nf
+  Script_0b8c4b052c0126de: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/local/samplesheet_check.nf
+  Script_3638cc7c52aee461: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/local/get_software_versions.nf
+  Script_ae191e726bf66cb6: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/rapidnj/main.nf
+  Script_21199146c92e92c4: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/bcftools/filter/./functions.nf
+  Script_ddf404612229b386: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/local/alignpseudogenomes.nf
+  Script_14af7ba165dd752f: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/create_phylogeny.nf
+  Script_d7073b10b7ef1488: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/raxmlng/./functions.nf
+  Script_cca97fb3437e47cc: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/local/vcf2pseudogenome.nf
+  Script_e445c89549028377: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/samtools/sort/main.nf
+  Script_2e4cd9831c21be5c: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/rasusa/main.nf
+  Script_ae767b04842e0b04: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/variants_bcftools.nf
+  Script_961af4e491adb7ea: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/local/multiqc.nf
+  Script_933b90ac20e00b2d: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/fasttree/main.nf
+  Script_99a4ddf1dfb3b4c1: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/sub_sampling.nf
+  Script_746affc0d922a621: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/bcftools/filter/main.nf
+  Script_9050030bfcc1391b: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/iqtree/main.nf
+  Script_47a0e1a6412a5d1b: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/bwa/index/main.nf
+  Script_dc5a8ea6db0e6739: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/gubbins/main.nf
+  Script_633acdb5596edffa: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/local/./functions.nf
+  Script_7573084ff5e6c412: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/raxmlng/main.nf
+  Script_ca7bf02a0154d23e: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../modules/nf-core/software/fastp/./functions.nf
+  Script_c90c8321735ba8f3: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/./../modules/nf-core/software/samtools/idxstats/main.nf
+  Script_d56aed79970ac0e2: /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/./workflows/../subworkflows/../modules/nf-core/software/bcftools/mpileup/./functions.nf
+Oct-28 04:38:37.114 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Oct-28 04:38:37.135 [main] INFO  nextflow.Nextflow - -[0;35m[nf-core/bactmap][0;32m Pipeline completed successfully[0m-
+Oct-28 04:38:37.141 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=0; peakCpus=0; peakMemory=0; ]
+Oct-28 04:38:37.345 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Oct-28 04:38:37.370 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
+Oct-28 04:38:37.371 [main] DEBUG nextflow.file.SortFileCollector - FileCollector temp dir not removed: null
+Oct-28 04:38:37.371 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

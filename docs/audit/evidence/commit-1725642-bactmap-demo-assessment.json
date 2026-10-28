@@ -1,0 +1,580 @@
+{
+  "version": 1,
+  "source_commit": "17256428747a597fc177047ec0c0c712c6c667ff",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-assessment-1725642.py",
+    "sha256": "9e1d9352d66cb1f4cb56ce5e5b71a1ec7682f7714e4cdf8c686f649a4200ba81"
+  },
+  "started_at": "2026-10-28T05:13:34.130633+00:00",
+  "native_record": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo.json",
+    "sha256": "d54df4ac928f08509284000604c08a734e7d31955f0ef7cfc199ad4f7413dfba"
+  },
+  "oracle": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-fixture-oracle-20261028/oracle.json",
+    "sha256": "51d9379e0b222a81e3009deaf484d9791051b8d3e4525f8da28a2b380cab26f2"
+  },
+  "scope": "Exact three-sample fixture: input hashes, mapped primary read identity/mate/orientation-normalized trimmed bases and qualities, reference/variant/pseudogenome consistency and four-tree leaf/topology inventories. This is execution/data-consistency evidence, not a mapping/variant-calling accuracy benchmark or phylogenetic ground truth.",
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo",
+      "all_47_tasks_completed": true,
+      "samples": {
+        "ERR2172265": {
+          "input_pairs": 183701,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 367402,
+              "total_bases": 36011632,
+              "q20_bases": 35292120,
+              "q30_bases": 32454998,
+              "q20_rate": 0.98002,
+              "q30_rate": 0.901237,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524031
+            },
+            "after_filtering": {
+              "total_reads": 211228,
+              "total_bases": 20667046,
+              "q20_bases": 20640620,
+              "q30_bases": 20300952,
+              "q20_rate": 0.998721,
+              "q30_rate": 0.982286,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.516209
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo/samtools/ERR2172265.sorted.bam",
+            "sha256": "0e60b3f8a09a6a9d4e3a0287f41bbec08075d4dfbac4821f385c061c3ac8f10f",
+            "counts": {
+              "primary_mate_2": 105397,
+              "primary_mate_1": 105397,
+              "secondary_or_supplementary": 238
+            },
+            "primary_semantic_sha256": "09d4ef21d7b14036e8fb86ab56617119c6a66f31536f666be4bef54f42f6a613",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2156371,
+            "genotypes": {
+              "0": 2156268,
+              "None": 91,
+              "1": 12
+            },
+            "filter_counts": {
+              "PASS": 2046704,
+              "LowQual": 109667
+            },
+            "record_stream_sha256": "d42e25af090acee5cb95a2edce83ab539009d66d21267b47c28e0f39abbb4db9",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "80cecf37b5af9a5e01e538ad7613cc979a8068553f60584ad359903678fbfeaa",
+            "base_counts": {
+              "a": 482903,
+              "t": 486349,
+              "g": 543647,
+              "c": 533380,
+              "N": 109869,
+              "-": 16068,
+              "G": 1,
+              "T": 2,
+              "C": 1,
+              "A": 2
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172266": {
+          "input_pairs": 177566,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 355132,
+              "total_bases": 34747936,
+              "q20_bases": 33935920,
+              "q30_bases": 30690021,
+              "q20_rate": 0.976631,
+              "q30_rate": 0.883219,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524806
+            },
+            "after_filtering": {
+              "total_reads": 181222,
+              "total_bases": 17817334,
+              "q20_bases": 17790220,
+              "q30_bases": 17397026,
+              "q20_rate": 0.998478,
+              "q30_rate": 0.97641,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.514089
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo/samtools/ERR2172266.sorted.bam",
+            "sha256": "1f24a6323f60de93f85981a99006b0ba782eba1e4a36861067f498c7a22e72ec",
+            "counts": {
+              "primary_mate_1": 90436,
+              "primary_mate_2": 90436,
+              "secondary_or_supplementary": 91
+            },
+            "primary_semantic_sha256": "f7a35a3ac64992228a725f238383edc9139f03bcb8b5d7b40b80077e0e3aae64",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2150768,
+            "genotypes": {
+              "None": 110,
+              "0": 2150650,
+              "1": 8
+            },
+            "filter_counts": {
+              "LowQual": 103031,
+              "PASS": 2047737
+            },
+            "record_stream_sha256": "01a8e7429cb6464b443fce191e05541f69411403f82b591927cb548dc66ff512",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "ed7836443dc9b3b92ed648cdd38e640e629605a453eab007c75febada2c34e2c",
+            "base_counts": {
+              "N": 103223,
+              "c": 533450,
+              "a": 483456,
+              "g": 543699,
+              "t": 486731,
+              "-": 21658,
+              "G": 3,
+              "A": 1,
+              "T": 1
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172267": {
+          "input_pairs": 176002,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 352004,
+              "total_bases": 34675005,
+              "q20_bases": 34084592,
+              "q30_bases": 32030699,
+              "q20_rate": 0.982973,
+              "q30_rate": 0.92374,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.521539
+            },
+            "after_filtering": {
+              "total_reads": 240688,
+              "total_bases": 23792250,
+              "q20_bases": 23760399,
+              "q30_bases": 23390298,
+              "q20_rate": 0.998661,
+              "q30_rate": 0.983106,
+              "read1_mean_length": 99,
+              "read2_mean_length": 98,
+              "gc_content": 0.51514
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo/samtools/ERR2172267.sorted.bam",
+            "sha256": "d10d18c17f54ed8fba2cfbe0f25c6ca21d25c70baaba225711846694af395044",
+            "counts": {
+              "primary_mate_2": 116492,
+              "primary_mate_1": 116491,
+              "secondary_or_supplementary": 171
+            },
+            "primary_semantic_sha256": "365fbeaeb38f70aeb9ef41b401b3e40238ac06660f6c3399a66d858a7386d4d2",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2160271,
+            "genotypes": {
+              "0": 2160074,
+              "None": 101,
+              "1": 96
+            },
+            "filter_counts": {
+              "PASS": 2051739,
+              "LowQual": 108532
+            },
+            "record_stream_sha256": "6c154f9d0d62713c230b68dda9b527929354e4c7f4aacc93615f3a5ac2584c41",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "7bc1074061043e73fca48a1fc48d8121daf648fb0b852261168346c5f572c7e1",
+            "base_counts": {
+              "a": 483919,
+              "t": 487446,
+              "g": 545048,
+              "c": 534753,
+              "N": 108782,
+              "-": 12205,
+              "T": 18,
+              "A": 11,
+              "G": 20,
+              "C": 20
+            },
+            "independent_projection_matches": true
+          }
+        }
+      },
+      "negative_controls": {
+        "ERR2172265_missing_input_read": true,
+        "ERR2172265_altered_pseudogenome": true,
+        "ERR2172266_missing_input_read": true,
+        "ERR2172266_altered_pseudogenome": true,
+        "ERR2172267_missing_input_read": true,
+        "ERR2172267_altered_pseudogenome": true,
+        "missing_tree_leaf": true,
+        "missing_phylogeny_task": true,
+        "wrong_reference_allele": true
+      },
+      "all_seven_consumed_remote_inputs_match_oracle": true,
+      "trees": {
+        "fasttree/fasttree_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": []
+        },
+        "rapidnj/rapidnj_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "raxmlng/output.raxml.bestTree": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172267"
+            ]
+          ]
+        }
+      },
+      "tree_parser_version": "1.78",
+      "all_data_consistency_checks_passed": true
+    },
+    {
+      "kind": "replay",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-replay",
+      "all_47_tasks_completed": true,
+      "samples": {
+        "ERR2172265": {
+          "input_pairs": 183701,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 367402,
+              "total_bases": 36011632,
+              "q20_bases": 35292120,
+              "q30_bases": 32454998,
+              "q20_rate": 0.98002,
+              "q30_rate": 0.901237,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524031
+            },
+            "after_filtering": {
+              "total_reads": 211228,
+              "total_bases": 20667046,
+              "q20_bases": 20640620,
+              "q30_bases": 20300952,
+              "q20_rate": 0.998721,
+              "q30_rate": 0.982286,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.516209
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-replay/samtools/ERR2172265.sorted.bam",
+            "sha256": "1f30d2cda0dd16450c83b22bf05d32dcfeb68915d22419da3672cc4a55f9fda0",
+            "counts": {
+              "primary_mate_2": 105397,
+              "primary_mate_1": 105397,
+              "secondary_or_supplementary": 238
+            },
+            "primary_semantic_sha256": "51aa8eaf7cf8ca8661172ac744a8c1c13c32529627a09f72327e8cac5127fb74",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2156416,
+            "genotypes": {
+              "0": 2156314,
+              "1": 12,
+              "None": 90
+            },
+            "filter_counts": {
+              "PASS": 2046543,
+              "LowQual": 109873
+            },
+            "record_stream_sha256": "70f0f0dedb10bc18ae980be874f142e1844e9aad614f9f6fe811c4a218dea262",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "3a6a75aea68b8f2060ef44a8602bea01d99e7121c74d8ce1a8d5732e6dd357aa",
+            "base_counts": {
+              "a": 482864,
+              "t": 486316,
+              "g": 543608,
+              "c": 533330,
+              "N": 110075,
+              "-": 16023,
+              "G": 1,
+              "T": 2,
+              "C": 1,
+              "A": 2
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172266": {
+          "input_pairs": 177566,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 355132,
+              "total_bases": 34747936,
+              "q20_bases": 33935920,
+              "q30_bases": 30690021,
+              "q20_rate": 0.976631,
+              "q30_rate": 0.883219,
+              "read1_mean_length": 98,
+              "read2_mean_length": 97,
+              "gc_content": 0.524806
+            },
+            "after_filtering": {
+              "total_reads": 181222,
+              "total_bases": 17817334,
+              "q20_bases": 17790220,
+              "q30_bases": 17397026,
+              "q20_rate": 0.998478,
+              "q30_rate": 0.97641,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.514089
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-replay/samtools/ERR2172266.sorted.bam",
+            "sha256": "2345b912a2c7acb1f8d70c069697c669d8a102bb43cd2d46c9707842250d7d86",
+            "counts": {
+              "primary_mate_1": 90436,
+              "primary_mate_2": 90436,
+              "secondary_or_supplementary": 91
+            },
+            "primary_semantic_sha256": "ced08532512942cc2c611491c8a4a5122ec994ef595ccd73b5b623922f4db068",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2150827,
+            "genotypes": {
+              "None": 109,
+              "0": 2150710,
+              "1": 8
+            },
+            "filter_counts": {
+              "LowQual": 103249,
+              "PASS": 2047578
+            },
+            "record_stream_sha256": "84aecfcdb1f93f313838d457e62522636550db61e1d3ec6808696792e98372be",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "cc08f0f33598388a3c4d3bd5ff12238f3da13366240330aa49958e17c83e8228",
+            "base_counts": {
+              "N": 103441,
+              "c": 533421,
+              "a": 483410,
+              "g": 543667,
+              "t": 486679,
+              "-": 21599,
+              "G": 3,
+              "A": 1,
+              "T": 1
+            },
+            "independent_projection_matches": true
+          }
+        },
+        "ERR2172267": {
+          "input_pairs": 176002,
+          "fastp": {
+            "before_filtering": {
+              "total_reads": 352004,
+              "total_bases": 34675005,
+              "q20_bases": 34084592,
+              "q30_bases": 32030699,
+              "q20_rate": 0.982973,
+              "q30_rate": 0.92374,
+              "read1_mean_length": 98,
+              "read2_mean_length": 98,
+              "gc_content": 0.521539
+            },
+            "after_filtering": {
+              "total_reads": 240688,
+              "total_bases": 23792250,
+              "q20_bases": 23760399,
+              "q30_bases": 23390298,
+              "q20_rate": 0.998661,
+              "q30_rate": 0.983106,
+              "read1_mean_length": 99,
+              "read2_mean_length": 98,
+              "gc_content": 0.51514
+            }
+          },
+          "bam": {
+            "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-replay/samtools/ERR2172267.sorted.bam",
+            "sha256": "cec91d0389f4f935ec05b11821264431744b84d43da7b9cf8c1eea29bc7508e4",
+            "counts": {
+              "primary_mate_2": 116492,
+              "primary_mate_1": 116491,
+              "secondary_or_supplementary": 171
+            },
+            "primary_semantic_sha256": "03c49beb457a9b59ca74f6e0547c8347de95bbbe5956652a4cae329f24b19635",
+            "all_primary_reads_match_original_mate_trimmed_sequence_and_quality": true
+          },
+          "filtered_vcf": {
+            "records": 2160695,
+            "genotypes": {
+              "0": 2160496,
+              "None": 103,
+              "1": 96
+            },
+            "filter_counts": {
+              "PASS": 2051978,
+              "LowQual": 108717
+            },
+            "record_stream_sha256": "dfdd15c406c6ef4449130f89a0cb7fb2d63d76a17540c1f4f2745fbc82787184",
+            "every_REF_matches_reference": true
+          },
+          "pseudogenome": {
+            "length": 2172222,
+            "sequence_sha256": "7e1241386162b538a11635e163bb3ac4524e62f165c8e84afe4541e17a7b4b19",
+            "base_counts": {
+              "a": 484007,
+              "t": 487494,
+              "g": 545115,
+              "c": 534789,
+              "N": 108967,
+              "-": 11781,
+              "T": 18,
+              "A": 11,
+              "G": 20,
+              "C": 20
+            },
+            "independent_projection_matches": true
+          }
+        }
+      },
+      "negative_controls": {
+        "ERR2172265_missing_input_read": true,
+        "ERR2172265_altered_pseudogenome": true,
+        "ERR2172266_missing_input_read": true,
+        "ERR2172266_altered_pseudogenome": true,
+        "ERR2172267_missing_input_read": true,
+        "ERR2172267_altered_pseudogenome": true,
+        "missing_tree_leaf": true,
+        "missing_phylogeny_task": true,
+        "wrong_reference_allele": true
+      },
+      "all_seven_consumed_remote_inputs_match_oracle": true,
+      "trees": {
+        "fasttree/fasttree_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": []
+        },
+        "rapidnj/rapidnj_phylogeny.tre": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172266"
+            ]
+          ]
+        },
+        "raxmlng/output.raxml.bestTree": {
+          "leaves": [
+            "ERR2172265",
+            "ERR2172266",
+            "ERR2172267",
+            "NZ_LT906437.1"
+          ],
+          "unrooted_bipartitions": [
+            [
+              "ERR2172265",
+              "ERR2172267"
+            ]
+          ]
+        }
+      },
+      "tree_parser_version": "1.78",
+      "all_data_consistency_checks_passed": true
+    }
+  ]
+}

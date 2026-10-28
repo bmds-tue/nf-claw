@@ -1,0 +1,22 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import json,hashlib,collections,sys
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');sys.path.insert(0,str(source))
+from runner import verify
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');record=root/'commit-1725642-bactmap-variation-summary.json';assert not record.exists()
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def seq(p):return ''.join(line for line in p.read_text().splitlines() if not line.startswith('>'))
+value={'version':1,'observed_at':datetime.now(UTC).isoformat(),'worker':{'path':__file__,'sha256':sha(Path(__file__))},'scope':'Characterization of retained failed scientific-comparison controls. No differences are ignored, accepted as accurate, or converted into successful full-replay evidence.','controls':{}}
+order=root/'commit-1725642-bactmap-order-control.json';value['order_record']={'path':str(order),'sha256':sha(order)}
+for variant in ['demo','singlecpu']:
+ native=root/f'commit-1725642-bactmap-{variant}.json';assessment=root/f'commit-1725642-bactmap-{variant}-assessment.json'
+ a=json.loads(assessment.read_text());left,right=[Path(r['outdir']) for r in a['runs']]
+ comp=verify.compare(left,right,require_environment=True)
+ r={'native_record':{'path':str(native),'sha256':sha(native)},'failed_assessment':{'path':str(assessment),'sha256':sha(assessment)},'replay_comparison':{**vars(comp),'structurally_equal':comp.structurally_equal},'samples':{},'tree_unrooted_bipartitions_equal':{k:a['runs'][0]['trees'][k]['unrooted_bipartitions']==a['runs'][1]['trees'][k]['unrooted_bipartitions'] for k in a['runs'][0]['trees']}}
+ for sample in ['ERR2172265','ERR2172266','ERR2172267']:
+  x,y=[seq(p/f'pseudogenomes/{sample}.fas') for p in [left,right]];assert len(x)==len(y)==2172222
+  changes=collections.Counter(f'{b}->{c}' for b,c in zip(x,y) if b!=c)
+  snps=[{i:b for i,b in enumerate(s,1) if b in 'ACGT'} for s in [x,y]]
+  r['samples'][sample]={'differing_pseudogenome_positions':sum(changes.values()),'base_transition_counts':dict(sorted(changes.items())),'uppercase_called_SNP_maps_equal':snps[0]==snps[1], 'alignment_rows':[[line[1:] for line in (p/'pseudogenomes/aligned_pseudogenomes.fas').read_text().splitlines() if line.startswith('>')] for p in [left,right]]}
+ value['controls'][variant]=r
+record.write_text(json.dumps(value,indent=2)+'\n');print(json.dumps({k:{'sample_differences':v['samples'],'tree_topology_equal':v['tree_unrooted_bipartitions_equal'],'environment':v['replay_comparison']['environment']} for k,v in value['controls'].items()},indent=2))

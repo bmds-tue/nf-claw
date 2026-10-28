@@ -1,0 +1,101 @@
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from datetime import datetime, UTC
+import hashlib
+import json
+import os
+import stat
+import subprocess
+
+SOURCE = Path('/mnt/volume/nfclaw-remediation-matrix-source')
+FALLBACK = Path('/mnt/volume/nfclaw-remediation-20261026')
+ROOT = Path('/mnt/volume/nfclaw-remediation-python-matrix')
+COMMIT = '8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3'
+BASE = ROOT / '8db1cbb'
+SCRATCH = Path('/dev/shm/nfclaw-maintenance-validation-8db1cbb')
+assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=SOURCE, text=True).strip() == COMMIT
+subprocess.run(['git', 'diff', '--quiet', 'HEAD'], cwd=SOURCE, check=True)
+subprocess.run(['git', 'diff', '--quiet', 'HEAD'], cwd=FALLBACK, check=True)
+paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=SOURCE).decode().split('\0')
+paths = [p for p in paths if p and not p.startswith('pipelines/')]
+def inventory(root):
+    return {p: {'sha256': hashlib.sha256((root / p).read_bytes()).hexdigest(),
+                'mode': stat.S_IMODE((root / p).stat().st_mode)} for p in paths}
+def digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+initial = inventory(SOURCE)
+fallback_initial = inventory(FALLBACK)
+def code_identity(value):
+    return {p: (entry['sha256'], bool(entry['mode'] & 0o100)) for p, entry in value.items()}
+assert code_identity(fallback_initial) == code_identity(initial), 'fallback code bytes/execute bits differ'
+BASE.mkdir(parents=True, exist_ok=False)
+SCRATCH.mkdir(parents=True, exist_ok=False)
+(BASE / 'source-inventory.json').write_text(json.dumps(initial, indent=2) + '\n')
+(BASE / 'fallback-source-inventory.json').write_text(json.dumps(fallback_initial, indent=2) + '\n')
+initial_digest = digest(initial)
+affected = ['tests/test_audit_fixes.py', 'tests/test_bactmap_corrections.py', 'tests/test_nextflow_preview.py',
+    'tests/test_source_corrections.py', 'tests/test_source_corrections_run.py',
+    'tests/test_demo_defaults.py', 'tests/test_demo_hgtseq.py', 'tests/test_demo_fastqrepair.py',
+    'tests/test_nextflow_accept.py', 'tests/test_maintenance_pytest.py', 'tests/test_write_skill.py',
+    'tests/test_workflows.py', 'tests/test_website_parsing.py', 'tests/test_check_drift.py']
+assert all((SOURCE / p).is_file() for p in affected)
+
+def run(version):
+    python = FALLBACK / '.venv/bin/python' if version == '3.12' else ROOT / version / 'bin/python'
+    scope = 'full' if version == '3.12' else 'affected'
+    report = BASE / f'{version}-{scope}.xml'
+    command = [str(python), '-m', 'pytest', '-o', 'addopts=', '-q', '-rs',
+               '--basetemp', str(SCRATCH / version), '--junitxml', str(report),
+               *([] if scope == 'full' else affected)]
+    environment = {**os.environ, 'PYTHONPATH': str(SOURCE),
+        'NXF_JVM_ARGS': '-Djava.net.preferIPv6Addresses=true'}
+    if version == '3.15':
+        environment['LD_LIBRARY_PATH'] = str(ROOT / 'hdf5-private/root/usr/lib/x86_64-linux-gnu')
+    started = datetime.now(UTC).isoformat()
+    log_path = BASE / f'{version}-{scope}.log'
+    with log_path.open('w') as stream:
+        result = subprocess.run(command, cwd=SOURCE, env=environment,
+                                stdout=stream, stderr=subprocess.STDOUT)
+    packages = subprocess.check_output([str(python), '-c',
+        'import json,importlib.metadata as m;print(json.dumps({x:m.version(x) '
+        'for x in ["pytest","pysam","h5py","numpy"]}))'], env=environment, text=True)
+    evidence_check = None
+    if scope == 'full' and result.returncode == 0:
+        check_command = [str(python), 'scripts/check_maintenance_pytest.py', '--report', str(report),
+            '--os', 'ubuntu-latest', '--python', version, '--candidate', COMMIT,
+            '--output', str(BASE / 'full-suite-evidence-check.json')]
+        check = subprocess.run(check_command, cwd=SOURCE, env=environment,
+                               capture_output=True, text=True)
+        evidence_check = {'command': check_command, 'exit_code': check.returncode,
+                          'stdout': check.stdout, 'stderr': check.stderr}
+    record = {'source_commit': COMMIT, 'scope': scope, 'started_at': started,
+        'finished_at': datetime.now(UTC).isoformat(), 'command': command, 'exit_code': result.returncode,
+        'python': subprocess.check_output([str(python), '--version'], text=True).strip(),
+        'packages': json.loads(packages), 'platform': subprocess.check_output([str(python), '-c',
+            'import platform; print(platform.platform())'], text=True).strip(),
+        'source_inventory': str(BASE / 'source-inventory.json'),
+        'source_inventory_sha256_before': initial_digest,
+        'source_inventory_sha256_after': digest(inventory(SOURCE)),
+        'editable_fallback_code_bytes_and_execute_bits_match':
+            code_identity(inventory(FALLBACK)) == code_identity(initial),
+        'editable_fallback_unchanged': inventory(FALLBACK) == fallback_initial,
+        'fallback_initial_inventory_sha256': digest(fallback_initial),
+        'log': str(log_path), 'log_sha256': hashlib.sha256(log_path.read_bytes()).hexdigest(),
+        'junit_report': str(report),
+        'junit_sha256': hashlib.sha256(report.read_bytes()).hexdigest() if report.exists() else None,
+        'dependency_install_command': [], 'dependency_note': 'Existing validated adapter environments',
+        'environment': {key: environment[key] for key in ('PYTHONPATH', 'LD_LIBRARY_PATH')
+                        if key in environment}, 'full_suite_evidence_check': evidence_check}
+    (BASE / f'{version}-{scope}.json').write_text(json.dumps(record, indent=2) + '\n')
+    print(version, scope, result.returncode, evidence_check, flush=True)
+    return record
+
+with ThreadPoolExecutor(max_workers=2) as pool:
+    results = list(pool.map(run, ['3.12', '3.11', '3.13', '3.14', '3.15']))
+(BASE / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+subprocess.run(['git', 'diff', '--quiet', 'HEAD'], cwd=SOURCE, check=True)
+assert all(r['exit_code'] == 0 and r['source_inventory_sha256_after'] == initial_digest
+    and r['editable_fallback_code_bytes_and_execute_bits_match']
+    and r['editable_fallback_unchanged'] and (r['full_suite_evidence_check'] is None or
+        r['full_suite_evidence_check']['exit_code'] == 0) for r in results), 'Validation failed'
+print('Complete validation passed', flush=True)

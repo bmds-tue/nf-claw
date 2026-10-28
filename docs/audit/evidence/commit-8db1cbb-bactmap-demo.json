@@ -1,0 +1,2861 @@
+{
+  "version": 1,
+  "source_commit": "8db1cbb26ae257a37d01c0d3ff53fbd3ca19dce3",
+  "pipeline_commit": "834642d8ac150ca10d705833223e7bcf15efc210",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-native-8db1cbb.py",
+    "sha256": "3633fa184130d27b5a751c57a30b347ac34d8cc641279e754ba854ee0efcf3cf"
+  },
+  "pipeline_files_before": {
+    ".editorconfig": {
+      "sha256": "dd306bd5d532bb82747e2ba9c9434796017e399fe4793205022aee72e061887d",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "e338759ab75cb11f1deede242b9c910fda5f0b1ca05f389700b81a02ca0ac560",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/CONTRIBUTING.md": {
+      "sha256": "9e6ccaac8b391736730336ea0a64d1c7ac11cdd436892b65531dec8497ea0f64",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.md": {
+      "sha256": "a8e4da5432154777042db7ebfed48dcc98dcb07989f4bbc77358168694189bd8",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "a340ae391c8d44765052de17a0ec7560bdaff1cc83341d599c81505cff95acce",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.md": {
+      "sha256": "8eb338e2806e44f2445e4e5410a32677c75954b19855592e7938aa48340ac990",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "efa39fade499d6c0f28efdffe4ca145410d7ba8418fa8382f303f4d1fcc013b7",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "716d5edc46779fd534afda77b90da08183aea2f70be38ee43f840731ea146110",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "36d0ecfe5de43a58355600727fece27044f68b6a56d1f947d3b9346a4302de69",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "f4cb7076305fc98424ff6c4645481a80735d196892644cd3fe84b3672d9f199a",
+      "mode": 436
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "c49bbe1edba79719e635e1a050d50ec81fb948f95c36f52780ca3be2edfffcf2",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e067f6185389a8b4b12f568d14bfa752616f9442b5f17d53eccebd7a57cf045c",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "6217bd65230bdecce3dbc0cb2e67261f53cfd2b9e42fcc2bf5295d172e684f3f",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "2951a235c2fdc85f1a8bf0a53c1fe94a475de51ea2d6202f887010d061e90cce",
+      "mode": 436
+    },
+    ".markdownlint.yml": {
+      "sha256": "f5a831528d73b59e370fe3f53ea525f6378944501371ba86bfbba573234951cd",
+      "mode": 509
+    },
+    ".nf-core-lint.yml": {
+      "sha256": "036cc890454a3fa89504c69de514080fdb881646b3a7a834897b067a4c010968",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "bfa87bce61f6b78503eaec1b154daec6107b27b3178596538fae11c8302164a4",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "d375fe03d76dc5bb459be4e08b7e0360a6e599eeb07e11a3c2d0c3e714a8e402",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "8b850e0cf10fa53b7e366ec1a3f7ca65e84b79836137a413461394e6695bbc48",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "ccf1a04be6154c0d184c8dce61518be1fa940ef6722cd71c8afbbab7ba66db3f",
+      "mode": 436
+    },
+    "assets/adapters.fas": {
+      "sha256": "42bf334278ae112b50564696833e40386990e789e39571ac1109a5be5f48b17f",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "0d6f858755dd5f11d3ab19d22bc46ce7869f82f25dfab9b750c263363ac87de7",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "1df378bb66b963255a8550479528440c8ae4af1285c36d919522a1b3f2557c2a",
+      "mode": 436
+    },
+    "assets/multiqc_config.yaml": {
+      "sha256": "803e2bea469c3062725fe1332d8417f6b0c0b8542e776226b4662adf67039eda",
+      "mode": 436
+    },
+    "assets/nf-core-bactmap_logo.png": {
+      "sha256": "86a94278830367ebb4293856402b43ee922f511a35a167d1cece1f35d4fe5247",
+      "mode": 436
+    },
+    "assets/nihr_logos_funded_by.jpg": {
+      "sha256": "a4b4d555faee4eb73b2af5aa80792cf8b2fa9745140dbf4f77348fcbc7fe3885",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "d7b0a959143ddd28fc15598f585276cb0706c1356eea45d8649cb0d428f7047b",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "cdd454acd5e6cf5951a358c0b7b82e9d36fc9f50a0da158e1ec5dbbf10495420",
+      "mode": 436
+    },
+    "bin/calculate_fraction_of_non_GATC_bases.py": {
+      "sha256": "b25ee78d05330ac6b30de6dc380c3c40506db5de01253f48e2ede31778c55d37",
+      "mode": 509
+    },
+    "bin/check_samplesheet.py": {
+      "sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54",
+      "mode": 509
+    },
+    "bin/reference2single_sequence.py": {
+      "sha256": "10c9c370dd810a4e04fdea9d402d34426c929e0f91b23e7ea53b374ac0532fc7",
+      "mode": 509
+    },
+    "bin/scrape_software_versions.py": {
+      "sha256": "442749fd7771af1b1c85ff5219224b7e25e874ad1fafce55004f663ab7df6ccf",
+      "mode": 509
+    },
+    "bin/vcf2pseudogenome.py": {
+      "sha256": "ce9b364f55837cb6e2cd80b9013083010c11ec92c8a983f9fbfcf159dfd4880e",
+      "mode": 509
+    },
+    "conf/base.config": {
+      "sha256": "3ca02b0a22aa2d59c6123340a8c98956e734bef43a5b7f879d964dd0c9cf709e",
+      "mode": 436
+    },
+    "conf/modules.config": {
+      "sha256": "c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "082119ce8bf494ff81a32479277dbbcbf93dc2c8396a15300e061c15d44ca72e",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "2773a12075a16a64581db7d48134488a91e8f1e1786018601370c7804cd82e94",
+      "mode": 436
+    },
+    "docs/fixing_resource_errors.md": {
+      "sha256": "78502b010f317cc888d4c74d15fa2556e07bb4ba9e92758c8685be57767da1ec",
+      "mode": 436
+    },
+    "docs/images/Bactmap_pipeline.png": {
+      "sha256": "a7852914f5edb6d9746fd95d2fc7bcf54f4fb4be969facc8084bf67cd27a2810",
+      "mode": 436
+    },
+    "docs/images/multiqc_fastp.png": {
+      "sha256": "771f13a3e83b2afe3636ab8c91b69d8985620e1bec6631eb614548515b7ecef6",
+      "mode": 436
+    },
+    "docs/images/multiqc_general_stats.png": {
+      "sha256": "8c5fbaf1d1af13efdfbd9c5a4392b5e2e67808d9fa5aacddd7ce7085085e37a0",
+      "mode": 436
+    },
+    "docs/images/multiqc_mapping_stats.png": {
+      "sha256": "d4c262254d0004f7e3774d12f1c87d1b8a5620d217b312a81938370aade3cd94",
+      "mode": 436
+    },
+    "docs/images/multiqc_variants_stats.png": {
+      "sha256": "d370c456f1072ff60d063e77a2bae38ec7e24a09ff1398e0f06b027485349aab",
+      "mode": 436
+    },
+    "docs/images/nf-core-bactmap_logo.png": {
+      "sha256": "60f1f2e4425b09cfa5426d5624ba0769776b9c5f0a195dc83f1112c0818d5368",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "3e5b48c768bd3fe35aef2d9b7681b60e7a3c5aa6f19fd292da422922959b15ab",
+      "mode": 436
+    },
+    "docs/tool-specific_option_configuration.md": {
+      "sha256": "3c7a393207e55d40b91c8e37a9f13091951677efe97621f1464f9e2f3e6ce14c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "707650f3b8141991601022f05a663e8c8415b75a68c570d01ef3ab838a4c6de7",
+      "mode": 436
+    },
+    "lib/NfcoreSchema.groovy": {
+      "sha256": "05bdf46dea2961294bd5ac8cd7b9e4bd7ce89c24a93871dfa3949ae68e9937de",
+      "mode": 509
+    },
+    "lib/NfcoreTemplate.groovy": {
+      "sha256": "dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2",
+      "mode": 509
+    },
+    "lib/Utils.groovy": {
+      "sha256": "31fe917ba0613e6f7bf7ab86ef4289973bd90f6d56c5e62d6351899970c257f0",
+      "mode": 509
+    },
+    "lib/WorkflowBactmap.groovy": {
+      "sha256": "55a61779a485d63823ae9d8cbf38b5df7db4c5ebb9595ddd9f05d71decd31f6f",
+      "mode": 509
+    },
+    "lib/WorkflowMain.groovy": {
+      "sha256": "e62810ef5ac8737c320ee3906304a4af0ac1ae7b984f8843eb5a97583bba4dd7",
+      "mode": 509
+    },
+    "lib/nfcore_external_java_deps.jar": {
+      "sha256": "7c176a55f60b157519d88a06aa03daa2955dd9e8dfd1a118c9ea4dcb3a62bad6",
+      "mode": 509
+    },
+    "main.nf": {
+      "sha256": "2ad203954a1dda7783dd561c6bf17757e85db445221e653f3644ff385c1c26f5",
+      "mode": 436
+    },
+    "modules/local/alignpseudogenomes.nf": {
+      "sha256": "691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e",
+      "mode": 436
+    },
+    "modules/local/functions.nf": {
+      "sha256": "c34b87949d2687c723d689cab0c1b3515d5d00d43643c8b4567f9bd9b3216aef",
+      "mode": 436
+    },
+    "modules/local/get_software_versions.nf": {
+      "sha256": "184e68077df1e50bf156fafdeb8a80e927d3874a8db5f5de44276d4960fb4237",
+      "mode": 436
+    },
+    "modules/local/multiqc.nf": {
+      "sha256": "1145272f323fdec61d50243b888252c104c2b055a4506a35e1f400d55146e1d5",
+      "mode": 436
+    },
+    "modules/local/samplesheet_check.nf": {
+      "sha256": "6f9ddb15b06db335097aef649733e914c9226f44e3314145be840b6a1197b1f1",
+      "mode": 436
+    },
+    "modules/local/vcf2pseudogenome.nf": {
+      "sha256": "6f63b8390683dc584ff0b4b38198ca56c771333181f3428d95c69ac1e2613747",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/functions.nf": {
+      "sha256": "8bd3f0d7f6c7b6893b71c6f69e82e1c165cff43f820478d3b8ef913440cbcd43",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/main.nf": {
+      "sha256": "88fe9a79497a4fd733e8fd3c0375af63bbe3f626c72a092e7a0d3d8a9168d82b",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/meta.yml": {
+      "sha256": "21336b6fdd3b91011d5540852e270ea1e8ab82c5c70b87afa0e6d5a4496423c8",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/functions.nf": {
+      "sha256": "c88692848791d7a4fcb57f0fa0fbbbc5243fedc982b7ba0aae488df83505f545",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/main.nf": {
+      "sha256": "7bdd221c4b07c5449535d377e101d9833b24f8d2c8364b1078f8ec6b3b8b2193",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/meta.yml": {
+      "sha256": "70db37e9dd1e9ffb8e6d25eaf3923849ae9c3eb07f3a7c9fa81fc060ab775361",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/main.nf": {
+      "sha256": "16a537ef18e314861720fcfaebb7dcfb861fbe2a4849402f05eb1a5ce828c00d",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/meta.yml": {
+      "sha256": "9f8ec72070fe04115ef88ffc71875e86e4f7f04e044f3e7e64647ee7cb7ec9db",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/main.nf": {
+      "sha256": "1f5fa0bdc8da48269ab8f843da4daf9101e2e77a84fcaba5c33bfd99e604b8de",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/meta.yml": {
+      "sha256": "89ae8d5a64097fd23ff9da584d5faba1b5aa3556964ba53dfae60b9bf75964ee",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/main.nf": {
+      "sha256": "c0e8717893d4ee213035b1357571d5adfdeeac366241a154c66669aae3b472f2",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/meta.yml": {
+      "sha256": "128eb8fa5d1d7d25e8501126845de3e121a149d62feaf7f9db89056f4aed44ea",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/main.nf": {
+      "sha256": "978641d5f5efac930fe600fa45b073e636c719c0e5823de7c8ed61427b06d957",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/meta.yml": {
+      "sha256": "f5576504925b438a1a35b6dc3b884060eba553643c0c938699b9d603e0e572d6",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/main.nf": {
+      "sha256": "bf4a9d220cfc508e952a4624b4d0d357563e35133bbfe3d44d2ccda2158fbfa9",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/meta.yml": {
+      "sha256": "6c6c2805a07fee76c24443e69568e60010d3b1e7e0672f177f5faeba20daac83",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/main.nf": {
+      "sha256": "5262ad6637ee2ec5aec65a231f48e1ceb615708ab645a3d19b7bec4062b7b743",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/meta.yml": {
+      "sha256": "5896df748eeecbd6e659c0aa4db7bc721bbfa9a315a3c8c99d2c064f3a0ee406",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/main.nf": {
+      "sha256": "d896ef75851403a104f03d93120bc415d3aad565e8b613ccf5c27704baaa50e4",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/meta.yml": {
+      "sha256": "268db923356471ed38c6f335b4e0408fab5f989f0e4ec7886c2a85e9dbb46353",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/main.nf": {
+      "sha256": "9dbc1dd945b12094715182a070726e5e327c0d83822d55d4200e26bfc9f098b6",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/meta.yml": {
+      "sha256": "e0ba1df3a4965b97e7281b31d490f2a355c99e2c8453ea207644ed0cafc1063d",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/main.nf": {
+      "sha256": "d59ca0c6157c1516f630b1990065ab34b8c3f18f81fe6723f959b44884f95f79",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/meta.yml": {
+      "sha256": "6d8e1355ac00f06ca3c2b189d8dbfc3739274de8653b3909300060c03d3dd4e3",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/main.nf": {
+      "sha256": "443b8ee50c24b87e5ab792cda925a7a8bd3111a0b3aa0e85aefce398a970a5d5",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/meta.yml": {
+      "sha256": "d2d747d67fe80730b5a18c660da2bdcb1994a687070c7600df79e878eb3c1f42",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/main.nf": {
+      "sha256": "341ef268d1da1378f74f2664a7358b3b9beca3770a3573b9df5d9cb41f5ee2cd",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/meta.yml": {
+      "sha256": "995b7a804ec870bb93141a9e3c45033de1ae3768d5f9be1d405b4c3e82b51dd3",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/main.nf": {
+      "sha256": "b1f5969384b36d8062faa1b063587bece44ea98ae6a557965e42ffb86ba5aa79",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/meta.yml": {
+      "sha256": "86a10826378877a11cd5f857a1010d2a51d6885bcf41c39525bc9d96e7a0a1b7",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/main.nf": {
+      "sha256": "264e8cbdc1d4ba342822c73816771c6b76c48a9de1c9faa6a62ac1ecf9119d30",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/meta.yml": {
+      "sha256": "07331b2a80d3e37daeb5978ed9a1b30c3b2939ed1bb0246ae544de7953ba5dcb",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/main.nf": {
+      "sha256": "62df48d975d5038787f948ad7b4d9851da7dd75684f5e421438b8d6ba9159673",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/meta.yml": {
+      "sha256": "1bcb4f84986cd0a5cfe53f0f37afa6ee9742fb5c513733b370349122f97fde1e",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/main.nf": {
+      "sha256": "215b434730af8d3de252404943b50a1b1a5b1c0cda0434af158e81aac7998efc",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/meta.yml": {
+      "sha256": "1dd25746e7756b158074166d6bb5f25647869de5bfa87374fa8f00e8e4b5cc57",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/main.nf": {
+      "sha256": "c95d7fbfd3155da1ad5efce9b5393d00205a0490cc45f7fffc935dd2c53410e8",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/meta.yml": {
+      "sha256": "55aef2deae9fa1a3006389ea04543ad8d700946eb728001552af54e0f7a38ea0",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/main.nf": {
+      "sha256": "dedc80ec809c8e8684b9855e283993c5ba5952659b9d451cfc5f726c08fe8560",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/meta.yml": {
+      "sha256": "0c5259b72855add940f20e5fbf20e29c2bd0a1600bc4dff561beac75f7111a61",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/main.nf": {
+      "sha256": "dad37eec712653893400c238adbc987aa2bfc4575bb1db6f1d923f1da02f56f1",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/meta.yml": {
+      "sha256": "bfdb3af77556fcce11af7cc5241df5db2a4774276f87367d09c8c071c287678f",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "a34b9ab6307a774c4e68380d839f3c77da0c653c68761ef959330f83b556cb36",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "mode": 436
+    },
+    "subworkflows/bam_sort_samtools.nf": {
+      "sha256": "aa2e7519102226d93aaf5fe14e9a7d6b4119d71bdb666f33acd5f7d7c2c053f0",
+      "mode": 436
+    },
+    "subworkflows/bam_stats_samtools.nf": {
+      "sha256": "ffe26db6b8000c4cdf00e5e423653d819ad70a608501fec090f4b211631a30fb",
+      "mode": 436
+    },
+    "subworkflows/create_phylogeny.nf": {
+      "sha256": "3cbb47bd0706b2bf405d76ec15e632fff3b81d46939ed8fc56a9234fd8cd3b95",
+      "mode": 509
+    },
+    "subworkflows/input_check.nf": {
+      "sha256": "1e085f64f6643273df6bff3c84029d12e6ad17f2a80de03cc56a39cae0fc0bd1",
+      "mode": 436
+    },
+    "subworkflows/sub_sampling.nf": {
+      "sha256": "5db7c41c19653e8aafe78c3d96cf345339467c67233faf63fbdc83fb171259da",
+      "mode": 509
+    },
+    "subworkflows/variants_bcftools.nf": {
+      "sha256": "4345886c5761009421651cf95302daec0ed32aa00cb2ed6d449d6a28126a1cb7",
+      "mode": 509
+    },
+    "workflows/bactmap.nf": {
+      "sha256": "4ce6fe68bb0925e059cc7c03bbc6d1a42bfe62116360518dfb4ae4f6f99c9e2d",
+      "mode": 436
+    }
+  },
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+        "-m",
+        "runner",
+        "run",
+        "bactmap",
+        "--demo",
+        "--outdir",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo",
+        "--nxf-ver",
+        "24.10.5",
+        "--limit-cpus",
+        "2",
+        "--limit-memory",
+        "4.GB",
+        "--limit-time",
+        "15.min",
+        "--timeout",
+        "1800",
+        "--nxf-env",
+        "NXF_WORK=/dev/shm/nfclaw-bactmap-demo-8db1cbb/work",
+        "--nxf-env",
+        "NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true"
+      ],
+      "started_at": "2026-10-28T09:13:00.873922+00:00",
+      "console_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo.console.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T09:17:59.353639+00:00",
+      "console_log_sha256": "dc1780a75c0bb17da1f0e05cb7422bfb3c3bd97eab4b58e918d6b7ffa5006369",
+      "tasks": [
+        {
+          "task_id": "1",
+          "hash": "e6/d55422",
+          "native_id": "433511",
+          "name": "NFCORE_BACTMAP:BACTMAP:INPUT_CHECK:SAMPLESHEET_CHECK (samplesheet.csv)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:13:19.456",
+          "duration": "3.8s",
+          "realtime": "0ms",
+          "%cpu": "67.1%",
+          "peak_rss": "11.2 MB",
+          "peak_vmem": "32.9 MB",
+          "rchar": "641 KB",
+          "wchar": "1.1 KB"
+        },
+        {
+          "task_id": "2",
+          "hash": "c3/986f1c",
+          "native_id": "433605",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_INDEX (NCTC13799.fna)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:13:19.646",
+          "duration": "5.6s",
+          "realtime": "1s",
+          "%cpu": "94.0%",
+          "peak_rss": "18.6 MB",
+          "peak_vmem": "44.5 MB",
+          "rchar": "8.4 MB",
+          "wchar": "5.7 MB"
+        },
+        {
+          "task_id": "3",
+          "hash": "51/4e32a0",
+          "native_id": "437501",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:13:24.286",
+          "duration": "38.4s",
+          "realtime": "34s",
+          "%cpu": "107.5%",
+          "peak_rss": "795.8 MB",
+          "peak_vmem": "1.1 GB",
+          "rchar": "46.9 MB",
+          "wchar": "12.6 MB"
+        },
+        {
+          "task_id": "6",
+          "hash": "80/7f267a",
+          "native_id": "460813",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:02.985",
+          "duration": "4.3s",
+          "realtime": "1s",
+          "%cpu": "148.1%",
+          "peak_rss": "12.1 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "12.2 MB",
+          "wchar": "12.3 KB"
+        },
+        {
+          "task_id": "4",
+          "hash": "a9/8317e1",
+          "native_id": "437865",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:13:25.470",
+          "duration": "42.1s",
+          "realtime": "38s",
+          "%cpu": "105.6%",
+          "peak_rss": "764.2 MB",
+          "peak_vmem": "1 GB",
+          "rchar": "46.9 MB",
+          "wchar": "11.3 MB"
+        },
+        {
+          "task_id": "5",
+          "hash": "69/a03931",
+          "native_id": "437726",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:13:25.160",
+          "duration": "47.6s",
+          "realtime": "43s",
+          "%cpu": "105.4%",
+          "peak_rss": "725.3 MB",
+          "peak_vmem": "1 GB",
+          "rchar": "49.1 MB",
+          "wchar": "16.1 MB"
+        },
+        {
+          "task_id": "8",
+          "hash": "48/a3b7b4",
+          "native_id": "464401",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:07.667",
+          "duration": "18.7s",
+          "realtime": "0ms",
+          "%cpu": "263.7%",
+          "peak_rss": "12.1 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "10.8 MB",
+          "wchar": "12.3 KB"
+        },
+        {
+          "task_id": "9",
+          "hash": "df/894077",
+          "native_id": "466659",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:12.780",
+          "duration": "16s",
+          "realtime": "1s",
+          "%cpu": "187.0%",
+          "peak_rss": "12.1 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "15.6 MB",
+          "wchar": "12.4 KB"
+        },
+        {
+          "task_id": "7",
+          "hash": "a6/654b54",
+          "native_id": "464308",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:07.372",
+          "duration": "27.7s",
+          "realtime": "7s",
+          "%cpu": "98.9%",
+          "peak_rss": "9.6 MB",
+          "peak_vmem": "14.8 MB",
+          "rchar": "24.2 MB",
+          "wchar": "11.4 MB"
+        },
+        {
+          "task_id": "10",
+          "hash": "b9/296123",
+          "native_id": "469557",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:26.381",
+          "duration": "9.1s",
+          "realtime": "6s",
+          "%cpu": "98.4%",
+          "peak_rss": "9.7 MB",
+          "peak_vmem": "14.8 MB",
+          "rchar": "21.6 MB",
+          "wchar": "10.2 MB"
+        },
+        {
+          "task_id": "11",
+          "hash": "51/02126d",
+          "native_id": "470528",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:28.834",
+          "duration": "12.8s",
+          "realtime": "8s",
+          "%cpu": "98.8%",
+          "peak_rss": "11.1 MB",
+          "peak_vmem": "15.6 MB",
+          "rchar": "31.2 MB",
+          "wchar": "14.5 MB"
+        },
+        {
+          "task_id": "13",
+          "hash": "b8/f1e088",
+          "native_id": "473482",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:35.558",
+          "duration": "19.3s",
+          "realtime": "8s",
+          "%cpu": "108.4%",
+          "peak_rss": "114.5 MB",
+          "peak_vmem": "274.1 MB",
+          "rchar": "67 MB",
+          "wchar": "66 MB"
+        },
+        {
+          "task_id": "12",
+          "hash": "c2/5c68f0",
+          "native_id": "473303",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:35.158",
+          "duration": "20.4s",
+          "realtime": "10s",
+          "%cpu": "111.7%",
+          "peak_rss": "121.2 MB",
+          "peak_vmem": "331.9 MB",
+          "rchar": "76.8 MB",
+          "wchar": "76.1 MB"
+        },
+        {
+          "task_id": "15",
+          "hash": "af/151d02",
+          "native_id": "483717",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:54.962",
+          "duration": "3.8s",
+          "realtime": "1s",
+          "%cpu": "92.5%",
+          "peak_rss": "63.4 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "13 MB",
+          "wchar": "9 MB"
+        },
+        {
+          "task_id": "14",
+          "hash": "1c/569b14",
+          "native_id": "475043",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:41.655",
+          "duration": "18.1s",
+          "realtime": "11s",
+          "%cpu": "112.6%",
+          "peak_rss": "126.8 MB",
+          "peak_vmem": "274.1 MB",
+          "rchar": "88.6 MB",
+          "wchar": "87.2 MB"
+        },
+        {
+          "task_id": "16",
+          "hash": "8f/ff00a3",
+          "native_id": "484264",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:55.645",
+          "duration": "4.6s",
+          "realtime": "1s",
+          "%cpu": "96.3%",
+          "peak_rss": "73.2 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "14.5 MB",
+          "wchar": "9.9 MB"
+        },
+        {
+          "task_id": "17",
+          "hash": "10/f8a369",
+          "native_id": "486964",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:58.839",
+          "duration": "3.9s",
+          "realtime": "0ms",
+          "%cpu": "100.0%",
+          "peak_rss": "5.9 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.1 MB",
+          "wchar": "5.7 KB"
+        },
+        {
+          "task_id": "20",
+          "hash": "7b/733e85",
+          "native_id": "487974",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:00.257",
+          "duration": "3.8s",
+          "realtime": "0ms",
+          "%cpu": "48.1%",
+          "peak_rss": "5.9 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.9 MB",
+          "wchar": "6.6 KB"
+        },
+        {
+          "task_id": "19",
+          "hash": "68/5d1c96",
+          "native_id": "487700",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:59.745",
+          "duration": "5.5s",
+          "realtime": "1s",
+          "%cpu": "96.6%",
+          "peak_rss": "80.2 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "16.8 MB",
+          "wchar": "11.3 MB"
+        },
+        {
+          "task_id": "22",
+          "hash": "97/1b7019",
+          "native_id": "492989",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:02.748",
+          "duration": "2.7s",
+          "realtime": "0ms",
+          "%cpu": "80.0%",
+          "peak_rss": "2.9 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "63.8 KB",
+          "wchar": "401 B"
+        },
+        {
+          "task_id": "23",
+          "hash": "2b/201af1",
+          "native_id": "493046",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:02.800",
+          "duration": "2.9s",
+          "realtime": "1s",
+          "%cpu": "74.3%",
+          "peak_rss": "6 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.1 MB",
+          "wchar": "777 B"
+        },
+        {
+          "task_id": "24",
+          "hash": "6a/51d592",
+          "native_id": "493022",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:02.782",
+          "duration": "3.3s",
+          "realtime": "0ms",
+          "%cpu": "92.9%",
+          "peak_rss": "6.9 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "9.1 MB",
+          "wchar": "56.3 KB"
+        },
+        {
+          "task_id": "25",
+          "hash": "0d/807d21",
+          "native_id": "494682",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:04.087",
+          "duration": "2s",
+          "realtime": "0ms",
+          "%cpu": "91.5%",
+          "peak_rss": "6.2 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.9 MB",
+          "wchar": "780 B"
+        },
+        {
+          "task_id": "27",
+          "hash": "fa/3ff4f0",
+          "native_id": "494710",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:04.100",
+          "duration": "2.4s",
+          "realtime": "1s",
+          "%cpu": "95.4%",
+          "peak_rss": "6.7 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "9.9 MB",
+          "wchar": "57 KB"
+        },
+        {
+          "task_id": "26",
+          "hash": "dc/f2ceb3",
+          "native_id": "494751",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:04.116",
+          "duration": "3s",
+          "realtime": "0ms",
+          "%cpu": "73.7%",
+          "peak_rss": "0",
+          "peak_vmem": "0",
+          "rchar": "64.7 KB",
+          "wchar": "401 B"
+        },
+        {
+          "task_id": "28",
+          "hash": "81/d0b66a",
+          "native_id": "496268",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:05.311",
+          "duration": "3.2s",
+          "realtime": "0ms",
+          "%cpu": "77.9%",
+          "peak_rss": "6.1 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "11.4 MB",
+          "wchar": "6.7 KB"
+        },
+        {
+          "task_id": "32",
+          "hash": "40/e18ec6",
+          "native_id": "499491",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:08.566",
+          "duration": "6.5s",
+          "realtime": "0ms",
+          "%cpu": "101.6%",
+          "peak_rss": "5.9 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "11.4 MB",
+          "wchar": "781 B"
+        },
+        {
+          "task_id": "31",
+          "hash": "ff/53328a",
+          "native_id": "499436",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:08.547",
+          "duration": "7.7s",
+          "realtime": "0ms",
+          "%cpu": "98.2%",
+          "peak_rss": "2.9 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "64.8 KB",
+          "wchar": "401 B"
+        },
+        {
+          "task_id": "30",
+          "hash": "47/f1af49",
+          "native_id": "499454",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:08.554",
+          "duration": "8.5s",
+          "realtime": "1s",
+          "%cpu": "102.0%",
+          "peak_rss": "6.9 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "11.4 MB",
+          "wchar": "59 KB"
+        },
+        {
+          "task_id": "18",
+          "hash": "ae/a78a03",
+          "native_id": "487028",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:14:58.929",
+          "duration": "30.1s",
+          "realtime": "23s",
+          "%cpu": "194.8%",
+          "peak_rss": "69.5 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "936.8 MB",
+          "wchar": "910.1 MB"
+        },
+        {
+          "task_id": "21",
+          "hash": "ed/398ffb",
+          "native_id": "488259",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:00.340",
+          "duration": "31.4s",
+          "realtime": "25s",
+          "%cpu": "192.7%",
+          "peak_rss": "69.6 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "946.7 MB",
+          "wchar": "919 MB"
+        },
+        {
+          "task_id": "29",
+          "hash": "bb/dbfbf0",
+          "native_id": "496403",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:05.536",
+          "duration": "32.2s",
+          "realtime": "27s",
+          "%cpu": "180.6%",
+          "peak_rss": "69.3 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "958.7 MB",
+          "wchar": "929.2 MB"
+        },
+        {
+          "task_id": "34",
+          "hash": "f4/e95c90",
+          "native_id": "514456",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:31.798",
+          "duration": "14.2s",
+          "realtime": "9s",
+          "%cpu": "99.5%",
+          "peak_rss": "11.3 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.5 MB",
+          "wchar": "13.5 MB"
+        },
+        {
+          "task_id": "33",
+          "hash": "46/69b1a5",
+          "native_id": "513067",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:29.119",
+          "duration": "17s",
+          "realtime": "9s",
+          "%cpu": "99.8%",
+          "peak_rss": "11.3 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.5 MB",
+          "wchar": "13.4 MB"
+        },
+        {
+          "task_id": "35",
+          "hash": "b0/0e350f",
+          "native_id": "518595",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:37.779",
+          "duration": "14.2s",
+          "realtime": "9s",
+          "%cpu": "96.4%",
+          "peak_rss": "11.2 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.9 MB",
+          "wchar": "13.9 MB"
+        },
+        {
+          "task_id": "36",
+          "hash": "dc/f091da",
+          "native_id": "524917",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:46.127",
+          "duration": "20.7s",
+          "realtime": "14s",
+          "%cpu": "99.0%",
+          "peak_rss": "166.3 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "20.6 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "37",
+          "hash": "ac/8a0319",
+          "native_id": "524981",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:46.240",
+          "duration": "20.8s",
+          "realtime": "13s",
+          "%cpu": "98.3%",
+          "peak_rss": "166.1 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "20.5 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "38",
+          "hash": "ff/4c59f2",
+          "native_id": "527647",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:15:52.064",
+          "duration": "25.2s",
+          "realtime": "16s",
+          "%cpu": "103.0%",
+          "peak_rss": "151.1 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "21 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "39",
+          "hash": "3b/059b6a",
+          "native_id": "539385",
+          "name": "NFCORE_BACTMAP:BACTMAP:ALIGNPSEUDOGENOMES",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:17.395",
+          "duration": "7.3s",
+          "realtime": "1s",
+          "%cpu": "574.2%",
+          "peak_rss": "18.2 MB",
+          "peak_vmem": "3.7 GB",
+          "rchar": "44.6 MB",
+          "wchar": "10.5 MB"
+        },
+        {
+          "task_id": "41",
+          "hash": "6a/4af828",
+          "native_id": "542325",
+          "name": "NFCORE_BACTMAP:BACTMAP:SNPSITES",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:24.758",
+          "duration": "5.1s",
+          "realtime": "0ms",
+          "%cpu": "90.1%",
+          "peak_rss": "11.1 MB",
+          "peak_vmem": "29.1 MB",
+          "rchar": "25.3 MB",
+          "wchar": "759 B"
+        },
+        {
+          "task_id": "40",
+          "hash": "a8/6ff8da",
+          "native_id": "542349",
+          "name": "NFCORE_BACTMAP:BACTMAP:GUBBINS",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:24.789",
+          "duration": "12.6s",
+          "realtime": "8s",
+          "%cpu": "88.6%",
+          "peak_rss": "62.3 MB",
+          "peak_vmem": "105.2 MB",
+          "rchar": "209.9 MB",
+          "wchar": "19 MB"
+        },
+        {
+          "task_id": "43",
+          "hash": "a4/8efce8",
+          "native_id": "549802",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:FASTTREE",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:37.539",
+          "duration": "17s",
+          "realtime": "0ms",
+          "%cpu": "61.4%",
+          "peak_rss": "2.9 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "42.5 KB",
+          "wchar": "50.2 KB"
+        },
+        {
+          "task_id": "42",
+          "hash": "dd/c15eab",
+          "native_id": "549820",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAPIDNJ",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:37.550",
+          "duration": "17s",
+          "realtime": "1s",
+          "%cpu": "192.7%",
+          "peak_rss": "17.2 MB",
+          "peak_vmem": "3.7 GB",
+          "rchar": "5.9 MB",
+          "wchar": "26.5 KB"
+        },
+        {
+          "task_id": "45",
+          "hash": "4e/8bc0c9",
+          "native_id": "549727",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:IQTREE",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:37.486",
+          "duration": "18s",
+          "realtime": "4s",
+          "%cpu": "100.3%",
+          "peak_rss": "104.3 MB",
+          "peak_vmem": "351.2 MB",
+          "rchar": "50.2 KB",
+          "wchar": "42.9 KB"
+        },
+        {
+          "task_id": "44",
+          "hash": "2c/60f3fd",
+          "native_id": "549749",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAXMLNG",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:16:37.505",
+          "duration": "23.3s",
+          "realtime": "9.7s",
+          "%cpu": "98.7%",
+          "peak_rss": "10.3 MB",
+          "peak_vmem": "35.4 MB",
+          "rchar": "71.7 KB",
+          "wchar": "740.7 MB"
+        },
+        {
+          "task_id": "46",
+          "hash": "1d/78e29b",
+          "native_id": "557690",
+          "name": "NFCORE_BACTMAP:BACTMAP:GET_SOFTWARE_VERSIONS",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:17:00.910",
+          "duration": "4s",
+          "realtime": "0ms",
+          "%cpu": "86.8%",
+          "peak_rss": "3 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "194.7 KB",
+          "wchar": "1.3 KB"
+        },
+        {
+          "task_id": "47",
+          "hash": "01/567768",
+          "native_id": "559172",
+          "name": "NFCORE_BACTMAP:BACTMAP:MULTIQC (1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:17:04.994",
+          "duration": "46.1s",
+          "realtime": "24.1s",
+          "%cpu": "138.7%",
+          "peak_rss": "136.6 MB",
+          "peak_vmem": "4 GB",
+          "rchar": "701.7 MB",
+          "wchar": "10.1 MB"
+        }
+      ],
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo/pipeline_info/execution_trace_2026-10-28_09-13-10.txt",
+      "trace_sha256": "9ba5416469cf8a8380ef6004b5f7f3161363fb1999961a8c075ee0cf2631c001",
+      "outcome": "success",
+      "completion_caveats": null,
+      "dependency_stability": {
+        "checked_at": "2026-10-28T09:17:53+00:00",
+        "issues": [],
+        "status": "unchanged",
+        "version": 1
+      },
+      "nextflow": "nextflow version 24.10.5",
+      "generated_samplesheet": {
+        "data_commit": "02195cfa96ca496173e9d63dd58e34bf02fcf55a",
+        "file": "samplesheet.csv",
+        "files": 0,
+        "kind": "bundled_demo_fixture",
+        "paired_end": 3,
+        "pipeline": "bactmap",
+        "pipeline_commit": "834642d8ac150ca10d705833223e7bcf15efc210",
+        "row_roles": {
+          "ERR2172265": "matched_paired_sample",
+          "ERR2172266": "matched_paired_sample",
+          "ERR2172267": "matched_paired_sample"
+        },
+        "rows": 3,
+        "samples": 3,
+        "sha256": "762239c877a69d4fc47599e05559698b921a6d265957c4454461851fb0ddd5ea",
+        "single_end": 0,
+        "sources": [
+          "bundled:runner.demo_defaults/bactmap"
+        ],
+        "validation_contract": {
+          "scope": "paired_bundled_fixture_only",
+          "sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54",
+          "source": "bin/check_samplesheet.py"
+        },
+        "version": 1
+      },
+      "source_corrections": {
+        "file": "source-corrections.json",
+        "sha256": "57078564369919d15f547a287e1dbbb5efb8e88ced6fac5a56d29f4a61ada6a5"
+      },
+      "original_source_unchanged": true
+    },
+    {
+      "kind": "replay",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-replay",
+      "command": [
+        "bash",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo/provenance/commands.sh",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-replay"
+      ],
+      "started_at": "2026-10-28T09:17:59.558692+00:00",
+      "console_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-replay.console.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T09:22:13.434130+00:00",
+      "console_log_sha256": "4b52d4d2e0e2b7b2c2e92a30aebd84090369e348bf9a3f4525053b1e5ba77db6",
+      "tasks": [
+        {
+          "task_id": "2",
+          "hash": "79/5e9216",
+          "native_id": "579667",
+          "name": "NFCORE_BACTMAP:BACTMAP:INPUT_CHECK:SAMPLESHEET_CHECK (samplesheet.csv)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:15.470",
+          "duration": "4.9s",
+          "realtime": "0ms",
+          "%cpu": "92.7%",
+          "peak_rss": "11.6 MB",
+          "peak_vmem": "33.1 MB",
+          "rchar": "641 KB",
+          "wchar": "1.1 KB"
+        },
+        {
+          "task_id": "1",
+          "hash": "ef/51555d",
+          "native_id": "579746",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_INDEX (NCTC13799.fna)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:15.659",
+          "duration": "7s",
+          "realtime": "1s",
+          "%cpu": "98.8%",
+          "peak_rss": "8.2 MB",
+          "peak_vmem": "27.9 MB",
+          "rchar": "8.4 MB",
+          "wchar": "5.7 MB"
+        },
+        {
+          "task_id": "3",
+          "hash": "47/d195bf",
+          "native_id": "582538",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:22.520",
+          "duration": "35.8s",
+          "realtime": "31s",
+          "%cpu": "112.3%",
+          "peak_rss": "795.4 MB",
+          "peak_vmem": "1.1 GB",
+          "rchar": "46.9 MB",
+          "wchar": "12.6 MB"
+        },
+        {
+          "task_id": "4",
+          "hash": "8f/301ba5",
+          "native_id": "581396",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:21.141",
+          "duration": "38.5s",
+          "realtime": "35s",
+          "%cpu": "110.1%",
+          "peak_rss": "765.2 MB",
+          "peak_vmem": "1.1 GB",
+          "rchar": "46.9 MB",
+          "wchar": "11.3 MB"
+        },
+        {
+          "task_id": "5",
+          "hash": "ca/fc7e4d",
+          "native_id": "581385",
+          "name": "NFCORE_BACTMAP:BACTMAP:FASTP (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:21.127",
+          "duration": "39.6s",
+          "realtime": "37s",
+          "%cpu": "110.7%",
+          "peak_rss": "725.2 MB",
+          "peak_vmem": "1 GB",
+          "rchar": "49.1 MB",
+          "wchar": "16.1 MB"
+        },
+        {
+          "task_id": "6",
+          "hash": "3b/b9ec5a",
+          "native_id": "602317",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:58.563",
+          "duration": "3s",
+          "realtime": "1s",
+          "%cpu": "378.3%",
+          "peak_rss": "12.2 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "12.2 MB",
+          "wchar": "12.3 KB"
+        },
+        {
+          "task_id": "7",
+          "hash": "90/728479",
+          "native_id": "602542",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:18:59.746",
+          "duration": "2s",
+          "realtime": "1s",
+          "%cpu": "363.3%",
+          "peak_rss": "12.2 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "10.8 MB",
+          "wchar": "12.3 KB"
+        },
+        {
+          "task_id": "8",
+          "hash": "ea/293c86",
+          "native_id": "603226",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:MASH_SKETCH (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:00.754",
+          "duration": "1.8s",
+          "realtime": "1s",
+          "%cpu": "330.0%",
+          "peak_rss": "12.1 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "15.6 MB",
+          "wchar": "12.4 KB"
+        },
+        {
+          "task_id": "10",
+          "hash": "9d/7dc77a",
+          "native_id": "603874",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:01.753",
+          "duration": "7.4s",
+          "realtime": "6s",
+          "%cpu": "100.3%",
+          "peak_rss": "9.9 MB",
+          "peak_vmem": "14.8 MB",
+          "rchar": "21.6 MB",
+          "wchar": "10.2 MB"
+        },
+        {
+          "task_id": "9",
+          "hash": "89/e0617d",
+          "native_id": "603813",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:01.578",
+          "duration": "8.2s",
+          "realtime": "6s",
+          "%cpu": "100.2%",
+          "peak_rss": "9.8 MB",
+          "peak_vmem": "14.8 MB",
+          "rchar": "24.2 MB",
+          "wchar": "11.4 MB"
+        },
+        {
+          "task_id": "11",
+          "hash": "2e/5cfadd",
+          "native_id": "604608",
+          "name": "NFCORE_BACTMAP:BACTMAP:SUB_SAMPLING:RASUSA (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:02.546",
+          "duration": "8.9s",
+          "realtime": "7s",
+          "%cpu": "100.1%",
+          "peak_rss": "11.1 MB",
+          "peak_vmem": "15.6 MB",
+          "rchar": "31.2 MB",
+          "wchar": "14.5 MB"
+        },
+        {
+          "task_id": "12",
+          "hash": "e4/45a181",
+          "native_id": "607585",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:09.269",
+          "duration": "45.6s",
+          "realtime": "7s",
+          "%cpu": "112.6%",
+          "peak_rss": "114.5 MB",
+          "peak_vmem": "274.1 MB",
+          "rchar": "67 MB",
+          "wchar": "66 MB"
+        },
+        {
+          "task_id": "14",
+          "hash": "ec/5607c0",
+          "native_id": "608976",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:11.447",
+          "duration": "43.7s",
+          "realtime": "9s",
+          "%cpu": "118.6%",
+          "peak_rss": "126.7 MB",
+          "peak_vmem": "274.1 MB",
+          "rchar": "88.6 MB",
+          "wchar": "87.2 MB"
+        },
+        {
+          "task_id": "13",
+          "hash": "58/2c7585",
+          "native_id": "607927",
+          "name": "NFCORE_BACTMAP:BACTMAP:BWA_MEM (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:09.797",
+          "duration": "45.4s",
+          "realtime": "8s",
+          "%cpu": "115.6%",
+          "peak_rss": "122.2 MB",
+          "peak_vmem": "331.9 MB",
+          "rchar": "76.8 MB",
+          "wchar": "76.1 MB"
+        },
+        {
+          "task_id": "15",
+          "hash": "ad/e4e998",
+          "native_id": "616732",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:54.958",
+          "duration": "3.8s",
+          "realtime": "1s",
+          "%cpu": "94.1%",
+          "peak_rss": "63 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "13 MB",
+          "wchar": "9 MB"
+        },
+        {
+          "task_id": "17",
+          "hash": "01/7aa034",
+          "native_id": "616820",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:55.217",
+          "duration": "3.8s",
+          "realtime": "1s",
+          "%cpu": "93.1%",
+          "peak_rss": "72.7 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "14.5 MB",
+          "wchar": "9.9 MB"
+        },
+        {
+          "task_id": "16",
+          "hash": "21/439793",
+          "native_id": "616811",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_SORT (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:55.207",
+          "duration": "3.9s",
+          "realtime": "1s",
+          "%cpu": "97.3%",
+          "peak_rss": "79.7 MB",
+          "peak_vmem": "936.8 MB",
+          "rchar": "16.8 MB",
+          "wchar": "11.3 MB"
+        },
+        {
+          "task_id": "19",
+          "hash": "0c/f1b56e",
+          "native_id": "621554",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:58.747",
+          "duration": "1.8s",
+          "realtime": "0ms",
+          "%cpu": "75.5%",
+          "peak_rss": "6 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.1 MB",
+          "wchar": "5.7 KB"
+        },
+        {
+          "task_id": "20",
+          "hash": "10/a40bfa",
+          "native_id": "621953",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:59.077",
+          "duration": "1.9s",
+          "realtime": "0ms",
+          "%cpu": "97.7%",
+          "peak_rss": "6.2 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.9 MB",
+          "wchar": "6.6 KB"
+        },
+        {
+          "task_id": "23",
+          "hash": "38/b96260",
+          "native_id": "621971",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:SAMTOOLS_INDEX (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:59.089",
+          "duration": "2s",
+          "realtime": "0ms",
+          "%cpu": "96.8%",
+          "peak_rss": "6.1 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "11.4 MB",
+          "wchar": "6.7 KB"
+        },
+        {
+          "task_id": "26",
+          "hash": "2d/8b12a9",
+          "native_id": "624809",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:00.564",
+          "duration": "2s",
+          "realtime": "0ms",
+          "%cpu": "70.9%",
+          "peak_rss": "2.9 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "63.8 KB",
+          "wchar": "401 B"
+        },
+        {
+          "task_id": "24",
+          "hash": "85/da7f4d",
+          "native_id": "624829",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:00.575",
+          "duration": "2.2s",
+          "realtime": "0ms",
+          "%cpu": "97.2%",
+          "peak_rss": "6.2 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.1 MB",
+          "wchar": "777 B"
+        },
+        {
+          "task_id": "25",
+          "hash": "15/bd336b",
+          "native_id": "624801",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:00.556",
+          "duration": "2.3s",
+          "realtime": "0ms",
+          "%cpu": "91.8%",
+          "peak_rss": "6.6 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "9.1 MB",
+          "wchar": "56.3 KB"
+        },
+        {
+          "task_id": "28",
+          "hash": "b5/e0bf7f",
+          "native_id": "625395",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.045",
+          "duration": "1.8s",
+          "realtime": "0ms",
+          "%cpu": "59.2%",
+          "peak_rss": "6.2 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "9.9 MB",
+          "wchar": "780 B"
+        },
+        {
+          "task_id": "29",
+          "hash": "30/cd80f6",
+          "native_id": "625406",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.057",
+          "duration": "2s",
+          "realtime": "0ms",
+          "%cpu": "59.2%",
+          "peak_rss": "0",
+          "peak_vmem": "0",
+          "rchar": "64.7 KB",
+          "wchar": "401 B"
+        },
+        {
+          "task_id": "31",
+          "hash": "d8/12fe78",
+          "native_id": "625718",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_IDXSTATS (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.197",
+          "duration": "2.2s",
+          "realtime": "0ms",
+          "%cpu": "133.3%",
+          "peak_rss": "2.8 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "64.8 KB",
+          "wchar": "402 B"
+        },
+        {
+          "task_id": "32",
+          "hash": "c1/0b51fb",
+          "native_id": "625697",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_FLAGSTAT (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.188",
+          "duration": "2.2s",
+          "realtime": "0ms",
+          "%cpu": "88.0%",
+          "peak_rss": "6 MB",
+          "peak_vmem": "26.6 MB",
+          "rchar": "11.4 MB",
+          "wchar": "780 B"
+        },
+        {
+          "task_id": "27",
+          "hash": "79/4f3a90",
+          "native_id": "625424",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.071",
+          "duration": "2.8s",
+          "realtime": "0ms",
+          "%cpu": "94.5%",
+          "peak_rss": "6.7 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "9.9 MB",
+          "wchar": "57 KB"
+        },
+        {
+          "task_id": "30",
+          "hash": "1b/510640",
+          "native_id": "625676",
+          "name": "NFCORE_BACTMAP:BACTMAP:BAM_SORT_SAMTOOLS:BAM_STATS_SAMTOOLS:SAMTOOLS_STATS (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:01.176",
+          "duration": "2.8s",
+          "realtime": "0ms",
+          "%cpu": "95.8%",
+          "peak_rss": "7 MB",
+          "peak_vmem": "28.1 MB",
+          "rchar": "11.4 MB",
+          "wchar": "59 KB"
+        },
+        {
+          "task_id": "18",
+          "hash": "0b/fc86bf",
+          "native_id": "621655",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:58.823",
+          "duration": "30.8s",
+          "realtime": "29s",
+          "%cpu": "165.5%",
+          "peak_rss": "69.9 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "936.8 MB",
+          "wchar": "910.1 MB"
+        },
+        {
+          "task_id": "21",
+          "hash": "55/b2c0b6",
+          "native_id": "622411",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:59.263",
+          "duration": "32.3s",
+          "realtime": "30s",
+          "%cpu": "164.0%",
+          "peak_rss": "69.6 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "946.7 MB",
+          "wchar": "919 MB"
+        },
+        {
+          "task_id": "22",
+          "hash": "9d/dd9c13",
+          "native_id": "622387",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_MPILEUP (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:19:59.249",
+          "duration": "33.9s",
+          "realtime": "31s",
+          "%cpu": "162.6%",
+          "peak_rss": "69.2 MB",
+          "peak_vmem": "14.6 GB",
+          "rchar": "958.7 MB",
+          "wchar": "929.2 MB"
+        },
+        {
+          "task_id": "33",
+          "hash": "e7/b83b16",
+          "native_id": "647489",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:29.807",
+          "duration": "10.9s",
+          "realtime": "8s",
+          "%cpu": "132.3%",
+          "peak_rss": "11.1 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.5 MB",
+          "wchar": "13.4 MB"
+        },
+        {
+          "task_id": "34",
+          "hash": "d7/5c6d13",
+          "native_id": "648414",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:31.971",
+          "duration": "13.5s",
+          "realtime": "10s",
+          "%cpu": "124.3%",
+          "peak_rss": "11.2 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.5 MB",
+          "wchar": "13.5 MB"
+        },
+        {
+          "task_id": "35",
+          "hash": "af/f66ffb",
+          "native_id": "648699",
+          "name": "NFCORE_BACTMAP:BACTMAP:VARIANTS_BCFTOOLS:BCFTOOLS_FILTER (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:33.143",
+          "duration": "13.8s",
+          "realtime": "9s",
+          "%cpu": "116.8%",
+          "peak_rss": "11.2 MB",
+          "peak_vmem": "3.6 GB",
+          "rchar": "13.9 MB",
+          "wchar": "13.9 MB"
+        },
+        {
+          "task_id": "36",
+          "hash": "be/587e9f",
+          "native_id": "652953",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172266)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:41.183",
+          "duration": "26.7s",
+          "realtime": "22s",
+          "%cpu": "59.8%",
+          "peak_rss": "148.9 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "20.5 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "37",
+          "hash": "13/a41e1b",
+          "native_id": "656305",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172265)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:45.589",
+          "duration": "26.1s",
+          "realtime": "23s",
+          "%cpu": "59.8%",
+          "peak_rss": "187.2 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "20.6 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "38",
+          "hash": "c6/fafbea",
+          "native_id": "657632",
+          "name": "NFCORE_BACTMAP:BACTMAP:VCF2PSEUDOGENOME (ERR2172267)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:20:46.980",
+          "duration": "25.2s",
+          "realtime": "24s",
+          "%cpu": "58.2%",
+          "peak_rss": "181.6 MB",
+          "peak_vmem": "3.8 GB",
+          "rchar": "21 MB",
+          "wchar": "2.1 MB"
+        },
+        {
+          "task_id": "39",
+          "hash": "f8/938b89",
+          "native_id": "687203",
+          "name": "NFCORE_BACTMAP:BACTMAP:ALIGNPSEUDOGENOMES",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:12.296",
+          "duration": "3.3s",
+          "realtime": "2s",
+          "%cpu": "660.4%",
+          "peak_rss": "36.9 MB",
+          "peak_vmem": "3.7 GB",
+          "rchar": "44.6 MB",
+          "wchar": "10.5 MB"
+        },
+        {
+          "task_id": "41",
+          "hash": "39/59878d",
+          "native_id": "689179",
+          "name": "NFCORE_BACTMAP:BACTMAP:SNPSITES",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:15.625",
+          "duration": "5.8s",
+          "realtime": "0ms",
+          "%cpu": "100.9%",
+          "peak_rss": "11.1 MB",
+          "peak_vmem": "29.1 MB",
+          "rchar": "25.3 MB",
+          "wchar": "760 B"
+        },
+        {
+          "task_id": "40",
+          "hash": "48/a64af7",
+          "native_id": "689188",
+          "name": "NFCORE_BACTMAP:BACTMAP:GUBBINS",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:15.637",
+          "duration": "12.9s",
+          "realtime": "7s",
+          "%cpu": "100.1%",
+          "peak_rss": "55.5 MB",
+          "peak_vmem": "90.3 MB",
+          "rchar": "209.9 MB",
+          "wchar": "19 MB"
+        },
+        {
+          "task_id": "43",
+          "hash": "4f/42fc84",
+          "native_id": "694540",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:FASTTREE",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:28.563",
+          "duration": "3.2s",
+          "realtime": "0ms",
+          "%cpu": "118.3%",
+          "peak_rss": "3 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "42.5 KB",
+          "wchar": "50.2 KB"
+        },
+        {
+          "task_id": "44",
+          "hash": "04/dd730c",
+          "native_id": "694528",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAPIDNJ",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:28.555",
+          "duration": "3.9s",
+          "realtime": "1s",
+          "%cpu": "438.8%",
+          "peak_rss": "12 MB",
+          "peak_vmem": "35.1 MB",
+          "rchar": "5.9 MB",
+          "wchar": "26.5 KB"
+        },
+        {
+          "task_id": "45",
+          "hash": "8a/806325",
+          "native_id": "694563",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:IQTREE",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:28.575",
+          "duration": "8s",
+          "realtime": "5s",
+          "%cpu": "100.8%",
+          "peak_rss": "104 MB",
+          "peak_vmem": "403.4 MB",
+          "rchar": "50.2 KB",
+          "wchar": "48.9 KB"
+        },
+        {
+          "task_id": "42",
+          "hash": "f7/38348b",
+          "native_id": "694577",
+          "name": "NFCORE_BACTMAP:BACTMAP:CREATE_PHYLOGENY:RAXMLNG",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:28.582",
+          "duration": "11.7s",
+          "realtime": "9.4s",
+          "%cpu": "99.2%",
+          "peak_rss": "10.5 MB",
+          "peak_vmem": "35.4 MB",
+          "rchar": "71.7 KB",
+          "wchar": "740.7 MB"
+        },
+        {
+          "task_id": "46",
+          "hash": "f0/078097",
+          "native_id": "701727",
+          "name": "NFCORE_BACTMAP:BACTMAP:GET_SOFTWARE_VERSIONS",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:40.323",
+          "duration": "2.5s",
+          "realtime": "0ms",
+          "%cpu": "62.9%",
+          "peak_rss": "2.9 MB",
+          "peak_vmem": "11 MB",
+          "rchar": "194.7 KB",
+          "wchar": "1.3 KB"
+        },
+        {
+          "task_id": "47",
+          "hash": "1a/307af8",
+          "native_id": "703796",
+          "name": "NFCORE_BACTMAP:BACTMAP:MULTIQC (1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 09:21:42.865",
+          "duration": "24.2s",
+          "realtime": "22.2s",
+          "%cpu": "138.6%",
+          "peak_rss": "136.2 MB",
+          "peak_vmem": "4 GB",
+          "rchar": "701.7 MB",
+          "wchar": "10.1 MB"
+        }
+      ],
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-replay/pipeline_info/execution_trace_2026-10-28_09-18-06.txt",
+      "trace_sha256": "8b4ff502ef0ce978d21b510fc18a49ed505c0b8226d4045129165ca9b8a46230",
+      "original_source_unchanged": true
+    }
+  ],
+  "docker_host": "unix:///dev/shm/nfc-d28/docker.sock",
+  "private_engine_info": {
+    "ID": "9af5ea5f-8ba7-4f3e-aeed-d15576745279",
+    "Containers": 0,
+    "ContainersRunning": 0,
+    "ContainersPaused": 0,
+    "ContainersStopped": 0,
+    "Images": 18,
+    "Driver": "overlay2",
+    "DriverStatus": [
+      [
+        "Backing Filesystem",
+        "tmpfs"
+      ],
+      [
+        "Supports d_type",
+        "true"
+      ],
+      [
+        "Using metacopy",
+        "false"
+      ],
+      [
+        "Native Overlay Diff",
+        "true"
+      ],
+      [
+        "userxattr",
+        "false"
+      ]
+    ],
+    "Plugins": {
+      "Volume": [
+        "local"
+      ],
+      "Network": [
+        "bridge",
+        "host",
+        "ipvlan",
+        "macvlan",
+        "null",
+        "overlay"
+      ],
+      "Authorization": null,
+      "Log": [
+        "awslogs",
+        "fluentd",
+        "gcplogs",
+        "gelf",
+        "journald",
+        "json-file",
+        "local",
+        "splunk",
+        "syslog"
+      ]
+    },
+    "MemoryLimit": true,
+    "SwapLimit": true,
+    "CpuCfsPeriod": true,
+    "CpuCfsQuota": true,
+    "CPUShares": true,
+    "CPUSet": true,
+    "PidsLimit": true,
+    "IPv4Forwarding": true,
+    "Debug": false,
+    "NFd": 23,
+    "OomKillDisable": false,
+    "NGoroutines": 42,
+    "SystemTime": "2026-10-28T09:13:00.84725975Z",
+    "LoggingDriver": "json-file",
+    "CgroupDriver": "systemd",
+    "CgroupVersion": "2",
+    "NEventsListener": 0,
+    "KernelVersion": "6.8.0-147-generic",
+    "OperatingSystem": "Ubuntu 24.04.4 LTS",
+    "OSVersion": "24.04",
+    "OSType": "linux",
+    "Architecture": "x86_64",
+    "IndexServerAddress": "https://index.docker.io/v1/",
+    "RegistryConfig": {
+      "InsecureRegistryCIDRs": [
+        "127.0.0.0/8",
+        "::1/128"
+      ],
+      "IndexConfigs": {
+        "docker.io": {
+          "Name": "docker.io",
+          "Mirrors": [],
+          "Secure": true,
+          "Official": true
+        }
+      },
+      "Mirrors": []
+    },
+    "NCPU": 28,
+    "MemTotal": 67420184576,
+    "GenericResources": null,
+    "DockerRootDir": "/dev/shm/nfc-d28/data",
+    "HttpProxy": "",
+    "HttpsProxy": "",
+    "NoProxy": "",
+    "Name": "danilo-instance",
+    "Labels": [],
+    "ExperimentalBuild": false,
+    "ServerVersion": "29.1.3",
+    "Runtimes": {
+      "io.containerd.runc.v2": {
+        "path": "runc",
+        "status": {
+          "org.opencontainers.runtime-spec.features": "{\"ociVersionMin\":\"1.0.0\",\"ociVersionMax\":\"1.2.1\",\"hooks\":[\"prestart\",\"createRuntime\",\"createContainer\",\"startContainer\",\"poststart\",\"poststop\"],\"mountOptions\":[\"async\",\"atime\",\"bind\",\"defaults\",\"dev\",\"diratime\",\"dirsync\",\"exec\",\"iversion\",\"lazytime\",\"loud\",\"mand\",\"noatime\",\"nodev\",\"nodiratime\",\"noexec\",\"noiversion\",\"nolazytime\",\"nomand\",\"norelatime\",\"nostrictatime\",\"nosuid\",\"nosymfollow\",\"private\",\"ratime\",\"rbind\",\"rdev\",\"rdiratime\",\"relatime\",\"remount\",\"rexec\",\"rnoatime\",\"rnodev\",\"rnodiratime\",\"rnoexec\",\"rnorelatime\",\"rnostrictatime\",\"rnosuid\",\"rnosymfollow\",\"ro\",\"rprivate\",\"rrelatime\",\"rro\",\"rrw\",\"rshared\",\"rslave\",\"rstrictatime\",\"rsuid\",\"rsymfollow\",\"runbindable\",\"rw\",\"shared\",\"silent\",\"slave\",\"strictatime\",\"suid\",\"symfollow\",\"sync\",\"tmpcopyup\",\"unbindable\"],\"linux\":{\"namespaces\":[\"cgroup\",\"ipc\",\"mount\",\"network\",\"pid\",\"time\",\"user\",\"uts\"],\"capabilities\":[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\"CAP_FOWNER\",\"CAP_FSETID\",\"CAP_KILL\",\"CAP_SETGID\",\"CAP_SETUID\",\"CAP_SETPCAP\",\"CAP_LINUX_IMMUTABLE\",\"CAP_NET_BIND_SERVICE\",\"CAP_NET_BROADCAST\",\"CAP_NET_ADMIN\",\"CAP_NET_RAW\",\"CAP_IPC_LOCK\",\"CAP_IPC_OWNER\",\"CAP_SYS_MODULE\",\"CAP_SYS_RAWIO\",\"CAP_SYS_CHROOT\",\"CAP_SYS_PTRACE\",\"CAP_SYS_PACCT\",\"CAP_SYS_ADMIN\",\"CAP_SYS_BOOT\",\"CAP_SYS_NICE\",\"CAP_SYS_RESOURCE\",\"CAP_SYS_TIME\",\"CAP_SYS_TTY_CONFIG\",\"CAP_MKNOD\",\"CAP_LEASE\",\"CAP_AUDIT_WRITE\",\"CAP_AUDIT_CONTROL\",\"CAP_SETFCAP\",\"CAP_MAC_OVERRIDE\",\"CAP_MAC_ADMIN\",\"CAP_SYSLOG\",\"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"],\"cgroup\":{\"v1\":true,\"v2\":true,\"systemd\":true,\"systemdUser\":true,\"rdma\":true},\"seccomp\":{\"enabled\":true,\"actions\":[\"SCMP_ACT_ALLOW\",\"SCMP_ACT_ERRNO\",\"SCMP_ACT_KILL\",\"SCMP_ACT_KILL_PROCESS\",\"SCMP_ACT_KILL_THREAD\",\"SCMP_ACT_LOG\",\"SCMP_ACT_NOTIFY\",\"SCMP_ACT_TRACE\",\"SCMP_ACT_TRAP\"],\"operators\":[\"SCMP_CMP_EQ\",\"SCMP_CMP_GE\",\"SCMP_CMP_GT\",\"SCMP_CMP_LE\",\"SCMP_CMP_LT\",\"SCMP_CMP_MASKED_EQ\",\"SCMP_CMP_NE\"],\"archs\":[\"SCMP_ARCH_AARCH64\",\"SCMP_ARCH_ARM\",\"SCMP_ARCH_MIPS\",\"SCMP_ARCH_MIPS64\",\"SCMP_ARCH_MIPS64N32\",\"SCMP_ARCH_MIPSEL\",\"SCMP_ARCH_MIPSEL64\",\"SCMP_ARCH_MIPSEL64N32\",\"SCMP_ARCH_PPC\",\"SCMP_ARCH_PPC64\",\"SCMP_ARCH_PPC64LE\",\"SCMP_ARCH_RISCV64\",\"SCMP_ARCH_S390\",\"SCMP_ARCH_S390X\",\"SCMP_ARCH_X32\",\"SCMP_ARCH_X86\",\"SCMP_ARCH_X86_64\"],\"knownFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"],\"supportedFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"]},\"apparmor\":{\"enabled\":true},\"selinux\":{\"enabled\":true},\"intelRdt\":{\"enabled\":true},\"mountExtensions\":{\"idmap\":{\"enabled\":true}}},\"annotations\":{\"io.github.seccomp.libseccomp.version\":\"2.5.5\",\"org.opencontainers.runc.checkpoint.enabled\":\"true\",\"org.opencontainers.runc.commit\":\"\",\"org.opencontainers.runc.version\":\"1.3.4-0ubuntu1~24.04.1\"},\"potentiallyUnsafeConfigAnnotations\":[\"bundle\",\"org.systemd.property.\",\"org.criu.config\"]}"
+        }
+      },
+      "runc": {
+        "path": "runc",
+        "status": {
+          "org.opencontainers.runtime-spec.features": "{\"ociVersionMin\":\"1.0.0\",\"ociVersionMax\":\"1.2.1\",\"hooks\":[\"prestart\",\"createRuntime\",\"createContainer\",\"startContainer\",\"poststart\",\"poststop\"],\"mountOptions\":[\"async\",\"atime\",\"bind\",\"defaults\",\"dev\",\"diratime\",\"dirsync\",\"exec\",\"iversion\",\"lazytime\",\"loud\",\"mand\",\"noatime\",\"nodev\",\"nodiratime\",\"noexec\",\"noiversion\",\"nolazytime\",\"nomand\",\"norelatime\",\"nostrictatime\",\"nosuid\",\"nosymfollow\",\"private\",\"ratime\",\"rbind\",\"rdev\",\"rdiratime\",\"relatime\",\"remount\",\"rexec\",\"rnoatime\",\"rnodev\",\"rnodiratime\",\"rnoexec\",\"rnorelatime\",\"rnostrictatime\",\"rnosuid\",\"rnosymfollow\",\"ro\",\"rprivate\",\"rrelatime\",\"rro\",\"rrw\",\"rshared\",\"rslave\",\"rstrictatime\",\"rsuid\",\"rsymfollow\",\"runbindable\",\"rw\",\"shared\",\"silent\",\"slave\",\"strictatime\",\"suid\",\"symfollow\",\"sync\",\"tmpcopyup\",\"unbindable\"],\"linux\":{\"namespaces\":[\"cgroup\",\"ipc\",\"mount\",\"network\",\"pid\",\"time\",\"user\",\"uts\"],\"capabilities\":[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\"CAP_FOWNER\",\"CAP_FSETID\",\"CAP_KILL\",\"CAP_SETGID\",\"CAP_SETUID\",\"CAP_SETPCAP\",\"CAP_LINUX_IMMUTABLE\",\"CAP_NET_BIND_SERVICE\",\"CAP_NET_BROADCAST\",\"CAP_NET_ADMIN\",\"CAP_NET_RAW\",\"CAP_IPC_LOCK\",\"CAP_IPC_OWNER\",\"CAP_SYS_MODULE\",\"CAP_SYS_RAWIO\",\"CAP_SYS_CHROOT\",\"CAP_SYS_PTRACE\",\"CAP_SYS_PACCT\",\"CAP_SYS_ADMIN\",\"CAP_SYS_BOOT\",\"CAP_SYS_NICE\",\"CAP_SYS_RESOURCE\",\"CAP_SYS_TIME\",\"CAP_SYS_TTY_CONFIG\",\"CAP_MKNOD\",\"CAP_LEASE\",\"CAP_AUDIT_WRITE\",\"CAP_AUDIT_CONTROL\",\"CAP_SETFCAP\",\"CAP_MAC_OVERRIDE\",\"CAP_MAC_ADMIN\",\"CAP_SYSLOG\",\"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"],\"cgroup\":{\"v1\":true,\"v2\":true,\"systemd\":true,\"systemdUser\":true,\"rdma\":true},\"seccomp\":{\"enabled\":true,\"actions\":[\"SCMP_ACT_ALLOW\",\"SCMP_ACT_ERRNO\",\"SCMP_ACT_KILL\",\"SCMP_ACT_KILL_PROCESS\",\"SCMP_ACT_KILL_THREAD\",\"SCMP_ACT_LOG\",\"SCMP_ACT_NOTIFY\",\"SCMP_ACT_TRACE\",\"SCMP_ACT_TRAP\"],\"operators\":[\"SCMP_CMP_EQ\",\"SCMP_CMP_GE\",\"SCMP_CMP_GT\",\"SCMP_CMP_LE\",\"SCMP_CMP_LT\",\"SCMP_CMP_MASKED_EQ\",\"SCMP_CMP_NE\"],\"archs\":[\"SCMP_ARCH_AARCH64\",\"SCMP_ARCH_ARM\",\"SCMP_ARCH_MIPS\",\"SCMP_ARCH_MIPS64\",\"SCMP_ARCH_MIPS64N32\",\"SCMP_ARCH_MIPSEL\",\"SCMP_ARCH_MIPSEL64\",\"SCMP_ARCH_MIPSEL64N32\",\"SCMP_ARCH_PPC\",\"SCMP_ARCH_PPC64\",\"SCMP_ARCH_PPC64LE\",\"SCMP_ARCH_RISCV64\",\"SCMP_ARCH_S390\",\"SCMP_ARCH_S390X\",\"SCMP_ARCH_X32\",\"SCMP_ARCH_X86\",\"SCMP_ARCH_X86_64\"],\"knownFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"],\"supportedFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"]},\"apparmor\":{\"enabled\":true},\"selinux\":{\"enabled\":true},\"intelRdt\":{\"enabled\":true},\"mountExtensions\":{\"idmap\":{\"enabled\":true}}},\"annotations\":{\"io.github.seccomp.libseccomp.version\":\"2.5.5\",\"org.opencontainers.runc.checkpoint.enabled\":\"true\",\"org.opencontainers.runc.commit\":\"\",\"org.opencontainers.runc.version\":\"1.3.4-0ubuntu1~24.04.1\"},\"potentiallyUnsafeConfigAnnotations\":[\"bundle\",\"org.systemd.property.\",\"org.criu.config\"]}"
+        }
+      }
+    },
+    "DefaultRuntime": "runc",
+    "Swarm": {
+      "NodeID": "",
+      "NodeAddr": "",
+      "LocalNodeState": "inactive",
+      "ControlAvailable": false,
+      "Error": "",
+      "RemoteManagers": null
+    },
+    "LiveRestoreEnabled": false,
+    "Isolation": "",
+    "InitBinary": "docker-init",
+    "ContainerdCommit": {
+      "ID": ""
+    },
+    "RuncCommit": {
+      "ID": ""
+    },
+    "InitCommit": {
+      "ID": ""
+    },
+    "SecurityOptions": [
+      "name=apparmor",
+      "name=seccomp,profile=builtin",
+      "name=cgroupns"
+    ],
+    "FirewallBackend": {
+      "Driver": "iptables"
+    },
+    "CDISpecDirs": [
+      "/etc/cdi",
+      "/var/run/cdi"
+    ],
+    "Containerd": {
+      "Address": "/run/containerd/containerd.sock",
+      "Namespaces": {
+        "Containers": "moby",
+        "Plugins": "plugins.moby"
+      }
+    },
+    "Warnings": null,
+    "ClientInfo": {
+      "Debug": false,
+      "Version": "29.1.3",
+      "DefaultAPIVersion": "1.52",
+      "GitCommit": "29.1.3-0ubuntu3~24.04.2",
+      "GoVersion": "go1.24.4",
+      "Os": "linux",
+      "Arch": "amd64",
+      "BuildTime": "Wed Apr 29 16:41:06 2026",
+      "Context": "default",
+      "Plugins": [
+        {
+          "SchemaVersion": "0.1.0",
+          "Vendor": "Docker Inc.",
+          "Version": "29.1.3",
+          "ShortDescription": "Manage trust on Docker images",
+          "Name": "trust",
+          "Path": "/usr/libexec/docker/cli-plugins/docker-trust"
+        }
+      ],
+      "Warnings": null
+    }
+  },
+  "oracle": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-fixture-oracle-20261028/oracle.json",
+    "sha256": "51d9379e0b222a81e3009deaf484d9791051b8d3e4525f8da28a2b380cab26f2"
+  },
+  "scope": "Actual bare managed Bactmap demo plus fresh recorded replay. Task completion is recorded here; separate output assessment is required for scientific claims.",
+  "pipeline_files_after": {
+    ".editorconfig": {
+      "sha256": "dd306bd5d532bb82747e2ba9c9434796017e399fe4793205022aee72e061887d",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "e338759ab75cb11f1deede242b9c910fda5f0b1ca05f389700b81a02ca0ac560",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/CONTRIBUTING.md": {
+      "sha256": "9e6ccaac8b391736730336ea0a64d1c7ac11cdd436892b65531dec8497ea0f64",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.md": {
+      "sha256": "a8e4da5432154777042db7ebfed48dcc98dcb07989f4bbc77358168694189bd8",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "a340ae391c8d44765052de17a0ec7560bdaff1cc83341d599c81505cff95acce",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.md": {
+      "sha256": "8eb338e2806e44f2445e4e5410a32677c75954b19855592e7938aa48340ac990",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "efa39fade499d6c0f28efdffe4ca145410d7ba8418fa8382f303f4d1fcc013b7",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "716d5edc46779fd534afda77b90da08183aea2f70be38ee43f840731ea146110",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "36d0ecfe5de43a58355600727fece27044f68b6a56d1f947d3b9346a4302de69",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "f4cb7076305fc98424ff6c4645481a80735d196892644cd3fe84b3672d9f199a",
+      "mode": 436
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "c49bbe1edba79719e635e1a050d50ec81fb948f95c36f52780ca3be2edfffcf2",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e067f6185389a8b4b12f568d14bfa752616f9442b5f17d53eccebd7a57cf045c",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "6217bd65230bdecce3dbc0cb2e67261f53cfd2b9e42fcc2bf5295d172e684f3f",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "2951a235c2fdc85f1a8bf0a53c1fe94a475de51ea2d6202f887010d061e90cce",
+      "mode": 436
+    },
+    ".markdownlint.yml": {
+      "sha256": "f5a831528d73b59e370fe3f53ea525f6378944501371ba86bfbba573234951cd",
+      "mode": 509
+    },
+    ".nf-core-lint.yml": {
+      "sha256": "036cc890454a3fa89504c69de514080fdb881646b3a7a834897b067a4c010968",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "bfa87bce61f6b78503eaec1b154daec6107b27b3178596538fae11c8302164a4",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "d375fe03d76dc5bb459be4e08b7e0360a6e599eeb07e11a3c2d0c3e714a8e402",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "8b850e0cf10fa53b7e366ec1a3f7ca65e84b79836137a413461394e6695bbc48",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "ccf1a04be6154c0d184c8dce61518be1fa940ef6722cd71c8afbbab7ba66db3f",
+      "mode": 436
+    },
+    "assets/adapters.fas": {
+      "sha256": "42bf334278ae112b50564696833e40386990e789e39571ac1109a5be5f48b17f",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "0d6f858755dd5f11d3ab19d22bc46ce7869f82f25dfab9b750c263363ac87de7",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "1df378bb66b963255a8550479528440c8ae4af1285c36d919522a1b3f2557c2a",
+      "mode": 436
+    },
+    "assets/multiqc_config.yaml": {
+      "sha256": "803e2bea469c3062725fe1332d8417f6b0c0b8542e776226b4662adf67039eda",
+      "mode": 436
+    },
+    "assets/nf-core-bactmap_logo.png": {
+      "sha256": "86a94278830367ebb4293856402b43ee922f511a35a167d1cece1f35d4fe5247",
+      "mode": 436
+    },
+    "assets/nihr_logos_funded_by.jpg": {
+      "sha256": "a4b4d555faee4eb73b2af5aa80792cf8b2fa9745140dbf4f77348fcbc7fe3885",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "d7b0a959143ddd28fc15598f585276cb0706c1356eea45d8649cb0d428f7047b",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "cdd454acd5e6cf5951a358c0b7b82e9d36fc9f50a0da158e1ec5dbbf10495420",
+      "mode": 436
+    },
+    "bin/calculate_fraction_of_non_GATC_bases.py": {
+      "sha256": "b25ee78d05330ac6b30de6dc380c3c40506db5de01253f48e2ede31778c55d37",
+      "mode": 509
+    },
+    "bin/check_samplesheet.py": {
+      "sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54",
+      "mode": 509
+    },
+    "bin/reference2single_sequence.py": {
+      "sha256": "10c9c370dd810a4e04fdea9d402d34426c929e0f91b23e7ea53b374ac0532fc7",
+      "mode": 509
+    },
+    "bin/scrape_software_versions.py": {
+      "sha256": "442749fd7771af1b1c85ff5219224b7e25e874ad1fafce55004f663ab7df6ccf",
+      "mode": 509
+    },
+    "bin/vcf2pseudogenome.py": {
+      "sha256": "ce9b364f55837cb6e2cd80b9013083010c11ec92c8a983f9fbfcf159dfd4880e",
+      "mode": 509
+    },
+    "conf/base.config": {
+      "sha256": "3ca02b0a22aa2d59c6123340a8c98956e734bef43a5b7f879d964dd0c9cf709e",
+      "mode": 436
+    },
+    "conf/modules.config": {
+      "sha256": "c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "082119ce8bf494ff81a32479277dbbcbf93dc2c8396a15300e061c15d44ca72e",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "2773a12075a16a64581db7d48134488a91e8f1e1786018601370c7804cd82e94",
+      "mode": 436
+    },
+    "docs/fixing_resource_errors.md": {
+      "sha256": "78502b010f317cc888d4c74d15fa2556e07bb4ba9e92758c8685be57767da1ec",
+      "mode": 436
+    },
+    "docs/images/Bactmap_pipeline.png": {
+      "sha256": "a7852914f5edb6d9746fd95d2fc7bcf54f4fb4be969facc8084bf67cd27a2810",
+      "mode": 436
+    },
+    "docs/images/multiqc_fastp.png": {
+      "sha256": "771f13a3e83b2afe3636ab8c91b69d8985620e1bec6631eb614548515b7ecef6",
+      "mode": 436
+    },
+    "docs/images/multiqc_general_stats.png": {
+      "sha256": "8c5fbaf1d1af13efdfbd9c5a4392b5e2e67808d9fa5aacddd7ce7085085e37a0",
+      "mode": 436
+    },
+    "docs/images/multiqc_mapping_stats.png": {
+      "sha256": "d4c262254d0004f7e3774d12f1c87d1b8a5620d217b312a81938370aade3cd94",
+      "mode": 436
+    },
+    "docs/images/multiqc_variants_stats.png": {
+      "sha256": "d370c456f1072ff60d063e77a2bae38ec7e24a09ff1398e0f06b027485349aab",
+      "mode": 436
+    },
+    "docs/images/nf-core-bactmap_logo.png": {
+      "sha256": "60f1f2e4425b09cfa5426d5624ba0769776b9c5f0a195dc83f1112c0818d5368",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "3e5b48c768bd3fe35aef2d9b7681b60e7a3c5aa6f19fd292da422922959b15ab",
+      "mode": 436
+    },
+    "docs/tool-specific_option_configuration.md": {
+      "sha256": "3c7a393207e55d40b91c8e37a9f13091951677efe97621f1464f9e2f3e6ce14c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "707650f3b8141991601022f05a663e8c8415b75a68c570d01ef3ab838a4c6de7",
+      "mode": 436
+    },
+    "lib/NfcoreSchema.groovy": {
+      "sha256": "05bdf46dea2961294bd5ac8cd7b9e4bd7ce89c24a93871dfa3949ae68e9937de",
+      "mode": 509
+    },
+    "lib/NfcoreTemplate.groovy": {
+      "sha256": "dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2",
+      "mode": 509
+    },
+    "lib/Utils.groovy": {
+      "sha256": "31fe917ba0613e6f7bf7ab86ef4289973bd90f6d56c5e62d6351899970c257f0",
+      "mode": 509
+    },
+    "lib/WorkflowBactmap.groovy": {
+      "sha256": "55a61779a485d63823ae9d8cbf38b5df7db4c5ebb9595ddd9f05d71decd31f6f",
+      "mode": 509
+    },
+    "lib/WorkflowMain.groovy": {
+      "sha256": "e62810ef5ac8737c320ee3906304a4af0ac1ae7b984f8843eb5a97583bba4dd7",
+      "mode": 509
+    },
+    "lib/nfcore_external_java_deps.jar": {
+      "sha256": "7c176a55f60b157519d88a06aa03daa2955dd9e8dfd1a118c9ea4dcb3a62bad6",
+      "mode": 509
+    },
+    "main.nf": {
+      "sha256": "2ad203954a1dda7783dd561c6bf17757e85db445221e653f3644ff385c1c26f5",
+      "mode": 436
+    },
+    "modules/local/alignpseudogenomes.nf": {
+      "sha256": "691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e",
+      "mode": 436
+    },
+    "modules/local/functions.nf": {
+      "sha256": "c34b87949d2687c723d689cab0c1b3515d5d00d43643c8b4567f9bd9b3216aef",
+      "mode": 436
+    },
+    "modules/local/get_software_versions.nf": {
+      "sha256": "184e68077df1e50bf156fafdeb8a80e927d3874a8db5f5de44276d4960fb4237",
+      "mode": 436
+    },
+    "modules/local/multiqc.nf": {
+      "sha256": "1145272f323fdec61d50243b888252c104c2b055a4506a35e1f400d55146e1d5",
+      "mode": 436
+    },
+    "modules/local/samplesheet_check.nf": {
+      "sha256": "6f9ddb15b06db335097aef649733e914c9226f44e3314145be840b6a1197b1f1",
+      "mode": 436
+    },
+    "modules/local/vcf2pseudogenome.nf": {
+      "sha256": "6f63b8390683dc584ff0b4b38198ca56c771333181f3428d95c69ac1e2613747",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/functions.nf": {
+      "sha256": "8bd3f0d7f6c7b6893b71c6f69e82e1c165cff43f820478d3b8ef913440cbcd43",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/main.nf": {
+      "sha256": "88fe9a79497a4fd733e8fd3c0375af63bbe3f626c72a092e7a0d3d8a9168d82b",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/filter/meta.yml": {
+      "sha256": "21336b6fdd3b91011d5540852e270ea1e8ab82c5c70b87afa0e6d5a4496423c8",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/functions.nf": {
+      "sha256": "c88692848791d7a4fcb57f0fa0fbbbc5243fedc982b7ba0aae488df83505f545",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/main.nf": {
+      "sha256": "7bdd221c4b07c5449535d377e101d9833b24f8d2c8364b1078f8ec6b3b8b2193",
+      "mode": 436
+    },
+    "modules/nf-core/software/bcftools/mpileup/meta.yml": {
+      "sha256": "70db37e9dd1e9ffb8e6d25eaf3923849ae9c3eb07f3a7c9fa81fc060ab775361",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/main.nf": {
+      "sha256": "16a537ef18e314861720fcfaebb7dcfb861fbe2a4849402f05eb1a5ce828c00d",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/index/meta.yml": {
+      "sha256": "9f8ec72070fe04115ef88ffc71875e86e4f7f04e044f3e7e64647ee7cb7ec9db",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/main.nf": {
+      "sha256": "1f5fa0bdc8da48269ab8f843da4daf9101e2e77a84fcaba5c33bfd99e604b8de",
+      "mode": 436
+    },
+    "modules/nf-core/software/bwa/mem/meta.yml": {
+      "sha256": "89ae8d5a64097fd23ff9da584d5faba1b5aa3556964ba53dfae60b9bf75964ee",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/main.nf": {
+      "sha256": "c0e8717893d4ee213035b1357571d5adfdeeac366241a154c66669aae3b472f2",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastp/meta.yml": {
+      "sha256": "128eb8fa5d1d7d25e8501126845de3e121a149d62feaf7f9db89056f4aed44ea",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/main.nf": {
+      "sha256": "978641d5f5efac930fe600fa45b073e636c719c0e5823de7c8ed61427b06d957",
+      "mode": 436
+    },
+    "modules/nf-core/software/fastqc/meta.yml": {
+      "sha256": "f5576504925b438a1a35b6dc3b884060eba553643c0c938699b9d603e0e572d6",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/main.nf": {
+      "sha256": "bf4a9d220cfc508e952a4624b4d0d357563e35133bbfe3d44d2ccda2158fbfa9",
+      "mode": 436
+    },
+    "modules/nf-core/software/fasttree/meta.yml": {
+      "sha256": "6c6c2805a07fee76c24443e69568e60010d3b1e7e0672f177f5faeba20daac83",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/main.nf": {
+      "sha256": "5262ad6637ee2ec5aec65a231f48e1ceb615708ab645a3d19b7bec4062b7b743",
+      "mode": 436
+    },
+    "modules/nf-core/software/gubbins/meta.yml": {
+      "sha256": "5896df748eeecbd6e659c0aa4db7bc721bbfa9a315a3c8c99d2c064f3a0ee406",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/main.nf": {
+      "sha256": "d896ef75851403a104f03d93120bc415d3aad565e8b613ccf5c27704baaa50e4",
+      "mode": 436
+    },
+    "modules/nf-core/software/iqtree/meta.yml": {
+      "sha256": "268db923356471ed38c6f335b4e0408fab5f989f0e4ec7886c2a85e9dbb46353",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/main.nf": {
+      "sha256": "9dbc1dd945b12094715182a070726e5e327c0d83822d55d4200e26bfc9f098b6",
+      "mode": 436
+    },
+    "modules/nf-core/software/mash/sketch/meta.yml": {
+      "sha256": "e0ba1df3a4965b97e7281b31d490f2a355c99e2c8453ea207644ed0cafc1063d",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/main.nf": {
+      "sha256": "d59ca0c6157c1516f630b1990065ab34b8c3f18f81fe6723f959b44884f95f79",
+      "mode": 436
+    },
+    "modules/nf-core/software/multiqc/meta.yml": {
+      "sha256": "6d8e1355ac00f06ca3c2b189d8dbfc3739274de8653b3909300060c03d3dd4e3",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/main.nf": {
+      "sha256": "443b8ee50c24b87e5ab792cda925a7a8bd3111a0b3aa0e85aefce398a970a5d5",
+      "mode": 436
+    },
+    "modules/nf-core/software/rapidnj/meta.yml": {
+      "sha256": "d2d747d67fe80730b5a18c660da2bdcb1994a687070c7600df79e878eb3c1f42",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/main.nf": {
+      "sha256": "341ef268d1da1378f74f2664a7358b3b9beca3770a3573b9df5d9cb41f5ee2cd",
+      "mode": 436
+    },
+    "modules/nf-core/software/rasusa/meta.yml": {
+      "sha256": "995b7a804ec870bb93141a9e3c45033de1ae3768d5f9be1d405b4c3e82b51dd3",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/main.nf": {
+      "sha256": "b1f5969384b36d8062faa1b063587bece44ea98ae6a557965e42ffb86ba5aa79",
+      "mode": 436
+    },
+    "modules/nf-core/software/raxmlng/meta.yml": {
+      "sha256": "86a10826378877a11cd5f857a1010d2a51d6885bcf41c39525bc9d96e7a0a1b7",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/main.nf": {
+      "sha256": "264e8cbdc1d4ba342822c73816771c6b76c48a9de1c9faa6a62ac1ecf9119d30",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/flagstat/meta.yml": {
+      "sha256": "07331b2a80d3e37daeb5978ed9a1b30c3b2939ed1bb0246ae544de7953ba5dcb",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/main.nf": {
+      "sha256": "62df48d975d5038787f948ad7b4d9851da7dd75684f5e421438b8d6ba9159673",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/idxstats/meta.yml": {
+      "sha256": "1bcb4f84986cd0a5cfe53f0f37afa6ee9742fb5c513733b370349122f97fde1e",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/main.nf": {
+      "sha256": "215b434730af8d3de252404943b50a1b1a5b1c0cda0434af158e81aac7998efc",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/index/meta.yml": {
+      "sha256": "1dd25746e7756b158074166d6bb5f25647869de5bfa87374fa8f00e8e4b5cc57",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/main.nf": {
+      "sha256": "c95d7fbfd3155da1ad5efce9b5393d00205a0490cc45f7fffc935dd2c53410e8",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/sort/meta.yml": {
+      "sha256": "55aef2deae9fa1a3006389ea04543ad8d700946eb728001552af54e0f7a38ea0",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/functions.nf": {
+      "sha256": "182deafbb55443d702282265536c0b1eec48abdd5b1527f28d3302c6c5686104",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/main.nf": {
+      "sha256": "dedc80ec809c8e8684b9855e283993c5ba5952659b9d451cfc5f726c08fe8560",
+      "mode": 436
+    },
+    "modules/nf-core/software/samtools/stats/meta.yml": {
+      "sha256": "0c5259b72855add940f20e5fbf20e29c2bd0a1600bc4dff561beac75f7111a61",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/functions.nf": {
+      "sha256": "0fcfd7873dfccc022edf5b6e9bcd4c8e5a7efde67965bfc82b34301d69ec9809",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/main.nf": {
+      "sha256": "dad37eec712653893400c238adbc987aa2bfc4575bb1db6f1d923f1da02f56f1",
+      "mode": 436
+    },
+    "modules/nf-core/software/snpsites/meta.yml": {
+      "sha256": "bfdb3af77556fcce11af7cc5241df5db2a4774276f87367d09c8c071c287678f",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "a34b9ab6307a774c4e68380d839f3c77da0c653c68761ef959330f83b556cb36",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "mode": 436
+    },
+    "subworkflows/bam_sort_samtools.nf": {
+      "sha256": "aa2e7519102226d93aaf5fe14e9a7d6b4119d71bdb666f33acd5f7d7c2c053f0",
+      "mode": 436
+    },
+    "subworkflows/bam_stats_samtools.nf": {
+      "sha256": "ffe26db6b8000c4cdf00e5e423653d819ad70a608501fec090f4b211631a30fb",
+      "mode": 436
+    },
+    "subworkflows/create_phylogeny.nf": {
+      "sha256": "3cbb47bd0706b2bf405d76ec15e632fff3b81d46939ed8fc56a9234fd8cd3b95",
+      "mode": 509
+    },
+    "subworkflows/input_check.nf": {
+      "sha256": "1e085f64f6643273df6bff3c84029d12e6ad17f2a80de03cc56a39cae0fc0bd1",
+      "mode": 436
+    },
+    "subworkflows/sub_sampling.nf": {
+      "sha256": "5db7c41c19653e8aafe78c3d96cf345339467c67233faf63fbdc83fb171259da",
+      "mode": 509
+    },
+    "subworkflows/variants_bcftools.nf": {
+      "sha256": "4345886c5761009421651cf95302daec0ed32aa00cb2ed6d449d6a28126a1cb7",
+      "mode": 509
+    },
+    "workflows/bactmap.nf": {
+      "sha256": "4ce6fe68bb0925e059cc7c03bbc6d1a42bfe62116360518dfb4ae4f6f99c9e2d",
+      "mode": 436
+    }
+  },
+  "original_source_unchanged": true
+}

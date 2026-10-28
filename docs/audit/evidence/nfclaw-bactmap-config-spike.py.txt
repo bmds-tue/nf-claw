@@ -1,0 +1,32 @@
+from pathlib import Path
+import shutil,os,json,hashlib
+from runner.probes import capture
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source/pipelines/bactmap/upstream')
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028');root.mkdir(mode=0o700,exist_ok=False)
+original=(source/'conf/test.config').read_text();start=original.index('    modules {');stop=original.index('    remove_recombination',start)
+block=original[start:stop]
+filter_args="--soft-filter LowQual --exclude '%QUAL<25 || FORMAT/DP<1 || MQ<30 || MQ0F>0.1' --output-type z"
+replace='''    modules = params.modules + [
+        bcftools_filter: params.modules.bcftools_filter + [
+            args: "%s", suffix: '.filtered', publish_dir: 'variants'
+        ],
+        alignpseudogenomes: params.modules.alignpseudogenomes + [non_GATC_threshold: 0.8]
+    ]
+'''%filter_args
+variants={'merge_expression':original[:start]+replace+original[stop:],
+          'assign_leaves':original[:start]+original[stop:]+'''\nparams.modules.bcftools_filter.args = "%s"
+params.modules.bcftools_filter.suffix = '.filtered'
+params.modules.bcftools_filter.publish_dir = 'variants'
+params.modules.alignpseudogenomes.non_GATC_threshold = 0.8
+'''%filter_args}
+records=[]
+for name,content in variants.items():
+ target=root/name;shutil.copytree(source,target,ignore=shutil.ignore_patterns('.git'))
+ (target/'conf/test.config').write_text(content)
+ command=['nextflow','config',str(target),'-profile','test,docker','-flat']
+ result=capture(command,timeout=60,env={**os.environ,'NXF_VER':'24.10.5','NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true'},cwd=root)
+ (root/(name+'.flat')).write_text(result.stdout);(root/(name+'.stderr')).write_text(result.stderr)
+ modules=[line for line in result.stdout.splitlines() if line.startswith('params.modules.')]
+ records.append({'variant':name,'command':command,'exit_code':result.returncode,'module_options':modules,'corrected_test_config_sha256':hashlib.sha256(content.encode()).hexdigest()})
+ print(name,result.returncode,'options',len(modules),result.stderr[:200],flush=True)
+(root/'records.json').write_text(json.dumps(records,indent=2)+'\n')

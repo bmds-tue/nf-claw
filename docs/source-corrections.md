@@ -65,6 +65,11 @@ coverage and pseudogenome masks. The single-CPU control preserved read order and
 bytes. Explicit `--max-cpus` and params-file values remain authoritative; a resource ceiling
 does not increase this default. This control does not establish phylogenetic accuracy or promise
 identical branch lengths or bootstrap support. No output differences are ignored by verification.
+At runtime commit `8db1cbb`, a fresh native original and replay each completed all 47 tasks;
+the independent fixture assessment matched each sample's alignment content, variant records and
+pseudogenome bases. The combined alignment and all four tree files were byte-identical in that
+pair. Full output byte identity is not claimed. The [audit evidence](audit/2026-10-26-progress.md#u06-bactmap-matched-data-preview-and-replay)
+also retains the earlier failed comparisons and their read-order controls.
 
 The internal acceptance stager prepares the same managed source and demo, then appends its
 preview-only reporting config. Ordinary releases retain direct previews. Preparation installs

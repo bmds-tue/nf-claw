@@ -1,0 +1,1066 @@
+{
+  "version": 1,
+  "worker": {
+    "path": "/mnt/volume/nfclaw-bactmap-private-images.py",
+    "sha256": "244d019b5dca006ad571d5183fe131bc31ac95c7967cc46cb806a78462c7e3e1"
+  },
+  "socket": "unix:///dev/shm/nfc-d28/docker.sock",
+  "images": [
+    {
+      "image": "quay.io/biocontainers/bcftools:1.11--h7c999a4_0",
+      "started_at": "2026-10-28T04:54:49.623300+00:00",
+      "free_bytes_before": 26137518080,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-00.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:01.172661+00:00",
+      "log_sha256": "2ecc0637937b5d5621457a143f0a3992370ecd5abe407c69417b8a679c2b4a23",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-10-04T13:03:28.854151066Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/47bbd1e5dd56fc90ad240b8fb84db7b5cf97f2ddc9446dbb8b32af908f6298ba/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/47bbd1e5dd56fc90ad240b8fb84db7b5cf97f2ddc9446dbb8b32af908f6298ba/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/47bbd1e5dd56fc90ad240b8fb84db7b5cf97f2ddc9446dbb8b32af908f6298ba/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:d27059dfedb48cb5adb1f24c0faa40ee998cf0b5702f78cd0780d7912452d7f9",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/bcftools@sha256:3111c95af5d0d6e560ed9e0fec50a3d5b0a08c5fc3183640db9d27fbe3a697c0"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/bcftools:1.11--h7c999a4_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:642249d6184fe65048880fec4c15d2343b1f91e7e9a106309da5ee2b53d0d1eb"
+          ],
+          "Type": "layers"
+        },
+        "Size": 224278893
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/biopython:1.78",
+      "started_at": "2026-10-28T04:55:01.196389+00:00",
+      "free_bytes_before": 25897443328,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-01.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:22.556559+00:00",
+      "log_sha256": "43b1cdb52831fe0a34dfff7ceaaf519c4a2d6a4bb6ed96919964c67c0cefa1a1",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2021-01-28T10:18:08.05529344Z",
+        "DockerVersion": "19.03.14+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/4b6e98655ebbf8d209f3d6cc4d83a50cc1cde88c8e2b1ade0cbf610d286bc15f/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/4b6e98655ebbf8d209f3d6cc4d83a50cc1cde88c8e2b1ade0cbf610d286bc15f/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/4b6e98655ebbf8d209f3d6cc4d83a50cc1cde88c8e2b1ade0cbf610d286bc15f/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:b3994fb399a08b180f3f01f9def5bcbb3c34dfc8a8c284d2a02343a7e3fe6b40",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/biopython@sha256:8bdeb52fb15b5f61c40292f73d85a3a77cda4bbd95d29e710ddaad7a6bf76720"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/biopython:1.78"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:cec4f450fc2054c592347a4f0ef1ae8a91d6fbfab7a5e68c5edf8b140d013ac4"
+          ],
+          "Type": "layers"
+        },
+        "Size": 266160549
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/bwa:0.7.17--hed695b0_7",
+      "started_at": "2026-10-28T04:55:22.579371+00:00",
+      "free_bytes_before": 25617076224,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-02.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:28.817581+00:00",
+      "log_sha256": "51a7fd4e7bb9c0ec506d0dad99e4c2760a010f394ef5b40c589bd8374c21a119",
+      "inspection": {
+        "Architecture": "amd64",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2019-12-19T14:53:31.36679745Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/81f82c1088a7207c7426d4f24f5b52212bed465dc7d46d6675f554b0142e0e82/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/81f82c1088a7207c7426d4f24f5b52212bed465dc7d46d6675f554b0142e0e82/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/81f82c1088a7207c7426d4f24f5b52212bed465dc7d46d6675f554b0142e0e82/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:821f214d9847ceccf88d41b64bd445d9d72bdbc3df9e1992fd95f54ef98ce548",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/bwa@sha256:c3a708bea7947a44288e675fd9791c7aaf0c97dba0710addba336ed193821f8a"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/bwa:0.7.17--hed695b0_7"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:0fb914c45f8595ddf087f862dc81c6f84972a1f5cf2ddcdef5748e7cef345905"
+          ],
+          "Type": "layers"
+        },
+        "Size": 108852784
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/fastp:0.20.1--h8b12597_0",
+      "started_at": "2026-10-28T04:55:28.840003+00:00",
+      "free_bytes_before": 25509113856,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-03.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:36.893170+00:00",
+      "log_sha256": "a3a29cb32d67dec2e4982a88d34d7633131a922420d777875d573966d3c05858",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-04-10T07:56:35.015704732Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/183d77c36b763988d6725400595a9c6a38255d21178fcf265f8dd79145256d17/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/183d77c36b763988d6725400595a9c6a38255d21178fcf265f8dd79145256d17/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/183d77c36b763988d6725400595a9c6a38255d21178fcf265f8dd79145256d17/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:67b5ce22e80714775c9d2f4aaa36a97679ef9dcb2b442c3c6f939f7d3d8b39c9",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/fastp@sha256:56ca79fc827c1e9f48120cfa5adb654c029904d8e0b75d01d5f86fdd9b567bc5"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/fastp:0.20.1--h8b12597_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:e8ec6d26cbc444c401a608c36d42323d6c621e4295fde2ebe199572795beb72c"
+          ],
+          "Type": "layers"
+        },
+        "Size": 54976466
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/fastqc:0.11.9--0",
+      "started_at": "2026-10-28T04:55:36.916509+00:00",
+      "free_bytes_before": 25460776960,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-04.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:45.057315+00:00",
+      "log_sha256": "ab2321686d0843139ceda15d3853412b7f531ce3e6aaa4e491783dd400ee346b",
+      "inspection": {
+        "Architecture": "amd64",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-01-24T15:39:30.564518517Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/cf2749d83d3a97deaa4581c3dc935af8338c0d8339599d445250ec6063da72a6/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/cf2749d83d3a97deaa4581c3dc935af8338c0d8339599d445250ec6063da72a6/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/cf2749d83d3a97deaa4581c3dc935af8338c0d8339599d445250ec6063da72a6/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:f2f14c82e6c20c6a4061398845fd65a93b9291afb5ad205921e37ecca60ec19c",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/fastqc@sha256:70de12400206b9c1784c8dfd019cfe4e42eed9a42eabf6c61eb68342843bdaab"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/fastqc:0.11.9--0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:d8f6caace52299e2c7c1ce66d0e27e80b02edea20e24b75fa225abaf82edf7c0"
+          ],
+          "Type": "layers"
+        },
+        "Size": 531289904
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/fasttree:2.1.10--h516909a_4",
+      "started_at": "2026-10-28T04:55:45.081107+00:00",
+      "free_bytes_before": 24925458432,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-05.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:55:49.026600+00:00",
+      "log_sha256": "0435c65faab7ea8ab56409ccb28539ba5ef2bb1ff5fd3e0ed97858421998414b",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-07-03T04:10:15.6926093Z",
+        "DockerVersion": "3.0.13+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/8a87173f5ceebb89964eb674603adb399ef62719b808fcf5ddc275a0f283e350/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/8a87173f5ceebb89964eb674603adb399ef62719b808fcf5ddc275a0f283e350/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/8a87173f5ceebb89964eb674603adb399ef62719b808fcf5ddc275a0f283e350/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:75296097952fd8b0a30a1a3052d19f37047b7f85a8ed0787fd5bd17ffbf6ce58",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/fasttree@sha256:978e48e975d63e4228c40b754fe30d4f26b30bef0c08ca69e72ce83f94265e52"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/fasttree:2.1.10--h516909a_4"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:153843b6da5dc206bf7bf15b277e7b474fb26c9673e5438831a95f0ceffb346e"
+          ],
+          "Type": "layers"
+        },
+        "Size": 34854166
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/gubbins:2.4.1--py38h197edbe_1",
+      "started_at": "2026-10-28T04:55:49.052712+00:00",
+      "free_bytes_before": 24897253376,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-06.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:56:08.319862+00:00",
+      "log_sha256": "b65b44e2b3cc5a48c6a99cae52d513b353a329b414198094f6fc59e3cec6dbfb",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-08-31T17:18:19.403306817Z",
+        "DockerVersion": "19.03.12+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/8b78db41e4031672bc61c7bed458d82d5ba594fde0f427612303b0bd1924f654/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/8b78db41e4031672bc61c7bed458d82d5ba594fde0f427612303b0bd1924f654/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/8b78db41e4031672bc61c7bed458d82d5ba594fde0f427612303b0bd1924f654/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:207f4ee7d610d22a3cae881d738025ffb0034ec987c0468c267323ba817f1021",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/gubbins@sha256:8ef0101d1a40e58984d7ca7570c0d8261143214f93792c2ceb04000a660747b2"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/gubbins:2.4.1--py38h197edbe_1"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:3c5bdf898fde859390d74c836704dba2a2f86b05baad209e23fd502d4a24bc11"
+          ],
+          "Type": "layers"
+        },
+        "Size": 273542484
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/iqtree:2.1.2--h56fc30b_0",
+      "started_at": "2026-10-28T04:56:08.343993+00:00",
+      "free_bytes_before": 24609230848,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-07.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:56:28.835006+00:00",
+      "log_sha256": "a1b08defe40349126500b52415363bf747d60537c6bd2b0f102d0f98b41b8a25",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2021-03-30T20:46:55.887403523Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/24415fc22dca4eb5df537a09fc7848e073df70e979552494f6cce9bda0be0040/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/24415fc22dca4eb5df537a09fc7848e073df70e979552494f6cce9bda0be0040/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/24415fc22dca4eb5df537a09fc7848e073df70e979552494f6cce9bda0be0040/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:2b9f4478df7a836375a4807653d922d78710f25e1096098f84e63df4ef059e3f",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/iqtree@sha256:5920f1ef60a7ad21423a76d559e96090521b5f3e14ad832af76e344186966e51"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/iqtree:2.1.2--h56fc30b_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:dde51474913cfae33bf55fbbe685f12f2f3ecc724812d41e2a50597ec2b7dabc"
+          ],
+          "Type": "layers"
+        },
+        "Size": 65520871
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/mash:2.3--he348c14_1",
+      "started_at": "2026-10-28T04:56:28.859767+00:00",
+      "free_bytes_before": 24550301696,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-08.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:56:42.325902+00:00",
+      "log_sha256": "84ef5794486753a1caba5ed78d300da1af11379ccc60924a3917bcae0c86d9af",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Entrypoint": [
+            "/usr/local/env-execute"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG=C.UTF-8"
+          ],
+          "Labels": {
+            "busybox": "BusyBox v1.32.1 (2021-03-22 16:41:38 UTC) multi-call binary.",
+            "deb-list": "gcc-8-base_8.3.0-6_amd64.deb\nlibc6_2.28-10_amd64.deb\nlibgcc1_1%3a8.3.0-6_amd64.deb\nbash_5.0-4_amd64.deb\nlibc-bin_2.28-10_amd64.deb\nlibtinfo6_6.1+20181013-2+deb10u2_amd64.deb\nncurses-base_6.1+20181013-2+deb10u2_all.deb\nbase-files_10.3+deb10u8_amd64.deb",
+            "glibc": "GNU C Library (Debian GLIBC 2.28-10) stable release version 2.28.",
+            "io.buildah.version": "1.19.6",
+            "pkg-list": "gcc-8-base\nlibc6\nlibgcc1\nbash\nlibc-bin\nlibtinfo6\nncurses-base\nbase-files"
+          }
+        },
+        "Created": "2021-03-27T21:33:43.108050821Z",
+        "DockerVersion": "20.10.5+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/d466aec3a3589f1e29baca277519667d0b8ef6fa8d6968263ef4a2e67205ba53/diff:/dev/shm/nfc-d28/data/overlay2/1ea0105c5d4e46edf624d27ba4d1feda07b5420494a367388d5c3fad5e26f5b4/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/5d4bc495a8f3672b6b1764aae3c3918e447d6c4438d1426d3cc42bd47e086d7b/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/5d4bc495a8f3672b6b1764aae3c3918e447d6c4438d1426d3cc42bd47e086d7b/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/5d4bc495a8f3672b6b1764aae3c3918e447d6c4438d1426d3cc42bd47e086d7b/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:870b093fc25bdc3cfc7b2da7d488a0e405f1f22ae133762a06cd9425632b8b36",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/mash@sha256:08edd15a3c797c84a28fc16a201e4715cdade1fdb14eb4164bb9731e7b7c0f38"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/mash:2.3--he348c14_1"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:07141bcb4d747fe1303d9f01770e4b535f826d3413f1d5fc86034fb591c971e7",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:4723e5492da33854cb461c3778c4946cadd4347512e41de25caeb0f114d03b8d"
+          ],
+          "Type": "layers"
+        },
+        "Size": 125883882
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/mulled-v2-3a59640f3fe1ed11819984087d31d68600200c3f:185a25ca79923df85b58f42deb48f5ac4481e91f-0",
+      "started_at": "2026-10-28T04:56:42.349742+00:00",
+      "free_bytes_before": 24422768640,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-09.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:57:03.445355+00:00",
+      "log_sha256": "c141789b0295b8eb5a33bbd0a7f2870b51df0819f1e9ddd8cb9ce26fa514cfa6",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2021-03-23T19:05:56.698533779Z",
+        "DockerVersion": "20.10.5+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/486c448dee82b726f1c7a43d91556ebc7d31438642032bac133e28e9952eae35/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/486c448dee82b726f1c7a43d91556ebc7d31438642032bac133e28e9952eae35/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/486c448dee82b726f1c7a43d91556ebc7d31438642032bac133e28e9952eae35/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:ec005263947d8676fe5f940bb6a382576e146cf7cc83aea5d527d77b2fa85a96",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/mulled-v2-3a59640f3fe1ed11819984087d31d68600200c3f@sha256:67f330f0f5fca4777df0e02f8e82b6779bcaaa782189c3530a0cce921d128f8a"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/mulled-v2-3a59640f3fe1ed11819984087d31d68600200c3f:185a25ca79923df85b58f42deb48f5ac4481e91f-0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:c3af84963d22810ee97d8e70eebbf87b09de55d3147409c5c3a4eb91a144f3a0"
+          ],
+          "Type": "layers"
+        },
+        "Size": 285805587
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/mulled-v2-805c6e0f138f952f9c61cdd57c632a1a263ea990:3c52e4c8da6b3e4d69b9ca83fa4d366168898179-0",
+      "started_at": "2026-10-28T04:57:03.469686+00:00",
+      "free_bytes_before": 24122929152,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-10.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:57:25.811621+00:00",
+      "log_sha256": "4f4ce1d5a25ff2544ac1ff98c0b8fcec25722f1038de7822e97f44d6cf7f2da9",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2021-04-07T19:40:59.026444246Z",
+        "DockerVersion": "20.10.5+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/44028abee03b9ac50d2130e74d3c71815c134b534003cc0b411fbe494e2a9324/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/44028abee03b9ac50d2130e74d3c71815c134b534003cc0b411fbe494e2a9324/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/44028abee03b9ac50d2130e74d3c71815c134b534003cc0b411fbe494e2a9324/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:d025ebae5a0d46b0d3db972fa04788c8015dde310ac5973a12eb071e89b9b27f",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/mulled-v2-805c6e0f138f952f9c61cdd57c632a1a263ea990@sha256:2c346c19c0d6a1e2fbc61507a1fb4d1df5ef4d077194a13622963294dfd2940e"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/mulled-v2-805c6e0f138f952f9c61cdd57c632a1a263ea990:3c52e4c8da6b3e4d69b9ca83fa4d366168898179-0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:b711b94f403769a1e0ad6d95d5ec5e59c029e6c76da316a196d347f9a6dbdd34"
+          ],
+          "Type": "layers"
+        },
+        "Size": 269364704
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:eabfac3657eda5818bae4090db989e3d41b01542-0",
+      "started_at": "2026-10-28T04:57:25.834269+00:00",
+      "free_bytes_before": 23838822400,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-11.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:57:42.056591+00:00",
+      "log_sha256": "9bce6b89fcfd8209274373955bb2cd731c03ad10de6dc49063358f6ef3919a8c",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-06-29T12:32:21.442810499Z",
+        "DockerVersion": "18.06.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/cb7cb3d3c9bd4230aac0db0d8b1cacde2ffb6444f5c1ca5eba3f8cfb34c7d6f1/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/cb7cb3d3c9bd4230aac0db0d8b1cacde2ffb6444f5c1ca5eba3f8cfb34c7d6f1/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/cb7cb3d3c9bd4230aac0db0d8b1cacde2ffb6444f5c1ca5eba3f8cfb34c7d6f1/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:97a71971e4ae906c70363988dea50e24eb5b5cd6f3f1e5686307df9ef1978696",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40@sha256:bb187ff28ef27d028d379aa836c905bea3614b69e399f82061d98059665eefd3"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:eabfac3657eda5818bae4090db989e3d41b01542-0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:cb49dd8eba1d8fab681620b668985301043f9c7671a739f096fd114c43f411de"
+          ],
+          "Type": "layers"
+        },
+        "Size": 166056150
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/multiqc:1.10.1--py_0",
+      "started_at": "2026-10-28T04:57:42.079355+00:00",
+      "free_bytes_before": 23665356800,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-12.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:58:15.854741+00:00",
+      "log_sha256": "f42b3a9400322b408a2ae3937ebe5ea9b95c9f8ee5b98376028ed848d1777ba2",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LC_ALL=en_US.UTF-8",
+            "LANG=en_US.UTF-8"
+          ]
+        },
+        "Created": "2021-03-31T23:24:12.088038156Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/fb23664ea54a81458c6204bfc56c6766dfaf2c8237460701e2e6c23a28e28409/diff:/dev/shm/nfc-d28/data/overlay2/597ca94a9fc4a9cdb38ad0acfb85cd568d39a3969fcd1807ecab1618c199013a/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/139acd0ae032d03e6d8a441153fd3aa4fa403c87b56b38890d3dab7ec13476fd/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/139acd0ae032d03e6d8a441153fd3aa4fa403c87b56b38890d3dab7ec13476fd/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/139acd0ae032d03e6d8a441153fd3aa4fa403c87b56b38890d3dab7ec13476fd/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:d7a0844853245ac9009677145d2a121988aefa327161643023a50863befa8ddb",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/multiqc@sha256:fe91e2f287bc094637647fb428a54788bdfba99fc9b5f4fb2343937012eb72b5"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/multiqc:1.10.1--py_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:517a903e4ff7e0f26bf57f18495b5d50418c30bf94d44a616ed4e67519ff62b6",
+            "sha256:e7c701e8b34022f29353fc289d1c9b14040d0ab080763730d55eaabf8a9ecbec",
+            "sha256:8f78551b52edc0f020157a39acd6f64042253721de37f9bb00b2b9eac45af199"
+          ],
+          "Type": "layers"
+        },
+        "Size": 419460445
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/python:3.8.3",
+      "started_at": "2026-10-28T04:58:15.878650+00:00",
+      "free_bytes_before": 23199150080,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-13.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:58:21.513761+00:00",
+      "log_sha256": "e62be0ef78603b7e1cf8e895045d99779708ac572566dceb66780e20afd5e317",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2020-07-18T06:53:39.352747904Z",
+        "DockerVersion": "18.06.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/a4514f37dcc2c6862f54af803860cd1c9a4a2c08c73b5aec19c79da5c71c12ff/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/a4514f37dcc2c6862f54af803860cd1c9a4a2c08c73b5aec19c79da5c71c12ff/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/a4514f37dcc2c6862f54af803860cd1c9a4a2c08c73b5aec19c79da5c71c12ff/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:7d255f0a290f2d858a1b4316c73ed6bd74c71258ffac4fbfb217e83d36518a2f",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/python@sha256:4965e8f9078ba50c7148d49dcbc41c1827f21cb74329013deeca366204f0e317"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/python:3.8.3"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:ce5e554cf38f7c66af708e1e2a32761ffa1445bcc0694e42d105f892f40b9a4a"
+          ],
+          "Type": "layers"
+        },
+        "Size": 207239362
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/rasusa:0.3.0--h779adbc_1",
+      "started_at": "2026-10-28T04:58:21.535348+00:00",
+      "free_bytes_before": 22973349888,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-14.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:58:29.086007+00:00",
+      "log_sha256": "1a91ecf75c74f8583d4dd446c122740e7ad52d5efb0d1fca7e5f69de5446f199",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Entrypoint": [
+            "/usr/local/env-execute"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG=C.UTF-8"
+          ],
+          "Labels": {
+            "busybox": "BusyBox v1.32.1 (2021-03-22 16:41:38 UTC) multi-call binary.",
+            "deb-list": "gcc-8-base_8.3.0-6_amd64.deb\nlibc6_2.28-10_amd64.deb\nlibgcc1_1%3a8.3.0-6_amd64.deb\nbash_5.0-4_amd64.deb\nlibc-bin_2.28-10_amd64.deb\nlibtinfo6_6.1+20181013-2+deb10u2_amd64.deb\nncurses-base_6.1+20181013-2+deb10u2_all.deb\nbase-files_10.3+deb10u8_amd64.deb",
+            "glibc": "GNU C Library (Debian GLIBC 2.28-10) stable release version 2.28.",
+            "io.buildah.version": "1.19.6",
+            "pkg-list": "gcc-8-base\nlibc6\nlibgcc1\nbash\nlibc-bin\nlibtinfo6\nncurses-base\nbase-files"
+          }
+        },
+        "Created": "2021-03-25T16:19:59.857431877Z",
+        "DockerVersion": "20.10.5+azure",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/d466aec3a3589f1e29baca277519667d0b8ef6fa8d6968263ef4a2e67205ba53/diff:/dev/shm/nfc-d28/data/overlay2/1ea0105c5d4e46edf624d27ba4d1feda07b5420494a367388d5c3fad5e26f5b4/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/15c8ac2868f9d23dbaf897be96f6a50aab9202dc93ca871178d13681d2d6def7/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/15c8ac2868f9d23dbaf897be96f6a50aab9202dc93ca871178d13681d2d6def7/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/15c8ac2868f9d23dbaf897be96f6a50aab9202dc93ca871178d13681d2d6def7/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:d65888d0076ab88e738bcd97929a99db2a49e21e0bf21174a79c72095c5138c3",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/rasusa@sha256:15e9827012acab593ad8ed0fbdc72e6d9795c9e7e04bcc2f79b38d578e8e0b0c"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/rasusa:0.3.0--h779adbc_1"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:07141bcb4d747fe1303d9f01770e4b535f826d3413f1d5fc86034fb591c971e7",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:68d690b220907c9e8c25b1c8a7c4419f2e86ed5ef38da9a3d486b7866a4fdfe7"
+          ],
+          "Type": "layers"
+        },
+        "Size": 44015934
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/raxml-ng:1.0.2--h7447c1b_0",
+      "started_at": "2026-10-28T04:58:29.109078+00:00",
+      "free_bytes_before": 22933508096,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-15.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:58:55.049523+00:00",
+      "log_sha256": "539bc3b52f6c876f497901be1addc99253438a9ad621c04d0349916d515b8b33",
+      "inspection": {
+        "Architecture": "amd64",
+        "Comment": "Created with Involucro",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LC_ALL=en_US.UTF-8",
+            "LANG=en_US.UTF-8"
+          ]
+        },
+        "Created": "2021-02-22T19:29:10.830386398Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/a5ca9c996638d45a0a2c760238fb1f58a9a75d40b154959a329ab853f3500175/diff:/dev/shm/nfc-d28/data/overlay2/9ff03aeab7c90c0123cb6662611d68a7f9a16687becc86f3ed07de24e8c6434b/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/ba3fbf2bd86b4a110ee73e540d22762d436c20e261b25c267f6474c22ecb4117/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/ba3fbf2bd86b4a110ee73e540d22762d436c20e261b25c267f6474c22ecb4117/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/ba3fbf2bd86b4a110ee73e540d22762d436c20e261b25c267f6474c22ecb4117/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:2e724a8903ce3c2ddd3837fa85b2f400915e8661c37ad1ce879a4b70ae60d5f0",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/raxml-ng@sha256:80635c3c14740b48b1683bfa235f21c93a1795b80e871caa0f75ee30de5d3384"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/raxml-ng:1.0.2--h7447c1b_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:d7d6dd37b613bacf86fd197edd55352c772ecd53b3d953984a52b2f0dd6f216f",
+            "sha256:fe1245ccc402fc0e7d2197e2af60d5cb179267be2d14af170f2d8d8740a37381",
+            "sha256:9a97033a6836d234a904ec559c1655786fdc2d06e75503a09c58d88221a57d29"
+          ],
+          "Type": "layers"
+        },
+        "Size": 159005604
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/samtools:1.10--h9402c20_2",
+      "started_at": "2026-10-28T04:58:55.075001+00:00",
+      "free_bytes_before": 22720892928,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-16.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:59:05.077673+00:00",
+      "log_sha256": "08f31dba75b38f734f6b35f9e0cfb9ee24cbb43d2050f7faf64ed590fc72146d",
+      "inspection": {
+        "Architecture": "amd64",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2019-12-22T19:35:51.253197857Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/c27b78b51efdb7a206a6513d8f650be53db190f2e467300851cbdd965bc8aaf4/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/c27b78b51efdb7a206a6513d8f650be53db190f2e467300851cbdd965bc8aaf4/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/c27b78b51efdb7a206a6513d8f650be53db190f2e467300851cbdd965bc8aaf4/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:66dbf63b917392c6982f9e13f0c1ad84cd45950aaeb5395583624c3fe3fbdd51",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/samtools@sha256:fd6ee9fa8d9a2ca26adf91d2e0bf48cc4bb9dd9ebe577d990a6f278da3d93b5c"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/samtools:1.10--h9402c20_2"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:f84b22da2488a664b3f055b62db99d4fc7fedbc810306a8ef99e13d4fda1517f"
+          ],
+          "Type": "layers"
+        },
+        "Size": 90159759
+      }
+    },
+    {
+      "image": "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0",
+      "started_at": "2026-10-28T04:59:05.101753+00:00",
+      "free_bytes_before": 22623014912,
+      "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/image-17.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T04:59:09.081815+00:00",
+      "log_sha256": "d9ce15d9fc870f81f91bb4febee56cba8a27d664d762044ce0f5ea27bcc22152",
+      "inspection": {
+        "Architecture": "amd64",
+        "Config": {
+          "Cmd": [
+            "/bin/sh"
+          ],
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          ]
+        },
+        "Created": "2019-10-23T00:42:56.937631949Z",
+        "DockerVersion": "17.09.0-ce",
+        "GraphDriver": {
+          "Data": {
+            "LowerDir": "/dev/shm/nfc-d28/data/overlay2/9bf14c5ba220294d34d26e9c24a660e3b86ef725a63c9c3a7dcf97767604f999/diff:/dev/shm/nfc-d28/data/overlay2/c4d17a5f487b4eb11f2a54e30baa42aede107f74a0b979857634c40285eb865a/diff:/dev/shm/nfc-d28/data/overlay2/4688d645dd817321b724e43d39b85d9b586bfef9f7431a433438a27fd7395a12/diff:/dev/shm/nfc-d28/data/overlay2/05eae0e50a6dddae519df518061e23f9516f2325279569d199fb04d6b901faaf/diff:/dev/shm/nfc-d28/data/overlay2/e4254821f0e2df2a6c2d4df45a733c97463c5c44145049c212f063d183b75acf/diff:/dev/shm/nfc-d28/data/overlay2/3f521c7f2ccdd1e56016ee34a39d72cb57b921aac2ebf610df1e4cb053d80d30/diff:/dev/shm/nfc-d28/data/overlay2/15c1c3cb2547e726b256351fa3b7171308337e4520e853b03f5a79a3a6da084e/diff:/dev/shm/nfc-d28/data/overlay2/9b11db268f22ff6d8519b5e31483d8b1754febc3b628b4b056d9a9c598725078/diff:/dev/shm/nfc-d28/data/overlay2/317b6749124fa58d58d1518628e8001a7f7d18e93dec16626149635eae45c786/diff",
+            "MergedDir": "/dev/shm/nfc-d28/data/overlay2/64cf81235371acf0dcbdc93427e3367b70f3f599412e1195e22b6ada6b92d783/merged",
+            "UpperDir": "/dev/shm/nfc-d28/data/overlay2/64cf81235371acf0dcbdc93427e3367b70f3f599412e1195e22b6ada6b92d783/diff",
+            "WorkDir": "/dev/shm/nfc-d28/data/overlay2/64cf81235371acf0dcbdc93427e3367b70f3f599412e1195e22b6ada6b92d783/work"
+          },
+          "Name": "overlay2"
+        },
+        "Id": "sha256:55bb32a6d4ff682d692799d4aafb0f669bb166b0d4833609dd1d106a17025e1c",
+        "Metadata": {
+          "LastTagTime": "0001-01-01T00:00:00Z"
+        },
+        "Os": "linux",
+        "RepoDigests": [
+          "quay.io/biocontainers/snp-sites@sha256:a5fdeaa6aea761c91fd571c966edc9626fb8f50a8ad765a6ff6ef19cb607ee41"
+        ],
+        "RepoTags": [
+          "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
+        ],
+        "RootFS": {
+          "Layers": [
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:461f75075df2a334108df11b185363d2afda21517fda5ffb10852020e7639b7b",
+            "sha256:d9c122ba3e7627ce3008fd063788e8a1212d8de86248d66772f39f7b978634ef",
+            "sha256:2e4090b968e1df4c6c6d8024c7e60f81148cf4b4dacaa2ece4f3e99f3dba3fc8",
+            "sha256:4266fd267d6bfee846b1abef4ab786955e2d1625354fc59ed2ff25a0461db2d7",
+            "sha256:b46c2431d956fdcc4b659bbb008e9df0a1ee186088d494267232e562b3b7f3d6",
+            "sha256:fe8ed9f638c2465e53d616918ce063f2df83c9ce5cb2a18ee5f334432c1dc76f",
+            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+            "sha256:b7a67dc9db8baf3fe750b0161bb0e57544960fdbcfdc61a4e68d8c4c0a43623c",
+            "sha256:75647efa226586390c4de4ead96aa86ed2c9eb803e85071a3c4421b2f2e9aee6"
+          ],
+          "Type": "layers"
+        },
+        "Size": 33940344
+      }
+    }
+  ]
+}

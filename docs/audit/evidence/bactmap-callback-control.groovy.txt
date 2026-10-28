@@ -1,0 +1,37 @@
+import groovyx.gpars.dataflow.DataflowVariable
+import groovy.json.JsonOutput
+class LegacyWorkflow {
+    boolean success = true
+    Map fields
+    def propertyMissing(String name) { fields[name] }
+}
+class ModernWorkflow extends LegacyWorkflow { boolean preview = false }
+class CountingReport {
+    int calls = 0
+    def getVal() { calls++; [] }
+}
+def root = new File(args[0]); root.mkdirs()
+def pipeline = new File(args[1])
+def klass = new GroovyClassLoader(this.class.classLoader).parseClass(new File(pipeline,'lib/NfcoreTemplate.groovy'))
+def fields = [manifest:[name:'nf-core/bactmap',version:'1.0.0'],runName:'callback-control',start:new Date(),complete:new Date(),scriptFile:'main.nf',scriptId:'control',repository:null,commitId:null,revision:null,nextflow:[version:'24.10.5',build:'control',timestamp:'control'],duration:0,exitStatus:0,errorMessage:null,errorReport:null,commandLine:'isolated completion control',projectDir:pipeline.toString()]
+def results=[]
+[['preview',true,true,0],['real',false,true,1],['legacy',null,true,1],['failed',false,false,0]].each { label,preview,success,want ->
+    def flow = preview==null ? new LegacyWorkflow(fields:fields,success:success) : new ModernWorkflow(fields:fields,success:success,preview:preview)
+    def report = new CountingReport()
+    def out = new File(root,label)
+    def params = [email:null,email_on_fail:null,monochrome_logs:true,outdir:out.toString(),max_multiqc_email_size:'1.MB']
+    klass.email(flow,params,[:],pipeline,[warn:{ String s -> }],report)
+    assert report.calls==want
+    assert new File(out,'pipeline_info/pipeline_report.txt').isFile()
+    results << [case:label,getVal_calls:report.calls,expected:want,email_address:null]
+}
+def future = new DataflowVariable()
+def delay = Thread.start { Thread.sleep(400); future.bind([]) }
+def started = System.nanoTime()
+klass.email(new ModernWorkflow(fields:fields,preview:false),[email:null,email_on_fail:null,monochrome_logs:true,outdir:new File(root,'delayed-real').toString(),max_multiqc_email_size:'1.MB'],[:],pipeline,[warn:{ String s -> }],future)
+def waitedMs = (System.nanoTime()-started)/1_000_000
+assert waitedMs>=250
+assert future.isBound()
+delay.join()
+results << [case:'real_delayed_future',waited_ms:waitedMs,bound:true,email_address:null]
+println JsonOutput.prettyPrint(JsonOutput.toJson(results))

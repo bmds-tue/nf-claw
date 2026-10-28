@@ -1,0 +1,980 @@
+{
+  "generated_at": "2026-10-28T09:58:55.644234+00:00",
+  "scope": "Bactmap U06 raw records and retained helper source; large scientific input/result files remain at their hashed server locations. This export runs no tests and edits no results.",
+  "entries": [
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo-assessment.json",
+      "bytes": 19898,
+      "sha256": "3560f7fc88ce9f0f6d16ee7e816a5dabd0e600d7d3b3d4aee8a487c294be72cf",
+      "retained_copy": "commit-1725642-bactmap-demo-assessment.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-demo.json",
+      "bytes": 103799,
+      "sha256": "d54df4ac928f08509284000604c08a734e7d31955f0ef7cfc199ad4f7413dfba",
+      "retained_copy": "commit-1725642-bactmap-demo.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-order-control.json",
+      "bytes": 24752,
+      "sha256": "50e476ed5b965659a9b724c42bec1246207ab04b142bc008a8ebce428fa0fae0",
+      "retained_copy": "commit-1725642-bactmap-order-control.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu-assessment.json",
+      "bytes": 27511,
+      "sha256": "6814b2e4a751fe572217dcfc0df4909b94c94fe76ab7242fdc58fef8896d2982",
+      "retained_copy": "commit-1725642-bactmap-singlecpu-assessment.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-singlecpu.json",
+      "bytes": 103981,
+      "sha256": "6a5cb6f8a93976d664e67932469120afbeba4ce964a5ef7634bcf280ec0f343c",
+      "retained_copy": "commit-1725642-bactmap-singlecpu.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-1725642-bactmap-variation-summary.json",
+      "bytes": 21201,
+      "sha256": "3bd05fef0cfd470e33ee6085acc325c2757d9997defe26c48dd2028eac9912c9",
+      "retained_copy": "commit-1725642-bactmap-variation-summary.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-assessment-v2.json",
+      "bytes": 30320,
+      "sha256": "037334896ba1eb0a3f0c35277052309d876bde051d635859bf8de754f503712b",
+      "retained_copy": "commit-8db1cbb-bactmap-demo-assessment-v2.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-assessment.json",
+      "bytes": 18414,
+      "sha256": "4f2b656b776e1006729e218a53d8bcdfcefb7b67f56ccb07bb2aa3ef8c86ee31",
+      "retained_copy": "commit-8db1cbb-bactmap-demo-assessment.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-tree-parser-v2.json",
+      "bytes": 4318,
+      "sha256": "05c964d6483297e8faca7a6f7b30e0e3fa94d7420b3f5f69d5ec5aacaeb57a4c",
+      "retained_copy": "commit-8db1cbb-bactmap-demo-tree-parser-v2.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo.json",
+      "bytes": 103687,
+      "sha256": "a08270759c32bb16efc20308cda879baba1f14ebbfa99d4223d4ff4a1cc98a90",
+      "retained_copy": "commit-8db1cbb-bactmap-demo.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-bactmap-bare.json",
+      "bytes": 42440,
+      "sha256": "60fb9ff0d15953d1805771527ecdb28cafc781ab929559f7e6971a39f7eb72fa",
+      "retained_copy": "commit-eee40ee-bactmap-bare.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028/docker.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-config-diagnosis-20261028--docker.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028/records.json",
+      "bytes": 3748,
+      "sha256": "256dff8e44a59e1c3aa5e8186726c8a4b9c292690811af00775b1f5cd20371aa",
+      "retained_copy": "bactmap-config-diagnosis-20261028--records.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028/test-docker.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-config-diagnosis-20261028--test-docker.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028/assign_leaves/nextflow_schema.json",
+      "bytes": 17627,
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "retained_copy": "bactmap-config-spike-20261028--assign_leaves--nextflow_schema.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028/assign_leaves.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-config-spike-20261028--assign_leaves.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028/merge_expression/nextflow_schema.json",
+      "bytes": 17627,
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "retained_copy": "bactmap-config-spike-20261028--merge_expression--nextflow_schema.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028/merge_expression.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-config-spike-20261028--merge_expression.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-spike-20261028/records.json",
+      "bytes": 5703,
+      "sha256": "de33b1bca39bd424f3117ea981f2b2c218273b9e6566b3d266c8913a655924f4",
+      "retained_copy": "bactmap-config-spike-20261028--records.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-fixture-oracle-20261028/oracle.json",
+      "bytes": 12563,
+      "sha256": "51d9379e0b222a81e3009deaf484d9791051b8d3e4525f8da28a2b380cab26f2",
+      "retained_copy": "bactmap-fixture-oracle-20261028--oracle.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/config.stderr",
+      "bytes": 96,
+      "sha256": "18644a7200dd69504bf9cb1e2d1a73d6654cd20f54cc02056e824212bde21c02",
+      "retained_copy": "bactmap-managed-probe-20261028--config.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/config.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-managed-probe-20261028--config.stdout"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/nextflow.log",
+      "bytes": 35131,
+      "sha256": "4a14df89656d1903c2f59899e7d35edff1b72b759d71999203a698bcc30a7f79",
+      "retained_copy": "bactmap-managed-probe-20261028--nextflow.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/out/.nextflow/cache/c3ba30db-e837-4f36-adff-f41624a84a3c/db/000003.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "local_copy_excluded": "Nextflow engine cache bookkeeping; original remains at the server path."
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/preview.stderr",
+      "bytes": 76,
+      "sha256": "1e5cd00951cab5f6613f6de943910726e646b0f7b9570c183e29273a844ef9f1",
+      "retained_copy": "bactmap-managed-probe-20261028--preview.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/preview.stdout",
+      "bytes": 9405,
+      "sha256": "438e037883af9e45a8a02bbe6c44aaf3480c35c94a5567a5d622cd74b6ad08d9",
+      "retained_copy": "bactmap-managed-probe-20261028--preview.stdout"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/record.json",
+      "bytes": 44327,
+      "sha256": "c1b47b5ea0f0602723356814e5e5f827d10f741b0f1155572a82f627dfe6d2f2",
+      "retained_copy": "bactmap-managed-probe-20261028--record.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/params.json",
+      "bytes": 449,
+      "sha256": "71806c568a96d573ea5ab8d2287f2b182138564008c05fc3a810f8c473de3f0a",
+      "retained_copy": "bactmap-managed-probe-20261028--staging--nfclaw-check-xecjjhbf--params.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/pipeline/nextflow_schema.json",
+      "bytes": 17627,
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "retained_copy": "bactmap-managed-probe-20261028--staging--nfclaw-check-xecjjhbf--pipeline--nextflow_schema.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/working-source.json",
+      "bytes": 21852,
+      "sha256": "ad3a33b0d35bf0af4166fca3dbe418844639421cc2320ae4b74e05464a59d2d4",
+      "retained_copy": "bactmap-managed-probe-20261028--staging--nfclaw-check-xecjjhbf--working-source.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/callback-control.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--callback-control.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/callback-control.stdout",
+      "bytes": 616,
+      "sha256": "77530de53b0bf16333ca1c26f4a107c425441fff44d788409ea3826853c1e9b3",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--callback-control.stdout"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/config.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--config.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/config.stdout",
+      "bytes": 6577,
+      "sha256": "522d8b2375a0aa645bb3ec7385296c1cda9d04ad3ca83c90bdefb000264c2041",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--config.stdout"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/nextflow.log",
+      "bytes": 35264,
+      "sha256": "e2aa4777b2d7d115b16bfdf6ca3c0e16f049e062a91c93ad27498f99dcdc9471",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--nextflow.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/out/.nextflow/cache/38cd6753-70e4-41dd-be2f-9a5f7e2a0147/db/000003.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "local_copy_excluded": "Nextflow engine cache bookkeeping; original remains at the server path."
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/preview.stderr",
+      "bytes": 76,
+      "sha256": "1e5cd00951cab5f6613f6de943910726e646b0f7b9570c183e29273a844ef9f1",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--preview.stderr"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/preview.stdout",
+      "bytes": 9186,
+      "sha256": "6e9b34ebbef66191db01842b8749325029ff89ea00835535eddaa1b48b034782",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--preview.stdout"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/record.json",
+      "bytes": 44227,
+      "sha256": "768ba072d1991cea8bfaca8472b0f09c0eadf53ee3f43e6fd42c116ad9985422",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--record.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/params.json",
+      "bytes": 455,
+      "sha256": "5682efe7f68f6c08c46318d5089062d5d10f88fc3a1eafcbeef0fc8cff8f0326",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--staging--nfclaw-check-09cfvou7--params.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/pipeline/nextflow_schema.json",
+      "bytes": 17627,
+      "sha256": "76775840e0a5cdf051f608500c6a1da70b0337152b7144243efe71b22890cc74",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--staging--nfclaw-check-09cfvou7--pipeline--nextflow_schema.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028-v2/staging/nfclaw-check-09cfvou7/working-source.json",
+      "bytes": 21855,
+      "sha256": "2739754d5a10226fd8ec6c351347cc44f08a04ccebf3f4c0d571c1787ef5104e",
+      "retained_copy": "bactmap-managed-probe-20261028-v2--staging--nfclaw-check-09cfvou7--working-source.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/.nextflow/cache/27b7cdb0-a6d0-4807-b73c-4f2988b775f3/db/000003.log",
+      "bytes": 1825,
+      "sha256": "1f0016e0ee96887523036cbf6c2ab5a5c56c16a00050a4a059144bd37991ad4a",
+      "local_copy_excluded": "Nextflow engine cache bookkeeping; original remains at the server path."
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/nextflow.log",
+      "bytes": 48390,
+      "sha256": "782730d353bc6c4fbd379d6c9d7714cce1506ab29199b884ddc922da79bec749",
+      "retained_copy": "bactmap-sorting-control-20261028--nextflow.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028/record.json",
+      "bytes": 2118,
+      "sha256": "afe7e9aedc4de1c019c8f92fa57c111bb055867845844a886e0c167501fb7674",
+      "retained_copy": "bactmap-sorting-control-20261028--record.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/.nextflow/cache/b47c4e32-587d-4ecd-9caf-cabfde427b20/db/000003.log",
+      "bytes": 1820,
+      "sha256": "25e110637124a843d4801796e8b0cf5b31ff2752ea2523d2435024216f83ce07",
+      "local_copy_excluded": "Nextflow engine cache bookkeeping; original remains at the server path."
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/nextflow.log",
+      "bytes": 7333,
+      "sha256": "9c2c3d7b41fc99a43dce1fd77ffa2302e42b8d400f411e20fa9cdba7e37ae19c",
+      "retained_copy": "bactmap-sorting-control-20261028-v2--nextflow.log"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-sorting-control-20261028-v2/record.json",
+      "bytes": 1378,
+      "sha256": "709fee76fd10a02f4354da08e652707597dfd21e991b8d78a26b3ce7f5dac5b3",
+      "retained_copy": "bactmap-sorting-control-20261028-v2--record.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-1725642.py",
+      "bytes": 11851,
+      "sha256": "9e1d9352d66cb1f4cb56ce5e5b71a1ec7682f7714e4cdf8c686f649a4200ba81",
+      "retained_copy": "nfclaw-bactmap-assessment-1725642.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-8db1cbb.py",
+      "bytes": 11872,
+      "sha256": "ff745a0a050d821992c7058bbba8c8495c11b08abbd80a5ecb4e46ed69c3f0fd",
+      "retained_copy": "nfclaw-bactmap-assessment-8db1cbb.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-complete.py",
+      "bytes": 6152,
+      "sha256": "311eeb97b9ee33c76d19a8486287c406fed47e52317425eecf58c8e1b8ffe4ef",
+      "retained_copy": "nfclaw-bactmap-assessment-complete.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-bare-eee40ee.py",
+      "bytes": 2723,
+      "sha256": "f6aa72a86e79adac6b6a16c1ccfd923709445a4bf843ecdc9f34fea4bd1f56c1",
+      "retained_copy": "nfclaw-bactmap-bare-eee40ee.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-collect.py",
+      "bytes": 3895,
+      "sha256": "4ac935046a4ef0ae7ac9182fa4a5e0aa2b43ae5f13da6cd1326a8c871e848a79",
+      "retained_copy": "nfclaw-bactmap-collect.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-config-diagnosis.py",
+      "bytes": 1268,
+      "sha256": "ece7b2177397e8db4091d224f69198cc66056ea6f09f7b6b946f4256bbd3e00c",
+      "retained_copy": "nfclaw-bactmap-config-diagnosis.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-config-spike.py",
+      "bytes": 2167,
+      "sha256": "0a66e21deb5d3468bbf81b749c2d32a49ef744fe4c53c6b086136dd6c2be9df6",
+      "retained_copy": "nfclaw-bactmap-config-spike.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-fixture-oracle.py",
+      "bytes": 2746,
+      "sha256": "a5ec3d60609af6a506a7a95f148ea35997e2f3774d020a7062cabe2b1b2a77ab",
+      "retained_copy": "nfclaw-bactmap-fixture-oracle.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-managed-probe-v2.py",
+      "bytes": 2792,
+      "sha256": "4e6f17191a57de80a04693b3a678f55a945c03aec2486bc62d24ecfc896ce9d1",
+      "retained_copy": "nfclaw-bactmap-managed-probe-v2.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-managed-probe.py",
+      "bytes": 2813,
+      "sha256": "646dee8bc31c1990f9ff2272627d408ea91ab053ca0aee3372be5422d8154f8e",
+      "retained_copy": "nfclaw-bactmap-managed-probe.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-native-1725642.py",
+      "bytes": 3939,
+      "sha256": "30aaccd6e335d90948447753cb6518fa4d478a1e3006c1e95c90c43f93bc8683",
+      "retained_copy": "nfclaw-bactmap-native-1725642.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-native-8db1cbb.py",
+      "bytes": 3939,
+      "sha256": "3633fa184130d27b5a751c57a30b347ac34d8cc641279e754ba854ee0efcf3cf",
+      "retained_copy": "nfclaw-bactmap-native-8db1cbb.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-order-control.py",
+      "bytes": 2382,
+      "sha256": "dfbe41b3b5c2fa8b0a0abd24315b1402ef1a7e19879a464100067efe3cecf4e3",
+      "retained_copy": "nfclaw-bactmap-order-control.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-private-docker-stop.py",
+      "bytes": 3309,
+      "sha256": "4a8a1e834efa507a5c0ea62638c3fb40d5ae099211591c5a01844e5592135d0f",
+      "retained_copy": "nfclaw-bactmap-private-docker-stop.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-private-docker.py",
+      "bytes": 2515,
+      "sha256": "44dc443c1e967e09c9bcac466a2be16bdba7668c248d6dfc9c47101661750f16",
+      "retained_copy": "nfclaw-bactmap-private-docker.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-private-images.py",
+      "bytes": 1791,
+      "sha256": "244d019b5dca006ad571d5183fe131bc31ac95c7967cc46cb806a78462c7e3e1",
+      "retained_copy": "nfclaw-bactmap-private-images.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-singlecpu-1725642.py",
+      "bytes": 4030,
+      "sha256": "690d94c33cbbfc3fe31bba60d5af099b89e44540afbdd81868ff6c487382e260",
+      "retained_copy": "nfclaw-bactmap-singlecpu-1725642.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-singlecpu-assessment.py",
+      "bytes": 11870,
+      "sha256": "45e6d2d8417347ec00dc8f36c99e09da5fa17e443aca263508606dbbb5d459ba",
+      "retained_copy": "nfclaw-bactmap-singlecpu-assessment.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-sorting-control-v2.py",
+      "bytes": 2191,
+      "sha256": "063c4511ac936047431a80204acba739272728b9fc0c4d7ebd1a6ec9c6ce72f2",
+      "retained_copy": "nfclaw-bactmap-sorting-control-v2.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-sorting-control.py",
+      "bytes": 2185,
+      "sha256": "2616fea87053af9d00b28847e406c716b6bf5bf3a0d3f09fd42f951c8e6894f7",
+      "retained_copy": "nfclaw-bactmap-sorting-control.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-validation-1725642.py",
+      "bytes": 6410,
+      "sha256": "2168a9336f1cbebdfd520d04a57bded0f0631dbb667c14c730a31a942ed074fb",
+      "retained_copy": "nfclaw-bactmap-validation-1725642.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-validation-8db1cbb.py",
+      "bytes": 6439,
+      "sha256": "051a4c6bfa7df1964400c8be239a51edf1d9498e0b7510f8c2be9da731ad88fe",
+      "retained_copy": "nfclaw-bactmap-validation-8db1cbb.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-variation-summary.py",
+      "bytes": 2596,
+      "sha256": "50a3e9f717a61f060ee96957117171d11a694e17b4535718a6c6571aba3ae1a7",
+      "retained_copy": "nfclaw-bactmap-variation-summary.py.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-callback-control.groovy",
+      "bytes": 2329,
+      "sha256": "f815704b922b8ad7f842cbbcc6f6d6815a0d0c6246d56200d0f5f831b7cbced8",
+      "retained_copy": "bactmap-callback-control.groovy.txt"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-1725642.log",
+      "bytes": 1743,
+      "sha256": "47d18bf1da8275f628f91cf69654f2bd2e7c4fba25dc4c501a8e321bb4720947"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-8db1cbb.log",
+      "bytes": 4118,
+      "sha256": "839dec3444a2098b503237276a292e3eaa4725eed9f85a34e03e5a26cb035f6c"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-assessment-complete.log",
+      "bytes": 1482,
+      "sha256": "50e83426257dd42dc486b244f0373a5fe928d27040f978c1d03b4e0f7cf66c51"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-bare-eee40ee.worker.log",
+      "bytes": 42,
+      "sha256": "99f1d3dfb047493bb71af5e0d4d0f9a8214d7968e3d0acafc3431b93e94cb6b5"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-collect.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-config-diagnosis.log",
+      "bytes": 44,
+      "sha256": "1ce95d93942f398b74ce2e7fbedd0e2000c92d160f15cfca7746017ca844c26d"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-config-spike.log",
+      "bytes": 59,
+      "sha256": "dbd2a533aee2fdf893de02d64eb4b02d6c607858aac669efaf2bb477fdc94128"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-fixture-oracle.log",
+      "bytes": 12563,
+      "sha256": "51d9379e0b222a81e3009deaf484d9791051b8d3e4525f8da28a2b380cab26f2"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-managed-probe-v2.log",
+      "bytes": 1482,
+      "sha256": "ccf65de6635c246e89d6bc303bea8749ab7849d799e8e114f6ccf648204cd971"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-managed-probe.log",
+      "bytes": 3476,
+      "sha256": "29ccc2b618206014ce0873071769632fb1089cb91b3f60982bd78c6102a6b37d"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-native-1725642.log",
+      "bytes": 101,
+      "sha256": "f03bf59781da2f1a259109228af32d611941bd4eecbda4e53de5ddfeab01b734"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-native-8db1cbb.log",
+      "bytes": 101,
+      "sha256": "f03bf59781da2f1a259109228af32d611941bd4eecbda4e53de5ddfeab01b734"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-order-control.log",
+      "bytes": 2740,
+      "sha256": "bb2249ed8fcfb6c30ddb14adf7b661db708d09f856ddb7b6b59285f4d12d4842"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-private-images.log",
+      "bytes": 1222,
+      "sha256": "2a4840de010d68710635e65a7f0a96f3edd64caec68f797ecd6ad41ef0879eb0"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-singlecpu-1725642.log",
+      "bytes": 101,
+      "sha256": "f03bf59781da2f1a259109228af32d611941bd4eecbda4e53de5ddfeab01b734"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-singlecpu-assessment.log",
+      "bytes": 1686,
+      "sha256": "666f8c6ce9abedfc8e323b83e2760c872b20a310b2c41f7558c6cd0735e55c7e"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-sorting-control-v2.log",
+      "bytes": 505,
+      "sha256": "378caf900158b74d372a26a6ac744c87783f2181c85e690a2aeb53ec2949b99e"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-sorting-control.log",
+      "bytes": 1547,
+      "sha256": "d0512d0abc83777696762262eae04dbbf1fb2116ddbd3878eddcab0a89838b04"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-validation-1725642.log",
+      "bytes": 434,
+      "sha256": "50ab817bd21fa40d3192d79974f8df6661de960ff7f9e316a890d9d432916739"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-validation-8db1cbb.log",
+      "bytes": 565,
+      "sha256": "5db19d725bd950df71db0b338bfecdc339bd8a8d5462638453257c5073fe0572"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-variation-summary.log",
+      "bytes": 4388,
+      "sha256": "678a1ca43c54a9d677431e8dbf424b65cfd363ca73338a0d547149b38760deca"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-docs-red-20261028.log",
+      "bytes": 2646,
+      "sha256": "cab4a7dce2a823006a1bafc84bcf3a7f1fddc65eb378c86ffb7ddb082a4773e9"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-generation-20261028.log",
+      "bytes": 68,
+      "sha256": "c9d7ee8f096266edc01c89ac1a962abaebb2f86092bf79a879e7c8079bbd320e"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-order-seeds-green-20261028-v2.log",
+      "bytes": 421,
+      "sha256": "f750cb3edbd29520479180127aa08509ec3788a67efde8b3a83781d5c98185bf"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-order-seeds-green-20261028.log",
+      "bytes": 421,
+      "sha256": "05d351fceb07aab2fed7d51acec0193df07a1ece80edeefa3ef95a581d022920"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-portable-timeout-green-20261028.log",
+      "bytes": 181,
+      "sha256": "1b073d309427c8026aad4fbc7d8e6382a177b62962e97e6c353b37899b78e04c"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-preview-red-20261028.log",
+      "bytes": 10390,
+      "sha256": "53221517e8bee51439e435612443a694d6bc9688f800629e7f148f1c3da9c5ea"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-ruff-20261028.log",
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-singlecpu-default-green-20261028.log",
+      "bytes": 421,
+      "sha256": "a2c9f120c220c1e707cba441b5398ae23074484d961002c4f72010f1b6032596"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-singlecpu-default-red-20261028.log",
+      "bytes": 4168,
+      "sha256": "0835be8e239731dbb57f12c46eaafdb7b1183a4fec3aa53cf5b10346ccaf386e"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tests-green-20261028-v1.log",
+      "bytes": 29931,
+      "sha256": "c5908b90fb6bad8506d6020319524a194f3340b6c797484f3f7233377147391d"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tests-green-20261028-v2.log",
+      "bytes": 5426,
+      "sha256": "9d9b5a7ae688f6c1f70ffce3712207d235974da11bcc2cdcd1b99a0e11b74f27"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tests-green-20261028-v3.log",
+      "bytes": 261,
+      "sha256": "9869a0ea2fa61b71c1073d7ba76d394cb8df9c817b208b09692e863b11ad2a73"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tests-green-20261028-v4.log",
+      "bytes": 341,
+      "sha256": "db092aa4c9afd901cbe6a9ce018f40ae2b57bf41a32a217ae7402d4e6ee54a0c"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tests-red-20261028.log",
+      "bytes": 47741,
+      "sha256": "9db10eccdc4c93bdec13a3cf32dde7948eb98e6b3bbebb56e8158c4d5644cbea"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-tree-order-red-20261028.log",
+      "bytes": 2986,
+      "sha256": "59511f5f5f1671611e4c8a1ae4d589fc6b60af1b355e8c7fd4909eec270b230c"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/server-storage-observation-20261028.json",
+      "bytes": 595,
+      "sha256": "ec440993495bf6eaca2be2608ed2d04a9b745e6704abbeb4eba55f38d33c0592",
+      "retained_copy": "bactmap-server-storage-observation-20261028.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/record.json",
+      "bytes": 21973,
+      "sha256": "cee95e74d242c0c1b2ddb324ea8b90a8081eddb83d698eddec053b811303c99f",
+      "retained_copy": "bactmap-record.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/daemon.json",
+      "bytes": 407,
+      "sha256": "5407c26cfedd35d27746ad2856f25755a8e5c914e96ed05b71a293ccf80c5678",
+      "retained_copy": "bactmap-daemon.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/bactmap-images.json",
+      "bytes": 63198,
+      "sha256": "bfd075d1f15234cd0330c52b8f33f352aab32b83185277dfe26eba464b0d3811",
+      "retained_copy": "bactmap-bactmap-images.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/results.json",
+      "bytes": 12441,
+      "sha256": "d4dac5bde3bf5f4d300a410edf704d8ce5cc0bc4b1e7dba1f6424ea9aa19a3d7",
+      "retained_copy": "python-validation-8db1cbb.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.12-full.xml",
+      "bytes": 462519,
+      "sha256": "dbab8a89ca04e75f6d52f59269926df3d45e6688efea3159be799e3ca060fadd"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.12-full.log",
+      "bytes": 4081,
+      "sha256": "1e3e7150ee6e38f3162da953167bc07612520c802b102ac65c1df2b2e59d1852"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.11-affected.xml",
+      "bytes": 53433,
+      "sha256": "0eeb75f65030609745b4bac28a58659c01cc43e94e8fcb38a43ea190ce2888dd"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.11-affected.log",
+      "bytes": 501,
+      "sha256": "249c8b13bbb60adb4232fd36beda43bd37a683b0041a7905c9f022b44ad70456"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.13-affected.xml",
+      "bytes": 53433,
+      "sha256": "2d11ea548f8ddb9412690c9ea230f2d1343b82a86827d61bc693d6dee00c4f25"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.13-affected.log",
+      "bytes": 501,
+      "sha256": "6b792e943695500d01adc23b70d1d7584f9332231387275c4bdec4933fb3fa75"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.14-affected.xml",
+      "bytes": 53433,
+      "sha256": "71abd3a30406ad6f9f0e9a94472fa71f7a00c3c426937e2308fb533a8817f63b"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.14-affected.log",
+      "bytes": 501,
+      "sha256": "c47df8d2446b603c30c552e5204fde9676f8832e4a37ab9dd7aa0fdc236a7ea6"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.15-affected.xml",
+      "bytes": 53433,
+      "sha256": "ac44883097fe7041c101875b34e85d400cb572c7955d8a95ad34c87123245761"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/3.15-affected.log",
+      "bytes": 501,
+      "sha256": "6cc10c8552517f3be03043559ba1b8f9c5596eb77c8b4c7a4d9605e342752759"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/full-suite-evidence-check.json",
+      "bytes": 513,
+      "sha256": "838dcfb871092c378bd7453035c4d0283f7619a86f32d0b0145a7c53852a50c4",
+      "retained_copy": "python-full-suite-evidence-check-8db1cbb.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/source-inventory.json",
+      "bytes": 61275,
+      "sha256": "bc26d09c1d422fb4d2d98c9f41ed9849e85ec82064c0d58fab55d9a758e6164b",
+      "retained_copy": "python-source-inventory-8db1cbb.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb/fallback-source-inventory.json",
+      "bytes": 61275,
+      "sha256": "013ba05b678a2beccd8ae516778bb5ddae4d5936ae4f35bbab7e554584362561",
+      "retained_copy": "python-fallback-source-inventory-8db1cbb.json"
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-8db1cbb-bactmap-demo-raw-vcf-comparison.json",
+      "bytes": 4161,
+      "sha256": "5b19f33b4c427c9ba25f1c303c73a347a789ad0872b52ef3132b5771b093d348",
+      "retained_copy": "commit-8db1cbb-bactmap-demo-raw-vcf-comparison.json",
+      "publication_supplement": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-bactmap-raw-vcf-comparison.py",
+      "bytes": 2015,
+      "sha256": "1f1b4f7b7458ea7e32ff14feb06130b613aa27acda0853bd48fa6baf8d72c66b",
+      "retained_copy": "nfclaw-bactmap-raw-vcf-comparison.py.txt",
+      "publication_supplement": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/shutdown.json",
+      "bytes": 1248,
+      "sha256": "3903043ec195c084b2700096ea30cb87e717b7b818e92c50fbb8eb81bc83966e",
+      "retained_copy": "bactmap-private-docker-shutdown-20261028.json",
+      "publication_supplement": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/private-docker-20261028/daemon-future-namespaced.json",
+      "bytes": 529,
+      "sha256": "79b75c218d3963ce91905ee324d34e02aef92eafad9abb75bfd23a5d5bb927a1",
+      "retained_copy": "bactmap-daemon-future-namespaced.json",
+      "publication_supplement": true
+    }
+  ],
+  "python_summary": [
+    {
+      "python": "Python 3.12.3",
+      "scope": "full",
+      "exit_code": 0,
+      "tests": 3397,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "seconds": 1678.054
+    },
+    {
+      "python": "Python 3.11.17",
+      "scope": "affected",
+      "exit_code": 0,
+      "tests": 386,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 38.447
+    },
+    {
+      "python": "Python 3.13.17",
+      "scope": "affected",
+      "exit_code": 0,
+      "tests": 386,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 49.919
+    },
+    {
+      "python": "Python 3.14.9",
+      "scope": "affected",
+      "exit_code": 0,
+      "tests": 386,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 45.59
+    },
+    {
+      "python": "Python 3.15.1",
+      "scope": "affected",
+      "exit_code": 0,
+      "tests": 386,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 44.021
+    }
+  ],
+  "assessment_summary": {
+    "all_checks_passed": true,
+    "scientific_replay_comparison": {
+      "ERR2172265": {
+        "bam_primary_alignment_semantics": true,
+        "filtered_vcf_record_stream": true,
+        "pseudogenome_sequence": true
+      },
+      "ERR2172266": {
+        "bam_primary_alignment_semantics": true,
+        "filtered_vcf_record_stream": true,
+        "pseudogenome_sequence": true
+      },
+      "ERR2172267": {
+        "bam_primary_alignment_semantics": true,
+        "filtered_vcf_record_stream": true,
+        "pseudogenome_sequence": true
+      }
+    },
+    "aligned_pseudogenomes_byte_identical": true,
+    "tree_topology_comparison": {
+      "rapidnj/rapidnj_phylogeny.tre": true,
+      "fasttree/fasttree_phylogeny.tre": true,
+      "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": true,
+      "raxmlng/output.raxml.bestTree": true
+    },
+    "tree_byte_comparison": {
+      "rapidnj/rapidnj_phylogeny.tre": true,
+      "fasttree/fasttree_phylogeny.tre": true,
+      "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile": true,
+      "raxmlng/output.raxml.bestTree": true
+    }
+  },
+  "replay_comparison": {
+    "identical": [
+      "bwa/index/NCTC13799.amb",
+      "bwa/index/NCTC13799.ann",
+      "bwa/index/NCTC13799.bwt",
+      "bwa/index/NCTC13799.pac",
+      "bwa/index/NCTC13799.sa",
+      "fastp/ERR2172265.fastp.json",
+      "fastp/ERR2172266.fastp.json",
+      "fastp/ERR2172267.fastp.json",
+      "fasttree/fasttree_phylogeny.tre",
+      "gubbins/aligned_pseudogenomes.branch_base_reconstruction.embl",
+      "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.fasta",
+      "gubbins/aligned_pseudogenomes.filtered_polymorphic_sites.phylip",
+      "gubbins/aligned_pseudogenomes.final_tree.tre",
+      "gubbins/aligned_pseudogenomes.node_labelled.final_tree.tre",
+      "gubbins/aligned_pseudogenomes.per_branch_statistics.csv",
+      "gubbins/aligned_pseudogenomes.recombination_predictions.embl",
+      "gubbins/aligned_pseudogenomes.recombination_predictions.gff",
+      "gubbins/aligned_pseudogenomes.summary_of_snp_distribution.vcf",
+      "iqtree/aligned_pseudogenomes.filtered_polymorphic_sites.fasta.treefile",
+      "mash/ERR2172265.mash_stats",
+      "mash/ERR2172265.msh",
+      "mash/ERR2172266.mash_stats",
+      "mash/ERR2172266.msh",
+      "mash/ERR2172267.mash_stats",
+      "mash/ERR2172267.msh",
+      "multiqc/multiqc_data/mqc_bcftools-stats-subtypes_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_depth_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_indel-lengths_1.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Indels.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_SNP.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transitions.yaml",
+      "multiqc/multiqc_data/mqc_bcftools_stats_vqc_Count_Transversions.yaml",
+      "multiqc/multiqc_data/mqc_fastp-duprates-plot_1.yaml",
+      "multiqc/multiqc_data/mqc_fastp-insert-size-plot_1.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-gc-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-content-n-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_1_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_After_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp-seq-quality-plot_Read_2_Before_filtering.yaml",
+      "multiqc/multiqc_data/mqc_fastp_filtered_reads_plot_1.yaml",
+      "multiqc/multiqc_data/mqc_samtools_alignment_plot_1.yaml",
+      "multiqc/multiqc_data/multiqc_bcftools_stats_bcftools.yaml",
+      "multiqc/multiqc_data/multiqc_fastp.yaml",
+      "multiqc/multiqc_data/multiqc_general_stats.yaml",
+      "multiqc/multiqc_data/multiqc_samtools_stats_samtools.yaml",
+      "pipeline_info/samplesheet.valid.csv",
+      "pseudogenomes/ERR2172265.fas",
+      "pseudogenomes/ERR2172266.fas",
+      "pseudogenomes/ERR2172267.fas",
+      "pseudogenomes/aligned_pseudogenomes.fas",
+      "pseudogenomes/low_quality_pseudogenomes.tsv",
+      "rapidnj/alignment.sth",
+      "rapidnj/rapidnj_phylogeny.tre",
+      "rasusa/ERR2172265_1.fastq.gz",
+      "rasusa/ERR2172265_2.fastq.gz",
+      "rasusa/ERR2172266_1.fastq.gz",
+      "rasusa/ERR2172266_2.fastq.gz",
+      "rasusa/ERR2172267_1.fastq.gz",
+      "rasusa/ERR2172267_2.fastq.gz",
+      "raxmlng/output.raxml.bestTree",
+      "raxmlng/output.raxml.support",
+      "samtools/ERR2172265.sorted.bam",
+      "samtools/ERR2172265.sorted.bam.bai",
+      "samtools/ERR2172265.sorted.bam.flagstat",
+      "samtools/ERR2172265.sorted.bam.idxstats",
+      "samtools/ERR2172265.sorted.bam.stats",
+      "samtools/ERR2172266.sorted.bam",
+      "samtools/ERR2172266.sorted.bam.bai",
+      "samtools/ERR2172266.sorted.bam.flagstat",
+      "samtools/ERR2172266.sorted.bam.idxstats",
+      "samtools/ERR2172266.sorted.bam.stats",
+      "samtools/ERR2172267.sorted.bam",
+      "samtools/ERR2172267.sorted.bam.bai",
+      "samtools/ERR2172267.sorted.bam.flagstat",
+      "samtools/ERR2172267.sorted.bam.idxstats",
+      "samtools/ERR2172267.sorted.bam.stats",
+      "snpsites/constant.sites.txt",
+      "snpsites/filtered_alignment.fas",
+      "variants/ERR2172265.bcftools_stats.txt",
+      "variants/ERR2172265.vcf.gz.tbi",
+      "variants/ERR2172266.bcftools_stats.txt",
+      "variants/ERR2172266.vcf.gz.tbi",
+      "variants/ERR2172267.bcftools_stats.txt"
+    ],
+    "changed": [
+      "fastp/ERR2172265.fastp.html",
+      "fastp/ERR2172266.fastp.html",
+      "fastp/ERR2172267.fastp.html",
+      "fastp/log/ERR2172265.fastp.log",
+      "fastp/log/ERR2172266.fastp.log",
+      "fastp/log/ERR2172267.fastp.log",
+      "multiqc/multiqc_data/multiqc.log",
+      "multiqc/multiqc_data/multiqc_data.json",
+      "multiqc/multiqc_data/multiqc_sources.yaml",
+      "multiqc/multiqc_report.html",
+      "pipeline_info/execution_report_2026-10-28_09-13-10.html -> pipeline_info/execution_report_2026-10-28_09-18-06.html",
+      "pipeline_info/execution_timeline_2026-10-28_09-13-10.html -> pipeline_info/execution_timeline_2026-10-28_09-18-06.html",
+      "pipeline_info/execution_trace_2026-10-28_09-13-10.txt -> pipeline_info/execution_trace_2026-10-28_09-18-06.txt",
+      "pipeline_info/pipeline_dag_2026-10-28_09-13-10.dot -> pipeline_info/pipeline_dag_2026-10-28_09-18-06.dot",
+      "pipeline_info/pipeline_report.html",
+      "pipeline_info/pipeline_report.txt",
+      "variants/ERR2172265.filtered.vcf.gz",
+      "variants/ERR2172265.vcf.gz",
+      "variants/ERR2172266.filtered.vcf.gz",
+      "variants/ERR2172266.vcf.gz",
+      "variants/ERR2172267.filtered.vcf.gz",
+      "variants/ERR2172267.vcf.gz",
+      "variants/ERR2172267.vcf.gz.tbi"
+    ],
+    "missing": [],
+    "extra": [],
+    "missing_directories": [],
+    "extra_directories": [],
+    "changed_links": [],
+    "unverified_structure": false,
+    "renamed": [
+      "pipeline_info/execution_report_2026-10-28_09-13-10.html -> pipeline_info/execution_report_2026-10-28_09-18-06.html",
+      "pipeline_info/execution_timeline_2026-10-28_09-13-10.html -> pipeline_info/execution_timeline_2026-10-28_09-18-06.html",
+      "pipeline_info/execution_trace_2026-10-28_09-13-10.txt -> pipeline_info/execution_trace_2026-10-28_09-18-06.txt",
+      "pipeline_info/pipeline_dag_2026-10-28_09-13-10.dot -> pipeline_info/pipeline_dag_2026-10-28_09-18-06.dot"
+    ],
+    "environment": {
+      "version": 1,
+      "status": "identical",
+      "mismatches": [],
+      "unverified": [],
+      "notes": []
+    },
+    "structurally_equal": true,
+    "byte_identical": false
+  },
+  "publication_preparation": {
+    "original_server_export_index_sha256": "4d599a1b23e531c1e42a855a754c81147df5131afac2b7d3d600ef5d86147aba",
+    "excluded_copies": [
+      "bactmap-managed-probe-20261028--out--.nextflow--cache--c3ba30db-e837-4f36-adff-f41624a84a3c--db--000003.log",
+      "bactmap-managed-probe-20261028-v2--out--.nextflow--cache--38cd6753-70e4-41dd-be2f-9a5f7e2a0147--db--000003.log",
+      "bactmap-sorting-control-20261028--.nextflow--cache--27b7cdb0-a6d0-4807-b73c-4f2988b775f3--db--000003.log",
+      "bactmap-sorting-control-20261028-v2--.nextflow--cache--b47c4e32-587d-4ecd-9caf-cabfde427b20--db--000003.log"
+    ],
+    "scientific_records_modified": false,
+    "updated_at": "2026-10-28T11:04:56.598269+00:00"
+  }
+}

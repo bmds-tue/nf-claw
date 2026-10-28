@@ -1,0 +1,36 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import json,hashlib,subprocess,gzip,collections
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-fixture-oracle-20261028');root.mkdir(mode=0o700,exist_ok=False)
+commit='02195cfa96ca496173e9d63dd58e34bf02fcf55a';base=f'https://raw.githubusercontent.com/nf-core/test-datasets/{commit}/'
+record={'version':1,'checked_at':datetime.now(UTC).isoformat(),'data_commit':commit,'worker':{'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},'files':{},'samples':{},'reference':{}}
+def download(rel):
+ p=root/Path(rel).name;url=base+rel
+ subprocess.run(['curl','--fail','--location','--silent','--show-error','--proto','=https','--connect-timeout','15','--max-time','90','--max-filesize','20971520','--output',str(p),url],check=True)
+ record['files'][rel]={'url':url,'path':str(p),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+ return p
+p=download('genome/NCTC13799.fna');current=None;seqs={}
+for line in p.read_text().splitlines():
+ if line.startswith('>'):
+  current=line[1:].split()[0];assert current and current not in seqs;seqs[current]=''
+ elif line:
+  assert current is not None;seqs[current]+=line.strip()
+assert seqs and all(seqs.values())
+record['reference']={name:{'length':len(seq),'sequence_sha256':hashlib.sha256(seq.encode()).hexdigest(),'sequence_md5':hashlib.md5(seq.encode()).hexdigest(),'alphabet':sorted(set(seq))} for name,seq in seqs.items()}
+for sample in ['ERR2172265','ERR2172266','ERR2172267']:
+ ids={};mates={}
+ for mate in (1,2):
+  rel=f'illumina/{sample}_{mate}.fastq.gz';p=download(rel);seen=set();lengths=collections.Counter();h=hashlib.sha256();n=0;duplicates=0
+  with gzip.open(p,'rt',encoding='ascii') as f:
+   while header:=f.readline():
+    seq=f.readline().rstrip('\r\n');plus=f.readline();qual=f.readline().rstrip('\r\n')
+    assert header.startswith('@') and plus.startswith('+') and seq and len(seq)==len(qual)
+    assert all(33<=ord(c)<=126 for c in qual)
+    identifier=header[1:].split()[0].removesuffix('/'+str(mate))
+    duplicates+=identifier in seen;seen.add(identifier);lengths[len(seq)]+=1;n+=1
+    h.update(json.dumps((header.rstrip('\r\n'),seq,qual),separators=(',',':')).encode()+b'\n')
+  ids[mate]=seen;mates[str(mate)]={'reads':n,'unique_ids':len(seen),'duplicate_ids':duplicates,'length_counts':dict(lengths),'canonical_stream_sha256':h.hexdigest()}
+ assert mates['1']['reads'] and ids[1]==ids[2] and mates['1']['duplicate_ids']==mates['2']['duplicate_ids']==0
+ record['samples'][sample]={'mates':mates,'matched_pair_ids':len(ids[1]),'orphan_ids':0}
+(root/'oracle.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps(record,indent=2),flush=True)

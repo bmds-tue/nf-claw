@@ -1,0 +1,42 @@
+from pathlib import Path
+from datetime import datetime, UTC
+import hashlib,json,shutil,xml.etree.ElementTree as ET
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+export=Path('/mnt/volume/nfclaw-bactmap-evidence-export-20261028');export.mkdir(exist_ok=False)
+def sha(path):
+ h=hashlib.sha256()
+ with path.open('rb') as stream:
+  for block in iter(lambda:stream.read(1024*1024),b''):h.update(block)
+ return h.hexdigest()
+entries=[]
+def add(path,name=None,copy=True):
+ assert path.is_file(),path
+ entry={'path':str(path),'bytes':path.stat().st_size,'sha256':sha(path)}
+ if copy:
+  name=name or path.name;assert not (export/name).exists(),name
+  shutil.copyfile(path,export/name);entry['retained_copy']=name
+ entries.append(entry)
+for path in sorted(root.glob('commit-*-bactmap*.json')):add(path)
+for folder in ['bactmap-config-diagnosis-20261028','bactmap-config-spike-20261028','bactmap-fixture-oracle-20261028','bactmap-managed-probe-20261028','bactmap-managed-probe-20261028-v2','bactmap-sorting-control-20261028','bactmap-sorting-control-20261028-v2']:
+ for path in sorted((root/folder).rglob('*')):
+  if path.is_file() and path.suffix in ('.json','.stdout','.stderr','.log'):
+   add(path,folder+'--'+str(path.relative_to(root/folder)).replace('/','--'),copy=path.stat().st_size<100000)
+for path in sorted(Path('/mnt/volume').glob('nfclaw-bactmap-*.py')):add(path,path.name+'.txt')
+add(Path('/mnt/volume/nfclaw-bactmap-callback-control.groovy'),'bactmap-callback-control.groovy.txt')
+for path in sorted(Path('/mnt/volume').glob('nfclaw-bactmap-*.log')):add(path,copy=False)
+for path in sorted(root.glob('bactmap-*.log')):add(path,copy=False)
+for path in [root/'server-storage-observation-20261028.json',root/'private-docker-20261028/record.json',root/'private-docker-20261028/daemon.json',root/'private-docker-20261028/bactmap-images.json']:
+ add(path,'bactmap-'+path.name)
+matrix=Path('/mnt/volume/nfclaw-remediation-python-matrix/8db1cbb');add(matrix/'results.json','python-validation-8db1cbb.json')
+summary=[]
+for record in json.loads((matrix/'results.json').read_text()):
+ report=Path(record['junit_report']);suites=ET.parse(report).getroot();nodes=list(suites.iter('testsuite'))
+ summary.append({'python':record['python'],'scope':record['scope'],'exit_code':record['exit_code'],'tests':sum(int(x.get('tests',0)) for x in nodes),'failures':sum(int(x.get('failures',0)) for x in nodes),'errors':sum(int(x.get('errors',0)) for x in nodes),'skipped':sum(int(x.get('skipped',0)) for x in nodes),'seconds':sum(float(x.get('time',0)) for x in nodes)})
+ add(report,copy=False);add(Path(record['log']),copy=False)
+add(matrix/'full-suite-evidence-check.json','python-full-suite-evidence-check-8db1cbb.json')
+add(matrix/'source-inventory.json','python-source-inventory-8db1cbb.json')
+add(matrix/'fallback-source-inventory.json','python-fallback-source-inventory-8db1cbb.json')
+assessment=json.loads((root/'commit-8db1cbb-bactmap-demo-assessment-v2.json').read_text())
+record={'generated_at':datetime.now(UTC).isoformat(),'scope':'Bactmap U06 raw records and retained helper source; large scientific input/result files remain at their hashed server locations. This export runs no tests and edits no results.','entries':entries,'python_summary':summary,'assessment_summary':{k:assessment[k] for k in ['all_checks_passed','scientific_replay_comparison','aligned_pseudogenomes_byte_identical','tree_topology_comparison','tree_byte_comparison']},'replay_comparison':assessment['replay_comparison']}
+(export/'bactmap-evidence-index-20261028.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps({'files':len(list(export.iterdir())),'bytes':sum(x.stat().st_size for x in export.iterdir()),'python_summary':summary,'replay_comparison':assessment['replay_comparison'],'runs':[{'kind':r['kind'],'negative_controls':r['negative_controls']} for r in assessment['runs']]},indent=2))

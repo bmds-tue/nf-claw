@@ -1,0 +1,19 @@
+from pathlib import Path
+import os,json,subprocess,hashlib
+from runner.probes import capture
+base=Path('/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-config-diagnosis-20261028');base.mkdir(mode=0o700,exist_ok=False)
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source/pipelines/bactmap/upstream')
+env={**os.environ,'NXF_VER':'24.10.5','NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true'}
+records=[]
+for profile in ['docker','test,docker']:
+ command=['nextflow','config',str(source),'-profile',profile,'-flat']
+ try:
+  result=capture(command,timeout=60,env=env,cwd=base)
+  stdout,stderr,code=result.stdout,result.stderr,result.returncode
+ except subprocess.TimeoutExpired as exc:
+  stdout,stderr,code=str(exc.output or ''),str(exc.stderr or ''),'timeout'
+ name=profile.replace(',','-');p=base/(name+'.config.flat');p.write_text(stdout);(base/(name+'.stderr')).write_text(stderr)
+ modules=[line for line in stdout.splitlines() if line.startswith('params.modules.')]
+ records.append({'profile':profile,'command':command,'exit_code':code,'flat':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'module_options':modules})
+ print(profile,code,'options',len(modules),flush=True)
+(base/'records.json').write_text(json.dumps(records,indent=2)+'\n')

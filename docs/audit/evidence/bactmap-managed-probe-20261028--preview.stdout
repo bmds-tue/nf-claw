@@ -1,0 +1,170 @@
+
+ N E X T F L O W   ~  version 24.10.5
+
+Launching `/mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/pipeline/main.nf` [pedantic_caravaggio] DSL2 - revision: 2e456c2488
+
+
+
+------------------------------------------------------
+                                        ,--./,-.
+        ___     __   __   __   ___     /,-._.--~'
+  |\ | |__  __ /  ` /  \ |__) |__         }  {
+  | \| |       \__, \__/ |  \ |___     \`-._,-`-,
+                                        `._,._,'
+  nf-core/bactmap v1.0.0
+------------------------------------------------------
+Core Nextflow options
+  runName              : pedantic_caravaggio
+  containerEngine      : docker
+  launchDir            : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/out
+  workDir              : /dev/shm/nfclaw-bactmap-managed-probe-20261028/work
+  projectDir           : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/pipeline
+  userName             : ubuntu
+  profile              : test,docker
+  configFiles          : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/pipeline/nextflow.config, /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/no-reports.config
+
+Input/output options
+  input                : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/samplesheet.csv
+  outdir               : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/out
+
+Compulsory parameters
+  reference            : https://raw.githubusercontent.com/nf-core/test-datasets/02195cfa96ca496173e9d63dd58e34bf02fcf55a/genome/NCTC13799.fna
+
+Optional pipeline steps
+  adapter_file         : /mnt/volume/nfclaw-remediation-evidence-20261026/bactmap-managed-probe-20261028/staging/nfclaw-check-xecjjhbf/pipeline/assets/adapters.fas
+  remove_recombination : true
+  rapidnj              : true
+  fasttree             : true
+  iqtree               : true
+  raxmlng              : true
+
+Max job request options
+  max_cpus             : 2
+  max_memory           : 2.GB
+  max_time             : 1.h
+
+Institutional config options
+  custom_config_version: 19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20
+  custom_config_base   : https://raw.githubusercontent.com/nf-core/configs/19bb40da0b4bd9e69f8c0043f8c55ce10f5dac20
+
+!! Only displaying parameters that differ from the pipeline defaults !!
+------------------------------------------------------
+If you use nf-core/bactmap for your analysis please cite:
+
+* The nf-core framework
+  https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+  https://github.com/nf-core/bactmap/blob/master/CITATIONS.md
+------------------------------------------------------
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+WARN: Include with `addParams()` is deprecated -- pass params as a workflow or process input instead
+[-        ] NFC…UT_CHECK:SAMPLESHEET_CHECK -
+
+[-        ] NFC…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] NFC…_BACTMAP:BACTMAP:BWA_INDEX -
+[-        ] NFCORE_BACTMAP:BACTMAP:FASTP   -
+[-        ] NFC…P:SUB_SAMPLING:MASH_SKETCH -
+[-        ] NFC…ACTMAP:SUB_SAMPLING:RASUSA -
+[-        ] NFCORE_BACTMAP:BACTMAP:BWA_MEM -
+[-        ] NFC…ORT_SAMTOOLS:SAMTOOLS_SORT -
+[-        ] NFC…RT_SAMTOOLS:SAMTOOLS_INDEX -
+[-        ] NFC…TS_SAMTOOLS:SAMTOOLS_STATS -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_FLAGSTAT -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_IDXSTATS -
+
+[-        ] NFC…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] NFC…_BACTMAP:BACTMAP:BWA_INDEX -
+[-        ] NFCORE_BACTMAP:BACTMAP:FASTP   -
+[-        ] NFC…P:SUB_SAMPLING:MASH_SKETCH -
+[-        ] NFC…ACTMAP:SUB_SAMPLING:RASUSA -
+[-        ] NFCORE_BACTMAP:BACTMAP:BWA_MEM -
+[-        ] NFC…ORT_SAMTOOLS:SAMTOOLS_SORT -
+[-        ] NFC…RT_SAMTOOLS:SAMTOOLS_INDEX -
+[-        ] NFC…TS_SAMTOOLS:SAMTOOLS_STATS -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_FLAGSTAT -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_IDXSTATS -
+[-        ] NFC…_BCFTOOLS:BCFTOOLS_MPILEUP -
+[-        ] NFC…S_BCFTOOLS:BCFTOOLS_FILTER -
+[-        ] NFC…P:BACTMAP:VCF2PSEUDOGENOME -
+[-        ] NFC…BACTMAP:ALIGNPSEUDOGENOMES -
+[-        ] NFC…E_BACTMAP:BACTMAP:SNPSITES -
+[-        ] NFCORE_BACTMAP:BACTMAP:GUBBINS -
+[-        ] NFC…P:CREATE_PHYLOGENY:RAPIDNJ -
+[-        ] NFC…:CREATE_PHYLOGENY:FASTTREE -
+[-        ] NFC…AP:CREATE_PHYLOGENY:IQTREE -
+Plus 1 more processes waiting for tasks…
+
+[-        ] NFC…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] NFC…_BACTMAP:BACTMAP:BWA_INDEX -
+[-        ] NFCORE_BACTMAP:BACTMAP:FASTP   -
+[-        ] NFC…P:SUB_SAMPLING:MASH_SKETCH -
+[-        ] NFC…ACTMAP:SUB_SAMPLING:RASUSA -
+[-        ] NFCORE_BACTMAP:BACTMAP:BWA_MEM -
+[-        ] NFC…ORT_SAMTOOLS:SAMTOOLS_SORT -
+[-        ] NFC…RT_SAMTOOLS:SAMTOOLS_INDEX -
+[-        ] NFC…TS_SAMTOOLS:SAMTOOLS_STATS -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_FLAGSTAT -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_IDXSTATS -
+[-        ] NFC…_BCFTOOLS:BCFTOOLS_MPILEUP -
+[-        ] NFC…S_BCFTOOLS:BCFTOOLS_FILTER -
+[-        ] NFC…P:BACTMAP:VCF2PSEUDOGENOME -
+[-        ] NFC…BACTMAP:ALIGNPSEUDOGENOMES -
+[-        ] NFC…E_BACTMAP:BACTMAP:SNPSITES -
+[-        ] NFCORE_BACTMAP:BACTMAP:GUBBINS -
+[-        ] NFC…P:CREATE_PHYLOGENY:RAPIDNJ -
+[-        ] NFC…:CREATE_PHYLOGENY:FASTTREE -
+[-        ] NFC…AP:CREATE_PHYLOGENY:IQTREE -
+Plus 3 more processes waiting for tasks…
+-[nf-core/bactmap] Pipeline completed successfully-
+
+[-        ] NFC…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] NFC…_BACTMAP:BACTMAP:BWA_INDEX -
+[-        ] NFCORE_BACTMAP:BACTMAP:FASTP   -
+[-        ] NFC…P:SUB_SAMPLING:MASH_SKETCH -
+[-        ] NFC…ACTMAP:SUB_SAMPLING:RASUSA -
+[-        ] NFCORE_BACTMAP:BACTMAP:BWA_MEM -
+[-        ] NFC…ORT_SAMTOOLS:SAMTOOLS_SORT -
+[-        ] NFC…RT_SAMTOOLS:SAMTOOLS_INDEX -
+[-        ] NFC…TS_SAMTOOLS:SAMTOOLS_STATS -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_FLAGSTAT -
+[-        ] NFC…SAMTOOLS:SAMTOOLS_IDXSTATS -
+[-        ] NFC…_BCFTOOLS:BCFTOOLS_MPILEUP -
+[-        ] NFC…S_BCFTOOLS:BCFTOOLS_FILTER -
+[-        ] NFC…P:BACTMAP:VCF2PSEUDOGENOME -
+[-        ] NFC…BACTMAP:ALIGNPSEUDOGENOMES -
+[-        ] NFC…E_BACTMAP:BACTMAP:SNPSITES -
+[-        ] NFCORE_BACTMAP:BACTMAP:GUBBINS -
+[-        ] NFC…P:CREATE_PHYLOGENY:RAPIDNJ -
+[-        ] NFC…:CREATE_PHYLOGENY:FASTTREE -
+[-        ] NFC…AP:CREATE_PHYLOGENY:IQTREE -
+Plus 3 more processes waiting for tasks…
+-[nf-core/bactmap] Pipeline completed successfully-
+
