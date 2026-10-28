@@ -779,7 +779,8 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
             'createtaxdb': 'Sourmash sorts a copy rather than the shared genome list.',
             'funcscan': 'HMM search retains sample metadata so all HMM results reach AMPcombi.',
             'bactmap': 'The test profile preserves module defaults and overrides only its '
-                       'intended leaves. Preview skips the unbound MultiQC report wait; '
+                       'intended leaves, with explicit IQ-TREE and RAxML seeds. Pseudogenomes '
+                       'are aligned in sample-name order. Preview skips the unbound MultiQC wait; '
                        'real execution still waits for its report.',
         }[name]
         doc_root = '../..' if pipeline_version is None else '../../../..'

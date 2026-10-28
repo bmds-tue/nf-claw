@@ -17,7 +17,8 @@ COMMIT = '834642d8ac150ca10d705833223e7bcf15efc210'
 DATA = '02195cfa96ca496173e9d63dd58e34bf02fcf55a'
 BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{DATA}/'
 TARGETS = {'conf/test.config': 'bactmap-test.config',
-           'lib/NfcoreTemplate.groovy': 'bactmap-NfcoreTemplate.groovy'}
+           'lib/NfcoreTemplate.groovy': 'bactmap-NfcoreTemplate.groovy',
+           'modules/local/alignpseudogenomes.nf': 'bactmap-alignpseudogenomes.nf'}
 
 
 def original(tmp_path):
@@ -29,7 +30,7 @@ def original(tmp_path):
     return SubmoduleStatus('bactmap', root, True, True, '1.0.0', COMMIT, ())
 
 
-def test_both_corrections_are_one_atomic_recorded_source(tmp_path):
+def test_all_corrections_are_one_atomic_recorded_source(tmp_path):
     st = original(tmp_path)
     before = replay_guard.hash_pipeline(st.path)
     planned = source_corrections.plan(st)
@@ -40,6 +41,12 @@ def test_both_corrections_are_one_atomic_recorded_source(tmp_path):
     assert '    modules {' not in config
     assert 'params.modules.bcftools_filter.args =' in config
     assert 'params.modules.alignpseudogenomes.non_GATC_threshold = 0.8' in config
+    assert "params.modules.raxmlng.args += ' --seed 23032021'" in config
+    assert "params.modules.iqtree.args += ' --seed 23032021'" in config
+    alignment = (working.path / 'modules/local/alignpseudogenomes.nf').read_text()
+    assert '${ordered_pseudogenomes}' in alignment
+    assert 'new nextflow.util.BlankSeparatedList(' in alignment
+    assert '.sort(false) { it.name }' in alignment
     assert (working.path / 'conf/modules.config').read_bytes() == (
         FIXTURES / 'bactmap-modules.config').read_bytes()
     source_corrections.verify(working)
@@ -101,7 +108,7 @@ def test_second_file_is_checked_on_resume_and_cache_reuse(tmp_path, target):
 
 def test_demo_sheet_and_reference_use_the_same_immutable_dataset():
     assert demo_defaults.parameters('bactmap', COMMIT) == {
-        'reference': BASE + 'genome/NCTC13799.fna'}
+        'reference': BASE + 'genome/NCTC13799.fna', 'max_cpus': 1}
     sheet = demo_defaults.samplesheet('bactmap', COMMIT)
     assert sheet.header == ('sample', 'fastq_1', 'fastq_2')
     assert sheet.files == ()
@@ -120,7 +127,7 @@ def test_explicit_data_selectors_disable_the_entire_fixture(selector):
     assert demo_defaults.parameters('bactmap', COMMIT, provided=frozenset({selector})) == {}
 
 
-@pytest.mark.parametrize('override', ['none', 'input', 'reference', 'null_reference',
+@pytest.mark.parametrize('override', ['none', 'cpus', 'input', 'reference', 'null_reference',
                                      'config', 'profile', 'non_demo'])
 def test_bare_demo_eligibility_and_parameter_precedence(tmp_path, monkeypatch, override):
     source = ROOT / 'pipelines/bactmap/upstream'
@@ -132,6 +139,8 @@ def test_bare_demo_eligibility_and_parameter_precedence(tmp_path, monkeypatch, o
         pytest.skip('bactmap is no longer pinned at the audited commit 834642d8ac15')
     monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])
     cli = {'fasttree': False}
+    if override == 'cpus':
+        cli['max_cpus'] = 2
     if override in ('reference', 'input'):
         suffix = 'fna' if override == 'reference' else 'csv'
         cli[override] = 'https://example.org/custom.' + suffix
@@ -158,13 +167,16 @@ def test_bare_demo_eligibility_and_parameter_precedence(tmp_path, monkeypatch, o
         cmd = shlex.split(result.command)
         params = json.loads(Path(cmd[cmd.index('-params-file') + 1]).read_text())
         assert params['fasttree'] is False
-        assert (result.generated_samplesheet is not None) == (override == 'none')
-        if override == 'none':
+        assert (result.generated_samplesheet is not None) == (override in {'none', 'cpus'})
+        if override in {'none', 'cpus'}:
             assert params['reference'] == BASE + 'genome/NCTC13799.fna'
+            assert params['max_cpus'] == (2 if override == 'cpus' else 1)
         elif override in ('input', 'reference'):
             assert params[override] == cli[override]
         elif override == 'null_reference':
             assert params['reference'] is None
+        if override not in {'none', 'cpus'}:
+            assert 'max_cpus' not in params
         assert Path(cmd[cmd.index('run') + 1]) != source
         assert not result.outdir.exists()
     finally:

@@ -72,7 +72,7 @@ _RECIPES = (
             (b'[[id: meta.id], file]',
              b"[meta.findAll { key, value -> key != 'hmm_id' }, file]"))),
     Recipe('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210',
-           'bactmap-module-defaults-preview-v1', 'conf/test.config',
+           'bactmap-demo-order-preview-v2', 'conf/test.config',
            '665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604',
            ((b'''    modules {
         'bcftools_filter' {
@@ -93,6 +93,8 @@ params.modules.bcftools_filter.args = "''' + _BACTMAP_FILTER + b'''"
 params.modules.bcftools_filter.suffix = '.filtered'
 params.modules.bcftools_filter.publish_dir = 'variants'
 params.modules.alignpseudogenomes.non_GATC_threshold = 0.8
+params.modules.iqtree.args += ' --seed 23032021'
+params.modules.raxmlng.args += ' --seed 23032021'
 ''')),
            (FilePatch('lib/NfcoreTemplate.groovy',
                       'dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2',
@@ -100,7 +102,16 @@ params.modules.alignpseudogenomes.non_GATC_threshold = 0.8
                         b'                mqc_report = multiqc_report.getVal()',
                         b"if (workflow.success && !(workflow.hasProperty('preview') "
                         b'&& workflow.preview)) {\n'
-                        b'                mqc_report = multiqc_report.getVal()'),)),)),
+                        b'                mqc_report = multiqc_report.getVal()'),)),
+            FilePatch('modules/local/alignpseudogenomes.nf',
+                      '691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e',
+                      ((b'    def software = getSoftwareName(task.process)\n',
+                        b'    def software = getSoftwareName(task.process)\n'
+                        b'    def ordered_pseudogenomes = new nextflow.util.BlankSeparatedList(\n'
+                        b'        (pseudogenomes instanceof Collection ? pseudogenomes : '
+                        b'[pseudogenomes])\n'
+                        b'            .sort(false) { it.name })\n'),
+                       (b'${pseudogenomes}', b'${ordered_pseudogenomes}'))))),
 )
 
 

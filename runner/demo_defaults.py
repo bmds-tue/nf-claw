@@ -23,7 +23,7 @@ _REFERENCE = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
               '618f1541382c4ad49eff566dadf13d5ccbd0ebb4/'
               'data/genomics/homo_sapiens/genome/genome.fasta')
 _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
-               _BACTMAP: {'reference': _BACTMAP_BASE + 'genome/NCTC13799.fna'},
+               _BACTMAP: {'reference': _BACTMAP_BASE + 'genome/NCTC13799.fna', 'max_cpus': 1},
                _TUMOUREVO: {'sparsesignatures_k': '2:3'},
                _FASTQREPAIR: {'num_splits': 2},
                _HGTSEQ: {'gff': _HGT_BASE + 'reference/Homo_sapiens.hg38.chr21.gff3',
@@ -43,7 +43,12 @@ _NOTES = {_BACTMAP:
     'test-datasets commit `02195cfa96ca496173e9d63dd58e34bf02fcf55a`. The generated sheet and '
     'data commit are recorded and rebased for replay. Explicit input or reference, custom '
     'profiles or `--config` disable the entire fixture. Other releases retain their defaults. '
-    'A source-bound working copy preserves module defaults under the test profile and skips '
+    'Bare demos default to `max_cpus=1`: native two-CPU runs reordered identical reads and '
+    'changed downstream alignments and pseudogenome masking; the single-CPU control matched. '
+    'Explicit `--max-cpus` or params-file values win. Resource limits are ceilings and do not '
+    'raise this default. Tree branch lengths and bootstrap support still need separate comparison. '
+    'A source-bound working copy preserves module defaults, orders the pseudogenome alignment '
+    'by sample name, seeds IQ-TREE and RAxML under the test profile, and skips '
     'the unbound MultiQC report wait only during preview; real runs still wait for the report.',
     _BAMTOFASTQ:
     'This pinned test profile omits its required reference. For the bundled demo input, nfclaw '

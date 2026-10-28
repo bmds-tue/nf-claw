@@ -83,7 +83,7 @@ def test_funcscan_dramp_recipe_is_visible_and_bound_to_the_tested_consumer(tmp_p
      'createtaxdb-sourmash-copy-sort-v1'),
     ('funcscan', 'aee3dc965eb0c77267435544dda30da858763913', 'funcscan-hmm-metadata-v1'),
     ('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210',
-     'bactmap-module-defaults-preview-v1')])
+     'bactmap-demo-order-preview-v2')])
 def test_workflow_correction_docs_distinguish_direct_upstream_execution(
         tmp_path, name, commit, recipe):
     pdir = _seed(tmp_path, 'mini')

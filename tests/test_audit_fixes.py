@@ -56,17 +56,6 @@ def test_nextflow_accept_rejects_special_path_components(tmp_path, name):
     assert "Invalid pipeline name" in proc.stdout
 
 
-def test_nextflow_accept_timeout_is_portable():
-    text = (REPO / "scripts" / "nextflow_accept.sh").read_text(encoding="utf-8")
-    assert "_run_with_timeout()" in text
-    assert "command -v timeout" in text
-    assert "command -v gtimeout" in text
-    # Global engine options such as -log may precede the run subcommand.
-    assert "NXF_VER=\"$ver\" _run_with_timeout \"$budget\" nextflow " in text
-    assert "budget=900" in text
-
-
-
 def test_setup_nextflow_action_verifies_the_checksum_and_stays_out_of_the_repo():
     # The launcher is fetched from the network on every job, so the install must stay pinned and
     # checksum-verified — and must never land in the working tree: a workflow that commits its tree

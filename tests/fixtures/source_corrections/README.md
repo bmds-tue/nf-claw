@@ -22,6 +22,7 @@ Bactmap 1.0.0 commit `834642d8ac150ca10d705833223e7bcf15efc210` fixtures:
 | `bactmap-NfcoreTemplate.groovy` | `lib/NfcoreTemplate.groovy` | `dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2` |
 | `bactmap-modules.config` | `conf/modules.config` | `c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142` |
 | `bactmap-check_samplesheet.py.txt` | `bin/check_samplesheet.py` | `2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54` |
+| `bactmap-alignpseudogenomes.nf` | `modules/local/alignpseudogenomes.nf` | `691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e` |
 | `bactmap-LICENSE` | `LICENSE` | `875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0` |
 
 Source: [Bactmap tree](https://github.com/nf-core/bactmap/tree/834642d8ac150ca10d705833223e7bcf15efc210).
