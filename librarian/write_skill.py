@@ -775,9 +775,13 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     if correction := source_corrections.recipe_identity(name, st.commit):
         raw_comment = ('# direct upstream execution (omits nfclaw\'s recorded workflow '
                        'correction):')
-        purpose = ('Sourmash sorts a copy rather than the shared genome list.'
-                   if name == 'createtaxdb' else
-                   'HMM search retains sample metadata so all HMM results reach AMPcombi.')
+        purpose = {
+            'createtaxdb': 'Sourmash sorts a copy rather than the shared genome list.',
+            'funcscan': 'HMM search retains sample metadata so all HMM results reach AMPcombi.',
+            'bactmap': 'The test profile preserves module defaults and overrides only its '
+                       'intended leaves. Preview skips the unbound MultiQC report wait; '
+                       'real execution still waits for its report.',
+        }[name]
         doc_root = '../..' if pipeline_version is None else '../../../..'
         correction_block = (
             '## Runtime corrections\n'

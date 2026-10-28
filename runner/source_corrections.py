@@ -21,6 +21,15 @@ try:
 except ImportError:
     fcntl = None
 
+_BACTMAP_FILTER = (b"--soft-filter LowQual --exclude '%QUAL<25 || FORMAT/DP<1 || MQ<30 || "
+                   b"MQ0F>0.1' --output-type z")
+
+@dataclass(frozen=True)
+class FilePatch:
+    path: str
+    original_sha256: str
+    edits: tuple[tuple[bytes, bytes], ...]
+
 
 @dataclass(frozen=True)
 class Recipe:
@@ -30,12 +39,19 @@ class Recipe:
     path: str
     original_sha256: str
     edits: tuple[tuple[bytes, bytes], ...]
+    additional_files: tuple[FilePatch, ...] = ()
 
     def identity(self) -> dict:
         content = {'version': 1, 'pipeline': self.pipeline, 'upstream_commit': self.commit,
                    'recipe': self.identifier, 'path': self.path,
                    'original_sha256': self.original_sha256,
                    'edits': [[old.decode(), new.decode()] for old, new in self.edits]}
+        # Preserve identities already recorded by the single-file recipes.
+        if self.additional_files:
+            content['additional_files'] = [
+                {'path': patch.path, 'original_sha256': patch.original_sha256,
+                 'edits': [[old.decode(), new.decode()] for old, new in patch.edits]}
+                for patch in self.additional_files]
         fingerprint = hashlib.sha256(json.dumps(content, sort_keys=True,
                                                  separators=(',', ':')).encode()).hexdigest()
         return {'version': 1, 'pipeline': self.pipeline, 'upstream_commit': self.commit,
@@ -55,6 +71,36 @@ _RECIPES = (
              b'def meta_new = meta_faa + [hmm_id: meta_hmm.id]'),
             (b'[[id: meta.id], file]',
              b"[meta.findAll { key, value -> key != 'hmm_id' }, file]"))),
+    Recipe('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210',
+           'bactmap-module-defaults-preview-v1', 'conf/test.config',
+           '665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604',
+           ((b'''    modules {
+        'bcftools_filter' {
+            args = "''' + _BACTMAP_FILTER + b'''"
+            suffix = ".filtered"
+            publish_dir   = 'variants'
+        }
+        'alignpseudogenomes' {
+            non_GATC_threshold = 0.8
+        }
+    }
+''', b''),
+            (b'    remove_recombination = true\n}\n', b'''    remove_recombination = true
+}
+
+// Override only these leaves; replacing params.modules discards the release defaults.
+params.modules.bcftools_filter.args = "''' + _BACTMAP_FILTER + b'''"
+params.modules.bcftools_filter.suffix = '.filtered'
+params.modules.bcftools_filter.publish_dir = 'variants'
+params.modules.alignpseudogenomes.non_GATC_threshold = 0.8
+''')),
+           (FilePatch('lib/NfcoreTemplate.groovy',
+                      'dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2',
+                      ((b'if (workflow.success) {\n'
+                        b'                mqc_report = multiqc_report.getVal()',
+                        b"if (workflow.success && !(workflow.hasProperty('preview') "
+                        b'&& workflow.preview)) {\n'
+                        b'                mqc_report = multiqc_report.getVal()'),)),)),
 )
 
 
@@ -122,21 +168,30 @@ def plan(st: SubmoduleStatus) -> SourcePlan | None:
     try:
         _check_untracked(st.path)
         original = replay_guard.hash_pipeline(st.path)
-        if original.get(recipe.path) != recipe.original_sha256:
-            raise _error(f'The source checksum does not match correction {recipe.identifier}: '
-                         f'{st.path / recipe.path}')
-        content = (st.path / recipe.path).read_bytes()
-        if hashlib.sha256(content).hexdigest() != recipe.original_sha256:
-            raise _error(f'The source changed while reading correction {recipe.identifier}.')
-        for old, new in recipe.edits:
-            if content.count(old) != 1:
-                raise _error(f'The source edit is ambiguous for correction {recipe.identifier}.')
-            content = content.replace(old, new)
-        expected = {**original, recipe.path: hashlib.sha256(content).hexdigest()}
+        patches = (FilePatch(recipe.path, recipe.original_sha256, recipe.edits),
+                   *recipe.additional_files)
+        if len({patch.path for patch in patches}) != len(patches):
+            raise _error(f'Duplicate source paths in correction {recipe.identifier}.')
+        expected = dict(original)
+        patched = {}
+        for patch in patches:
+            if original.get(patch.path) != patch.original_sha256:
+                raise _error(f'The source checksum does not match correction {recipe.identifier}: '
+                             f'{st.path / patch.path}')
+            content = (st.path / patch.path).read_bytes()
+            if hashlib.sha256(content).hexdigest() != patch.original_sha256:
+                raise _error(f'The source changed while reading correction {recipe.identifier}.')
+            for old, new in patch.edits:
+                if content.count(old) != 1:
+                    raise _error(f'The source edit is ambiguous for correction '
+                                 f'{recipe.identifier}.')
+                content = content.replace(old, new)
+            expected[patch.path] = hashlib.sha256(content).hexdigest()
+            patched[patch.path] = content
         identity = recipe.identity()
         return SourcePlan(st.path.resolve(), recipe.identifier, st.commit,
                           identity['fingerprint'], identity, original, expected,
-                          _source_modes(st.path, original), {recipe.path: content})
+                          _source_modes(st.path, original), patched)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         raise _error(f'Cannot plan the corrected source: {exc}') from exc
 

@@ -5,7 +5,8 @@
 #
 # For each pipeline this initialises the pinned submodule and runs
 # `nextflow run <upstream> -profile test,docker -preview` with the Nextflow
-# version the release declares (a release declaring an engine older than 22.10.0
+# version and managed source/demo corrections, where registered for that exact release. The
+# version is the one the release declares (a release declaring an engine older than 22.10.0
 # is checked on 24.10.5, a -preview-capable lenient-parser version). "Accepted" means Nextflow compiled the
 # pipeline, resolved its config/profile and validated its parameters, and the
 # preview exited successfully. Every nonzero exit fails this gate. A clearly
@@ -84,6 +85,8 @@ if [ "${#names[@]}" -eq 0 ]; then
 fi
 
 exceptions="${NFCLAW_ACCEPT_EXCEPTIONS:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_accept_exceptions.tsv}"
+preview_helper="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_preview.py"
+repo_root="$(pwd -P)"
 tmp=$(mktemp -d "${RUNNER_TEMP:-/tmp}/nfclaw-accept.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$tmp"' EXIT
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
@@ -163,8 +166,11 @@ for name in "${names[@]}"; do
   attempt=1
   while :; do
     rm -rf -- "$work" "$out" "$engine_log"
-    NXF_VER="$ver" _run_with_timeout "$budget" nextflow -log "$engine_log" run "$up" -profile test,docker \
-      -c "$cfg" --outdir "$out" -work-dir "$work" -preview > "$log" 2>&1 && rc=0 || rc=$?
+    NXF_VER="$ver" _run_with_timeout "$budget" python3 "$preview_helper" \
+      --name "$name" --commit "$commit" --version "$ver" --repo-root "$repo_root" \
+      --upstream "$up" --config "$cfg" --outdir "$out" --work "$work" \
+      --engine-log "$engine_log" --scratch "$tmp/prepared-$name-$attempt" \
+      > "$log" 2>&1 && rc=0 || rc=$?
     transient=""
     if [ "$rc" != 0 ] && [ "$attempt" -lt 3 ]; then
       if _remote_failure "$log"; then

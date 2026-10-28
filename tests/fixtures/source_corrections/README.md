@@ -13,3 +13,15 @@ MIT licenses are retained alongside them. Tests must preserve their original byt
 
 Source: [Createtaxdb](https://github.com/nf-core/createtaxdb/blob/b01a0f8ed96a5990d15470828dfa92a22cf08bba/subworkflows/local/sourmash_create/main.nf)
 and [Funcscan](https://github.com/nf-core/funcscan/blob/aee3dc965eb0c77267435544dda30da858763913/subworkflows/local/amp.nf).
+
+Bactmap 1.0.0 commit `834642d8ac150ca10d705833223e7bcf15efc210` fixtures:
+
+| Fixture | Upstream path | SHA-256 |
+| --- | --- | --- |
+| `bactmap-test.config` | `conf/test.config` | `665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604` |
+| `bactmap-NfcoreTemplate.groovy` | `lib/NfcoreTemplate.groovy` | `dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2` |
+| `bactmap-modules.config` | `conf/modules.config` | `c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142` |
+| `bactmap-check_samplesheet.py.txt` | `bin/check_samplesheet.py` | `2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54` |
+| `bactmap-LICENSE` | `LICENSE` | `875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0` |
+
+Source: [Bactmap tree](https://github.com/nf-core/bactmap/tree/834642d8ac150ca10d705833223e7bcf15efc210).

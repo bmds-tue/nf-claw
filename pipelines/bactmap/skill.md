@@ -18,11 +18,14 @@ nf-core/bactmap is a bioinformatics best-practice analysis pipeline for mapping 
 ```bash
 git submodule update --init pipelines/bactmap/upstream   # first time only
 nfclaw run bactmap --input <input> --outdir results --reference <reference> -profile docker
-# raw equivalent (the submodule is already pinned to this release, so no -r is needed):
+# direct upstream execution (omits nfclaw's recorded workflow correction):
 nextflow run pipelines/bactmap/upstream -profile docker --input <input> --outdir results --reference <reference>
 ```
 
 This is the pinned latest release. To run a different one, list the available releases with `nfclaw versions bactmap` and add `--pipeline-version X.Y.Z` to the command above (`nfclaw show bactmap --pipeline-version X.Y.Z` prints that release's docs). To run unreleased development code instead, add `--pipeline-version dev`: nfclaw resolves nf-core's `dev` branch to its current head commit at run time and records that commit in provenance (`nfclaw show bactmap --pipeline-version dev` prints the docs generated from it). Use it only for changes not yet released.
+
+## Runtime corrections
+For this exact commit, `nfclaw run` applies `bactmap-module-defaults-preview-v1` in a separate verified working copy. The test profile preserves module defaults and overrides only its intended leaves. Preview skips the unbound MultiQC report wait; real execution still waits for its report. The original pinned checkout stays unchanged. The direct Nextflow command omits this correction. The actual corrected bytes, recipe, source archive and executable modes are recorded for replay; resume refuses missing or changed source identity. Use `NFCLAW_SOURCE_CACHE` to select another writable user cache. [Recorded source corrections](../../docs/source-corrections.md) explains the exact scope and validation.
 
 ## Inputs
 This release publishes no samplesheet schema for `--input`, so nfclaw does not pre-check its contents. The parameter reads: Path to a sample sheet describing paths to input fastq files. Configure the other inputs via parameters (see [reference.md](reference.md)).
@@ -79,5 +82,7 @@ Full list with references: https://github.com/nf-core/bactmap/blob/1.0.0/CITATIO
 ```bash
 nfclaw run bactmap --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
+
+This pinned bundled test uses missing moving data URLs. For a bare demo, nfclaw stages the three original paired samples and matched NCTC13799 reference from immutable test-datasets commit `02195cfa96ca496173e9d63dd58e34bf02fcf55a`. The generated sheet and data commit are recorded and rebased for replay. Explicit input or reference, custom profiles or `--config` disable the entire fixture. Other releases retain their defaults. A source-bound working copy preserves module defaults under the test profile and skips the unbound MultiQC report wait only during preview; real runs still wait for the report.
 
 <!-- Generated from nf-core/bactmap@834642d8ac150ca10d705833223e7bcf15efc210. Do not edit by hand. -->

@@ -1,14 +1,17 @@
 # Recorded workflow-source corrections
 
-Two pinned releases need workflow changes that a process configuration cannot supply:
+Three pinned releases need source changes that a process configuration cannot supply:
 
 | Release and exact commit | Recorded correction | Effect |
 | --- | --- | --- |
 | Createtaxdb 3.1.0, `b01a0f8ed96a5990d15470828dfa92a22cf08bba` | `createtaxdb-sourmash-copy-sort-v1` | Sort a copy of each shared genome list before Sourmash batching. Other database builders keep their original list. |
 | Funcscan 4.0.0, `aee3dc965eb0c77267435544dda30da858763913` | `funcscan-hmm-metadata-v1` | Preserve original sample metadata through HMM search, removing only the temporary model identifier before joining the result files with FAA/GBK/InterPro inputs. |
+| Bactmap 1.0.0, `834642d8ac150ca10d705833223e7bcf15efc210` | `bactmap-module-defaults-preview-v1` | Preserve the default module map and apply the four test overrides as individual leaves. Skip the unbound MultiQC report wait only during preview; real execution retains the wait. |
 
 `nfclaw run` applies only these exact-name, exact-commit recipes, after checking the original
-target-file SHA-256. Each bounded replacement must occur exactly once. Other releases retain
+target-file SHA-256. Multi-file recipes validate every target before copying, record every changed
+file and bind all edits in one fingerprint. Earlier single-file fingerprints remain unchanged.
+Each bounded replacement must occur exactly once. Other releases retain
 their original behavior. No upstream checkout or pin is edited. The changed files, original and
 corrected hashes, recipe fingerprint and complete working-source inventory are recorded.
 
@@ -47,3 +50,16 @@ input/write separation, check-only staging, no-provenance resume, source changes
 retention, chain fingerprints and archive fallback. Native Sourmash-enabled and HMM-only/mixed
 scientific runs are tracked separately in the [audit progress](audit/2026-10-26-progress.md);
 unit or replay-guard tests alone do not establish scientific task coverage or database accuracy.
+
+For Bactmap's bare bundled demo, nfclaw stages all three historical paired samples and the matched
+NCTC13799 reference from test-datasets commit `02195cfa96ca496173e9d63dd58e34bf02fcf55a`.
+Every read URL names that immutable commit. Explicit input/reference values (including null),
+custom configs or extra profiles disable this fixture. The legacy release has no JSON input
+schema: a contract limited to this paired fixture checks the exact Python samplesheet consumer
+checksum, header, required values, read extensions and duplicate rows before staging. The real
+task still runs the release's checker. This does not provide arbitrary legacy sheet generation.
+
+The internal acceptance stager prepares the same managed source and demo, then appends its
+preview-only reporting config. Ordinary releases retain direct previews. Preparation installs
+signal cleanup for probes with separate process groups, restores handlers before replacing
+itself with Nextflow, and keeps all staged files under the gate's private temporary directory.

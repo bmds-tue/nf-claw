@@ -14,6 +14,9 @@ from pathlib import Path
 
 
 def allowed_skip(module: str, name: str, reason: str, os_name: str, python: str) -> bool:
+    if (module == 'tests.test_bactmap_corrections'
+            and reason == 'bactmap is no longer pinned at the audited commit 834642d8ac15'):
+        return True
     if module in {'tests.test_legacy_sheet_paths', 'tests.test_path_roles'} and re.fullmatch(
             r'[a-z0-9_-]+ is no longer pinned at the audited commit [0-9a-f]{12}', reason):
         return True

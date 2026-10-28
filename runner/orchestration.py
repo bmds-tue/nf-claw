@@ -322,6 +322,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         # same schema validation, staging and replay rebasing as file-generated samplesheets.
         fixture_schema = schema_mod.load_input_schema(st.path)
         if fixture_schema is None:
+            fixture_schema = demo_defaults.fixture_schema(name, st.commit, st.path)
+        if fixture_schema is None:
             raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
                               'The bundled demo fixture has no source-bound input schema.')
         sheetgen._validate(sheet.text, sheet.suffix, fixture_schema, name)

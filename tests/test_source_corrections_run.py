@@ -13,8 +13,8 @@ from runner import chain, orchestration, replay_guard, source_corrections, submo
 from runner.errors import NfclawError
 
 
-@pytest.fixture
-def corrected_run(tmp_path, monkeypatch):
+@pytest.fixture(params=['single', 'multi'])
+def corrected_run(tmp_path, monkeypatch, request):
     root = tmp_path / 'repo'
     upstream = root / 'pipelines/mini/upstream'
     upstream.mkdir(parents=True)
@@ -33,6 +33,11 @@ def corrected_run(tmp_path, monkeypatch):
     st = submodule.resolve_at('mini', upstream)
     (upstream.parent / 'skill.md').write_text('---\nname: mini\n---\n')
     recipe = replace(source_corrections._RECIPES[0], pipeline='mini', commit=st.commit)
+    if request.param == 'multi':
+        digest = hashlib.sha256((upstream / 'nextflow.config').read_bytes()).hexdigest()
+        patch = source_corrections.FilePatch('nextflow.config', digest,
+            ((b'// original configuration', b'// corrected configuration'),))
+        recipe = replace(recipe, additional_files=(patch,))
     monkeypatch.setattr(source_corrections, '_RECIPES', (recipe,))
     monkeypatch.setenv('NFCLAW_SOURCE_CACHE', str(tmp_path / 'private-cache'))
     monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **kw: [])

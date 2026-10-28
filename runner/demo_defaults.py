@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
+from pathlib import Path
 
 _BAMTOFASTQ = ('bamtofastq', '8a295860c0c9221337dec7f2620709a47cea254d')
 _TUMOUREVO = ('tumourevo', '180ae5447d0eb0214f650b6fcf7dabed0c77b5a2')
 _HGTSEQ = ('hgtseq', '683daaf41bb396839445e603152b45daa141ced4')
 _FASTQREPAIR = ('fastqrepair', '70a38209407b9367a9ff7ab8b26d84cb1983ea18')
+_BACTMAP = ('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210')
+_BACTMAP_DATA = '02195cfa96ca496173e9d63dd58e34bf02fcf55a'
+_BACTMAP_BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_BACTMAP_DATA}/'
+_BACTMAP_CHECKER = '2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54'
 _FASTQ_DAMAGE = 'f72c633f2547fdfaf475c7f05423437a7eac0bbf'
 _HGT_DATA = '800330ec8f47c93caabe8157e20dd23e243de4e1'
 _HGT_BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_HGT_DATA}/testdata/'
@@ -17,6 +23,7 @@ _REFERENCE = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
               '618f1541382c4ad49eff566dadf13d5ccbd0ebb4/'
               'data/genomics/homo_sapiens/genome/genome.fasta')
 _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
+               _BACTMAP: {'reference': _BACTMAP_BASE + 'genome/NCTC13799.fna'},
                _TUMOUREVO: {'sparsesignatures_k': '2:3'},
                _FASTQREPAIR: {'num_splits': 2},
                _HGTSEQ: {'gff': _HGT_BASE + 'reference/Homo_sapiens.hg38.chr21.gff3',
@@ -24,12 +31,21 @@ _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
                         'krakendb': _MODULE_DATA + 'sarscov2/genome/db/kraken2.tar.gz',
                         'kronadb': _MODULE_DATA + 'sarscov2/metagenome/krona_taxonomy.tab'}}
 _DATA_SELECTORS = {_BAMTOFASTQ: {'input', 'genome', 'pipelines_testdata_base_path'},
+                   _BACTMAP: {'input', 'reference'},
                    _TUMOUREVO: {'input', 'pipelines_testdata_base_path'},
                    _FASTQREPAIR: {'input', 'pipelines_testdata_base_path'},
                    _HGTSEQ: {'input', 'genome', 'pipelines_testdata_base_path',
                              'fasta', 'gff', 'krakendb', 'kronadb', 'bwaindex', 'bwamem2index',
                              'igenomes_base'}}
-_NOTES = {_BAMTOFASTQ:
+_NOTES = {_BACTMAP:
+    'This pinned bundled test uses missing moving data URLs. For a bare demo, nfclaw stages '
+    'the three original paired samples and matched NCTC13799 reference from immutable '
+    'test-datasets commit `02195cfa96ca496173e9d63dd58e34bf02fcf55a`. The generated sheet and '
+    'data commit are recorded and rebased for replay. Explicit input or reference, custom '
+    'profiles or `--config` disable the entire fixture. Other releases retain their defaults. '
+    'A source-bound working copy preserves module defaults under the test profile and skips '
+    'the unbound MultiQC report wait only during preview; real runs still wait for the report.',
+    _BAMTOFASTQ:
     'This pinned test profile omits its required reference. For the bundled demo input, nfclaw '
     'supplies the matched chr22:1-40001 test FASTA from immutable test-datasets commit '
     '`618f1541382c4ad49eff566dadf13d5ccbd0ebb4` and records it in params/provenance. Explicit '
@@ -82,6 +98,32 @@ def note(name: str, commit: str | None) -> str:
     return _NOTES.get((name, commit), '')
 
 
+def fixture_schema(name: str, commit: str | None, source: Path):
+    """Validate only this paired bundled fixture where the old release has no JSON input schema.
+
+    This is not an adapter for arbitrary user sheets or automatic sheet generation. The release's
+    own Python consumer still validates the staged sheet during actual execution.
+    """
+    if (name, commit) != _BACTMAP:
+        return None
+    from runner.errors import ErrorCode, NfclawError
+    from runner.schema import Column, InputSchema
+
+    checker = source / 'bin/check_samplesheet.py'
+    if (not checker.is_file() or
+            hashlib.sha256(checker.read_bytes()).hexdigest() != _BACTMAP_CHECKER):
+        raise NfclawError(ErrorCode.SAMPLESHEET_INVALID,
+                          'The Bactmap bundled fixture consumer does not match its audited source.')
+    return InputSchema(columns=(Column('sample', 'string', True, r'^\S+$'),
+                                Column('fastq_1', 'string', True, r'^\S+\.(?:fastq|fq)\.gz$',
+                                       fmt='file-path'),
+                                Column('fastq_2', 'string', True, r'^\S+\.(?:fastq|fq)\.gz$',
+                                       fmt='file-path')),
+                       header_prefix=('sample', 'fastq_1', 'fastq_2'),
+                       unique_entries=(('sample', 'fastq_1', 'fastq_2'),),
+                       audit_note='Source-bound paired bundled Bactmap fixture only.')
+
+
 def samplesheet(name: str, commit: str | None):
     """A named historical fixture, staged like generated input without a package-path dependency.
 
@@ -90,6 +132,8 @@ def samplesheet(name: str, commit: str | None):
     """
     if (name, commit) == _FASTQREPAIR:
         return _fastqrepair_sheet(name, commit)
+    if (name, commit) == _BACTMAP:
+        return _bactmap_sheet(name, commit)
     if (name, commit) != _HGTSEQ:
         return None
     from runner.sheetgen import Generated
@@ -110,6 +154,32 @@ def samplesheet(name: str, commit: str | None):
                              'pipeline_commit': commit, 'data_commit': _HGT_DATA,
                              'samples': 3, 'rows': 3, 'paired_end': 3, 'single_end': 0,
                              'files': 0, 'sources': ['bundled:runner.demo_defaults/hgtseq']})
+
+
+def _bactmap_sheet(name: str, commit: str):
+    from runner.sheetgen import Generated
+
+    header = ('sample', 'fastq_1', 'fastq_2')
+    rows = tuple({'sample': sample,
+                  'fastq_1': _BACTMAP_BASE + f'illumina/{sample}_1.fastq.gz',
+                  'fastq_2': _BACTMAP_BASE + f'illumina/{sample}_2.fastq.gz'}
+                 for sample in ('ERR2172265', 'ERR2172266', 'ERR2172267'))
+    stream = io.StringIO()
+    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
+    writer.writeheader()
+    writer.writerows(rows)
+    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+                     id_column='sample', summary='Prepared the immutable Bactmap demo '
+                     'samplesheet: 3 named paired samples with the matched NCTC13799 reference.',
+                     notes=(), record={
+                         'version': 1, 'kind': 'bundled_demo_fixture', 'pipeline': name,
+                         'pipeline_commit': commit, 'data_commit': _BACTMAP_DATA,
+                         'samples': 3, 'rows': 3, 'paired_end': 3, 'single_end': 0, 'files': 0,
+                         'row_roles': {row['sample']: 'matched_paired_sample' for row in rows},
+                         'validation_contract': {
+                             'scope': 'paired_bundled_fixture_only',
+                             'source': 'bin/check_samplesheet.py', 'sha256': _BACTMAP_CHECKER},
+                         'sources': ['bundled:runner.demo_defaults/bactmap']})
 
 
 def _fastqrepair_sheet(name: str, commit: str):

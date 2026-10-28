@@ -86,15 +86,20 @@ def test_h5ad_exception_applies_only_to_macos_python315_and_its_module(tmp_path)
         check(path, 'ubuntu-latest', '3.15')
 
 
-def test_obsolete_fastqrepair_recipe_skip_is_scoped_to_exact_module_and_reason(tmp_path):
-    reason = 'requires the audited fastqrepair 1.1.1 source'
-    path = report(tmp_path, ('tests.test_demo_fastqrepair', 'test_bare_demo', reason))
+@pytest.mark.parametrize('module,reason', [
+    ('tests.test_demo_fastqrepair', 'requires the audited fastqrepair 1.1.1 source'),
+    ('tests.test_bactmap_corrections',
+     'bactmap is no longer pinned at the audited commit 834642d8ac15')])
+def test_obsolete_recipe_skip_is_scoped_to_exact_module_and_reason(tmp_path, module, reason):
+    path = report(tmp_path, (module, 'test_bare_demo', reason))
     assert check(path)['skipped'][0]['reason'] == reason
     with pytest.raises(ValueError):
         check(report(tmp_path, ('tests.test_example', 'test_bare_demo', reason)))
     with pytest.raises(ValueError):
-        check(report(tmp_path, ('tests.test_demo_fastqrepair', 'test_bare_demo',
+        check(report(tmp_path, (module, 'test_bare_demo',
                                'requires initialized pinned pipeline source')))
+    with pytest.raises(ValueError):
+        check(report(tmp_path, (module, 'test_bare_demo', 'requires audited bactmap source')))
 
 
 def test_receipt_refuses_a_deleted_source_file_even_at_the_registered_pin(tmp_path, monkeypatch):
