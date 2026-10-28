@@ -219,7 +219,7 @@ def report(cmp: Comparison) -> str:
         f"changed   : {len(cmp.changed)}   (same file, different bytes)",
         f"missing   : {len(cmp.missing)}   (in the original, not in the replay)",
         f"extra     : {len(cmp.extra)}   (in the replay, not in the original)",
-        f"renamed   : {len(cmp.renamed)}   (nf-core run metadata named by its launch time)",
+        f"renamed   : {len(cmp.renamed)}   (launch-time or tool-random names, paired by role)",
         f"missing directories : {len(cmp.missing_directories)}",
         f"extra directories   : {len(cmp.extra_directories)}",
         f"changed links       : {len(cmp.changed_links)}   (target identities differ)",
