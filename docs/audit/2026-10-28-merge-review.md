@@ -105,7 +105,12 @@ Main's first push-triggered runs after the merge (`9fd2a4c`) found:
   `outdir_cache` has no other use, and `main.nf`'s SnpSift block is unchanged; both records now
   cover 3.11.0 and the tests run again. The remaining rnasplice skip is by design: its record
   audits the 1.0.4 consumer, while the 2.0.0 pin declares its read paths in its own schema.
-- **Two transient workflow failures**, re-run: `smoke` (a runner's Docker did not respond) and
+- **Docker preflight too impatient.** Three unrelated CI jobs (`native-wipe (gzip)`, `smoke`'s
+  airrflow check, `native-pairs (plain, phred64)`) failed with "docker daemon not responding"
+  exactly 10 s after the probe started: `docker info` had a fixed 10 s limit, which a busy but
+  healthy runner daemon can exceed. The limit is now 60 s, bounded by the run's `--timeout`,
+  configurable with `NFCLAW_DOCKER_TIMEOUT`, and a timeout is reported as such.
+- **Two transient workflow failures**, re-run: `smoke` (the Docker probe above) and
   `nextflow-validate` shard 7, where sarek 3.11.0's preview stalled for 12 minutes downloading the
   `nf-amazon` plugin from `registry.nextflow.io`. sarek 3.11.0 arrived in bot commit `18331a5`,
   whose push does not trigger that workflow; 3.10.0 needed the same plugin and passed. The same
