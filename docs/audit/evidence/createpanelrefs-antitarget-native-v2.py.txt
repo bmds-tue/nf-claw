@@ -1,0 +1,44 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import subprocess,os,json,hashlib,csv,stat
+source=Path('/mnt/volume/nfclaw-remediation-matrix-source');commit='eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592'
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026');fixture=root/'createpanelrefs-antitarget-fixture-20261028-v2'
+py='/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python'
+label='commit-eee40ee-createpanelrefs-antitarget-v2';receipt=root/(label+'.json');out=root/label;replay=root/(label+'-replay')
+assert not receipt.exists() and not out.exists() and not replay.exists()
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()==commit
+subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+upstream=source/'pipelines/createpanelrefs/upstream';pin=subprocess.check_output(['git','rev-parse','HEAD'],cwd=upstream,text=True).strip()
+assert pin=='8ce86a84b5af74facf99abb76216531622b52bc8'
+def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+paths=subprocess.check_output(['git','ls-files','-z'],cwd=upstream,text=True).split('\0')
+def snapshot():return {p:{'sha256':digest(upstream/p),'mode':stat.S_IMODE((upstream/p).stat().st_mode)} for p in paths if p}
+initial=snapshot();inputs=json.loads((fixture/'fixture.json').read_text())
+def unchanged_inputs():return all(digest(Path(p))==v['sha256'] for p,v in inputs['input_files'].items())
+assert unchanged_inputs()
+record={'version':1,'source_commit':commit,'pipeline_commit':pin,'source':str(source),'worker':{'path':__file__,'sha256':digest(Path(__file__))},'fixture':inputs,'fixture_record_sha256':digest(fixture/'fixture.json'),'pipeline_files_before':initial,'runs':[],'scope':'Explicit hybrid CNVkit normal-panel branch with deterministic synthetic nonempty antitarget truth; not a default whole-genome/real-cohort/CNV-calling claim. Scientific assessment is separate from execution.'}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+env={**os.environ,'PYTHONPATH':str(source),'PATH':str(Path(py).parent)+os.pathsep+os.environ['PATH'],'NXF_JVM_ARGS':'-Djava.net.preferIPv6Addresses=true'}
+def run(kind,target,command):
+ log=root/(target.name+'.console.log');r={'kind':kind,'outdir':str(target),'command':command,'started_at':datetime.now(UTC).isoformat(),'console_log':str(log)}
+ record['runs'].append(r);save()
+ with log.open('x') as f:result=subprocess.run(command,cwd=source,env=env,stdout=f,stderr=subprocess.STDOUT)
+ r.update(exit_code=result.returncode,finished_at=datetime.now(UTC).isoformat(),console_log_sha256=digest(log),pipeline_unchanged=snapshot()==initial,inputs_unchanged=unchanged_inputs())
+ if (target/'provenance/run_manifest.json').is_file():
+  manifest=json.loads((target/'provenance/run_manifest.json').read_text())
+  r.update({k:manifest.get(k) for k in ['outcome','completion_caveats','dependency_stability','stub_profiles','stub_configs']})
+ traces=list((target/'pipeline_info').glob('execution_trace*.txt'))
+ if len(traces)==1:
+  with traces[0].open() as f:r['tasks']=list(csv.DictReader(f,delimiter='\t'))
+  r['trace']=str(traces[0]);r['trace_sha256']=digest(traces[0])
+ save();print(kind,'exit',result.returncode,'tasks',len(r.get('tasks',[])),flush=True)
+ assert result.returncode==0 and r['pipeline_unchanged'] and r['inputs_unchanged']
+ assert r.get('tasks') and all(t['status']=='COMPLETED' and t['exit']=='0' for t in r['tasks'])
+ assert sum(':CNVKIT_BATCH' in t['name'] for t in r['tasks'])==1
+ assert not r.get('completion_caveats') and not r.get('stub_profiles') and not r.get('stub_configs')
+ files=list((target/'references/cnvkit').glob('*.antitarget.bed'));assert len(files)==1 and files[0].stat().st_size>0,'antitarget fixture still empty'
+run('original',out,[py,'-m','runner','run','createpanelrefs','--demo','--params-file',str(fixture/'params.json'),'--config',str(fixture/'hybrid.config'),'--outdir',str(out),'--nxf-ver','26.04.0','--limit-cpus','2','--limit-memory','4.GB','--limit-time','10.min','--timeout','1200','--nxf-env','NXF_WORK=/dev/shm/nfclaw-createpanelrefs-antitarget-v2-eee40ee/work','--nxf-env','NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true'])
+run('replay',replay,['bash',str(out/'provenance/commands.sh'),str(replay)])
+record['pipeline_files_after']=snapshot();record['pipeline_unchanged']=snapshot()==initial;record['inputs_unchanged']=unchanged_inputs()
+save();subprocess.run(['git','diff','--quiet','--ignore-submodules=none','HEAD'],cwd=source,check=True)
+print('Original and replay execution passed; independent depth assessment remains',flush=True)

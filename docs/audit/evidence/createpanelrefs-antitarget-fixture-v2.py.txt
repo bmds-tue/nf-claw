@@ -1,0 +1,30 @@
+from pathlib import Path
+from datetime import datetime,UTC
+import shutil,json,hashlib
+base=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+old=base/'createpanelrefs-antitarget-fixture-20261028';root=base/'createpanelrefs-antitarget-fixture-20261028-v2'
+assert not root.exists();root.mkdir(mode=0o700)
+original=json.loads((old/'fixture.json').read_text())
+for name in ['audit.fasta','audit.fasta.fai','normal_a.bam','normal_a.bam.bai','normal_b.bam','normal_b.bam.bai','targets.bed']:
+ source=old/name;assert hashlib.sha256(source.read_bytes()).hexdigest()==original['input_files'][str(source)]['sha256']
+ shutil.copy2(source,root/name)
+(root/'access.bed').write_text('chrAudit\t0\t1000000\n')
+(root/'samples.csv').write_text('sample,bam,bai\n'+''.join(f'{s},{root/s}.bam,{root/s}.bam.bai\n' for s in ('normal_a','normal_b')))
+(root/'hybrid.config').write_text(r'''process {
+    withName: ".*:CNVKIT_BATCH" {
+        beforeScript = "printf 'chrAudit\\t0\\t1000000\\n' > audit_access.bed"
+        ext.args = { "--method hybrid --access audit_access.bed --target-avg-size 1000 --antitarget-avg-size 1000000 --antitarget-min-size 1000 --output-reference ${meta.id}.cnn" }
+    }
+}
+''')
+params={'input':str(root/'samples.csv'),'tools':'cnvkit','genome':None,'igenomes_ignore':True,'fasta':str(root/'audit.fasta'),'fai':str(root/'audit.fasta.fai'),'cnvkit_targets':str(root/'targets.bed'),'cnvkit_pon_name':'audit_panel'}
+(root/'params.json').write_text(json.dumps(params,indent=2)+'\n')
+record={k:v for k,v in original.items() if k not in ['input_files','samples','generator','created_at']}
+record.update(version=2,created_at=datetime.now(UTC).isoformat(),generator={'path':__file__,'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},parent_fixture={'path':str(old/'fixture.json'),'sha256':hashlib.sha256((old/'fixture.json').read_bytes()).hexdigest()},
+ samples={s:{**v,'bam':str(root/(s+'.bam')),'bai':str(root/(s+'.bam.bai'))} for s,v in original['samples'].items()},
+ expected_bins={'target':[['chrAudit',10000,11000,'targetA'],['chrAudit',30000,31000,'targetB']],
+ 'antitarget':[['chrAudit',500,9500,'Antitarget'],['chrAudit',11500,29500,'Antitarget'],['chrAudit',31500,999500,'Antitarget']]},
+ binning={'access':['chrAudit',0,1000000],'target_avg_size':1000,'antitarget_avg_size':1000000,'antitarget_min_size':1000,'margin':500,'basis':'CNVkit0.9.12 antitarget.get_antitargets, INSERT_SIZE250; expectations fixed before native v2 outputs.'})
+record['input_files']={str(p):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(root.iterdir()) if p.is_file()}
+(root/'fixture.json').write_text(json.dumps(record,indent=2)+'\n')
+print(json.dumps(record,indent=2),flush=True)

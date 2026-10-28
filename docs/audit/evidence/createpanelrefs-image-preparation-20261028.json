@@ -1,0 +1,25 @@
+{
+  "started_at": "2026-10-28T02:27:20.349676+00:00",
+  "image": "community.wave.seqera.io/library/cnvkit_htslib_samtools@sha256:ae32b215e525f9b50e2067c6619d49230446eca590ee571870c1e15a0bb09ae7",
+  "available_before": 3985330176,
+  "guard_minimum_before": 3758096384,
+  "guard_stop_available": 536870912,
+  "command": [
+    "docker",
+    "pull",
+    "community.wave.seqera.io/library/cnvkit_htslib_samtools@sha256:ae32b215e525f9b50e2067c6619d49230446eca590ee571870c1e15a0bb09ae7"
+  ],
+  "log": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-image-preparation-20261028.log",
+  "exit_code": 0,
+  "finished_at": "2026-10-28T02:27:48.356785+00:00",
+  "available_after": 1683836928,
+  "image_identity": {
+    "Id": "sha256:ae32b215e525f9b50e2067c6619d49230446eca590ee571870c1e15a0bb09ae7",
+    "RepoDigests": [
+      "community.wave.seqera.io/library/cnvkit_htslib_samtools@sha256:ae32b215e525f9b50e2067c6619d49230446eca590ee571870c1e15a0bb09ae7"
+    ],
+    "Size": 617728229,
+    "Architecture": "amd64",
+    "Os": "linux"
+  }
+}

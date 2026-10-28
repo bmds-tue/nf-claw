@@ -559,6 +559,19 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
   confirmed this behavior; raw paired quality identity is therefore not claimed. See the
   [run/replay assessment](audit/evidence/commit-eee40ee-fastqrepair-demo.assessed-v2.json).
 
+- **`createpanelrefs` 1.0.0 nonempty antitarget control** — Its bundled whole-genome CNVkit
+  configuration deliberately has no antitarget bins. A separate controlled hybrid fixture and
+  fresh replay each completed all three native Docker tasks, including CNVkit 0.9.12. It used a
+  synthetic 1 Mb reference and two normal BAMs with independently checked uniform 1× and 2×
+  aligned-base coverage. Explicit access bounds and bin sizes produced two target and three
+  antitarget bins; all coverage coordinates/depths and the five-bin pooled reference passed,
+  and all seven scientific files matched byte-for-byte in replay. Hybrid mode alone is
+  insufficient: without `--access`, this CNVkit version guesses bounds starting at 150,000,
+  which excluded these short target coordinates. The tested access bytes are embedded in the
+  recorded config and checked in each task. This validates synthetic bin/count mechanics,
+  not CNV calling accuracy or real-cohort behavior. See the
+  [assessment](audit/evidence/commit-eee40ee-createpanelrefs-antitarget-v2-assessment.json).
+
 - **`proteinfold` 2.0.0 `--demo`** — The bundled `test` profile sets `stubRun = true`: every task runs its stub block, so the run completes in minutes with empty placeholder structures, metrics and reports. `nfclaw run` announces this before launch and `nfclaw status` reports the success with a `stub run:` caveat (also recorded in `run_manifest.json` as `stub_profiles` and carried by a replay). A `--config` that sets `stubRun = true` is reported the same way and recorded as `stub_configs`. A real prediction needs a mode's databases (see `reference.md`); the demo only checks the workflow's wiring and publication. circdna's non-default `test_AA` profile is a stub run too.
 - **`pathogensurveillance` 1.1.0 `--demo` on an IPv6-only host** — Its one test sample is the NCBI accession `SRR18850314`, which [sra-tools cannot fetch there](#sra-tools-cannot-reach-ncbi-ipv6-only-host), and `BBMAP_SENDSKETCH` needs the [JVM's IPv6 preference](#java-tools-in-containers-prefer-ipv4-ipv6-only-host). Download the run's two ENA FastQ files (check their MD5 sums against the ENA portal) and pass a sheet with `sample_id,description,path,path_2,sequence_type,enabled,color_by,report_group_ids,ploidy,taxon` to `--input` alongside `--demo`; keep `taxon`, which `color_by` refers to. ENA serves this run with simplified quality scores (only `?` = Q30 and `$` = Q3), from which SPAdes cannot infer the encoding (`Failed to determine offset!`); the pipeline then ignores the assembly after four attempts and reports success with caveats. The `$` scores show Phred+33, so add `process { withName: 'SPADES' { ext.args = '--phred-offset 33' } }`. With these, the bundled test completed without caveats on Nextflow 25.04.6: a 2.07 Mb SPAdes assembly in 472 scaffolds, and sendsketch's top hit *Limosilactobacillus* at 98.4% ANI, as the test sheet expects. This establishes execution, not the accuracy of its phylogenetic placement.
 - **`lsmquant` 1.0.3 `--demo` without an NVIDIA GPU** — The test profile gives `NUMORPH_3DUNET` `ext.use_gpu = true` and `accelerator = 1`, and the module calls `nvidia-smi` unconditionally, so on a host without a GPU the task fails with exit status 127 (`nvidia-smi: command not found`). Adding `--nuclei-quantification false` skips that step: intensity adjustment, alignment and stitching then completed on Nextflow 25.10.4. Nuclei quantification itself needs a GPU: on a GPU host add the release's `gpu` profile, which passes the GPU to Docker with `--gpus all` (`nfclaw run lsmquant --demo -profile docker,gpu …`; nfclaw composes `test,docker,gpu`).

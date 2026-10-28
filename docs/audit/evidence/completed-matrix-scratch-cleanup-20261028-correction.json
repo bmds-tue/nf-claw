@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "corrected_at": "2026-10-28T03:20:51.665601+00:00",
+  "supersedes_metadata_in": {
+    "record": "/mnt/volume/nfclaw-remediation-evidence-20261026/completed-matrix-scratch-cleanup-20261028.json",
+    "sha256": "9740cd63ad15d63c7bdde0059f73ed100abf753f91bfc5c8fa2565564885cff7"
+  },
+  "incorrect_metadata": "The original purpose text said the tiny historical failed-test scratch fixtures were relocated for inspection. This was an intended action, not the actual outcome.",
+  "actual_outcome": "The glob matched no failed-test fixture directories; every retained_failed_fixtures list is empty. The four completed private Oct26 pytest scratch trees, including temporary failed-case folders, were removed. Original failure logs/results remain retained and unchanged. No claim is made that the original failed-case scratch remains available.",
+  "cause": "The retention glob matched no directory and the cleanup script did not require a match before removing its completed scratch root.",
+  "scope": "Only the four exact owned completed pytest scratch paths in the original receipt were removed. Current native run data, source checkouts, scientific results, shared images and user data were outside those paths.",
+  "preserved_log_and_result_records": [
+    {
+      "python": "Python 3.11.17",
+      "historical_exit_code": 0,
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.11-tests.log",
+      "log_sha256": "40c151fe7c92b0632491431bec54a6fecf5e1279b4aa98cd9a7e985d0188e75f",
+      "result": "/mnt/volume/nfclaw-remediation-python-matrix/3.11-result.json",
+      "result_sha256": "fe66360a745f8c133c096e5aa5c894bf53400a0cd8c154672b41dd49a47f4a4b"
+    },
+    {
+      "python": "Python 3.13.17",
+      "historical_exit_code": 0,
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.13-tests.log",
+      "log_sha256": "5e3d68a318e0ad8dd5057bceb82cc5b99dad86cd8e8e28b591ed3786a651a24a",
+      "result": "/mnt/volume/nfclaw-remediation-python-matrix/3.13-result.json",
+      "result_sha256": "c1227aa54f16f5ef4a83a7a634615a8645643e5c7a4d95ca9566bb259b75106f"
+    },
+    {
+      "python": "Python 3.14.9",
+      "historical_exit_code": 1,
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.14-tests.log",
+      "log_sha256": "89fd186ccbae16d49c4eab443d5a17607c46a212484ba693f640a830fdb25487",
+      "result": "/mnt/volume/nfclaw-remediation-python-matrix/3.14-result.json",
+      "result_sha256": "bc56a1328a8496465e73b5a54de9a1e5414ba1d7b3274784d696ae9dfe12e210"
+    },
+    {
+      "python": "Python 3.15.1",
+      "historical_exit_code": 1,
+      "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.15-tests.log",
+      "log_sha256": "f10568af3382ac23987decc188f9b8542f39e2eb144a270961a26ab17e9ca87b",
+      "result": "/mnt/volume/nfclaw-remediation-python-matrix/3.15-result.json",
+      "result_sha256": "c352e615367dcee17360fcf85ca164ffccd58a41519b79a4b3252c2e803f5b55"
+    }
+  ]
+}

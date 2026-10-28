@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-28T02:22:43.600196+00:00",
+  "purpose": "Clear only owned completed Oct26 pytest scratch; all original run results/logs retained. Both historical Python3.14/3.15 permission-check failures remain recorded, with their tiny failure fixtures relocated for inspection. Later512ade7 full five-version matrix passed.",
+  "entries": [
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.11",
+      "source_result": {
+        "python": "Python 3.11.17",
+        "source_commit": "b560566c1cd944cbbe5f363c67d5e8fbb153f254",
+        "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+        "started_at": "2026-10-26T22:33:17.398005+00:00",
+        "finished_at": "2026-10-26T22:56:35.598264+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.11/bin/python",
+          "-m",
+          "pytest",
+          "-rs",
+          "--basetemp",
+          "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.11"
+        ],
+        "exit_code": 0,
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.11-tests.log"
+      },
+      "source_result_file": "/mnt/volume/nfclaw-remediation-python-matrix/3.11-result.json",
+      "source_result_sha256": "fe66360a745f8c133c096e5aa5c894bf53400a0cd8c154672b41dd49a47f4a4b",
+      "log_sha256": "40c151fe7c92b0632491431bec54a6fecf5e1279b4aa98cd9a7e985d0188e75f",
+      "apparent_bytes": 219636920,
+      "retained_failed_fixtures": [],
+      "scratch_removed": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.13",
+      "source_result": {
+        "python": "Python 3.13.17",
+        "source_commit": "b560566c1cd944cbbe5f363c67d5e8fbb153f254",
+        "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+        "started_at": "2026-10-26T22:56:35.600585+00:00",
+        "finished_at": "2026-10-26T23:18:58.726795+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.13/bin/python",
+          "-m",
+          "pytest",
+          "-rs",
+          "--basetemp",
+          "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.13"
+        ],
+        "exit_code": 0,
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.13-tests.log"
+      },
+      "source_result_file": "/mnt/volume/nfclaw-remediation-python-matrix/3.13-result.json",
+      "source_result_sha256": "c1227aa54f16f5ef4a83a7a634615a8645643e5c7a4d95ca9566bb259b75106f",
+      "log_sha256": "5e3d68a318e0ad8dd5057bceb82cc5b99dad86cd8e8e28b591ed3786a651a24a",
+      "apparent_bytes": 219638460,
+      "retained_failed_fixtures": [],
+      "scratch_removed": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.14",
+      "source_result": {
+        "python": "Python 3.14.9",
+        "source_commit": "b560566c1cd944cbbe5f363c67d5e8fbb153f254",
+        "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+        "started_at": "2026-10-26T22:57:25.452928+00:00",
+        "finished_at": "2026-10-26T23:19:48.026344+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.14/bin/python",
+          "-m",
+          "pytest",
+          "-rs",
+          "--basetemp",
+          "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.14"
+        ],
+        "exit_code": 1,
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.14-tests.log"
+      },
+      "source_result_file": "/mnt/volume/nfclaw-remediation-python-matrix/3.14-result.json",
+      "source_result_sha256": "bc56a1328a8496465e73b5a54de9a1e5414ba1d7b3274784d696ae9dfe12e210",
+      "log_sha256": "89fd186ccbae16d49c4eab443d5a17607c46a212484ba693f640a830fdb25487",
+      "apparent_bytes": 219639986,
+      "retained_failed_fixtures": [],
+      "scratch_removed": true
+    },
+    {
+      "path": "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.15",
+      "source_result": {
+        "python": "Python 3.15.1",
+        "source_commit": "b560566c1cd944cbbe5f363c67d5e8fbb153f254",
+        "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+        "started_at": "2026-10-26T22:33:17.398523+00:00",
+        "finished_at": "2026-10-26T22:57:25.452433+00:00",
+        "command": [
+          "/mnt/volume/nfclaw-remediation-python-matrix/3.15/bin/python",
+          "-m",
+          "pytest",
+          "-rs",
+          "--basetemp",
+          "/mnt/volume/nfclaw-remediation-python-matrix/tmp/3.15"
+        ],
+        "exit_code": 1,
+        "log": "/mnt/volume/nfclaw-remediation-python-matrix/3.15-tests.log"
+      },
+      "source_result_file": "/mnt/volume/nfclaw-remediation-python-matrix/3.15-result.json",
+      "source_result_sha256": "c352e615367dcee17360fcf85ca164ffccd58a41519b79a4b3252c2e803f5b55",
+      "log_sha256": "f10568af3382ac23987decc188f9b8542f39e2eb144a270961a26ab17e9ca87b",
+      "apparent_bytes": 219638292,
+      "retained_failed_fixtures": [],
+      "scratch_removed": true
+    }
+  ],
+  "finished_at": "2026-10-28T02:22:52.794333+00:00",
+  "disk_after": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vdb        787G  743G  3.8G 100% /mnt/volume\n"
+}

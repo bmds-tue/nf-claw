@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "recorded_at": "2026-10-28T03:13:01.903809+00:00",
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "initial_fixture": {
+    "execution_record": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget.json",
+    "sha256": "cd6bb1673b6819c7df1eda0b36ac0aafa6cd3df757c4b44c549ea2e77bfcc3f9",
+    "disposition": "Original and replay completed, but both antitarget BEDs and both normal antitarget coverage tables were empty. Hybrid mode alone omitted explicit access; this is insufficient U22 fixture coverage, not scientific success.",
+    "reason": "CNVkit0.9.12 guesses accessible bounds150000..last_target_endpoint31000 when --access absent.",
+    "antitarget_inventory": [
+      {
+        "kind": "original",
+        "bed": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget/references/cnvkit/targets.antitarget.bed",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sample_coverage_rows": {
+          "normal_a": 0,
+          "normal_b": 0
+        }
+      },
+      {
+        "kind": "replay",
+        "bed": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-replay/references/cnvkit/targets.antitarget.bed",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sample_coverage_rows": {
+          "normal_a": 0,
+          "normal_b": 0
+        }
+      }
+    ]
+  },
+  "initial_harness_failure": {
+    "disposition": "Before output assessment, FastaFile list-vs-tuple guard failed. Corrected guard compares sequence contents; no pipeline/result bytes changed.",
+    "files": {
+      "/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.py": {
+        "sha256": "004401678af813969c76743bb09adef3b03c8a5b63b9feeaeba6149e83b1e56d",
+        "bytes": 8816
+      },
+      "/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.log": {
+        "sha256": "cd96ebaf6d6f4a9bec5cbe7de321e8f8c779dc908f3cd36f0051808d3912e877",
+        "bytes": 287
+      }
+    }
+  },
+  "corrected_assessment": {
+    "record": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-v2-assessment.json",
+    "sha256": "9355c40a0d7434a317c4c7c6a1a9e72e4b43afd82ae67e8cbdca8458c8fb760f"
+  },
+  "checkout_status": {
+    "/mnt/volume/nfclaw-remediation-matrix-source": {
+      "head": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "tracked_and_sources_clean": true
+    },
+    "/mnt/volume/nfclaw-remediation-20261026": {
+      "head": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+      "tracked_and_sources_clean": true
+    }
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "prior_harness_failure": {
+    "worker": "/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.py",
+    "log": "/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.log",
+    "reason": "pysam FastaFile references/lengths are lists; initial tuple-only equality guard ran no output assessment. Corrected guard compares sequence contents."
+  },
+  "assessed_at": "2026-10-28T03:00:37.580855+00:00",
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "pipeline_commit": "8ce86a84b5af74facf99abb76216531622b52bc8",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment-v2.py",
+    "sha256": "a7a3753112401b2645427b8562c3c46004189a9b2f58e946342571dbc8e0e382"
+  },
+  "execution_record": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-v2.json",
+    "sha256": "37c8460375f47eba5bdb638c23e80438f1e8763d04324ab527c126e96fa003b0"
+  },
+  "fixture_record": {
+    "path": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028-v2/fixture.json",
+    "sha256": "5930440b53099672705e238c7799968f2225fab966f21dbd3d84e1cd9dfeee1b"
+  },
+  "expected_bins": {
+    "target": [
+      [
+        "chrAudit",
+        10000,
+        11000,
+        "targetA"
+      ],
+      [
+        "chrAudit",
+        30000,
+        31000,
+        "targetB"
+      ]
+    ],
+    "antitarget": [
+      [
+        "chrAudit",
+        500,
+        9500,
+        "Antitarget"
+      ],
+      [
+        "chrAudit",
+        11500,
+        29500,
+        "Antitarget"
+      ],
+      [
+        "chrAudit",
+        31500,
+        999500,
+        "Antitarget"
+      ]
+    ]
+  },
+  "oracle_basis": "Fixed before corrected native execution: declared full1Mb access, explicit subdivision sizes, source-backed500-base margin. Exact uniform1x/2x BAM geometry independently inspected. Depth tolerance0; no candidate/output normalization.",
+  "scope": "Synthetic hybrid panel interval/count mechanics for two normals; not CNV accuracy or a changed whole-genome default.",
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-v2",
+      "assessed_files": {
+        "cnvkit/normal_a.targetcoverage.cnn": {
+          "rows": 2,
+          "sha256": "1019055bda80eee085f439b4a3cfb61e6bac06109afa0e9add1169e3bffd0a4e",
+          "uniform_depth": 1
+        },
+        "cnvkit/normal_a.antitargetcoverage.cnn": {
+          "rows": 3,
+          "sha256": "459b58935e36d5b31d4a849a082b137fa90111045a4ea15e0ca291f273ad59ce",
+          "uniform_depth": 1
+        },
+        "cnvkit/normal_b.targetcoverage.cnn": {
+          "rows": 2,
+          "sha256": "efecc3f804bd199d777085e88c83c053806c1f9eaaba69fb4631f75ae6374bc4",
+          "uniform_depth": 2
+        },
+        "cnvkit/normal_b.antitargetcoverage.cnn": {
+          "rows": 3,
+          "sha256": "acbd6decdaa7032d7a731eabe8161cc40ae779e8e934fd815ef2cdd194fd49e1",
+          "uniform_depth": 2
+        },
+        "cnvkit/audit_panel.cnn": {
+          "rows": 5,
+          "sha256": "4701578142c4a20264145ab2c1895967622c6495120e5b6b326417286c8d14c6",
+          "symmetric_two_normal_depth": "1.5"
+        },
+        "references/cnvkit/targets.target.bed": {
+          "rows": 2,
+          "sha256": "b75a0a21483953e7e20d756c95010ca9b1428e268ec4dc10e8495667d4e72e79"
+        },
+        "references/cnvkit/targets.antitarget.bed": {
+          "rows": 3,
+          "sha256": "f6b028dee9af4e1eb1bfc3325667ea795cf4a59fa58f2eba71fb6020be7b077e"
+        }
+      },
+      "access_asset": {
+        "path": "/dev/shm/nfclaw-createpanelrefs-antitarget-v2-eee40ee/work/e9/27180bf6c1260efc72ac1b9b84cd2e/audit_access.bed",
+        "sha256": "a1b625036d80627c73beadbdef4b22951190f89e93df91248465feb193d0dc30",
+        "embedded_in_recorded_config": true
+      },
+      "negative_controls": {
+        "altered_depth": {
+          "refused": true,
+          "reason": "incorrect aligned-base depth"
+        },
+        "missing_bin": {
+          "refused": true,
+          "reason": "missing/extra/incorrect bin coordinates"
+        },
+        "duplicate_bin": {
+          "refused": true,
+          "reason": "empty/duplicate bin coordinates"
+        },
+        "target_antitarget_intersection": {
+          "refused": true,
+          "reason": "target-antitarget intersection"
+        }
+      },
+      "passed": true
+    },
+    {
+      "kind": "replay",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-v2-replay",
+      "assessed_files": {
+        "cnvkit/normal_a.targetcoverage.cnn": {
+          "rows": 2,
+          "sha256": "1019055bda80eee085f439b4a3cfb61e6bac06109afa0e9add1169e3bffd0a4e",
+          "uniform_depth": 1
+        },
+        "cnvkit/normal_a.antitargetcoverage.cnn": {
+          "rows": 3,
+          "sha256": "459b58935e36d5b31d4a849a082b137fa90111045a4ea15e0ca291f273ad59ce",
+          "uniform_depth": 1
+        },
+        "cnvkit/normal_b.targetcoverage.cnn": {
+          "rows": 2,
+          "sha256": "efecc3f804bd199d777085e88c83c053806c1f9eaaba69fb4631f75ae6374bc4",
+          "uniform_depth": 2
+        },
+        "cnvkit/normal_b.antitargetcoverage.cnn": {
+          "rows": 3,
+          "sha256": "acbd6decdaa7032d7a731eabe8161cc40ae779e8e934fd815ef2cdd194fd49e1",
+          "uniform_depth": 2
+        },
+        "cnvkit/audit_panel.cnn": {
+          "rows": 5,
+          "sha256": "4701578142c4a20264145ab2c1895967622c6495120e5b6b326417286c8d14c6",
+          "symmetric_two_normal_depth": "1.5"
+        },
+        "references/cnvkit/targets.target.bed": {
+          "rows": 2,
+          "sha256": "b75a0a21483953e7e20d756c95010ca9b1428e268ec4dc10e8495667d4e72e79"
+        },
+        "references/cnvkit/targets.antitarget.bed": {
+          "rows": 3,
+          "sha256": "f6b028dee9af4e1eb1bfc3325667ea795cf4a59fa58f2eba71fb6020be7b077e"
+        }
+      },
+      "access_asset": {
+        "path": "/dev/shm/nfclaw-createpanelrefs-antitarget-v2-eee40ee/work/ee/ff2bb1df0c1cfb8e6da9d96f9a2ee6/audit_access.bed",
+        "sha256": "a1b625036d80627c73beadbdef4b22951190f89e93df91248465feb193d0dc30",
+        "embedded_in_recorded_config": true
+      },
+      "negative_controls": {
+        "altered_depth": {
+          "refused": true,
+          "reason": "incorrect aligned-base depth"
+        },
+        "missing_bin": {
+          "refused": true,
+          "reason": "missing/extra/incorrect bin coordinates"
+        },
+        "duplicate_bin": {
+          "refused": true,
+          "reason": "empty/duplicate bin coordinates"
+        },
+        "target_antitarget_intersection": {
+          "refused": true,
+          "reason": "target-antitarget intersection"
+        }
+      },
+      "passed": true
+    }
+  ],
+  "replay_comparison": {
+    "identical": [
+      "cnvkit/audit_panel.cnn",
+      "cnvkit/normal_a.antitargetcoverage.cnn",
+      "cnvkit/normal_a.targetcoverage.cnn",
+      "cnvkit/normal_b.antitargetcoverage.cnn",
+      "cnvkit/normal_b.targetcoverage.cnn",
+      "pipeline_info/nf_core_createpanelrefs_software_mqc_versions.yml",
+      "pipeline_info/pipeline_dag_2026-10-28_02-52-16.html",
+      "references/audit.dict",
+      "references/cnvkit/audit_access.bed",
+      "references/cnvkit/targets.antitarget.bed",
+      "references/cnvkit/targets.target.bed",
+      "reports/multiqc/multiqc_data/multiqc_citations.txt",
+      "reports/multiqc/multiqc_data/multiqc_software_versions.txt",
+      "reports/multiqc/multiqc_data/multiqc_sources.txt"
+    ],
+    "changed": [
+      "pipeline_info/execution_report_2026-10-28_02-52-16.html",
+      "pipeline_info/execution_timeline_2026-10-28_02-52-16.html",
+      "pipeline_info/execution_trace_2026-10-28_02-52-16.txt",
+      "pipeline_info/params_2026-10-28_02-52-26.json -> pipeline_info/params_2026-10-28_02-53-02.json",
+      "reports/multiqc/multiqc_data/llms-full.txt",
+      "reports/multiqc/multiqc_data/multiqc.log",
+      "reports/multiqc/multiqc_data/multiqc.parquet",
+      "reports/multiqc/multiqc_data/multiqc_data.json",
+      "reports/multiqc/multiqc_report.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "missing_directories": [],
+    "extra_directories": [],
+    "changed_links": [],
+    "renamed": [
+      "pipeline_info/params_2026-10-28_02-52-26.json -> pipeline_info/params_2026-10-28_02-53-02.json"
+    ],
+    "environment": {
+      "version": 1,
+      "status": "identical",
+      "mismatches": [],
+      "unverified": [],
+      "notes": []
+    },
+    "structurally_equal": true
+  },
+  "all_scientific_files_byte_identical": true,
+  "inputs_unchanged_after_assessment": true
+}

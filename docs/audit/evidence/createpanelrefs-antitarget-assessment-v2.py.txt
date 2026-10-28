@@ -1,0 +1,129 @@
+from pathlib import Path
+from datetime import datetime,UTC
+from decimal import Decimal
+from fractions import Fraction
+from collections import Counter
+import csv,json,hashlib,copy
+import pysam
+from runner import verify
+root=Path('/mnt/volume/nfclaw-remediation-evidence-20261026')
+label='commit-eee40ee-createpanelrefs-antitarget-v2'
+raw=root/(label+'.json');execution=json.loads(raw.read_text())
+fixture=root/'createpanelrefs-antitarget-fixture-20261028-v2';truth=json.loads((fixture/'fixture.json').read_text())
+receipt=root/(label+'-assessment.json');assert not receipt.exists()
+def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+assert digest(fixture/'fixture.json')==execution['fixture_record_sha256']
+assert all(digest(Path(p))==r['sha256'] for p,r in truth['input_files'].items())
+expected={'target':[('chrAudit',10000,11000,'targetA'),('chrAudit',30000,31000,'targetB')],
+ 'antitarget':[('chrAudit',500,9500,'Antitarget'),('chrAudit',11500,29500,'Antitarget'),('chrAudit',31500,999500,'Antitarget')]}
+assert {k:[list(x) for x in v] for k,v in expected.items()}==truth['expected_bins']
+assert truth['binning']=={'access':['chrAudit',0,1000000],'target_avg_size':1000,'antitarget_avg_size':1000000,'antitarget_min_size':1000,'margin':500,'basis':'CNVkit0.9.12 antitarget.get_antitargets, INSERT_SIZE250; expectations fixed before native v2 outputs.'}
+inputs={}
+with pysam.FastaFile(str(fixture/'audit.fasta')) as fasta:
+ assert tuple(fasta.references)==('chrAudit',) and tuple(fasta.lengths)==(1000000,)
+ for sample,info in truth['samples'].items():
+  copies=info['uniform_expected_depth'];coords=[]
+  with pysam.AlignmentFile(str(fixture/(sample+'.bam')),'rb') as bam:
+   assert bam.references==('chrAudit',) and bam.lengths==(1000000,)
+   for r in bam:
+    assert r.flag==0 and r.mapping_quality==60 and r.cigarstring=='100M'
+    assert r.reference_start%100==0 and len(r.query_sequence)==100
+    assert all(q==40 for q in r.query_qualities)
+    assert r.query_sequence==fasta.fetch('chrAudit',r.reference_start,r.reference_end)
+    coords.append((r.reference_start,r.reference_end))
+  assert Counter(a for a,b in coords)==Counter({i:copies for i in range(0,1000000,100)})
+  assert len(coords)==10000*copies and sum(b-a for a,b in coords)==1000000*copies
+  inputs[sample]=coords
+
+def coordinate(row):
+ if isinstance(row,tuple):return row
+ return row['chromosome'],int(row['start']),int(row['end']),row['gene']
+def valid_keys(rows,wanted):
+ keys=[coordinate(row) for row in rows]
+ assert keys and len(keys)==len(set(keys)),'empty/duplicate bin coordinates'
+ assert Counter(keys)==Counter(wanted),'missing/extra/incorrect bin coordinates'
+ assert all(c=='chrAudit' and 0<=a<b<=1000000 for c,a,b,g in keys),'invalid coordinate system/bounds'
+ return keys
+
+def geometry(targets,antitargets):
+ for c,a,b,g in targets:
+  for cc,aa,bb,gg in antitargets:
+   assert c!=cc or min(b,bb)<=max(a,aa),'target-antitarget intersection'
+
+def coverage(rows,wanted,sample):
+ keys=valid_keys(rows,wanted)
+ for row,(_,start,end,_) in zip(rows,keys):
+  # Count aligned-base overlap ourselves; CNVkit's coverage routine is never called here.
+  expected_depth=Fraction(sum(max(0,min(end,b)-max(start,a)) for a,b in inputs[sample]),end-start)
+  assert expected_depth==truth['samples'][sample]['uniform_expected_depth']
+  assert Fraction(Decimal(row['depth']))==expected_depth,'incorrect aligned-base depth'
+  assert Decimal(row['log2'])==(0 if expected_depth==1 else 1),'incorrect raw log2 depth'
+  assert all(Decimal(row[k]).is_finite() for k in ['depth','log2'])
+ return keys
+
+def bed(path):
+ rows=[]
+ for line in path.read_text().splitlines():
+  fields=line.split('\t');assert len(fields)==4
+  rows.append((fields[0],int(fields[1]),int(fields[2]),fields[3]))
+ return rows
+
+def cnn(path):
+ with path.open() as f:rows=list(csv.DictReader(f,delimiter='\t'))
+ assert rows,'empty coverage/reference table'
+ return rows
+
+record={'version':1,'prior_harness_failure':{'worker':'/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.py','log':'/mnt/volume/nfclaw-createpanelrefs-antitarget-assessment.log','reason':'pysam FastaFile references/lengths are lists; initial tuple-only equality guard ran no output assessment. Corrected guard compares sequence contents.'},'assessed_at':datetime.now(UTC).isoformat(),'source_commit':execution['source_commit'],'pipeline_commit':execution['pipeline_commit'],
+ 'worker':{'path':__file__,'sha256':digest(Path(__file__))},'execution_record':{'path':str(raw),'sha256':digest(raw)},
+ 'fixture_record':{'path':str(fixture/'fixture.json'),'sha256':digest(fixture/'fixture.json')},
+ 'expected_bins':expected,'oracle_basis':'Fixed before corrected native execution: declared full1Mb access, explicit subdivision sizes, source-backed500-base margin. Exact uniform1x/2x BAM geometry independently inspected. Depth tolerance0; no candidate/output normalization.',
+ 'scope':'Synthetic hybrid panel interval/count mechanics for two normals; not CNV accuracy or a changed whole-genome default.','runs':[]}
+def save():receipt.write_text(json.dumps(record,indent=2)+'\n')
+for r in execution['runs']:
+ run=Path(r['outdir']);assert r['exit_code']==0 and r['pipeline_unchanged'] and r['inputs_unchanged']
+ targets=bed(run/'references/cnvkit/targets.target.bed');antitargets=bed(run/'references/cnvkit/targets.antitarget.bed')
+ target_keys=valid_keys(targets,expected['target']);anti_keys=valid_keys(antitargets,expected['antitarget']);geometry(target_keys,anti_keys)
+ files={}
+ for sample in inputs:
+  for kind in expected:
+   path=run/'cnvkit'/f'{sample}.{kind}coverage.cnn';rows=cnn(path)
+   keys=coverage(rows,expected[kind],sample)
+   files[str(path.relative_to(run))]={'rows':len(rows),'sha256':digest(path),'uniform_depth':truth['samples'][sample]['uniform_expected_depth']}
+ path=run/'cnvkit/audit_panel.cnn';reference=cnn(path)
+ valid_keys(reference,expected['target']+expected['antitarget'])
+ for row in reference:
+  assert all(Decimal(row[k]).is_finite() for k in ['depth','log2','gc','spread'])
+  assert Decimal(row['depth'])==Decimal('1.5') and Decimal(row['log2'])==0
+  assert 0<=Decimal(row['gc'])<=1 and Decimal(row['spread'])>=0
+ files[str(path.relative_to(run))]={'rows':len(reference),'sha256':digest(path),'symmetric_two_normal_depth':'1.5'}
+ for kind in expected:
+  path=run/'references/cnvkit'/f'targets.{kind}.bed';files[str(path.relative_to(run))]={'rows':len(expected[kind]),'sha256':digest(path)}
+ task=next(t for t in r['tasks'] if ':CNVKIT_BATCH' in t['name']);prefix,suffix=task['hash'].split('/')
+ work=Path('/dev/shm/nfclaw-createpanelrefs-antitarget-v2-eee40ee/work');directories=list((work/prefix).glob(suffix+'*'));assert len(directories)==1
+ access=directories[0]/'audit_access.bed'
+ assert digest(access)==digest(fixture/'access.bed') and access.read_bytes()==b'chrAudit\t0\t1000000\n'
+ script=(directories[0]/'.command.sh').read_text()
+ assert all(arg in script for arg in ['--method hybrid','--access audit_access.bed','--target-avg-size 1000','--antitarget-avg-size 1000000','--antitarget-min-size 1000'])
+ # False-positive controls operate on analysis copies only.
+ rows=cnn(run/'cnvkit/normal_a.antitargetcoverage.cnn');altered=copy.deepcopy(rows);altered[0]['depth']='1.1'
+ negatives={}
+ tests={'altered_depth':lambda:coverage(altered,expected['antitarget'],'normal_a'),
+ 'missing_bin':lambda:coverage(rows[:-1],expected['antitarget'],'normal_a'),
+ 'duplicate_bin':lambda:coverage(rows+[copy.deepcopy(rows[0])],expected['antitarget'],'normal_a'),
+ 'target_antitarget_intersection':lambda:geometry(target_keys,[('chrAudit',10000,11000,'Antitarget')])}
+ for name,check in tests.items():
+  try:check()
+  except AssertionError as exc:negatives[name]={'refused':True,'reason':str(exc)}
+  else:raise AssertionError('negative control accepted:'+name)
+ record['runs'].append({'kind':r['kind'],'outdir':str(run),'assessed_files':files,'access_asset':{'path':str(access),'sha256':digest(access),'embedded_in_recorded_config':True},'negative_controls':negatives,'passed':True})
+ save()
+comparison=verify.compare(Path(execution['runs'][0]['outdir']),Path(execution['runs'][1]['outdir']),require_environment=True)
+record['replay_comparison']={key:getattr(comparison,key) for key in ['identical','changed','missing','extra','missing_directories','extra_directories','changed_links','renamed','environment']}
+record['replay_comparison']['structurally_equal']=comparison.structurally_equal
+record['all_scientific_files_byte_identical']=all(record['runs'][0]['assessed_files'][key]['sha256']==value['sha256'] for key,value in record['runs'][1]['assessed_files'].items())
+record['inputs_unchanged_after_assessment']=all(digest(Path(p))==v['sha256'] for p,v in truth['input_files'].items())
+save()
+assert comparison.structurally_equal and comparison.environment and comparison.environment['status']=='identical'
+assert record['all_scientific_files_byte_identical'] and record['inputs_unchanged_after_assessment']
+print('Nonempty antitarget assessment passed:',[(r['kind'],len(r['assessed_files'])) for r in record['runs']],flush=True)
+print('environment',comparison.environment,'changed',comparison.changed,flush=True)

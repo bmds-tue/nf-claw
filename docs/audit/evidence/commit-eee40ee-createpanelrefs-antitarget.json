@@ -1,0 +1,1695 @@
+{
+  "version": 1,
+  "source_commit": "eee40eeec81a7acbc02fe7b0aa8ce130e8fbf592",
+  "pipeline_commit": "8ce86a84b5af74facf99abb76216531622b52bc8",
+  "source": "/mnt/volume/nfclaw-remediation-matrix-source",
+  "worker": {
+    "path": "/mnt/volume/nfclaw-createpanelrefs-antitarget-native.py",
+    "sha256": "28776fc5c0c922662d48bb0bd5cbed5f2aa34697daa00800ddabd50812ad1012"
+  },
+  "fixture": {
+    "version": 1,
+    "created_at": "2026-10-28T02:30:03.585366+00:00",
+    "generator": {
+      "path": "/mnt/volume/nfclaw-createpanelrefs-fixture.py",
+      "sha256": "e0da269c0a7e3040d7d4eae960d1bef472d5fa94f4717bb69fe51cc99492bd86"
+    },
+    "seed": 20261028,
+    "reference": {
+      "name": "chrAudit",
+      "length": 1000000,
+      "bases": "ACGT"
+    },
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "pysam": "0.24.1",
+    "samtools_library": "1.24",
+    "samples": {
+      "normal_a": {
+        "reads": 10000,
+        "aligned_bases": 1000000,
+        "uniform_expected_depth": 1,
+        "bam": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_a.bam",
+        "bai": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_a.bam.bai"
+      },
+      "normal_b": {
+        "reads": 20000,
+        "aligned_bases": 2000000,
+        "uniform_expected_depth": 2,
+        "bam": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_b.bam",
+        "bai": "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_b.bam.bai"
+      }
+    },
+    "targets": [
+      {
+        "chromosome": "chrAudit",
+        "start": 10000,
+        "end": 11000,
+        "gene": "targetA"
+      },
+      {
+        "chromosome": "chrAudit",
+        "start": 30000,
+        "end": 31000,
+        "gene": "targetB"
+      }
+    ],
+    "scope": "Deterministic synthetic interval/count oracle. No CNV calling accuracy or real-cohort biological validation claim.",
+    "input_files": {
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/audit.fasta": {
+        "bytes": 1016677,
+        "sha256": "ce638aaccd90b07d0e1f9214cf04f8d12fdc26e754ea0589de1db938cf743600"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/audit.fasta.fai": {
+        "bytes": 26,
+        "sha256": "59a6a28b3e6a3a00b0f3151750bf0e20a2208fa07c2cbc8e6daa5b3d3867efbc"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/hybrid.config": {
+        "bytes": 127,
+        "sha256": "4010d408e3538a2a8a02535359d0348e772814abeeed6ed2da18ad2e26fe46f5"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_a.bam": {
+        "bytes": 398308,
+        "sha256": "0e168f9718eb9d340583cb80896b494b0462a9dfe52cb2e283830694925f14ac"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_a.bam.bai": {
+        "bytes": 584,
+        "sha256": "3c6f0549700c9e44bd3d0d390fcac2192cb5865b6dfd95e2f87ae6ad9b8d07fc"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_b.bam": {
+        "bytes": 449136,
+        "sha256": "941daaed5a1145e0f1053899946018c022cb3ad1f81b78c794da2102bb1ed0e1"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/normal_b.bam.bai": {
+        "bytes": 584,
+        "sha256": "8054d3163defee1bed13373464c491f41a824b5e604902b26fffe6644c88e62e"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/params.json": {
+        "bytes": 592,
+        "sha256": "014f6fe04d050147980385f0cfbd2b0814dbe31a6660085fe02d956722f57aab"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/samples.csv": {
+        "bytes": 465,
+        "sha256": "b0eb74dd8fd39816ce3394375751d423c9fbd2fdfdd618de4135b98a6f510bd9"
+      },
+      "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/targets.bed": {
+        "bytes": 58,
+        "sha256": "b75a0a21483953e7e20d756c95010ca9b1428e268ec4dc10e8495667d4e72e79"
+      }
+    }
+  },
+  "fixture_record_sha256": "3fe3247ca183f8bb18708bed76616a1e9d84690ce2939e32845d67660e18abfc",
+  "pipeline_files_before": {
+    ".devcontainer/devcontainer.json": {
+      "sha256": "7a781461a1d7dad5d218039f7b35b5855c360fa5b36a39774bdb7084bf6df4fa",
+      "mode": 436
+    },
+    ".devcontainer/setup.sh": {
+      "sha256": "ee05ddcbc7ca58a401aa6fdf44ab8401e03d46d5c068dd51a7d684c0ecef7381",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "c789806a02f29774b9f8ee7a9ac019ed28cdce9d80a9284726b46c1a24e2c211",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.yml": {
+      "sha256": "e69caa4ed6c11e46beb21678d6ca476879562505f1a0c5ce20713ce17860539d",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "f2ade9e02c0f247d62c5b53c6341271d866a903f5a2f50fde632201cf1d86420",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.yml": {
+      "sha256": "ab6768043cace66f78d9c71322eb437cea92f6b086092132c6ec6d13864f6b25",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "0dc5f54a79d33112b70e0aa9082c6037133a90404726ff4f59d5f3c7b95192c9",
+      "mode": 436
+    },
+    ".github/actions/get-shards/action.yml": {
+      "sha256": "bde449777823fdf54093974f0f9b1e91fbd33d97f4cd37743c94f862b5aa08f5",
+      "mode": 436
+    },
+    ".github/actions/nf-test/action.yml": {
+      "sha256": "794d6487571b2652d389924041150cf3bad5838178fdef9900214d1d7ae00265",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "eac5bb26c18bbc2f836ba8ff8124eed5d379ae3b91fd44130f58497729008235",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "14fa5e51d65fdf85c43c7473e3167c751aea664c67bb0c52923bd671d47c5d25",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "67c71e16a1771a9e250c26c428ff10eb5f99a3c1c63186fcbda1bf3498b2cb98",
+      "mode": 436
+    },
+    ".github/workflows/clean-up.yml": {
+      "sha256": "e41ff4edebd9d6f377203be1f9e3eac4d80603b49de2ee2bbc6305d62d024d9b",
+      "mode": 436
+    },
+    ".github/workflows/download_pipeline.yml": {
+      "sha256": "020cb24b58932859fd9b57871bfe9753377ac4c53b6fc216b5df0c7435225d0c",
+      "mode": 436
+    },
+    ".github/workflows/fix_linting.yml": {
+      "sha256": "0ec996c1f6f839549b730ce5795408b797dad4a4c9402fca264480e916d00f63",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e22f764787a0896e9f0dc99d42deec2633273db7605562cc014624b3c53975d0",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "62d7de40b2ed3989922d2b04831fd8046a46e18d8d5dfcb9deff586ad64c3300",
+      "mode": 436
+    },
+    ".github/workflows/nf-test.yml": {
+      "sha256": "19e182c45d61eb727780f2cd23226f2c88502a22920d384ec5e01f957fa33a1a",
+      "mode": 436
+    },
+    ".github/workflows/release-announcements.yml": {
+      "sha256": "77b97b07e4b29fff0d94cfdd1c537b5031c707dd604a77625965325c19d66343",
+      "mode": 436
+    },
+    ".github/workflows/template-version-comment.yml": {
+      "sha256": "4448f2d4c2c096a1476300f81d83de6168b24a7efad7642bbb33937fc95b5b0a",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "c1fb27307a334ab1bcc7823976515f322a35e85e3fce3f2459625a993b3b15a1",
+      "mode": 436
+    },
+    ".nf-core.yml": {
+      "sha256": "0435b7dc8fb378c26435a5164b545b16e7dc396170c3dc3f00505757a991d8d9",
+      "mode": 436
+    },
+    ".pre-commit-config.yaml": {
+      "sha256": "59043a2db36e25f54ccb789d8068beeed11a26068c57f9cddec958cdc853c2e1",
+      "mode": 436
+    },
+    ".prettierignore": {
+      "sha256": "c350972d84684f88b188386068400b50318a9751151dca215dd350b1b86a5986",
+      "mode": 436
+    },
+    ".prettierrc.yml": {
+      "sha256": "fef7704ceb2e95b565d31287910d153ea0ec93aee930eab9855d7953ca89bc45",
+      "mode": 436
+    },
+    ".vscode/settings.json": {
+      "sha256": "dbbfea20764ff9f2e17e96bd2186cf7c40adb457610ee28ed366b8bab1c296c0",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "853a569d02e19900f414b91538eeafa2cef52e98d11597db2246925a185c9501",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "cab8d7a433ea2607d2702ce88d4efde893652dd7a2c055387146bfb9a07bd717",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "b474915a37b8510c1a640e27fa57404e6b2f02a611ede77466b4bce34324f7a6",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "5133f0ab100ae4812ec67942dc3bee8f224c4de0a62c630019fee10eaa89dd54",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "62aad97fe7a81dfb2efd6d4e115321d09482d40c2855ab6bdb75da6946e54d46",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "d748e94cd9dec100ef5a4cb5e6c379f531267dbe0a66184873586b6333bb5ff4",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "3a9a9cd1781158d8761c6f0ed90dd2cd7784999b03c451abb8491acec5156c2d",
+      "mode": 436
+    },
+    "assets/methods_description_template.yml": {
+      "sha256": "2d6da3e1a42afe2dd5c2cc2a752203025853ef05cdc2533780cf8bb6e6df0a7f",
+      "mode": 436
+    },
+    "assets/multiqc_config.yml": {
+      "sha256": "0db452ef72905fcc48b7cd77d57559dc3892859956c9d3980c03c80ed66cc8b9",
+      "mode": 436
+    },
+    "assets/nf-core-createpanelrefs_logo_light.png": {
+      "sha256": "8539fd164f1dd24024a3258aaa6bb6701e89d8387ccaccf7d557c5a46b992dfd",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "50cb822e954f54c43b6845161fe1f97ae3088c4e71db38cb43df826fd1741e03",
+      "mode": 436
+    },
+    "assets/schema_input.json": {
+      "sha256": "5b6e150925ea07fbdac52270dd161036a12e2c592522503a5684fea5f1718b80",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "a000c7e335f2fdfdb52df99ee6932243bbc2f9b2c27ac39b4f2a40334a176762",
+      "mode": 436
+    },
+    "conf/base.config": {
+      "sha256": "8cb0dd2f27e51100b90603374a84be51ad2d42775a7c8178ab027493ebbbbc9c",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_amd64.config": {
+      "sha256": "ebe7d3ceadd9ae22a715ee32213c7bf8ae51a9f7c033138d7a788f18eeaf8acb",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_arm64.config": {
+      "sha256": "2b4a3665f61a9b168f4d66302921cae0d2f8b04f469f01902e7ee12da8087a35",
+      "mode": 436
+    },
+    "conf/containers_docker_amd64.config": {
+      "sha256": "1e45c1fb828d15601acbc20588dedb736e357c6e6c441e5925c025eba9e68397",
+      "mode": 436
+    },
+    "conf/containers_docker_arm64.config": {
+      "sha256": "277bca205a1b0c15687a023e9a2ba4812d0cf92e5e97b11c2b23baf70fe9d8ec",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_amd64.config": {
+      "sha256": "83a63efb0aa3e28ff77ba1a226b6e661bf1875e5b61ce7572042707b76f74535",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_arm64.config": {
+      "sha256": "0e71257e4e00ca201e8179ded3c4e0d0037abc8b6e3cc7f581892e362f3e7fc6",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_amd64.config": {
+      "sha256": "932a108fc17bea45aa52977d479aca9d2bc5fd543524f3743912958a3ee8e665",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_arm64.config": {
+      "sha256": "420ace44f71d76b3cc34a07ce2294d55047df5dec0e45b2603519b6bcba50490",
+      "mode": 436
+    },
+    "conf/igenomes.config": {
+      "sha256": "6937de38f831d86e23ce997d482f39cf24faaf5cc6d75d506742d664df5ea83a",
+      "mode": 436
+    },
+    "conf/igenomes_ignored.config": {
+      "sha256": "4eaa67a2d5906c50a45c225b7c022b24f18bce862fa5a4cb6b42341ed46b16bd",
+      "mode": 436
+    },
+    "conf/modules/base.config": {
+      "sha256": "e581253c9fc05bcfc787f1e7e70cdd5eda83830f1d02f482c116328c224721a8",
+      "mode": 436
+    },
+    "conf/modules/cnvkit.config": {
+      "sha256": "3fb6b8d2e2417ac8162ac017f915f7dfb3173bee10e8746d9cc4bdd052d4247f",
+      "mode": 436
+    },
+    "conf/modules/gens_pon.config": {
+      "sha256": "274d5042b28596e4ebf85f7f7b5acb295915c08c3cebbca616de4f9694fd541f",
+      "mode": 436
+    },
+    "conf/modules/germlinecnvcaller_cohort.config": {
+      "sha256": "64d40ba8ec79b2acbd00c298728ab459abcd37a96f1b83186c6b404fa5f017bf",
+      "mode": 436
+    },
+    "conf/modules/mutect2.config": {
+      "sha256": "ee420395271dc97258ea73746af7474b683623d417b91e9eb3acc0ce519ae856",
+      "mode": 436
+    },
+    "conf/modules/prepare_genome.config": {
+      "sha256": "ba71963489c4a7e52d416a65dbd9d32a15322a545f3f422067ecc42ea6af5715",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "74ec31873b03bc0032d6934aba042fd9dd2a4c7571c591ff2bb69c6ba7050f1b",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "db0b889d20ba66596e13705587a25350ee21cfa3e5a84572848c9cc90646f94e",
+      "mode": 436
+    },
+    "docs/CONTRIBUTING.md": {
+      "sha256": "1e603f94b725ec52540918f566ee7000ee2d3387b8e496cd49f0e2f891b75a02",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "38455a020fd48aa028e555658f57b895229e8dfa2fb158fb17e529694cb8f82f",
+      "mode": 436
+    },
+    "docs/images/nf-core-createpanelrefs_logo_dark.png": {
+      "sha256": "6e210cfaa41db7344a089e9920e4dafe5ba3e16774db7b22481a2fb627b31b76",
+      "mode": 436
+    },
+    "docs/images/nf-core-createpanelrefs_logo_light.png": {
+      "sha256": "2c90a43d296b25d3f986783c075e8d3dbe944110b5ade62e561676bb3ca21a63",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "62f811972da103e0a94bedc8fbf0f7a3d1676d3c17c3bf505eb2879bfdf1618c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "c7e69d4b67f588d68acda78355a6dd842952d36eaa8b29836ab6d8b440e4cdcd",
+      "mode": 436
+    },
+    "main.nf": {
+      "sha256": "b1b70e323d55f1a9a91e1cba756e923ad1776d205187237e0951755ffa373974",
+      "mode": 436
+    },
+    "modules.json": {
+      "sha256": "f310ad359c7261c65fa6bf15cb86df6a60f7a7be8c34c07127335a533395cff2",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/environment.yml": {
+      "sha256": "70bd5a1cb19b24ede9ca6fde15ddf3bef77b395ba899518a05912f66b3e951d4",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/main.nf": {
+      "sha256": "62444a8507d6eba0cdb43d4f628a43e999e794f1f1b5ebb958e4bb283e911c14",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/meta.yml": {
+      "sha256": "c8e55fd03ff38160939a8357fd40a68899542ec782f6802415bc0b0d75f4fd68",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/environment.yml": {
+      "sha256": "56ede991ff1230bdc2d6f8c8ca34b4b67fb77c1b48e813aa81280ae88faf2bca",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/main.nf": {
+      "sha256": "97843009a55f7d03a2a859144685bbbb13e4e2703cc7f544472be33743e1a731",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/meta.yml": {
+      "sha256": "6e46a4dd55fa6e934292f60060cff8aa188a923174faad95ae46a32e47388b37",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/main.nf": {
+      "sha256": "4db43bd01cf79a6e453e551777f170e9f67922e8147accdc5a9245e631a00c49",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/meta.yml": {
+      "sha256": "732cd5e3b6529161d472e1b9a1dd98ec69525d8c2b549f41d13b0a0b220b8e9c",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/main.nf": {
+      "sha256": "41ae7644a950bca941301954da577cb25b4b59ec102c5321eb50ee50a111ab5b",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/meta.yml": {
+      "sha256": "0c90b7b68c3e5e25277af83e6b852a70107c6cf6a8e87e7793d354841eefe3da",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/main.nf": {
+      "sha256": "7df1cd42a69a9d3feed287a4f1ae2950ecd916e01d719387847f8cf5c3202f0e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/meta.yml": {
+      "sha256": "9245dc219fc63fdbd7ed5fd1d2df3356090ed23aac70d9e5212f296a6947c39b",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/main.nf": {
+      "sha256": "1f7288495af5028b8ee65b6cf98f8c341a0c1959a8cfcf275bbadcdd13f3a037",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/meta.yml": {
+      "sha256": "8e78db4849a6e3f338b740c26ed96739632850f7f64d24d77066ab24e9bce9b5",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/main.nf": {
+      "sha256": "d6e30f229ac13a021fe78533c01f8ee654f69e8a6072da13115be7f051a7545f",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/meta.yml": {
+      "sha256": "b597f3ab18d58598b87269fd0bc0716ee3d68b16f7c9ae46c784862244d821a8",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/main.nf": {
+      "sha256": "5c3e42201173c0cfe5087892c30b2c6361b38f59e3c2dec2add686ff2955bfbd",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/meta.yml": {
+      "sha256": "a1fe9419267f4931e640ac4e033081b6bc66600df7fab50f191dc309672ce4fd",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/main.nf": {
+      "sha256": "a9669c8c1488cfc39fd71e91ca9e1c946433988f95180ffa87497c41511b130d",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/meta.yml": {
+      "sha256": "715ab5968a8bc921fe02f65da7f027c3c83c9387d6d4597f4d6affdab7290184",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/main.nf": {
+      "sha256": "5e6129cf535d6363e5080b091728f9c9efb2bd35ce54a4ce8afff7876e8a0baf",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/meta.yml": {
+      "sha256": "3761a230e51c764d0326bb6b78ab033b15b8a2283e40bc810b198b9ccf6de0fb",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/main.nf": {
+      "sha256": "c8936537e3f419780dc03da5bfb97ca5aa6cfd8d96852b4ab94f1621743eda78",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/meta.yml": {
+      "sha256": "b2460fa157779dc95e6b673c542c7578771a21e70e8e50987ac0c589d8db493f",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/main.nf": {
+      "sha256": "2d62bb302ebee752c44fdcf85f43042e9ca1c2d3135c389da1633bf270e7c58e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/meta.yml": {
+      "sha256": "9895e6ec42717840e8edeeef91311ae1abc646cf36d41dfcf2cad30cc25df72a",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/main.nf": {
+      "sha256": "bf081c1c5d2bb4c87508f7a7d92ec2e8f13bb164c8df0f4b23c756d28538e69e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/meta.yml": {
+      "sha256": "c4e35902dc8b6c7c1885cfa906f94925b3dd943ed82c2853b0a736e3cc8be745",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/main.nf": {
+      "sha256": "6d648a3e4b99701fc8ed40f73e92a45a5cc7982276c50bc62623826b49886de3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/meta.yml": {
+      "sha256": "140e4baf04f7d6fb828ad2a88458cd05eaffdde8ed3655ff1505996fc96b3ce1",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/main.nf": {
+      "sha256": "68fd60fdd4754bb8cd53f5dfa52cbd0f5b7b5f2aa8b9f6c7dabb74a78cc011ec",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/meta.yml": {
+      "sha256": "a722b5c66afc6f77c0089d585984950b961f04f0de03fa834dfdcb5b281a1ed3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/main.nf": {
+      "sha256": "507808241b685329350b411b3554a8187828ebb2a8017836af8a61966824aca3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/meta.yml": {
+      "sha256": "0410d5701b216bf6efd4e05d6c54052fe654f1151673636db66c43c32c7d2742",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/main.nf": {
+      "sha256": "82d2d7305b919f35b1cf6954ce0a36f989a99abfc399ab79034dccedfab919af",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/meta.yml": {
+      "sha256": "18c0331a8229207d50066fd86068d8c60e8f96fd8b0b8a2b123a34ce21bb148e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/main.nf": {
+      "sha256": "0fbc217855dce077cd34e8931f72ab378b7361841e72b6edad0c65d125f1b0f9",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/meta.yml": {
+      "sha256": "7f5383a82e64d611f819d1c2c273aa1db54930844cd4cf1257c005fc9165df87",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/main.nf": {
+      "sha256": "4c7a16ed9faefdf334d6dac91a0908d10f860e9bb676fab32e75ffb2f7b1eb02",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/meta.yml": {
+      "sha256": "6b716c8dcc02d39065a1f60e3a124401677b172767a7eed1d94244a75a005c36",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/environment.yml": {
+      "sha256": "3f15b00283980bf9c8a25bd63ab3b364f7fc537e4a566c40758e90a1b0dd2a0b",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/main.nf": {
+      "sha256": "cd8dbd4c4da359761f5ca07bb8ed711710cffc9767cf2a349328fc6c110b0b5d",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/meta.yml": {
+      "sha256": "34ed30a6aa7cd1f4451504781d07aec18c238059bb795d816d3a434a3557803e",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/environment.yml": {
+      "sha256": "55933bdd4522df8b0753a4be1be6b829d6a797079997ce98f1cdef9619063c85",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/main.nf": {
+      "sha256": "dbecb4d4d1670740299a12dc902d5b092c6dc0cfa8e3b2ed876ace8f7a073e93",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/meta.yml": {
+      "sha256": "ea657d255a4cce670816cb7317359baa70f253ee03c914f31350e05b8918f2dd",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_amd64-bd-c17fb751507e9dfc_1.txt": {
+      "sha256": "2e6a54ceb3dc97865e0ce0d8923595c3b764991cb02dddb1b84c0048a3ab4fd1",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_arm64-bd-5c84a5000a226ab5_1.txt": {
+      "sha256": "44aec23d2287c1d7dcdddc2712e1ef6ec41511786aa5ba2c702c074255623c01",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/environment.yml": {
+      "sha256": "d177f136e201eec8ac5f17fd56be42d6967875d55519b8f4ddd412491e39cccc",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/main.nf": {
+      "sha256": "b548ccc70c039d90f82641f42ff69c21474974aa6a0d8e34b88d3bcbf7cbd90f",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/meta.yml": {
+      "sha256": "4c3fbca627d9437d200079044502ccac1b9a29b118014e308aec35b9f83fa479",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/main.nf": {
+      "sha256": "1d21c87dc4ca82b3cdc69f912cdf3d608605dff6218474c47b23dde220777858",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/meta.yml": {
+      "sha256": "3eccdb9370d86bd7cb83075c10bffe1f1357e97359349d97e8e973948032b12a",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/main.nf": {
+      "sha256": "affb9f76467c7ccacf9ed5372468d78d6a8c2c18d94179952d4047668ac3cdec",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/meta.yml": {
+      "sha256": "bf389602b6cab11c8e63f5d7bdad6f3fb7c7975a79e9a493d6a81d6314bf3bcf",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/main.nf": {
+      "sha256": "1d5e908f0bf2084fd0bb5fc53bd3e169178af38769eba9804f65603411837de3",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/meta.yml": {
+      "sha256": "bc167d8371e3b96f0bc4f2cf678bca9df947ddd49d5bf6f3a1a0f3d231a0f96a",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "966b6666e59df45b4aec36371df9ff5ffc78823f9ecc62f32b1db1c3c5bdfc4b",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "6f008e02e596ad2eb5cd001ffd3c08e195e485372b383a22e2794109d23c9635",
+      "mode": 436
+    },
+    "nf-test.config": {
+      "sha256": "ab4bb57c287304f5dd1754198744865dca64237058520317561ab9570fde3053",
+      "mode": 436
+    },
+    "ro-crate-metadata.json": {
+      "sha256": "52fb5fbf4d96f489345b305817639f9c2c26fe176e0cdd357d9170f5e11d7910",
+      "mode": 436
+    },
+    "subworkflows/local/cnvkit_pon/main.nf": {
+      "sha256": "61e0986f8499133e2bae5c97fa65814617aa29bbe9f04256f058629d7061521f",
+      "mode": 436
+    },
+    "subworkflows/local/gens_pon/main.nf": {
+      "sha256": "cfa6866d2fc3d7a50b34dec2148445a5be5447349c2a750afa5812a853d4ed04",
+      "mode": 436
+    },
+    "subworkflows/local/germlinecnvcaller_cohort/main.nf": {
+      "sha256": "186b3186079e3d665f861de7459cba6b6289d325f913ae2e5438f917f9ffa881",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/main.nf": {
+      "sha256": "d211bab7a4752d2be9c7cfaa362fdced6a702481517ca0b09357ecb6ad3eebf1",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/tests/main.nf.test": {
+      "sha256": "f34a1675de365857839a866868923ef2bc11521429b6517fe6c5867b3bededd0",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/tests/main.nf.test.snap": {
+      "sha256": "25b12225f4f36cf5cff42eeff2b3e734bcf8971759e63fdd209e1a1017c974d6",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_genome/main.nf": {
+      "sha256": "225c03ebeb26106399bb57844e7501619b53b88e4170d2900b965941f5c92b47",
+      "mode": 436
+    },
+    "subworkflows/local/utils_nfcore_createpanelrefs_pipeline/main.nf": {
+      "sha256": "dbda373a446dbb76d3a5217c5e215c91f7be0810a26ed1f734001ebc859407a8",
+      "mode": 436
+    },
+    "subworkflows/nf-core/bam_create_som_pon_gatk/main.nf": {
+      "sha256": "9056ec8de28539546dd5fa7f680ccef7b616934c4d0a9f13264d19282c02447e",
+      "mode": 436
+    },
+    "subworkflows/nf-core/bam_create_som_pon_gatk/meta.yml": {
+      "sha256": "6fc3c25162887d4d5ae34fa3628effffa337a2c9753fbd2a257a8796323678a4",
+      "mode": 436
+    },
+    "tests/.nftignore": {
+      "sha256": "5561223522112a8c4c8e4f337402e801e5fa6ad2bb138c2176517ceee077ccd2",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam.csv": {
+      "sha256": "1d9be24349bca270044dfa58cd17d4e8a86d848d1e8693729d3d6367f81cdc5d",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam_cram.csv": {
+      "sha256": "8efd769e0b230fd4c3f7ab71187bec1e801dc3f2650b30ebcadd454f224d4f1d",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam_sorted.csv": {
+      "sha256": "29b61f970e227759fd680b1422dad3b59bf194bd9f19cc8748ae979684361382",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/cram.csv": {
+      "sha256": "39a8899afe976c1fd09cc1e2865d641ab6883a2e6778b1499d1e77e76d438125",
+      "mode": 436
+    },
+    "tests/default.nf.test": {
+      "sha256": "d9bba25983ed9fc10b328f17ba79bd35c49175ab0bc6b2f474eee80870389dde",
+      "mode": 436
+    },
+    "tests/default.nf.test.snap": {
+      "sha256": "9e0b7c740cf46b75148629fd310bb42485a48b695964d249cfab73ba0d22bf70",
+      "mode": 436
+    },
+    "tests/gens_pon.config": {
+      "sha256": "261e2cb7f502e453cba8a6c36bde03370278e722404ac4afe9e35099655e420b",
+      "mode": 436
+    },
+    "tests/gens_pon.nf.test": {
+      "sha256": "5244f59dd69420052da0d42d31c48a1e67a8706e58b97b118e724fdaf23ea66b",
+      "mode": 436
+    },
+    "tests/gens_pon.nf.test.snap": {
+      "sha256": "48efc5b4ecf1ed821ea9da5dd3346677d4a3fe451b536ca26694c3174103b58e",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.config": {
+      "sha256": "7936dbc9e72a953c33ecb7b227c77659530df20c599ed5a92b0a3db1297285cf",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.nf.test": {
+      "sha256": "49fb883fe1f52789454bdd6963edca81063ea111328cd02ed11dc4d21cfbcb01",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.nf.test.snap": {
+      "sha256": "0248b3c45ab7863a2321cda7f34ba07749784db14a77011193b55e358344d95a",
+      "mode": 436
+    },
+    "tests/lib/UTILS.groovy": {
+      "sha256": "91945ab8cbd5f3047a3d7fa642786aec51c2e06d556b67b71fa1f15ca4e1a321",
+      "mode": 436
+    },
+    "tests/mutect2.nf.test": {
+      "sha256": "519d5407f977700ea3f9e7dd74ffd7ea181f1d0c84fa15d3482f2f83f3c7f3cb",
+      "mode": 436
+    },
+    "tests/mutect2.nf.test.snap": {
+      "sha256": "84b033159891cc4f1cad3522759e12f30143be692f39de84dcd50231a3bae108",
+      "mode": 436
+    },
+    "tests/nextflow.config": {
+      "sha256": "be5a44ccf1f09e09b7f88f1412e01e0ccac6bea37edcf5ebab0198e888069273",
+      "mode": 436
+    },
+    "tower.yml": {
+      "sha256": "3c323f82ccd98f79afc9a837018344cb9cf9f3f83b7bb7bd321eb0a831e7f6ac",
+      "mode": 436
+    },
+    "workflows/createpanelrefs.nf": {
+      "sha256": "f57895d6e2ce8dc78931b791e5c70f4f26b20c0d394d1dc6d835b95b1863ecc4",
+      "mode": 436
+    }
+  },
+  "runs": [
+    {
+      "kind": "original",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget",
+      "command": [
+        "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+        "-m",
+        "runner",
+        "run",
+        "createpanelrefs",
+        "--demo",
+        "--params-file",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/params.json",
+        "--config",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/createpanelrefs-antitarget-fixture-20261028/hybrid.config",
+        "--outdir",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget",
+        "--nxf-ver",
+        "26.04.0",
+        "--limit-cpus",
+        "2",
+        "--limit-memory",
+        "4.GB",
+        "--limit-time",
+        "10.min",
+        "--timeout",
+        "1200",
+        "--nxf-env",
+        "NXF_WORK=/dev/shm/nfclaw-createpanelrefs-antitarget-eee40ee/work",
+        "--nxf-env",
+        "NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true"
+      ],
+      "started_at": "2026-10-28T02:35:25.066641+00:00",
+      "console_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget.console.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T02:36:22.827563+00:00",
+      "console_log_sha256": "a60a9a518f902aa3c688f6fdaac5af1a510b8149f52c4d8404717f8f182b7edc",
+      "pipeline_unchanged": true,
+      "inputs_unchanged": true,
+      "outcome": "success",
+      "completion_caveats": null,
+      "dependency_stability": {
+        "checked_at": "2026-10-28T02:36:20+00:00",
+        "issues": [],
+        "status": "unchanged",
+        "version": 1
+      },
+      "stub_profiles": null,
+      "stub_configs": null,
+      "tasks": [
+        {
+          "task_id": "2",
+          "hash": "e2/5714af",
+          "native_id": "3939024",
+          "name": "NFCORE_CREATEPANELREFS:CREATEPANELREFS:CNVKIT_PON:CNVKIT_BATCH (audit_panel)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:35:37.249",
+          "duration": "7.4s",
+          "realtime": "5.1s",
+          "%cpu": "213.6%",
+          "peak_rss": "198.6 MB",
+          "peak_vmem": "4.1 GB",
+          "rchar": "68 MB",
+          "wchar": "101.9 KB"
+        },
+        {
+          "task_id": "1",
+          "hash": "59/7ffda8",
+          "native_id": "3939004",
+          "name": "PREPARE_GENOME:GATK4_CREATESEQUENCEDICTIONARY (audit.fasta)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:35:37.227",
+          "duration": "10.7s",
+          "realtime": "4.8s",
+          "%cpu": "211.6%",
+          "peak_rss": "212.8 MB",
+          "peak_vmem": "7.3 GB",
+          "rchar": "95.5 MB",
+          "wchar": "690.2 KB"
+        },
+        {
+          "task_id": "3",
+          "hash": "45/f3addb",
+          "native_id": "3942215",
+          "name": "MULTIQC (createpanelrefs)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:35:48.081",
+          "duration": "30.8s",
+          "realtime": "28.8s",
+          "%cpu": "59.1%",
+          "peak_rss": "184.9 MB",
+          "peak_vmem": "8.2 GB",
+          "rchar": "67.7 MB",
+          "wchar": "4.4 MB"
+        }
+      ],
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget/pipeline_info/execution_trace_2026-10-28_02-35-25.txt",
+      "trace_sha256": "3c89c1e1d51b9689c4723b6749f675b0b796e83cd00d740975e341f4aefc7363"
+    },
+    {
+      "kind": "replay",
+      "outdir": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-replay",
+      "command": [
+        "bash",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget/provenance/commands.sh",
+        "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-replay"
+      ],
+      "started_at": "2026-10-28T02:36:22.848325+00:00",
+      "console_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-replay.console.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-28T02:36:57.542426+00:00",
+      "console_log_sha256": "d32d8fba5a372e10f332f6b01e367ff2b3ff4dad6b63d4148b32dc1fedabb3af",
+      "pipeline_unchanged": true,
+      "inputs_unchanged": true,
+      "tasks": [
+        {
+          "task_id": "2",
+          "hash": "7f/3bd47d",
+          "native_id": "3944025",
+          "name": "NFCORE_CREATEPANELREFS:CREATEPANELREFS:CNVKIT_PON:CNVKIT_BATCH (audit_panel)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:36:34.360",
+          "duration": "7s",
+          "realtime": "4.7s",
+          "%cpu": "222.3%",
+          "peak_rss": "177.5 MB",
+          "peak_vmem": "4.1 GB",
+          "rchar": "68 MB",
+          "wchar": "101.9 KB"
+        },
+        {
+          "task_id": "1",
+          "hash": "62/32675b",
+          "native_id": "3944043",
+          "name": "PREPARE_GENOME:GATK4_CREATESEQUENCEDICTIONARY (audit.fasta)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:36:34.381",
+          "duration": "8.1s",
+          "realtime": "4.2s",
+          "%cpu": "240.4%",
+          "peak_rss": "198.3 MB",
+          "peak_vmem": "6.8 GB",
+          "rchar": "95.5 MB",
+          "wchar": "690.2 KB"
+        },
+        {
+          "task_id": "3",
+          "hash": "f8/d0af43",
+          "native_id": "3946824",
+          "name": "MULTIQC (createpanelrefs)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "submit": "2026-10-28 02:36:42.596",
+          "duration": "10.8s",
+          "realtime": "9.6s",
+          "%cpu": "163.6%",
+          "peak_rss": "217.5 MB",
+          "peak_vmem": "10.2 GB",
+          "rchar": "67.7 MB",
+          "wchar": "4.4 MB"
+        }
+      ],
+      "trace": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-eee40ee-createpanelrefs-antitarget-replay/pipeline_info/execution_trace_2026-10-28_02-35-25.txt",
+      "trace_sha256": "78d54a8e5071518be7a680aba9c4c0f7b516d2a324313812665d67689384b87b"
+    }
+  ],
+  "scope": "Explicit hybrid CNVkit normal-panel branch with deterministic synthetic nonempty antitarget truth; not a default whole-genome/real-cohort/CNV-calling claim. Scientific assessment is separate from execution.",
+  "pipeline_files_after": {
+    ".devcontainer/devcontainer.json": {
+      "sha256": "7a781461a1d7dad5d218039f7b35b5855c360fa5b36a39774bdb7084bf6df4fa",
+      "mode": 436
+    },
+    ".devcontainer/setup.sh": {
+      "sha256": "ee05ddcbc7ca58a401aa6fdf44ab8401e03d46d5c068dd51a7d684c0ecef7381",
+      "mode": 509
+    },
+    ".gitattributes": {
+      "sha256": "c789806a02f29774b9f8ee7a9ac019ed28cdce9d80a9284726b46c1a24e2c211",
+      "mode": 436
+    },
+    ".github/.dockstore.yml": {
+      "sha256": "e3ed84c1c2cdc7923e42b11bdc659c0b1e348324146d01830e564da8ce5f717a",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.yml": {
+      "sha256": "e69caa4ed6c11e46beb21678d6ca476879562505f1a0c5ce20713ce17860539d",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "sha256": "f2ade9e02c0f247d62c5b53c6341271d866a903f5a2f50fde632201cf1d86420",
+      "mode": 436
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.yml": {
+      "sha256": "ab6768043cace66f78d9c71322eb437cea92f6b086092132c6ec6d13864f6b25",
+      "mode": 436
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "sha256": "0dc5f54a79d33112b70e0aa9082c6037133a90404726ff4f59d5f3c7b95192c9",
+      "mode": 436
+    },
+    ".github/actions/get-shards/action.yml": {
+      "sha256": "bde449777823fdf54093974f0f9b1e91fbd33d97f4cd37743c94f862b5aa08f5",
+      "mode": 436
+    },
+    ".github/actions/nf-test/action.yml": {
+      "sha256": "794d6487571b2652d389924041150cf3bad5838178fdef9900214d1d7ae00265",
+      "mode": 436
+    },
+    ".github/workflows/awsfulltest.yml": {
+      "sha256": "eac5bb26c18bbc2f836ba8ff8124eed5d379ae3b91fd44130f58497729008235",
+      "mode": 436
+    },
+    ".github/workflows/awstest.yml": {
+      "sha256": "14fa5e51d65fdf85c43c7473e3167c751aea664c67bb0c52923bd671d47c5d25",
+      "mode": 436
+    },
+    ".github/workflows/branch.yml": {
+      "sha256": "67c71e16a1771a9e250c26c428ff10eb5f99a3c1c63186fcbda1bf3498b2cb98",
+      "mode": 436
+    },
+    ".github/workflows/clean-up.yml": {
+      "sha256": "e41ff4edebd9d6f377203be1f9e3eac4d80603b49de2ee2bbc6305d62d024d9b",
+      "mode": 436
+    },
+    ".github/workflows/download_pipeline.yml": {
+      "sha256": "020cb24b58932859fd9b57871bfe9753377ac4c53b6fc216b5df0c7435225d0c",
+      "mode": 436
+    },
+    ".github/workflows/fix_linting.yml": {
+      "sha256": "0ec996c1f6f839549b730ce5795408b797dad4a4c9402fca264480e916d00f63",
+      "mode": 436
+    },
+    ".github/workflows/linting.yml": {
+      "sha256": "e22f764787a0896e9f0dc99d42deec2633273db7605562cc014624b3c53975d0",
+      "mode": 436
+    },
+    ".github/workflows/linting_comment.yml": {
+      "sha256": "62d7de40b2ed3989922d2b04831fd8046a46e18d8d5dfcb9deff586ad64c3300",
+      "mode": 436
+    },
+    ".github/workflows/nf-test.yml": {
+      "sha256": "19e182c45d61eb727780f2cd23226f2c88502a22920d384ec5e01f957fa33a1a",
+      "mode": 436
+    },
+    ".github/workflows/release-announcements.yml": {
+      "sha256": "77b97b07e4b29fff0d94cfdd1c537b5031c707dd604a77625965325c19d66343",
+      "mode": 436
+    },
+    ".github/workflows/template-version-comment.yml": {
+      "sha256": "4448f2d4c2c096a1476300f81d83de6168b24a7efad7642bbb33937fc95b5b0a",
+      "mode": 436
+    },
+    ".gitignore": {
+      "sha256": "c1fb27307a334ab1bcc7823976515f322a35e85e3fce3f2459625a993b3b15a1",
+      "mode": 436
+    },
+    ".nf-core.yml": {
+      "sha256": "0435b7dc8fb378c26435a5164b545b16e7dc396170c3dc3f00505757a991d8d9",
+      "mode": 436
+    },
+    ".pre-commit-config.yaml": {
+      "sha256": "59043a2db36e25f54ccb789d8068beeed11a26068c57f9cddec958cdc853c2e1",
+      "mode": 436
+    },
+    ".prettierignore": {
+      "sha256": "c350972d84684f88b188386068400b50318a9751151dca215dd350b1b86a5986",
+      "mode": 436
+    },
+    ".prettierrc.yml": {
+      "sha256": "fef7704ceb2e95b565d31287910d153ea0ec93aee930eab9855d7953ca89bc45",
+      "mode": 436
+    },
+    ".vscode/settings.json": {
+      "sha256": "dbbfea20764ff9f2e17e96bd2186cf7c40adb457610ee28ed366b8bab1c296c0",
+      "mode": 436
+    },
+    "CHANGELOG.md": {
+      "sha256": "853a569d02e19900f414b91538eeafa2cef52e98d11597db2246925a185c9501",
+      "mode": 436
+    },
+    "CITATIONS.md": {
+      "sha256": "cab8d7a433ea2607d2702ce88d4efde893652dd7a2c055387146bfb9a07bd717",
+      "mode": 436
+    },
+    "CODE_OF_CONDUCT.md": {
+      "sha256": "b474915a37b8510c1a640e27fa57404e6b2f02a611ede77466b4bce34324f7a6",
+      "mode": 436
+    },
+    "LICENSE": {
+      "sha256": "5133f0ab100ae4812ec67942dc3bee8f224c4de0a62c630019fee10eaa89dd54",
+      "mode": 436
+    },
+    "README.md": {
+      "sha256": "62aad97fe7a81dfb2efd6d4e115321d09482d40c2855ab6bdb75da6946e54d46",
+      "mode": 436
+    },
+    "assets/email_template.html": {
+      "sha256": "d748e94cd9dec100ef5a4cb5e6c379f531267dbe0a66184873586b6333bb5ff4",
+      "mode": 436
+    },
+    "assets/email_template.txt": {
+      "sha256": "3a9a9cd1781158d8761c6f0ed90dd2cd7784999b03c451abb8491acec5156c2d",
+      "mode": 436
+    },
+    "assets/methods_description_template.yml": {
+      "sha256": "2d6da3e1a42afe2dd5c2cc2a752203025853ef05cdc2533780cf8bb6e6df0a7f",
+      "mode": 436
+    },
+    "assets/multiqc_config.yml": {
+      "sha256": "0db452ef72905fcc48b7cd77d57559dc3892859956c9d3980c03c80ed66cc8b9",
+      "mode": 436
+    },
+    "assets/nf-core-createpanelrefs_logo_light.png": {
+      "sha256": "8539fd164f1dd24024a3258aaa6bb6701e89d8387ccaccf7d557c5a46b992dfd",
+      "mode": 436
+    },
+    "assets/samplesheet.csv": {
+      "sha256": "50cb822e954f54c43b6845161fe1f97ae3088c4e71db38cb43df826fd1741e03",
+      "mode": 436
+    },
+    "assets/schema_input.json": {
+      "sha256": "5b6e150925ea07fbdac52270dd161036a12e2c592522503a5684fea5f1718b80",
+      "mode": 436
+    },
+    "assets/sendmail_template.txt": {
+      "sha256": "a000c7e335f2fdfdb52df99ee6932243bbc2f9b2c27ac39b4f2a40334a176762",
+      "mode": 436
+    },
+    "conf/base.config": {
+      "sha256": "8cb0dd2f27e51100b90603374a84be51ad2d42775a7c8178ab027493ebbbbc9c",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_amd64.config": {
+      "sha256": "ebe7d3ceadd9ae22a715ee32213c7bf8ae51a9f7c033138d7a788f18eeaf8acb",
+      "mode": 436
+    },
+    "conf/containers_conda_lock_files_arm64.config": {
+      "sha256": "2b4a3665f61a9b168f4d66302921cae0d2f8b04f469f01902e7ee12da8087a35",
+      "mode": 436
+    },
+    "conf/containers_docker_amd64.config": {
+      "sha256": "1e45c1fb828d15601acbc20588dedb736e357c6e6c441e5925c025eba9e68397",
+      "mode": 436
+    },
+    "conf/containers_docker_arm64.config": {
+      "sha256": "277bca205a1b0c15687a023e9a2ba4812d0cf92e5e97b11c2b23baf70fe9d8ec",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_amd64.config": {
+      "sha256": "83a63efb0aa3e28ff77ba1a226b6e661bf1875e5b61ce7572042707b76f74535",
+      "mode": 436
+    },
+    "conf/containers_singularity_https_arm64.config": {
+      "sha256": "0e71257e4e00ca201e8179ded3c4e0d0037abc8b6e3cc7f581892e362f3e7fc6",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_amd64.config": {
+      "sha256": "932a108fc17bea45aa52977d479aca9d2bc5fd543524f3743912958a3ee8e665",
+      "mode": 436
+    },
+    "conf/containers_singularity_oras_arm64.config": {
+      "sha256": "420ace44f71d76b3cc34a07ce2294d55047df5dec0e45b2603519b6bcba50490",
+      "mode": 436
+    },
+    "conf/igenomes.config": {
+      "sha256": "6937de38f831d86e23ce997d482f39cf24faaf5cc6d75d506742d664df5ea83a",
+      "mode": 436
+    },
+    "conf/igenomes_ignored.config": {
+      "sha256": "4eaa67a2d5906c50a45c225b7c022b24f18bce862fa5a4cb6b42341ed46b16bd",
+      "mode": 436
+    },
+    "conf/modules/base.config": {
+      "sha256": "e581253c9fc05bcfc787f1e7e70cdd5eda83830f1d02f482c116328c224721a8",
+      "mode": 436
+    },
+    "conf/modules/cnvkit.config": {
+      "sha256": "3fb6b8d2e2417ac8162ac017f915f7dfb3173bee10e8746d9cc4bdd052d4247f",
+      "mode": 436
+    },
+    "conf/modules/gens_pon.config": {
+      "sha256": "274d5042b28596e4ebf85f7f7b5acb295915c08c3cebbca616de4f9694fd541f",
+      "mode": 436
+    },
+    "conf/modules/germlinecnvcaller_cohort.config": {
+      "sha256": "64d40ba8ec79b2acbd00c298728ab459abcd37a96f1b83186c6b404fa5f017bf",
+      "mode": 436
+    },
+    "conf/modules/mutect2.config": {
+      "sha256": "ee420395271dc97258ea73746af7474b683623d417b91e9eb3acc0ce519ae856",
+      "mode": 436
+    },
+    "conf/modules/prepare_genome.config": {
+      "sha256": "ba71963489c4a7e52d416a65dbd9d32a15322a545f3f422067ecc42ea6af5715",
+      "mode": 436
+    },
+    "conf/test.config": {
+      "sha256": "74ec31873b03bc0032d6934aba042fd9dd2a4c7571c591ff2bb69c6ba7050f1b",
+      "mode": 436
+    },
+    "conf/test_full.config": {
+      "sha256": "db0b889d20ba66596e13705587a25350ee21cfa3e5a84572848c9cc90646f94e",
+      "mode": 436
+    },
+    "docs/CONTRIBUTING.md": {
+      "sha256": "1e603f94b725ec52540918f566ee7000ee2d3387b8e496cd49f0e2f891b75a02",
+      "mode": 436
+    },
+    "docs/README.md": {
+      "sha256": "38455a020fd48aa028e555658f57b895229e8dfa2fb158fb17e529694cb8f82f",
+      "mode": 436
+    },
+    "docs/images/nf-core-createpanelrefs_logo_dark.png": {
+      "sha256": "6e210cfaa41db7344a089e9920e4dafe5ba3e16774db7b22481a2fb627b31b76",
+      "mode": 436
+    },
+    "docs/images/nf-core-createpanelrefs_logo_light.png": {
+      "sha256": "2c90a43d296b25d3f986783c075e8d3dbe944110b5ade62e561676bb3ca21a63",
+      "mode": 436
+    },
+    "docs/output.md": {
+      "sha256": "62f811972da103e0a94bedc8fbf0f7a3d1676d3c17c3bf505eb2879bfdf1618c",
+      "mode": 436
+    },
+    "docs/usage.md": {
+      "sha256": "c7e69d4b67f588d68acda78355a6dd842952d36eaa8b29836ab6d8b440e4cdcd",
+      "mode": 436
+    },
+    "main.nf": {
+      "sha256": "b1b70e323d55f1a9a91e1cba756e923ad1776d205187237e0951755ffa373974",
+      "mode": 436
+    },
+    "modules.json": {
+      "sha256": "f310ad359c7261c65fa6bf15cb86df6a60f7a7be8c34c07127335a533395cff2",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/environment.yml": {
+      "sha256": "70bd5a1cb19b24ede9ca6fde15ddf3bef77b395ba899518a05912f66b3e951d4",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/main.nf": {
+      "sha256": "62444a8507d6eba0cdb43d4f628a43e999e794f1f1b5ebb958e4bb283e911c14",
+      "mode": 436
+    },
+    "modules/nf-core/cnvkit/batch/meta.yml": {
+      "sha256": "c8e55fd03ff38160939a8357fd40a68899542ec782f6802415bc0b0d75f4fd68",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/environment.yml": {
+      "sha256": "56ede991ff1230bdc2d6f8c8ca34b4b67fb77c1b48e813aa81280ae88faf2bca",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/main.nf": {
+      "sha256": "97843009a55f7d03a2a859144685bbbb13e4e2703cc7f544472be33743e1a731",
+      "mode": 436
+    },
+    "modules/nf-core/find/concatenate/meta.yml": {
+      "sha256": "6e46a4dd55fa6e934292f60060cff8aa188a923174faad95ae46a32e47388b37",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/main.nf": {
+      "sha256": "4db43bd01cf79a6e453e551777f170e9f67922e8147accdc5a9245e631a00c49",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/annotateintervals/meta.yml": {
+      "sha256": "732cd5e3b6529161d472e1b9a1dd98ec69525d8c2b549f41d13b0a0b220b8e9c",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/main.nf": {
+      "sha256": "41ae7644a950bca941301954da577cb25b4b59ec102c5321eb50ee50a111ab5b",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/bedtointervallist/meta.yml": {
+      "sha256": "0c90b7b68c3e5e25277af83e6b852a70107c6cf6a8e87e7793d354841eefe3da",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/main.nf": {
+      "sha256": "7df1cd42a69a9d3feed287a4f1ae2950ecd916e01d719387847f8cf5c3202f0e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/collectreadcounts/meta.yml": {
+      "sha256": "9245dc219fc63fdbd7ed5fd1d2df3356090ed23aac70d9e5212f296a6947c39b",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/main.nf": {
+      "sha256": "1f7288495af5028b8ee65b6cf98f8c341a0c1959a8cfcf275bbadcdd13f3a037",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createreadcountpanelofnormals/meta.yml": {
+      "sha256": "8e78db4849a6e3f338b740c26ed96739632850f7f64d24d77066ab24e9bce9b5",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/main.nf": {
+      "sha256": "d6e30f229ac13a021fe78533c01f8ee654f69e8a6072da13115be7f051a7545f",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsequencedictionary/meta.yml": {
+      "sha256": "b597f3ab18d58598b87269fd0bc0716ee3d68b16f7c9ae46c784862244d821a8",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/main.nf": {
+      "sha256": "5c3e42201173c0cfe5087892c30b2c6361b38f59e3c2dec2add686ff2955bfbd",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/createsomaticpanelofnormals/meta.yml": {
+      "sha256": "a1fe9419267f4931e640ac4e033081b6bc66600df7fab50f191dc309672ce4fd",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/main.nf": {
+      "sha256": "a9669c8c1488cfc39fd71e91ca9e1c946433988f95180ffa87497c41511b130d",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/determinegermlinecontigploidy/meta.yml": {
+      "sha256": "715ab5968a8bc921fe02f65da7f027c3c83c9387d6d4597f4d6affdab7290184",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/main.nf": {
+      "sha256": "5e6129cf535d6363e5080b091728f9c9efb2bd35ce54a4ce8afff7876e8a0baf",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/filterintervals/meta.yml": {
+      "sha256": "3761a230e51c764d0326bb6b78ab033b15b8a2283e40bc810b198b9ccf6de0fb",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/main.nf": {
+      "sha256": "c8936537e3f419780dc03da5bfb97ca5aa6cfd8d96852b4ab94f1621743eda78",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/genomicsdbimport/meta.yml": {
+      "sha256": "b2460fa157779dc95e6b673c542c7578771a21e70e8e50987ac0c589d8db493f",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/main.nf": {
+      "sha256": "2d62bb302ebee752c44fdcf85f43042e9ca1c2d3135c389da1633bf270e7c58e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/germlinecnvcaller/meta.yml": {
+      "sha256": "9895e6ec42717840e8edeeef91311ae1abc646cf36d41dfcf2cad30cc25df72a",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/main.nf": {
+      "sha256": "bf081c1c5d2bb4c87508f7a7d92ec2e8f13bb164c8df0f4b23c756d28538e69e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/indexfeaturefile/meta.yml": {
+      "sha256": "c4e35902dc8b6c7c1885cfa906f94925b3dd943ed82c2853b0a736e3cc8be745",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/main.nf": {
+      "sha256": "6d648a3e4b99701fc8ed40f73e92a45a5cc7982276c50bc62623826b49886de3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/intervallisttools/meta.yml": {
+      "sha256": "140e4baf04f7d6fb828ad2a88458cd05eaffdde8ed3655ff1505996fc96b3ce1",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/main.nf": {
+      "sha256": "68fd60fdd4754bb8cd53f5dfa52cbd0f5b7b5f2aa8b9f6c7dabb74a78cc011ec",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergemutectstats/meta.yml": {
+      "sha256": "a722b5c66afc6f77c0089d585984950b961f04f0de03fa834dfdcb5b281a1ed3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/main.nf": {
+      "sha256": "507808241b685329350b411b3554a8187828ebb2a8017836af8a61966824aca3",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mergevcfs/meta.yml": {
+      "sha256": "0410d5701b216bf6efd4e05d6c54052fe654f1151673636db66c43c32c7d2742",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/main.nf": {
+      "sha256": "82d2d7305b919f35b1cf6954ce0a36f989a99abfc399ab79034dccedfab919af",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/mutect2/meta.yml": {
+      "sha256": "18c0331a8229207d50066fd86068d8c60e8f96fd8b0b8a2b123a34ce21bb148e",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/main.nf": {
+      "sha256": "0fbc217855dce077cd34e8931f72ab378b7361841e72b6edad0c65d125f1b0f9",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/preprocessintervals/meta.yml": {
+      "sha256": "7f5383a82e64d611f819d1c2c273aa1db54930844cd4cf1257c005fc9165df87",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/environment.yml": {
+      "sha256": "7a409e5b81e7ff4c38df51ee6d6f804f350335565ffd00105785615549da42db",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/main.nf": {
+      "sha256": "4c7a16ed9faefdf334d6dac91a0908d10f860e9bb676fab32e75ffb2f7b1eb02",
+      "mode": 436
+    },
+    "modules/nf-core/gatk4/splitintervals/meta.yml": {
+      "sha256": "6b716c8dcc02d39065a1f60e3a124401677b172767a7eed1d94244a75a005c36",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/environment.yml": {
+      "sha256": "3f15b00283980bf9c8a25bd63ab3b364f7fc537e4a566c40758e90a1b0dd2a0b",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/main.nf": {
+      "sha256": "cd8dbd4c4da359761f5ca07bb8ed711710cffc9767cf2a349328fc6c110b0b5d",
+      "mode": 436
+    },
+    "modules/nf-core/gawk/meta.yml": {
+      "sha256": "34ed30a6aa7cd1f4451504781d07aec18c238059bb795d816d3a434a3557803e",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/environment.yml": {
+      "sha256": "55933bdd4522df8b0753a4be1be6b829d6a797079997ce98f1cdef9619063c85",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/main.nf": {
+      "sha256": "dbecb4d4d1670740299a12dc902d5b092c6dc0cfa8e3b2ed876ace8f7a073e93",
+      "mode": 436
+    },
+    "modules/nf-core/mosdepth/meta.yml": {
+      "sha256": "ea657d255a4cce670816cb7317359baa70f253ee03c914f31350e05b8918f2dd",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_amd64-bd-c17fb751507e9dfc_1.txt": {
+      "sha256": "2e6a54ceb3dc97865e0ce0d8923595c3b764991cb02dddb1b84c0048a3ab4fd1",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/.conda-lock/linux_arm64-bd-5c84a5000a226ab5_1.txt": {
+      "sha256": "44aec23d2287c1d7dcdddc2712e1ef6ec41511786aa5ba2c702c074255623c01",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/environment.yml": {
+      "sha256": "d177f136e201eec8ac5f17fd56be42d6967875d55519b8f4ddd412491e39cccc",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/main.nf": {
+      "sha256": "b548ccc70c039d90f82641f42ff69c21474974aa6a0d8e34b88d3bcbf7cbd90f",
+      "mode": 436
+    },
+    "modules/nf-core/multiqc/meta.yml": {
+      "sha256": "4c3fbca627d9437d200079044502ccac1b9a29b118014e308aec35b9f83fa479",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/main.nf": {
+      "sha256": "1d21c87dc4ca82b3cdc69f912cdf3d608605dff6218474c47b23dde220777858",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/faidx/meta.yml": {
+      "sha256": "3eccdb9370d86bd7cb83075c10bffe1f1357e97359349d97e8e973948032b12a",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/main.nf": {
+      "sha256": "affb9f76467c7ccacf9ed5372468d78d6a8c2c18d94179952d4047668ac3cdec",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/index/meta.yml": {
+      "sha256": "bf389602b6cab11c8e63f5d7bdad6f3fb7c7975a79e9a493d6a81d6314bf3bcf",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/environment.yml": {
+      "sha256": "5e26f8c4d4699836d2bce8171b85c3345030f426a52f02f1951e5c5eec4caaef",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/main.nf": {
+      "sha256": "1d5e908f0bf2084fd0bb5fc53bd3e169178af38769eba9804f65603411837de3",
+      "mode": 436
+    },
+    "modules/nf-core/samtools/view/meta.yml": {
+      "sha256": "bc167d8371e3b96f0bc4f2cf678bca9df947ddd49d5bf6f3a1a0f3d231a0f96a",
+      "mode": 436
+    },
+    "nextflow.config": {
+      "sha256": "966b6666e59df45b4aec36371df9ff5ffc78823f9ecc62f32b1db1c3c5bdfc4b",
+      "mode": 436
+    },
+    "nextflow_schema.json": {
+      "sha256": "6f008e02e596ad2eb5cd001ffd3c08e195e485372b383a22e2794109d23c9635",
+      "mode": 436
+    },
+    "nf-test.config": {
+      "sha256": "ab4bb57c287304f5dd1754198744865dca64237058520317561ab9570fde3053",
+      "mode": 436
+    },
+    "ro-crate-metadata.json": {
+      "sha256": "52fb5fbf4d96f489345b305817639f9c2c26fe176e0cdd357d9170f5e11d7910",
+      "mode": 436
+    },
+    "subworkflows/local/cnvkit_pon/main.nf": {
+      "sha256": "61e0986f8499133e2bae5c97fa65814617aa29bbe9f04256f058629d7061521f",
+      "mode": 436
+    },
+    "subworkflows/local/gens_pon/main.nf": {
+      "sha256": "cfa6866d2fc3d7a50b34dec2148445a5be5447349c2a750afa5812a853d4ed04",
+      "mode": 436
+    },
+    "subworkflows/local/germlinecnvcaller_cohort/main.nf": {
+      "sha256": "186b3186079e3d665f861de7459cba6b6289d325f913ae2e5438f917f9ffa881",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/main.nf": {
+      "sha256": "d211bab7a4752d2be9c7cfaa362fdced6a702481517ca0b09357ecb6ad3eebf1",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/tests/main.nf.test": {
+      "sha256": "f34a1675de365857839a866868923ef2bc11521429b6517fe6c5867b3bededd0",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_alignment/tests/main.nf.test.snap": {
+      "sha256": "25b12225f4f36cf5cff42eeff2b3e734bcf8971759e63fdd209e1a1017c974d6",
+      "mode": 436
+    },
+    "subworkflows/local/prepare_genome/main.nf": {
+      "sha256": "225c03ebeb26106399bb57844e7501619b53b88e4170d2900b965941f5c92b47",
+      "mode": 436
+    },
+    "subworkflows/local/utils_nfcore_createpanelrefs_pipeline/main.nf": {
+      "sha256": "dbda373a446dbb76d3a5217c5e215c91f7be0810a26ed1f734001ebc859407a8",
+      "mode": 436
+    },
+    "subworkflows/nf-core/bam_create_som_pon_gatk/main.nf": {
+      "sha256": "9056ec8de28539546dd5fa7f680ccef7b616934c4d0a9f13264d19282c02447e",
+      "mode": 436
+    },
+    "subworkflows/nf-core/bam_create_som_pon_gatk/meta.yml": {
+      "sha256": "6fc3c25162887d4d5ae34fa3628effffa337a2c9753fbd2a257a8796323678a4",
+      "mode": 436
+    },
+    "tests/.nftignore": {
+      "sha256": "5561223522112a8c4c8e4f337402e801e5fa6ad2bb138c2176517ceee077ccd2",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam.csv": {
+      "sha256": "1d9be24349bca270044dfa58cd17d4e8a86d848d1e8693729d3d6367f81cdc5d",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam_cram.csv": {
+      "sha256": "8efd769e0b230fd4c3f7ab71187bec1e801dc3f2650b30ebcadd454f224d4f1d",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/bam_sorted.csv": {
+      "sha256": "29b61f970e227759fd680b1422dad3b59bf194bd9f19cc8748ae979684361382",
+      "mode": 436
+    },
+    "tests/csv/1.0.0/cram.csv": {
+      "sha256": "39a8899afe976c1fd09cc1e2865d641ab6883a2e6778b1499d1e77e76d438125",
+      "mode": 436
+    },
+    "tests/default.nf.test": {
+      "sha256": "d9bba25983ed9fc10b328f17ba79bd35c49175ab0bc6b2f474eee80870389dde",
+      "mode": 436
+    },
+    "tests/default.nf.test.snap": {
+      "sha256": "9e0b7c740cf46b75148629fd310bb42485a48b695964d249cfab73ba0d22bf70",
+      "mode": 436
+    },
+    "tests/gens_pon.config": {
+      "sha256": "261e2cb7f502e453cba8a6c36bde03370278e722404ac4afe9e35099655e420b",
+      "mode": 436
+    },
+    "tests/gens_pon.nf.test": {
+      "sha256": "5244f59dd69420052da0d42d31c48a1e67a8706e58b97b118e724fdaf23ea66b",
+      "mode": 436
+    },
+    "tests/gens_pon.nf.test.snap": {
+      "sha256": "48efc5b4ecf1ed821ea9da5dd3346677d4a3fe451b536ca26694c3174103b58e",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.config": {
+      "sha256": "7936dbc9e72a953c33ecb7b227c77659530df20c599ed5a92b0a3db1297285cf",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.nf.test": {
+      "sha256": "49fb883fe1f52789454bdd6963edca81063ea111328cd02ed11dc4d21cfbcb01",
+      "mode": 436
+    },
+    "tests/germlinecnvcaller_cohort.nf.test.snap": {
+      "sha256": "0248b3c45ab7863a2321cda7f34ba07749784db14a77011193b55e358344d95a",
+      "mode": 436
+    },
+    "tests/lib/UTILS.groovy": {
+      "sha256": "91945ab8cbd5f3047a3d7fa642786aec51c2e06d556b67b71fa1f15ca4e1a321",
+      "mode": 436
+    },
+    "tests/mutect2.nf.test": {
+      "sha256": "519d5407f977700ea3f9e7dd74ffd7ea181f1d0c84fa15d3482f2f83f3c7f3cb",
+      "mode": 436
+    },
+    "tests/mutect2.nf.test.snap": {
+      "sha256": "84b033159891cc4f1cad3522759e12f30143be692f39de84dcd50231a3bae108",
+      "mode": 436
+    },
+    "tests/nextflow.config": {
+      "sha256": "be5a44ccf1f09e09b7f88f1412e01e0ccac6bea37edcf5ebab0198e888069273",
+      "mode": 436
+    },
+    "tower.yml": {
+      "sha256": "3c323f82ccd98f79afc9a837018344cb9cf9f3f83b7bb7bd321eb0a831e7f6ac",
+      "mode": 436
+    },
+    "workflows/createpanelrefs.nf": {
+      "sha256": "f57895d6e2ce8dc78931b791e5c70f4f26b20c0d394d1dc6d835b95b1863ecc4",
+      "mode": 436
+    }
+  },
+  "pipeline_unchanged": true,
+  "inputs_unchanged": true
+}
