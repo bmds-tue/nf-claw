@@ -1,0 +1,614 @@
+{
+  "version": 1,
+  "source_commit": "512ade721a51902ae2a9845c88849c9aac83be05",
+  "checked_at": "2026-10-28T00:39:17.080500+00:00",
+  "reason": "All 95 exact clean source worktrees existed, but Git registration metadata was absent.",
+  "source_records_before_registration": [
+    {
+      "path": "pipelines/airrflow/upstream",
+      "expected_pin": "601bbe64a4a035b531b70626eeacca9770100e6e",
+      "actual_pin": "601bbe64a4a035b531b70626eeacca9770100e6e",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/ampliseq/upstream",
+      "expected_pin": "992e6df34065067185b5e34665b5861b6827981d",
+      "actual_pin": "992e6df34065067185b5e34665b5861b6827981d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/atacseq/upstream",
+      "expected_pin": "1a1dbe52ffbd82256c941a032b0e22abbd925b8a",
+      "actual_pin": "1a1dbe52ffbd82256c941a032b0e22abbd925b8a",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/bacass/upstream",
+      "expected_pin": "5ed7c2dd9a05d2434d8ba39ace1116368a4ba570",
+      "actual_pin": "5ed7c2dd9a05d2434d8ba39ace1116368a4ba570",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/bacmodel/upstream",
+      "expected_pin": "1abf4e28d250edf801c0f671a19f233f18128875",
+      "actual_pin": "1abf4e28d250edf801c0f671a19f233f18128875",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/bactmap/upstream",
+      "expected_pin": "834642d8ac150ca10d705833223e7bcf15efc210",
+      "actual_pin": "834642d8ac150ca10d705833223e7bcf15efc210",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/bamtofastq/upstream",
+      "expected_pin": "8a295860c0c9221337dec7f2620709a47cea254d",
+      "actual_pin": "8a295860c0c9221337dec7f2620709a47cea254d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/callingcards/upstream",
+      "expected_pin": "20b66e785a822028eaa125583aad0747d55bba61",
+      "actual_pin": "20b66e785a822028eaa125583aad0747d55bba61",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/chipseq/upstream",
+      "expected_pin": "76e2382b6d443db4dc2396e6831d1243256d80b0",
+      "actual_pin": "76e2382b6d443db4dc2396e6831d1243256d80b0",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/circdna/upstream",
+      "expected_pin": "8e0e14c84f90c94d975c2bac6bde8e5a1d5bc8ab",
+      "actual_pin": "8e0e14c84f90c94d975c2bac6bde8e5a1d5bc8ab",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/coproid/upstream",
+      "expected_pin": "045d569d5b01b2d1572220718e64a6d054ad57eb",
+      "actual_pin": "045d569d5b01b2d1572220718e64a6d054ad57eb",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/createpanelrefs/upstream",
+      "expected_pin": "8ce86a84b5af74facf99abb76216531622b52bc8",
+      "actual_pin": "8ce86a84b5af74facf99abb76216531622b52bc8",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/createtaxdb/upstream",
+      "expected_pin": "b01a0f8ed96a5990d15470828dfa92a22cf08bba",
+      "actual_pin": "b01a0f8ed96a5990d15470828dfa92a22cf08bba",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/crisprseq/upstream",
+      "expected_pin": "0e9f915c4a3c89d02a66ec58e2decbc832323c8b",
+      "actual_pin": "0e9f915c4a3c89d02a66ec58e2decbc832323c8b",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/cutandrun/upstream",
+      "expected_pin": "6e1125d4fee4ea7c8b70ed836bb0e92a89e3305f",
+      "actual_pin": "6e1125d4fee4ea7c8b70ed836bb0e92a89e3305f",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/datasync/upstream",
+      "expected_pin": "c48b5103cc568d275c7d65a9609771cfb3471931",
+      "actual_pin": "c48b5103cc568d275c7d65a9609771cfb3471931",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/demo/upstream",
+      "expected_pin": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+      "actual_pin": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/demultiplex/upstream",
+      "expected_pin": "daade37c4a75a4c1709ccf12434deb3424141319",
+      "actual_pin": "daade37c4a75a4c1709ccf12434deb3424141319",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/denovotranscript/upstream",
+      "expected_pin": "9ab0f57785c37f77e05a03c8c327e35c63c8432b",
+      "actual_pin": "9ab0f57785c37f77e05a03c8c327e35c63c8432b",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/detaxizer/upstream",
+      "expected_pin": "3586921aa3a4c49271f1b2082309bdc33c819749",
+      "actual_pin": "3586921aa3a4c49271f1b2082309bdc33c819749",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/differentialabundance/upstream",
+      "expected_pin": "30ed7741fc392127156c2fb10cfa3d69d216b54b",
+      "actual_pin": "30ed7741fc392127156c2fb10cfa3d69d216b54b",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/drop/upstream",
+      "expected_pin": "20388350d242746f8e799b28c3ae80421627b077",
+      "actual_pin": "20388350d242746f8e799b28c3ae80421627b077",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/drugresponseeval/upstream",
+      "expected_pin": "6e420c1cc2f1be2907627d9b2b3aca77bf622603",
+      "actual_pin": "6e420c1cc2f1be2907627d9b2b3aca77bf622603",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/epitopeprediction/upstream",
+      "expected_pin": "e637bc7c49e6e05a09f5207501a142ec68d8570b",
+      "actual_pin": "e637bc7c49e6e05a09f5207501a142ec68d8570b",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/fastqrepair/upstream",
+      "expected_pin": "70a38209407b9367a9ff7ab8b26d84cb1983ea18",
+      "actual_pin": "70a38209407b9367a9ff7ab8b26d84cb1983ea18",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/fastquorum/upstream",
+      "expected_pin": "074b201d8ca6a38717da7dca58921a2cae9e21f0",
+      "actual_pin": "074b201d8ca6a38717da7dca58921a2cae9e21f0",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/fetchngs/upstream",
+      "expected_pin": "955c892d80927cee633765e6e390f9cc6b7235c9",
+      "actual_pin": "955c892d80927cee633765e6e390f9cc6b7235c9",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/funcprofiler/upstream",
+      "expected_pin": "805e23e866b90142e176d1ae85da6f6a365bf056",
+      "actual_pin": "805e23e866b90142e176d1ae85da6f6a365bf056",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/funcscan/upstream",
+      "expected_pin": "aee3dc965eb0c77267435544dda30da858763913",
+      "actual_pin": "aee3dc965eb0c77267435544dda30da858763913",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/genomeassembler/upstream",
+      "expected_pin": "c608622876dc627020e6627a5ea8cffd0d2e3f3d",
+      "actual_pin": "c608622876dc627020e6627a5ea8cffd0d2e3f3d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/genomeqc/upstream",
+      "expected_pin": "bce44e5b558e21b38d4dd2b6521302246b4dae6d",
+      "actual_pin": "bce44e5b558e21b38d4dd2b6521302246b4dae6d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/hadge/upstream",
+      "expected_pin": "921d3780498d0d6f4da0d3ea8c8416d214a3ff42",
+      "actual_pin": "921d3780498d0d6f4da0d3ea8c8416d214a3ff42",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/hgtseq/upstream",
+      "expected_pin": "683daaf41bb396839445e603152b45daa141ced4",
+      "actual_pin": "683daaf41bb396839445e603152b45daa141ced4",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/hic/upstream",
+      "expected_pin": "fe4ac656317d24c37e81e7940a526ed9ea812f8e",
+      "actual_pin": "fe4ac656317d24c37e81e7940a526ed9ea812f8e",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/hicar/upstream",
+      "expected_pin": "429087d2b13e59c3edd2e71b8005c1adc5bbb7bb",
+      "actual_pin": "429087d2b13e59c3edd2e71b8005c1adc5bbb7bb",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/hlatyping/upstream",
+      "expected_pin": "3237d20e7e611d8bbf8c37e637202dfe8a23e996",
+      "actual_pin": "3237d20e7e611d8bbf8c37e637202dfe8a23e996",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/isoseq/upstream",
+      "expected_pin": "6c944831289d4d6e33497026f6b18e8c671705bd",
+      "actual_pin": "6c944831289d4d6e33497026f6b18e8c671705bd",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/longraredisease/upstream",
+      "expected_pin": "f40870fcbcf2e9fc29b623b848487789d487ed4a",
+      "actual_pin": "f40870fcbcf2e9fc29b623b848487789d487ed4a",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/lsmquant/upstream",
+      "expected_pin": "b39ec6e1fb267ab3d2d3b16d05b921aaa679cd1f",
+      "actual_pin": "b39ec6e1fb267ab3d2d3b16d05b921aaa679cd1f",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/mag/upstream",
+      "expected_pin": "56abab5b023ce953c9c43fe21090d156ad0e18af",
+      "actual_pin": "56abab5b023ce953c9c43fe21090d156ad0e18af",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/magmap/upstream",
+      "expected_pin": "839660084e48d682f70bed4e535f2a11a756638a",
+      "actual_pin": "839660084e48d682f70bed4e535f2a11a756638a",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/marsseq/upstream",
+      "expected_pin": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "actual_pin": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/mcmicro/upstream",
+      "expected_pin": "f4400001578642e370a72668966c6602fe172ef6",
+      "actual_pin": "f4400001578642e370a72668966c6602fe172ef6",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/metaboigniter/upstream",
+      "expected_pin": "55d82547604fcae3b6557fe7a3c442b623184f34",
+      "actual_pin": "55d82547604fcae3b6557fe7a3c442b623184f34",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/metapep/upstream",
+      "expected_pin": "84feafc9476978c2a1b84849871a553cffd9762a",
+      "actual_pin": "84feafc9476978c2a1b84849871a553cffd9762a",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/metatdenovo/upstream",
+      "expected_pin": "e9f8311e9a24278fdaed0f8717eb819532aef55e",
+      "actual_pin": "e9f8311e9a24278fdaed0f8717eb819532aef55e",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/methylong/upstream",
+      "expected_pin": "3513e80df682ad20f42d6429a2ee142b606949b5",
+      "actual_pin": "3513e80df682ad20f42d6429a2ee142b606949b5",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/methylseq/upstream",
+      "expected_pin": "5aa56467a85a5e2d6795ea72dfa5a5f0c9babc23",
+      "actual_pin": "5aa56467a85a5e2d6795ea72dfa5a5f0c9babc23",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/mhcquant/upstream",
+      "expected_pin": "a4b6d51803af0fbde5acd8e9802df76280ba8306",
+      "actual_pin": "a4b6d51803af0fbde5acd8e9802df76280ba8306",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/molkart/upstream",
+      "expected_pin": "4ec0790d80cf77f2428d33b1a8571ccb498e2170",
+      "actual_pin": "4ec0790d80cf77f2428d33b1a8571ccb498e2170",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/multiplesequencealign/upstream",
+      "expected_pin": "79724dac3d240b9bb7684532d3fe238b42f6a4b4",
+      "actual_pin": "79724dac3d240b9bb7684532d3fe238b42f6a4b4",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/nanoseq/upstream",
+      "expected_pin": "6e563e54362cddb8e48d15c156251708c22d0e8d",
+      "actual_pin": "6e563e54362cddb8e48d15c156251708c22d0e8d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/nanostring/upstream",
+      "expected_pin": "6f0b2d537a1f06e8fe1d6c63d7c409009141aa62",
+      "actual_pin": "6f0b2d537a1f06e8fe1d6c63d7c409009141aa62",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/nascent/upstream",
+      "expected_pin": "7d4fe61975015f652c271886e661764b05cfd3bf",
+      "actual_pin": "7d4fe61975015f652c271886e661764b05cfd3bf",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/oncoanalyser/upstream",
+      "expected_pin": "7c74c87a43749952b38c9a18915947570f0595a0",
+      "actual_pin": "7c74c87a43749952b38c9a18915947570f0595a0",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/pacvar/upstream",
+      "expected_pin": "20364830237171928c79e59651142460379d1459",
+      "actual_pin": "20364830237171928c79e59651142460379d1459",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/pairgenomealign/upstream",
+      "expected_pin": "8ee09a1cdc920fc90cd62358952045e5019e1fe0",
+      "actual_pin": "8ee09a1cdc920fc90cd62358952045e5019e1fe0",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/pangenome/upstream",
+      "expected_pin": "3d02bd1df79f48b4bfdb4ad95d4ca0d7f6aeb337",
+      "actual_pin": "3d02bd1df79f48b4bfdb4ad95d4ca0d7f6aeb337",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/pathogensurveillance/upstream",
+      "expected_pin": "13547eaa7345dab4ac97db49775ae8284af4113d",
+      "actual_pin": "13547eaa7345dab4ac97db49775ae8284af4113d",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/phaseimpute/upstream",
+      "expected_pin": "452783d960ebd2b4d337a649e9c8eb3859611916",
+      "actual_pin": "452783d960ebd2b4d337a649e9c8eb3859611916",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/phyloplace/upstream",
+      "expected_pin": "68db179c0f034bd0a6133b62a8a9fa37f8a3c517",
+      "actual_pin": "68db179c0f034bd0a6133b62a8a9fa37f8a3c517",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/pixelator/upstream",
+      "expected_pin": "d7376a8bca8b262b858ed440b6dd49c1853911e8",
+      "actual_pin": "d7376a8bca8b262b858ed440b6dd49c1853911e8",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/plasmodiumdrugres/upstream",
+      "expected_pin": "a333327a245ccb3c0f1a37167a7afe670c35894e",
+      "actual_pin": "a333327a245ccb3c0f1a37167a7afe670c35894e",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/proteinannotator/upstream",
+      "expected_pin": "cbf78d471f62d91af666e8c77bcd580b4743c6be",
+      "actual_pin": "cbf78d471f62d91af666e8c77bcd580b4743c6be",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/proteinfamilies/upstream",
+      "expected_pin": "318acd54eb9c679553338b2db46313bb469d03d1",
+      "actual_pin": "318acd54eb9c679553338b2db46313bb469d03d1",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/proteinfold/upstream",
+      "expected_pin": "5338c24b2af62cc4c02dcd34bcc49912eebffb3a",
+      "actual_pin": "5338c24b2af62cc4c02dcd34bcc49912eebffb3a",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/provenancereport/upstream",
+      "expected_pin": "89ed44de8da1788e5f00a6dd95bd72c51ff36dff",
+      "actual_pin": "89ed44de8da1788e5f00a6dd95bd72c51ff36dff",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rangeland/upstream",
+      "expected_pin": "7c5cb9593b80d2a3cdc8bcb14137722351644435",
+      "actual_pin": "7c5cb9593b80d2a3cdc8bcb14137722351644435",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/raredisease/upstream",
+      "expected_pin": "83f2699d28bc957e1d3b875da3d96004a818c2c3",
+      "actual_pin": "83f2699d28bc957e1d3b875da3d96004a818c2c3",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/readsimulator/upstream",
+      "expected_pin": "0e8805ddbcd0e0fdcdc62105d59c3f29dd985a64",
+      "actual_pin": "0e8805ddbcd0e0fdcdc62105d59c3f29dd985a64",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/reportho/upstream",
+      "expected_pin": "9e8ae5a07ddb5ccd34bb01c72e70e390d97d1cb7",
+      "actual_pin": "9e8ae5a07ddb5ccd34bb01c72e70e390d97d1cb7",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/ribomsqc/upstream",
+      "expected_pin": "3654357ea417c0a52ede22721f584885271fc0e7",
+      "actual_pin": "3654357ea417c0a52ede22721f584885271fc0e7",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/riboseq/upstream",
+      "expected_pin": "11d66a3b8ae1f41f9c385af36bd431c35bf015ab",
+      "actual_pin": "11d66a3b8ae1f41f9c385af36bd431c35bf015ab",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnadnavar/upstream",
+      "expected_pin": "8e8debdb0e7208218a4a2f852de7c741a69ca448",
+      "actual_pin": "8e8debdb0e7208218a4a2f852de7c741a69ca448",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnafusion/upstream",
+      "expected_pin": "76ad76e7c39b2ba9edc35aa3602e3dc454d842ec",
+      "actual_pin": "76ad76e7c39b2ba9edc35aa3602e3dc454d842ec",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnaseq/upstream",
+      "expected_pin": "a1fcdddd3b826fe46eb46f0479f2ff8a7815af05",
+      "actual_pin": "a1fcdddd3b826fe46eb46f0479f2ff8a7815af05",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnasplice/upstream",
+      "expected_pin": "aceb47ab77cf0edfb290a44035328ed5b7eb0be8",
+      "actual_pin": "aceb47ab77cf0edfb290a44035328ed5b7eb0be8",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnastructurome/upstream",
+      "expected_pin": "633ab1d0d12103f9002fe6e781ae1251df2d2656",
+      "actual_pin": "633ab1d0d12103f9002fe6e781ae1251df2d2656",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/rnavar/upstream",
+      "expected_pin": "a0e4641409eb7aed4b325e543d20577f9c08e437",
+      "actual_pin": "a0e4641409eb7aed4b325e543d20577f9c08e437",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/sarek/upstream",
+      "expected_pin": "8ccac7ad37b05dd792447763bf9671b719824587",
+      "actual_pin": "8ccac7ad37b05dd792447763bf9671b719824587",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/scnanoseq/upstream",
+      "expected_pin": "83d55ea87eb625a3564d40124fb1fa54c4c63f9e",
+      "actual_pin": "83d55ea87eb625a3564d40124fb1fa54c4c63f9e",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/scrnaseq/upstream",
+      "expected_pin": "3fc17b4f971a89e47c88337de71d0e777ffad8cc",
+      "actual_pin": "3fc17b4f971a89e47c88337de71d0e777ffad8cc",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/seqinspector/upstream",
+      "expected_pin": "6aa08aabb00cdbb0f5b62adf2749b472e794ba04",
+      "actual_pin": "6aa08aabb00cdbb0f5b62adf2749b472e794ba04",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/seqsubmit/upstream",
+      "expected_pin": "717fd19e7a40099fbe5362ec48ab8ec21f62d3f8",
+      "actual_pin": "717fd19e7a40099fbe5362ec48ab8ec21f62d3f8",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/smrnaseq/upstream",
+      "expected_pin": "cb0af579b24cb8d5a3accd87b2f14ea93fe04832",
+      "actual_pin": "cb0af579b24cb8d5a3accd87b2f14ea93fe04832",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/sopa/upstream",
+      "expected_pin": "0b959963a3984ff78725209113d9ecdb78cef0b6",
+      "actual_pin": "0b959963a3984ff78725209113d9ecdb78cef0b6",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/spatialaxe/upstream",
+      "expected_pin": "748d310ac01943c97a15bdbc27ec2525a3ee0a96",
+      "actual_pin": "748d310ac01943c97a15bdbc27ec2525a3ee0a96",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/stableexpression/upstream",
+      "expected_pin": "c4cbf82471391990cae257c0212be86f6b4fb18b",
+      "actual_pin": "c4cbf82471391990cae257c0212be86f6b4fb18b",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/taxprofiler/upstream",
+      "expected_pin": "70ecc15e49b4f1fcf79d876643b5d14b65c66178",
+      "actual_pin": "70ecc15e49b4f1fcf79d876643b5d14b65c66178",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/tumourevo/upstream",
+      "expected_pin": "180ae5447d0eb0214f650b6fcf7dabed0c77b5a2",
+      "actual_pin": "180ae5447d0eb0214f650b6fcf7dabed0c77b5a2",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/variantbenchmarking/upstream",
+      "expected_pin": "8b21c01749c4447b285d242a198127736f3ffe51",
+      "actual_pin": "8b21c01749c4447b285d242a198127736f3ffe51",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/variantprioritization/upstream",
+      "expected_pin": "8ba629c53dbdb65057c85a3b0a76a7eb2e8688ef",
+      "actual_pin": "8ba629c53dbdb65057c85a3b0a76a7eb2e8688ef",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/viralintegration/upstream",
+      "expected_pin": "70e558aaff836d43f5d662bf9c28414f4e6db642",
+      "actual_pin": "70e558aaff836d43f5d662bf9c28414f4e6db642",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/viralmetagenome/upstream",
+      "expected_pin": "74064a43f4b00c163c22bcfc9cf1d84a2a69e988",
+      "actual_pin": "74064a43f4b00c163c22bcfc9cf1d84a2a69e988",
+      "tracked_tree_clean": true
+    },
+    {
+      "path": "pipelines/viralrecon/upstream",
+      "expected_pin": "395079f1d24dce731ac22e03d7a5e71f110103fc",
+      "actual_pin": "395079f1d24dce731ac22e03d7a5e71f110103fc",
+      "tracked_tree_clean": true
+    }
+  ],
+  "status_prefixes_before": {
+    "-": 95
+  },
+  "status_prefixes_after": {
+    " ": 95
+  },
+  "metadata_command": [
+    "git",
+    "submodule",
+    "init"
+  ],
+  "metadata_log": "/mnt/volume/nfclaw-remediation-evidence-20261026/commit-512ade7-source-registration-reconcile.log",
+  "metadata_log_sha256": "234a21d078490156ad84af1d3ca4ac88425226152d7a085a38254e1982e00cc3",
+  "original_test_record": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.json",
+  "original_test_record_sha256": "9fd199499cf2929beeb45b7e86a4672c7e7624813ceab65d99064f4e5cdd8280",
+  "unchanged_junit_report": "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml",
+  "junit_sha256": "750810a4cecf16634a7b14a5d8d3239fceccc781157fc243c95e806cd2384208",
+  "evidence_recheck": {
+    "command": [
+      "/mnt/volume/nfclaw-remediation-20261026/.venv/bin/python",
+      "scripts/check_maintenance_pytest.py",
+      "--report",
+      "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/3.12-full.xml",
+      "--os",
+      "ubuntu-latest",
+      "--python",
+      "3.12",
+      "--candidate",
+      "512ade721a51902ae2a9845c88849c9aac83be05",
+      "--output",
+      "/mnt/volume/nfclaw-remediation-python-matrix/512ade7/full-suite-evidence-recheck.json"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}
