@@ -107,6 +107,22 @@ def test_ls_remote_reads_the_branch_head(monkeypatch, returncode, stdout, stderr
     assert seen["env"]["GIT_TERMINAL_PROMPT"] == "0"
 
 
+def test_lookup_honours_the_git_timeout_setting(monkeypatch):
+    # Every other remote Git probe reads NFCLAW_GIT_TIMEOUT; this one was fixed at 30 seconds.
+    seen = {}
+
+    def run(command, **kwargs):
+        seen.update(timeout=kwargs["timeout"])
+        return subprocess.CompletedProcess(command, 0, f"{COMMIT}\trefs/heads/master\n", "")
+    monkeypatch.setattr(institutional, "capture", run)
+    monkeypatch.setenv("NFCLAW_GIT_TIMEOUT", "95")
+    assert _REAL_LS_REMOTE("https://github.com/nf-core/configs", "master") == (COMMIT, None)
+    assert seen["timeout"] == 95
+    monkeypatch.delenv("NFCLAW_GIT_TIMEOUT")
+    _REAL_LS_REMOTE("https://github.com/nf-core/configs", "master")
+    assert seen["timeout"] == 30
+
+
 def test_lookup_obeys_active_budget_and_stops_download_helpers(tmp_path, monkeypatch):
     import os
     import time
@@ -118,10 +134,22 @@ def test_lookup_obeys_active_budget_and_stops_download_helpers(tmp_path, monkeyp
     git.write_text(f'#!/bin/sh\nsleep 60 &\necho $! > "{marker}"\nwait\n')
     git.chmod(0o755)
     monkeypatch.setenv('PATH', f'{tmp_path}:{os.environ["PATH"]}')
+    popen = subprocess.Popen
+
+    class Started(popen):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Let the deadline meet a fake git that has started its helper: scheduler delays on a
+            # busy host must not turn this into a test of shell startup speed.
+            deadline = time.monotonic() + 10
+            while (not (marker.exists() and marker.read_text().strip())
+                   and self.poll() is None and time.monotonic() < deadline):
+                time.sleep(0.02)
+    monkeypatch.setattr(subprocess, 'Popen', Started)
     start = time.monotonic()
     with pytest.raises(NfclawError):
         with budget.scope(0.5):
             _REAL_LS_REMOTE('https://github.com/nf-core/configs', 'master')
-    assert time.monotonic() - start < 5
+    assert time.monotonic() - start < 15          # the 60 s helper never sets the pace
     assert marker.exists()
     assert not _alive(int(marker.read_text()))

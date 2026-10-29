@@ -2,6 +2,7 @@
 import json
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -216,6 +217,46 @@ def test_globbed_directory_aliases_are_inspected(tmp_path):
     with pytest.raises(NfclawError, match="overlaps local dependency"):
         input_safety.check_write_boundaries([tmp_path / "select*"],
                                             [("outputs", data / "out", True)])
+
+
+def test_a_destination_that_cannot_be_inspected_names_the_permission_not_an_overlap(
+        tmp_path, monkeypatch):
+    # `--outdir /root/out` as another user: the boundary check cannot stat it. The refusal stands,
+    # but its fix must speak about permissions, not about separating inputs from outputs.
+    data = tmp_path / "reads.fastq"
+    data.write_bytes(b"fixed scientific input")
+    unreachable = tmp_path / "locked" / "out"
+    original = Path.stat
+
+    def refused(self, *args, **kwargs):
+        if self == unreachable:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "stat", refused)
+    with pytest.raises(NfclawError, match="Cannot inspect execution destination") as exc:
+        input_safety.check_write_boundaries([data], [("outputs", unreachable, True)])
+    assert "searchable" in exc.value.fix and exc.value.details["unsafe_write_boundary"]
+    monkeypatch.undo()
+    with pytest.raises(NfclawError, match="overlaps local dependency") as exc:
+        input_safety.check_write_boundaries([data], [("outputs", tmp_path, True)])
+    assert "outside input directories" in exc.value.fix
+
+
+def test_a_destination_raising_runtime_error_is_an_inspection_failure(tmp_path, monkeypatch):
+    # Python 3.11 and 3.12 raise RuntimeError, not OSError, resolving a symlink loop.
+    data = tmp_path / "reads.fastq"
+    data.write_bytes(b"fixed scientific input")
+    looped = tmp_path / "loop" / "out"
+    original = Path.resolve
+
+    def loop(self, *args, **kwargs):
+        if self == looped:
+            raise RuntimeError(f"Symlink loop from {self}")
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "resolve", loop)
+    with pytest.raises(NfclawError, match="Symlink loop") as exc:
+        input_safety.check_write_boundaries([data], [("outputs", looped, True)])
+    assert "searchable" in exc.value.fix and exc.value.details["unsafe_write_boundary"]
 
 
 def test_input_files_inside_a_publication_tree_are_refused(tmp_path):

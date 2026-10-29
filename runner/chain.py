@@ -798,6 +798,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
         log.note(f"    pid: {os.getpid()}")
         log.note(f"    {len(planned)} stages: " + " → ".join(p.stage.dirname for p in planned))
         print(f"nfclaw: logging this chain to {log.path}", file=sys.stderr, flush=True)
+        failed, failure = False, ""
         try:
             for i, p in enumerate(planned):
                 budget.check()
@@ -826,6 +827,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
             budget.check()
             state["outcome"] = log.outcome = "success"
         except BaseException as exc:
+            failed = True
             if state["outcome"] == "running":                 # not set by _run_stage: say why
                 if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details:
                     state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
@@ -834,19 +836,36 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                 else:
                     reason = exc.message if isinstance(exc, NfclawError) else type(exc).__name__
                     state["outcome"] = f"failed ({reason})"
-            log.fail(state["outcome"], str(exc) if isinstance(exc, NfclawError) else "")
+            failure = str(exc) if isinstance(exc, NfclawError) else ""
+            log.fail(state["outcome"], failure)
             raise
         finally:
-            state["updated"] = runlog.now()
-            _write_json(record / "state.json", state)
+            # The log's last line is written whatever happens below: `nfclaw status` polls it.
             try:
-                if state["outcome"] == "success":
-                    budget.check()
-            except NfclawError as exc:
-                state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
-                log.fail(state["outcome"], str(exc))
-                _write_json(record / "state.json", state)
-                raise
+                state["updated"] = runlog.now()
+                try:
+                    _write_json(record / "state.json", state)
+                    if state["outcome"] == "success":
+                        budget.check()
+                except NfclawError as exc:
+                    state["outcome"] = f"timed out after {exc.details['timeout_seconds']} s"
+                    log.fail(state["outcome"], str(exc))
+                    _write_json(record / "state.json", state)
+                    raise
+                except OSError as exc:
+                    # A success the recorded state does not back is not one. A failure already
+                    # under way keeps its own cause; the unrecorded state is noted beside it.
+                    unrecorded = f"nfclaw: the chain state could not be recorded: {exc}"
+                    log.fail(state["outcome"] if failed
+                             else "failed (the chain state could not be recorded)",
+                             f"{failure}\n{unrecorded}" if failure else unrecorded)
+                    if not failed:
+                        raise NfclawError(
+                            ErrorCode.ENVIRONMENT,
+                            f"The chain ran, but its state could not be recorded: "
+                            f"{exc.strerror or exc} ({exc.filename or record / 'state.json'})",
+                            fix="Free disk space or fix the permission, then resume the chain "
+                                "with --resume.") from exc
             finally:
                 log.finish()
     return ChainResult(outdir=outdir, outcome=state["outcome"], stages=state["stages"],
@@ -1272,14 +1291,17 @@ def status(path: Path, *, quick: bool = False) -> tuple[dict, list[str]]:
                           fix="Restore the chain record before checking or resuming it.")
     live = runlog.read_state(record / "logs" / LOG_NAME)
     state["log_state"], state["log_pid"], state["log_host"] = live.state, live.pid, live.host
+    if live.state == "unreadable":
+        state["log_error"] = live.error
     problems = [] if quick else _integrity_problems(state)
     state["lineage_verification"] = "not_checked" if quick else "broken" if problems else "verified"
     return state, problems
 
 
 def status_exit_code(state: dict, problems: list[str]) -> int:
-    """0 succeeded, 3 running, 1 failed; quick polling leaves lineage explicitly unchecked."""
-    if problems or state.get("log_state") == "dead":
+    """0 succeeded, 3 running, 1 failed; quick polling leaves lineage explicitly unchecked. An
+    unreadable chain log leaves the chain's progress unknown, which is not a success."""
+    if problems or state.get("log_state") in ("dead", "unreadable"):
         return 1
     if state.get("log_state") == "running":
         return 3
@@ -1291,9 +1313,14 @@ def format_status(state: dict, problems: list[str]) -> str:
     if state.get("log_state") == "running":
         outcome = f"running (nfclaw pid {state.get('log_pid')} on {state.get('log_host')})"
     elif state.get("log_state") == "dead":
-        outcome = (f"stopped without an outcome — nfclaw (pid {state.get('log_pid')}) is no longer "
+        pid = f" (pid {state['log_pid']})" if state.get("log_pid") else ""
+        outcome = (f"stopped without an outcome — nfclaw{pid} is no longer "
                    "running and never recorded how the chain ended (SIGKILL, out of memory, a "
                    "full disk, a restart); resume it with --resume")
+    elif state.get("log_state") == "unreadable":
+        reason = "; ".join(state.get("log_error") or [])
+        outcome = (f"unknown — its chain log cannot be read ({reason}); "
+                   f"the recorded state says: {outcome}")
     lines = [f"chain {state.get('chain_id', '?')}: {outcome}"]
     stages = state.get("stages", [])
     stages = stages if isinstance(stages, list) else []

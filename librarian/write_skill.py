@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 from runner import (demo_defaults, discovery, engine_version, fastqrepair_compat, handoff, inputs,
@@ -11,6 +12,7 @@ from runner import (demo_defaults, discovery, engine_version, fastqrepair_compat
                     sheetgen, source_corrections, versions)
 from runner import schema as schema_mod
 from runner import submodule as submod
+from runner.errors import NfclawError
 from runner.schema import InputSchema, Param, ParamSchema, json_scalar
 from runner.submodule import SubmoduleStatus
 
@@ -917,6 +919,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.all and not args.name:
         parser.error("pass a pipeline name or --all")
     pdir = Path(args.pipelines_dir)
+    if not args.all:
+        try:
+            discovery.find(args.name, pdir)            # a library pipeline, never another path
+        except NfclawError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
     names = ([d.name for d in discovery.pipeline_dirs(pdir)] if args.all else [args.name])
     for n in names:
         skill, ref = generate(n, pipelines_dir=pdir)

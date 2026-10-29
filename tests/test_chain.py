@@ -756,6 +756,67 @@ def test_status_exit_codes_follow_nfclaw_status(library, fake_runs, tmp_path):
     assert chain.status_exit_code({**state, "log_state": "running"}, []) == 3
 
 
+def test_an_unreadable_chain_log_leaves_the_chain_unknown(library, fake_runs, tmp_path,
+                                                          monkeypatch):
+    # `nfclaw chain status` on a log it cannot read ended in a PermissionError traceback.
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    out = tmp_path / "c"
+    chain.run_chain(_spec(), repo_root=root, outdir=out)
+    log, original = out / "chain" / "logs" / "chain.log", Path.open
+
+    def refused(self, *args, **kwargs):
+        if self == log:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", refused)
+    state, problems = chain.status(out, quick=True)
+    assert state["log_state"] == "unreadable" and state["log_error"] == ["Permission denied"]
+    report = chain.format_status(state, problems)
+    assert "unknown — its chain log cannot be read (Permission denied)" in report
+    assert "the recorded state says: success" in report
+    assert chain.status_exit_code(state, problems) == 1
+
+
+def _refuse_final_state(monkeypatch):
+    """The chain record's last write fails (a full disk, a revoked permission)."""
+    write = chain._write_json
+
+    def failing(path, data):
+        if path.name == "state.json" and "updated" in data:
+            raise OSError(28, "No space left on device", str(path))
+        return write(path, data)
+    monkeypatch.setattr(chain, "_write_json", failing)
+
+
+def test_the_chain_log_ends_even_when_its_state_cannot_be_recorded(library, fake_runs, tmp_path,
+                                                                   monkeypatch):
+    # The final state write used to skip the log's last line: `nfclaw status` then reported a
+    # chain that had finished as one stopped without an outcome.
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    out = tmp_path / "c"
+    _refuse_final_state(monkeypatch)
+    with pytest.raises(NfclawError, match="its state could not be recorded") as exc:
+        chain.run_chain(_spec(), repo_root=root, outdir=out)
+    assert exc.value.code is ErrorCode.ENVIRONMENT
+    assert _last_log_line(out).endswith(": failed (the chain state could not be recorded)")
+    st = runlog.read_state(out / "chain" / "logs" / "chain.log")
+    assert st.state == "ended" and "No space left on device" in "\n".join(st.error)
+
+
+def test_an_unrecorded_state_keeps_the_failure_already_under_way(library, fake_runs, tmp_path,
+                                                                 monkeypatch):
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    out = tmp_path / "c"
+    fake_runs.failures["mini"] = [_boom()]
+    _refuse_final_state(monkeypatch)
+    with pytest.raises(NfclawError, match="Nextflow execution failed"):
+        chain.run_chain(_spec(), repo_root=root, outdir=out)
+    assert _last_log_line(out).endswith(": failed at stage 02-mini: failed (exit status 1)")
+    st = runlog.read_state(out / "chain" / "logs" / "chain.log")
+    error = "\n".join(st.error)
+    assert "Nextflow execution failed" in error and "the chain state could not be recorded" in error
+
+
 # --- a stage whose samplesheet nfclaw generates from data files -----------------------------------
 
 def test_spec_sheet_set_and_input_lists_are_validated():

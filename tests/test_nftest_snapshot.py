@@ -88,6 +88,48 @@ def test_command_line_exit_status(tmp_path, capsys):
     assert snapshot_check.main([str(tmp_path / "absent.snap"), str(run)]) == 2
 
 
+def test_nextflow_state_in_the_outdir_is_not_a_published_result(tmp_path):
+    run = _run(tmp_path)
+    (run / "multiqc" / "general_stats.txt").unlink()
+    (run / ".nextflow" / "cache").mkdir(parents=True)
+    (run / ".nextflow" / "cache" / "general_stats.txt").write_bytes(COUNTS)
+    (run / ".nextflow.log.1").mkdir()
+    (run / ".nextflow.log.1" / "general_stats.txt").write_bytes(COUNTS)
+    assert snapshot_check.compare(_snapshot(), run)["missing_files"] == ["general_stats.txt"]
+
+
+def test_large_results_are_hashed_in_chunks(tmp_path, monkeypatch):
+    # Results were read (and decompressed) into memory whole; a .gz is hashed as a stream.
+    monkeypatch.setattr(snapshot_check, "_CHUNK", 3)
+    run = _run(tmp_path)
+    reads = run / "fq" / "A" / "A_R1.fastq.gz"
+    assert snapshot_check.digests(reads) == {_md5(reads.read_bytes()), _md5(READS)}
+    not_gzip = run / "fake.gz"
+    not_gzip.write_bytes(b"plain")
+    assert snapshot_check.digests(not_gzip) == {_md5(b"plain")}
+    # A gzip header over damaged data raised zlib.error, a traceback instead of a mismatch.
+    packed = gzip.compress(READS * 50, mtime=0)
+    corrupt = run / "corrupt.gz"
+    corrupt.write_bytes(packed[:10] + b"\xff\xff\xff\xff" + packed[14:])
+    assert snapshot_check.digests(corrupt) == {_md5(corrupt.read_bytes())}
+    assert snapshot_check.compare(_snapshot(), run)["identical"] == ["A_R1.fastq.gz",
+                                                                     "general_stats.txt"]
+
+
+@pytest.mark.parametrize("snapshot", [[], {"-profile test": []}, {"-profile test": "x"}])
+def test_a_malformed_snapshot_is_an_error_not_a_traceback(tmp_path, capsys, snapshot):
+    snap = tmp_path / "bad.snap"
+    snap.write_text(json.dumps(snapshot))
+    assert snapshot_check.main([str(snap), str(_run(tmp_path))]) == 2
+    assert capsys.readouterr().err.startswith("error: ")
+
+
+def test_a_missing_run_directory_is_an_error(tmp_path):
+    snap = tmp_path / "s.snap"
+    snap.write_text(json.dumps(_snapshot()))
+    assert snapshot_check.main([str(snap), str(tmp_path / "absent")]) == 2
+
+
 def test_the_pinned_demo_snapshot_records_paths_and_checksums():
     snap = REPO / "pipelines/demo/upstream/tests/default.nf.test.snap"
     if not snap.is_file():

@@ -38,6 +38,16 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
   const [mobileOpen, setMobileOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  // Large screens show the selected skill beside the list (a listbox); small screens open it under
+  // its row (a disclosure). The roles follow the layout, so a listbox never holds a skill's detail.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const layout = window.matchMedia("(max-width: 1023px)");
+    const update = () => setCompact(layout.matches);
+    update();
+    layout.addEventListener("change", update);
+    return () => layout.removeEventListener("change", update);
+  }, []);
 
   const categories = useMemo(() => domainCounts(skills), [skills]);
 
@@ -82,8 +92,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
 
   const onListKey = (e: React.KeyboardEvent) => {
     // Only rows on screen: small screens hide everything past the first page until "Show all".
-    const pool =
-      !showAll && window.matchMedia("(max-width: 1023px)").matches ? results.slice(0, MOBILE_PAGE) : results;
+    const pool = !showAll && compact ? results.slice(0, MOBILE_PAGE) : results;
     if (!pool.length) return;
     const i = pool.findIndex((r) => r.skill.name === selected);
     let next = -1;
@@ -139,8 +148,8 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
           <div className="glass min-w-0 p-2 lg:sticky lg:top-24">
             <div
               ref={listRef}
-              role="listbox"
-              aria-label="Skills"
+              role={compact ? undefined : "listbox"}
+              aria-label={compact ? undefined : "Skills"}
               onKeyDown={onListKey}
               className="space-y-1 lg:max-h-[min(680px,calc(100vh-8rem))] lg:overflow-y-auto lg:pr-1"
             >
@@ -153,6 +162,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
                       result={r}
                       query={query}
                       selected={isSel}
+                      compact={compact}
                       open={mobileOpen === r.skill.name}
                       onSelect={() => {
                         setSelected(r.skill.name);
@@ -178,15 +188,15 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
                   </div>
                 );
               })}
-              {!showAll && results.length > MOBILE_PAGE && (
-                <button
-                  onClick={() => setShowAll(true)}
-                  className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/[0.07] py-3 text-sm text-fog-muted transition hover:border-white/15 hover:text-fog lg:hidden"
-                >
-                  Show all {results.length} skills <ChevronDown className="h-4 w-4" />
-                </button>
-              )}
             </div>
+            {!showAll && results.length > MOBILE_PAGE && (
+              <button
+                onClick={() => setShowAll(true)}
+                className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/[0.07] py-3 text-sm text-fog-muted transition hover:border-white/15 hover:text-fog lg:hidden"
+              >
+                Show all {results.length} skills <ChevronDown className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* detail (large screens) */}
@@ -217,12 +227,15 @@ function SkillRow({
   result,
   query,
   selected,
+  compact,
   open,
   onSelect,
 }: {
   result: Result;
   query: string;
   selected: boolean;
+  /** Small-screen layout: the row discloses its detail instead of selecting it. */
+  compact: boolean;
   /** Its detail is expanded inline (small screens). */
   open: boolean;
   onSelect: () => void;
@@ -232,9 +245,10 @@ function SkillRow({
   return (
     <button
       data-skill={skill.name}
-      role="option"
-      aria-selected={selected}
-      tabIndex={selected ? 0 : -1}
+      role={compact ? undefined : "option"}
+      aria-selected={compact ? undefined : selected}
+      aria-expanded={compact ? open : undefined}
+      tabIndex={compact || selected ? 0 : -1}
       onClick={onSelect}
       className={cn(
         "relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-200 hover:bg-white/[0.03]",
@@ -280,6 +294,8 @@ function SkillRow({
 function SkillDetail({ result, query, large = false }: { result: Result; query: string; large?: boolean }) {
   const { skill, matchedParams } = result;
   const [outputsOpen, setOutputsOpen] = useState(false);
+  // Inline (small screens) the detail sits under the section heading, with no skill heading of its own.
+  const Subheading = large ? "h4" : "h3";
   const explorerHref = `/pipelines/${skill.name}/${query.trim() && matchedParams.length ? `?q=${encodeURIComponent(query.trim())}` : ""}#parameters`;
 
   return (
@@ -359,7 +375,7 @@ function SkillDetail({ result, query, large = false }: { result: Result; query: 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         {skill.required.length > 0 && (
           <div>
-            <h4 className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Required parameters</h4>
+            <Subheading className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Required parameters</Subheading>
             <ul className="space-y-2">
               {skill.required.map((r) => (
                 <li key={r.name} className="text-sm">
@@ -376,7 +392,7 @@ function SkillDetail({ result, query, large = false }: { result: Result; query: 
           </div>
         )}
         <div>
-          <h4 className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Parameter groups</h4>
+          <Subheading className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Parameter groups</Subheading>
           <div className="flex flex-wrap gap-1.5">
             {skill.groups.map((g) => (
               <span key={g.name} className="chip px-2.5 py-0.5 text-[11px]">
@@ -390,7 +406,7 @@ function SkillDetail({ result, query, large = false }: { result: Result; query: 
 
       {skill.outputs && (
         <div className="mt-6">
-          <h4 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Outputs</h4>
+          <Subheading className="mb-2 text-[11px] font-medium uppercase tracking-wider text-fog-dim">Outputs</Subheading>
           <p className={cn("text-sm leading-relaxed text-fog-muted", !outputsOpen && "line-clamp-3")}>
             <InlineMarkdown text={skill.outputs} />
           </p>

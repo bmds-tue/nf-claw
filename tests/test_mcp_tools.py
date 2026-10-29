@@ -352,6 +352,25 @@ def test_inline_chain_spec_retains_exact_numbers_in_durable_spec(tools, fake_cli
         'ratio': Decimal('0.1000000000000000000001'), 'tiny': Decimal('1e-9999')}
 
 
+def test_a_finished_job_without_its_status_report_says_why(tools, fake_cli, tmp_path):
+    # The supervisor could not retain the run's own report: the view says so instead of
+    # silently omitting it.
+    submitted = call(tools, "run_pipeline", pipeline="demo", outdir=str(tmp_path / "o"),
+                     wait_seconds=30)
+    job_id = submitted["structuredContent"]["job_id"]
+    call(tools, "get_job", job_id=job_id, wait_seconds=30)
+    job_dir = jobs.jobs_dir() / job_id
+    (job_dir / jobs.STATUS_FILE).unlink()
+    record = json.loads((job_dir / jobs.SUPERVISOR_FILE).read_text())
+    record["status_error"] = "could not freeze this job's run status: OSError: disk full"
+    (job_dir / jobs.SUPERVISOR_FILE).write_text(json.dumps(record))
+    result = call(tools, "get_job", job_id=job_id)
+    view = result["structuredContent"]
+    assert view["state"] == "succeeded" and "status_report" not in view
+    assert view["status_error"] == record["status_error"]
+    assert "status: could not freeze this job's run status" in result["content"][0]["text"]
+
+
 def test_finished_job_keeps_its_own_status_when_a_retry_reuses_the_outdir(
         tools, fake_cli, tmp_path):
     out = str(tmp_path / 'retry-out')

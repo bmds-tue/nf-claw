@@ -33,7 +33,14 @@ def _lock_inactive_sessions(original: Path, locks: ExitStack) -> None:
                           fix="Use a fresh output directory on this platform.") from None
     from runner import runlog
     state = runlog.read_state(original / "provenance/logs/run.log")
-    if state and (state.nextflow_alive or state.state == "elsewhere"):
+    if state.state == "unreadable":
+        # Whether its engine still runs cannot be judged: never move a tree that may be live.
+        raise NfclawError(ErrorCode.ENVIRONMENT,
+                          f"Cannot preserve the previous run: its run log cannot be read "
+                          f"({'; '.join(state.error)}) in {original}.",
+                          fix="Make the run log readable, and stop any engine still running "
+                              "there, before resuming.")
+    if state.nextflow_alive or state.state == "elsewhere":
         raise NfclawError(ErrorCode.ENVIRONMENT,
                           f"Cannot preserve the previous run: its Nextflow process is active "
                           f"or its remote outcome is unknown in {original}.",

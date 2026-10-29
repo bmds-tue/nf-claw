@@ -61,6 +61,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
+        {/* Entrance animations render their first frame (opacity 0) into the static HTML, and only
+            a script lifts it: without one, show that content as it ends up. */}
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: '<style>[style*="opacity:0;"],[style$="opacity:0"]{opacity:1!important}</style>',
+          }}
+        />
         <BackgroundFX />
         <Nav repo={meta.remote} />
         <main id="main" className="relative" tabIndex={-1}>

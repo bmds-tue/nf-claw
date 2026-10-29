@@ -156,6 +156,50 @@ def test_detaxizer_mag_never_assumes_a_long_read_platform(library, finished_run,
                             dest=tmp_path / "handoff-hybrid")
 
 
+def test_detaxizer_mag_refuses_samples_written_to_its_single_end_sheet(library, finished_run,
+                                                                      tmp_path):
+    """detaxizer writes samples without a second short-read file (single-end, or long reads only)
+    to mag-se.csv beside mag-pe.csv, since mag cannot take both in one run. The rule hands over
+    mag-pe.csv, so those samples were left out of mag without a word."""
+    down, rule = _mag_like(library), RULES[("detaxizer", "mag")]
+    header = "sample,run,group,short_reads_1,short_reads_2,long_reads\n"
+    files = {"A_1.fastq.gz": "a1", "A_2.fastq.gz": "a2", "B_1.fastq.gz": "b1",
+             "downstream_samplesheets/mag-pe.csv":
+                 header + "A,A,0,{outdir}/A_1.fastq.gz,{outdir}/A_2.fastq.gz,\n"}
+    paired = finished_run(tmp_path / "paired", files)
+    result = handoff.materialize(rule, upstream_outdir=paired, downstream_tree=down,
+                                 dest=tmp_path / "handoff")
+    with Path(result.params["input"]).open() as fh:
+        assert [row["sample"] for row in csv.DictReader(fh)] == ["A"]
+    mixed = finished_run(tmp_path / "mixed", {**files, "downstream_samplesheets/mag-se.csv":
+                                              header + "B,B,0,{outdir}/B_1.fastq.gz,,\n"})
+    with pytest.raises(NfclawError, match=r"downstream_samplesheets/mag-se.csv also holds 1 "
+                       r"row\(s\) \(B\)"):
+        handoff.materialize(rule, upstream_outdir=mixed, downstream_tree=down,
+                            dest=tmp_path / "handoff-mixed")
+
+
+def test_bamtofastq_rnaseq_refuses_single_end_conversions_beside_paired_ones(finished_run,
+                                                                            tmp_path):
+    """bamtofastq 2.2.1's own no_bai test converts test and test2 (paired-end) with test3
+    (single-end) in one run, publishing exactly these files under reads/. The rule's rows pattern
+    describes the paired files only, so test3 was left out of rnaseq without a word."""
+    rule, down = RULES[("bamtofastq", "rnaseq")], _tree("rnaseq")
+    paired = {f"reads/{s}_{r}.merged.fastq.gz": f"{s}{r}"
+              for s in ("test", "test2") for r in (1, 2)}
+    up = finished_run(tmp_path / "paired", paired)
+    result = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                 dest=tmp_path / "handoff")
+    with Path(result.params["input"]).open() as fh:
+        rows = list(csv.DictReader(fh))
+    assert sorted((r["sample"], Path(r["fastq_2"]).name) for r in rows) == [
+        ("test", "test_2.merged.fastq.gz"), ("test2", "test2_2.merged.fastq.gz")]
+    mixed = finished_run(tmp_path / "mixed", {**paired, "reads/test3_other.fq.gz": "test3"})
+    with pytest.raises(NfclawError, match="reads/test3_other.fq.gz"):
+        handoff.materialize(rule, upstream_outdir=mixed, downstream_tree=down,
+                            dest=tmp_path / "handoff-mixed")
+
+
 @pytest.mark.parametrize("down", ["rnaseq", "atacseq", "sarek", "metatdenovo", "viralrecon"])
 def test_fetchngs_short_read_handoffs_refuse_other_platforms(library, finished_run, tmp_path, down):
     """fetchngs's own test accessions include ABI_SOLID (colour-space) and CAPILLARY runs."""

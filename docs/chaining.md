@@ -173,6 +173,9 @@ value, but checksum, namespace and downstream validation failures remain errors.
 A `build` source supplies `rows` (a relative pattern with `{placeholders}`), `columns`
 (column-to-template mappings) and optional `format` (`csv` by default, or `tsv`).
 For a path column, a template ending in `?` leaves a missing companion file empty.
+An optional `exhaustive` glob names files that must all reach a row: a file it matches that no
+row uses, such as bamtofastq's single-end reads beside its paired ones, fails the handoff (even an
+optional one) instead of being left out.
 
 Explicit stage `input` and `params` values override mapped handoff parameters with an
 advisory; unused sources are not materialized. The rule must still pass static checks.
@@ -186,6 +189,11 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 4. `drop_rows_not_allowed`: Filter out rows containing values rejected by the downstream schema.
 5. `allowed_values`: Refuse (never drop) the handoff when a column holds a value outside a list — rows the downstream must not analyse although its schema cannot tell, such as a long-read or colour-space run in fetchngs's sheet for a short-read pipeline (`{"instrument_platform": ["ILLUMINA", …]}`).
 6. `require_values`: Assert that specific columns must contain non-empty values before launch.
+
+`refuse_rows_in` lists other sheets the upstream writes for the same downstream that the handoff
+cannot take with this one, such as detaxizer's `mag-se.csv` for samples without a second short-read
+file beside `mag-pe.csv`: a row in any of them fails the handoff, naming the samples, instead of
+leaving them out.
 
 > [!IMPORTANT]
 > **Metagenomic Co-Assembly Safety:**

@@ -786,3 +786,125 @@ def test_status_of_a_success_names_the_caveats_the_pipeline_reported(tmp_path, m
     out = capsys.readouterr().out
     assert out.startswith("status: success — with caveats the pipeline reported")
     assert "  [nf-core/rnaseq] Please check MultiQC report: 1/3 samples skipped" in out
+
+
+# --- what the command line says about itself ------------------------------------------------------
+
+def test_version_names_the_package_and_its_checkout_commit(capsys, monkeypatch):
+    from runner import version
+    monkeypatch.setattr(version, "commit", lambda: "0123456789abcdef" * 2 + "01234567")
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--version"])
+    assert exc.value.code == 0
+    assert capsys.readouterr().out == f"nfclaw {version.package_version()} (commit 0123456789ab)\n"
+
+
+def test_version_outside_a_checkout_names_the_package_alone(capsys, monkeypatch):
+    from runner import version
+    monkeypatch.setattr(version, "commit", lambda: None)
+    with pytest.raises(SystemExit):
+        cli.main(["--version"])
+    assert capsys.readouterr().out == f"nfclaw {version.package_version()}\n"
+
+
+def test_a_pipeline_flag_named_version_still_reaches_the_pipeline(captured, tmp_path):
+    # `--version` belongs to nfclaw only before a command; after `run` it is a pipeline parameter.
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--version", "2"]) == 0
+    assert captured["cli_overrides"] == {"version": "2"}
+
+
+def test_every_command_and_run_option_explains_itself():
+    parser = cli.build_parser()
+    commands = next(a for a in parser._actions if isinstance(a, cli.argparse._SubParsersAction))
+    described = {choice.dest for choice in commands._choices_actions}
+    assert described == set(commands.choices)
+    chain_commands = next(a for a in commands.choices["chain"]._actions
+                          if isinstance(a, cli.argparse._SubParsersAction))
+    assert {c.dest for c in chain_commands._choices_actions} == set(chain_commands.choices)
+    undocumented = [action.dest for action in commands.choices["run"]._actions
+                    if not action.help]
+    assert undocumented == []
+
+
+def test_list_searches_the_library_by_keyword(tmp_path, monkeypatch, capsys):
+    root = _seed(tmp_path)
+    (root / "catalog.json").write_text(json.dumps([
+        {"name": "rnaseq", "version": "3.0.0", "description": "RNA sequencing analysis",
+         "tools": ["STAR", "Salmon"], "input": "FastQ", "summary": ""},
+        {"name": "sarek", "version": "3.5.0", "description": "Variant calling",
+         "tools": ["GATK"], "input": "FastQ", "summary": "germline and somatic"}]))
+    monkeypatch.setattr(cli, "_repo_root", lambda: root)
+    assert cli.main(["list", "variant", "calling"]) == 0
+    assert capsys.readouterr().out == "sarek\t3.5.0\tVariant calling\n"
+    assert cli.main(["list", "salmon"]) == 0
+    assert capsys.readouterr().out.startswith("rnaseq\t3.0.0\t")
+    assert cli.main(["list", "metagenome"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "" and "No pipeline matches 'metagenome'" in captured.err
+
+
+def test_list_search_reads_skill_frontmatter_without_a_catalog(tmp_path, monkeypatch, capsys):
+    root = _seed(tmp_path)
+    monkeypatch.setattr(cli, "_repo_root", lambda: root)
+    assert cli.main(["list", "SAREK"]) == 0
+    assert capsys.readouterr().out == "sarek\t1.0.0\t\n"
+
+
+def test_status_and_run_survive_a_log_that_cannot_be_inspected(tmp_path, monkeypatch, capsys,
+                                                               captured):
+    # Before Python 3.14 `Path.is_file` raises PermissionError under a directory that cannot be
+    # searched: `nfclaw status` and `nfclaw run` must report it, not end in a traceback.
+    out = tmp_path / "out"
+    log = out / "provenance" / "logs" / "run.log"
+    original_stat = Path.stat
+
+    def refused(self, *args, **kwargs):
+        if self == log:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original_stat(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "stat", refused)
+    assert cli.main(["status", str(out)]) == 1
+    assert "cannot be read: Permission denied" in capsys.readouterr().out
+    assert cli.main(["run", "x", "--outdir", str(out)]) == 0
+
+
+def test_a_path_nfclaw_cannot_reach_is_a_refusal_not_a_traceback(tmp_path, monkeypatch, capsys):
+    # Before Python 3.14 `Path.exists` raises PermissionError under a directory that cannot be
+    # searched: `--input /root/x.csv` or `--outdir /root/out` ended in a traceback.
+    log = _write_run_log(tmp_path / "out", _finished_block("failed (exit status 1)"))
+
+    def unreachable(*a, **k):
+        raise PermissionError(13, "Permission denied", "/root/data/sheet.csv")
+    monkeypatch.setattr(orchestration, "run_pipeline", unreachable)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 1
+    err = capsys.readouterr().err
+    assert "[environment] cannot access /root/data/sheet.csv: Permission denied" in err
+    assert "Traceback" not in err
+    assert log.read_text().rstrip().splitlines()[-1].endswith(": refused before launch")
+
+
+def test_any_command_reports_an_unreachable_path_cleanly(tmp_path, monkeypatch, capsys):
+    root = _seed(tmp_path)
+    skill = root / "pipelines" / "sarek" / "skill.md"
+    original = Path.read_text
+
+    def refused(self, *args, **kwargs):
+        if self == skill:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(cli, "_repo_root", lambda: root)
+    monkeypatch.setattr(Path, "read_text", refused)
+    assert cli.main(["show", "sarek"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith(f"[environment] cannot access {skill}: Permission denied")
+
+
+def test_an_os_error_without_a_path_is_named_as_such(tmp_path, monkeypatch, capsys):
+    def full(*a, **k):
+        raise OSError(28, "No space left on device")
+    monkeypatch.setattr(orchestration, "run_pipeline", full)
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 1
+    assert "[environment] operating-system error: No space left on device" in \
+        capsys.readouterr().err

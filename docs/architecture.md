@@ -103,7 +103,8 @@ nfclaw keeps its own schema checks where they act before Nextflow could:
 - **Stream Separation:** `stdout.txt` and `stderr.txt` are maintained alongside `run.log`.
 - **`nfclaw status <outdir>`**: Reads `run.log` and, for an unfinished run on the same host,
   checks the recorded process identity. Reports `success`, `running`, `failed`, `terminated`, or
-  `stopped without an outcome`. Remote unfinished runs cannot be inspected locally.
+  `stopped without an outcome`. Remote unfinished runs cannot be inspected locally, and a log
+  that exists but cannot be read is reported as `unknown` with the reason (exit status 1).
 - **Completion caveats:** A pipeline can exit 0 without some samples or tasks. `runner/runlog.py`
   quotes what it reported (nf-core's "…, but with errored process(es)", rnaseq's skipped samples)
   and Nextflow's count of ignored task failures; `nfclaw run` prints them, `nfclaw status` reports
@@ -115,7 +116,7 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 | Manifest / File | Description & Verification Function |
 |---|---|
 | `logs/run.log` | The whole launch in order, ending with its outcome line (§2.4); `stdout.txt` and `stderr.txt` beside it keep Nextflow's raw streams. |
-| `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. `pipeline_archive`, `bundled_configs`, `container_pins` and `execution_environment.issues` show the evidence actually captured. |
+| `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, the nfclaw that wrote the bundle (`nfclaw`: package version and checkout commit, as `nfclaw --version` prints them), and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. `pipeline_archive`, `bundled_configs`, `container_pins` and `execution_environment.issues` show the evidence actually captured. |
 | `params.json` | Resolved wrapper parameters passed to Nextflow, including the pinned `trace_report_suffix` where the upstream schema supports it and the nf-core/configs commit (`custom_config_version`) when automatic pinning applies. The upstream pipeline can record further defaults or profile values itself, and other independently timestamped metadata can still change filenames. |
 | `commands.sh`, `replay_guard.py`, `environment_record.py` | The replay script and its two zero-dependency helpers (§2.6). |
 | `inputs.sha256` | Prelaunch digests of declared local input files, schema path parameters, existing absolute local files supplied to parameters without a path format, and local data paths inside CSV/TSV or flat JSON/YAML records, including auxiliary tables. |

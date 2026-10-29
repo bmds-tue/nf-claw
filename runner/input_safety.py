@@ -37,8 +37,14 @@ def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
     try:
         _check_write_boundaries(sources, writes)
     except (ValueError, OSError, RuntimeError) as exc:
+        # A path that could not be inspected is not an overlap: say what would let it be checked.
+        # Either way nothing is written, since no separation could be established.
+        inspection = (OSError, RuntimeError)
+        uninspected = isinstance(exc if isinstance(exc, inspection) else exc.__cause__, inspection)
         raise NfclawError(
             ErrorCode.ENVIRONMENT, str(exc),
-            fix="Keep output and work directories outside input directories, and keep "
-                "input data, configuration and pipeline code outside the output directory.",
+            fix=("Make the input, output and work paths readable and every directory above them "
+                 "searchable, then retry." if uninspected else
+                 "Keep output and work directories outside input directories, and keep "
+                 "input data, configuration and pipeline code outside the output directory."),
             details={"unsafe_write_boundary": True}) from exc

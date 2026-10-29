@@ -133,6 +133,10 @@ class ContainerWatch:
                     os.killpg(self._process.pid, signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
                     pass
+                try:
+                    self._process.wait(timeout=5)             # reap it: no zombie per run
+                except subprocess.TimeoutExpired:
+                    pass
         for thread in self._threads:
             thread.join(timeout=timeout)
         with self._lock:

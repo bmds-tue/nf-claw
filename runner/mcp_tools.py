@@ -22,10 +22,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, jobs, parameters, settings
+from runner import chain, cli, discovery, jobs, parameters, settings
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
+from runner.version import package_version
 
 INSTRUCTIONS = """\
 nf-claw runs pinned nf-core pipelines through its own CLI (nfclaw), with validation before launch \
@@ -62,18 +63,8 @@ _DEFAULT_RUN_WAIT = 20
 
 
 def server_version() -> str:
-    """nfclaw's version: the installed distribution's, else this checkout's pyproject.toml."""
-    try:
-        from importlib.metadata import version
-        return version("nfclaw")
-    except Exception:
-        pass
-    try:
-        import tomllib
-        pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
-        return tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
-    except Exception:
-        return "unknown"
+    """nfclaw's version, as `nfclaw --version` reports it (runner.version)."""
+    return package_version()
 
 
 class ToolError(Exception):
@@ -509,26 +500,9 @@ class NfclawTools:
 
     def _tool_list_pipelines(self, args: dict, ctx: Context) -> dict:
         catalog = json.loads((self.root / "catalog.json").read_text(encoding="utf-8"))
-        # Compared without punctuation or spacing, so "RNA-seq", "rna seq" and "rnaseq" all meet.
-        words = [w for w in (_squash(w) for w in re.split(r"[\s,;]+", args.get("query") or ""))
-                 if w]
+        words = discovery.query_words(args.get("query") or "")
         limit = args.get("limit") or 25
-
-        def score(p: dict) -> int:
-            if not words:
-                return 1
-            name = _squash(p.get("name", ""))
-            fields = [(name, 10), (_squash(p.get("description", "")), 4),
-                      (_squash(" ".join(p.get("tools") or [])), 4),
-                      (_squash(p.get("input", "")), 2), (_squash(p.get("summary", "")), 1)]
-            total = 0
-            for w in words:
-                total += max((weight for text, weight in fields if w in text), default=0)
-                total += 30 if w == name else 0
-            return total
-
-        ranked = sorted(((score(p), p) for p in catalog), key=lambda sp: (-sp[0], sp[1]["name"]))
-        found = [p for s, p in ranked if s > 0]
+        found = discovery.search(catalog, args.get("query") or "")
         shown = [{k: p.get(k) for k in ("name", "version", "description", "input", "feeds",
                                         "tools", "summary")} for p in found[:limit]]
         lines = [f"{len(found)} of {len(catalog)} pipelines match"
@@ -762,6 +736,9 @@ class NfclawTools:
                              else "finishing" if launched else "preparing")
         if job.error:
             view["error"] = job.error
+        if job.status_error and not frozen:
+            # The job ended, but its own run report was not retained: say why it is absent.
+            view["status_error"] = job.status_error
         view["output_tail"] = jobs.output_tail(job, log_lines)
         view["output_log"] = str(job.dir / jobs.OUTPUT_LOG)
         view["next"] = _next_step(view)
@@ -884,10 +861,6 @@ class NfclawTools:
                                       "exit_code": res.code, "report": res.text})
 
 
-def _squash(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "", text.lower())
-
-
 def _resource(uri: str, name: str, description: str) -> dict:
     return {"uri": uri, "name": name, "description": description, "mimeType": "text/markdown"}
 
@@ -958,6 +931,8 @@ def _render_job(view: dict) -> str:
         lines.append(f"exit code: {view['exit_code']}")
     if view.get("error"):
         lines.append(f"error: {view['error']}")
+    if view.get("status_error"):
+        lines.append(f"status: {view['status_error']}; run_status(outdir) reads the live log")
     if view.get("status_report"):
         lines += ["", "nfclaw status:", view["status_report"]]
     if view.get("output_tail"):

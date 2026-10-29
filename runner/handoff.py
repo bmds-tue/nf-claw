@@ -38,9 +38,9 @@ REGISTRY_DIRNAME = "handoffs"
 KINDS = ("samplesheet", "build", "file", "upstream_param")
 _RULE_KEYS = {"description", "upstream_params", "params"}
 _EXTRA_KEYS = {"samplesheet": {"provides", "rename", "set", "add_empty", "drop_rows_not_allowed",
-                               "require_values", "allowed_values"},
+                               "require_values", "allowed_values", "refuse_rows_in"},
                "build": set(), "file": {"paired_with"}, "upstream_param": set()}
-_BUILD_KEYS = {"rows", "columns", "format"}
+_BUILD_KEYS = {"rows", "columns", "format", "exhaustive"}
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
@@ -141,6 +141,10 @@ def parse_rule(data: Any, *, upstream: str, downstream: str, origin: str) -> Rul
                     isinstance(c, str) and c and isinstance(v, list) and v
                     and all(isinstance(x, str) and x for x in v) for c, v in allowed.items())):
                 raise bad(f"'{target}': 'allowed_values' must map column names to lists of values")
+            refuse = src.get("refuse_rows_in", [])
+            if not (isinstance(refuse, list) and all(map(_relative, refuse))):
+                raise bad(f"'{target}': 'refuse_rows_in' must list relative paths inside the "
+                          "upstream outdir")
         if kind == "build":
             _check_build(src["build"], target, bad)
         sources[target] = Source(kind, src, bool(src.get("optional", False)))
@@ -173,6 +177,8 @@ def _check_build(build: object, target: str, bad) -> None:
         raise bad(f"'{target}': 'columns' must map column names to templates")
     if build.get("format", "csv") not in ("csv", "tsv"):
         raise bad(f"'{target}': 'format' must be csv or tsv")
+    if "exhaustive" in build and not _relative(build["exhaustive"]):
+        raise bad(f"'{target}': 'exhaustive' must be a relative pattern inside the upstream outdir")
     captured = set(PLACEHOLDER.findall(rows))
     for col, template in columns.items():
         for name in PLACEHOLDER.findall(template):
@@ -576,6 +582,23 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
             header, rows = list(reader.fieldnames or []), list(reader)
     except (OSError, UnicodeDecodeError, csv.Error) as exc:
         raise _Unresolved(f"cannot read {sheet}: {exc}") from exc
+    # Sheets the upstream writes beside this one for the same downstream, which it cannot take in
+    # the same run (detaxizer puts single-end samples in mag-se.csv): a sample in one would
+    # otherwise be left out of the downstream analysis without a word.
+    for pattern in src.spec.get("refuse_rows_in", []):
+        for other in sorted(p for p in root.glob(pattern)
+                            if p.is_file() and is_result(p.relative_to(root))):
+            try:
+                with other.open(newline="", encoding="utf-8-sig") as fh:
+                    left = list(csv.DictReader(fh, delimiter=samplesheet.delimiter_for(other)))
+            except (OSError, UnicodeDecodeError, csv.Error) as exc:
+                raise _Unresolved(f"cannot read {other}: {exc}") from exc
+            if left:
+                names = list(dict.fromkeys(r.get("sample") or "?" for r in left))
+                raise _Unresolved(
+                    f"{other.relative_to(root).as_posix()} also holds {len(left)} row(s) ("
+                    + ", ".join(names[:5]) + (" and more" if len(names) > 5 else "")
+                    + f") that this handoff cannot hand over with {sheet.name}")
     duplicates = [name for name, count in Counter(header).items() if count > 1]
     if duplicates:
         raise _Unresolved(f"{sheet.name} has duplicate columns: {', '.join(duplicates)}")
@@ -713,6 +736,19 @@ def _build(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
                 text = column.join_paths(tuple(resolved)) if column else "".join(resolved)
             row[col] = text
         rows.append(row)
+    if (covered := spec.get("exhaustive")) is not None:
+        # Every file this pattern names must reach a row: one the rows pattern does not describe
+        # (bamtofastq's single-end reads beside its paired ones) would otherwise be left out of the
+        # downstream analysis without a word.
+        used = set(derived)
+        left = sorted(rel for p in root.glob(covered) if p.is_file()
+                      and is_result(p.relative_to(root))
+                      and (rel := p.relative_to(root).as_posix()) not in used)
+        if left:
+            shown = ", ".join(left[:5]) + (f" and {len(left) - 5} more" if len(left) > 5 else "")
+            raise _Unresolved(f"{len(left)} upstream file(s) matching {covered!r} would reach no "
+                              f"row of the sheet ({shown}): rows {spec['rows']!r} does not "
+                              "describe them")
     if not rows:
         raise _NoMatch(f"no file in {root} matches {spec['rows']!r}")
     return _write_sheet(dest.with_suffix("." + spec.get("format", "csv")),

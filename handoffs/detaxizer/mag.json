@@ -1,5 +1,5 @@
 {
-  "description": "detaxizer, with --generate-downstream-samplesheets, writes downstream_samplesheets/mag-pe.csv for its filtered paired-end reads, in the column layout of mag 3.x; each sample gets its own group and its short reads the ILLUMINA platform detaxizer documents for them. Different samples are not pooled for binning or assembly; use an inline handoff to supply study-specific pooling groups. detaxizer records no long-read platform, and mag chooses its long-read preprocessing and assembler mode by it: samples with long reads are refused until an inline handoff sets long_reads_platform (OXFORD_NANOPORE, OXFORD_NANOPORE_HQ, PACBIO_CLR or PACBIO_HIFI) for the data.",
+  "description": "detaxizer, with --generate-downstream-samplesheets, writes downstream_samplesheets/mag-pe.csv for its filtered paired-end reads, in the column layout of mag 3.x, and mag-se.csv for samples without a second short-read file, which mag cannot take in the same run: a run with any fails this handoff instead of leaving them out; each sample gets its own group and its short reads the ILLUMINA platform detaxizer documents for them. Different samples are not pooled for binning or assembly; use an inline handoff to supply study-specific pooling groups. detaxizer records no long-read platform, and mag chooses its long-read preprocessing and assembler mode by it: samples with long reads are refused until an inline handoff sets long_reads_platform (OXFORD_NANOPORE, OXFORD_NANOPORE_HQ, PACBIO_CLR or PACBIO_HIFI) for the data.",
   "upstream_params": {
     "generate_downstream_samplesheets": true,
     "generate_pipeline_samplesheets": "mag"
@@ -7,6 +7,9 @@
   "params": {
     "input": {
       "samplesheet": "downstream_samplesheets/mag-pe.csv",
+      "refuse_rows_in": [
+        "downstream_samplesheets/mag-se.csv"
+      ],
       "provides": [
         "sample",
         "run",

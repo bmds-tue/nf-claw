@@ -220,13 +220,15 @@ function ParamRow({
       )}
     >
       <div className="flex items-start gap-2 p-3.5 sm:p-4">
-        <button
-          onClick={() => expandable && onToggle()}
-          aria-expanded={expandable ? open : undefined}
-          className="flex min-w-0 flex-1 items-start gap-3 text-left"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="min-w-0 flex-1">
+          {/* The description can hold links, which a button must not contain: the button is the
+              summary line, and a click on the description (outside its links) toggles as well. */}
+          <button
+            onClick={() => expandable && onToggle()}
+            aria-expanded={expandable ? open : undefined}
+            className="flex w-full min-w-0 items-start gap-3 text-left"
+          >
+            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
               <code className="font-mono text-sm font-medium text-fog">
                 <Highlight text={param.name} query={query} />
               </code>
@@ -244,23 +246,30 @@ function ParamRow({
                   = {param.default.replace(/`/g, "")}
                 </span>
               )}
-            </div>
-            {param.description && (
-              <p className={cn("mt-1.5 text-sm leading-relaxed text-fog-muted", !open && "line-clamp-1")}>
-                {query.trim() ? (
-                  <Highlight text={param.description.replace(/`/g, "")} query={query} />
-                ) : (
-                  <InlineMarkdown text={param.description} />
-                )}
-              </p>
+            </span>
+            {expandable && (
+              <ChevronDown
+                className={cn("mt-1 h-4 w-4 shrink-0 text-fog-dim transition-transform duration-300", open && "rotate-180")}
+              />
             )}
-          </div>
-          {expandable && (
-            <ChevronDown
-              className={cn("mt-1 h-4 w-4 shrink-0 text-fog-dim transition-transform duration-300", open && "rotate-180")}
-            />
+          </button>
+          {param.description && (
+            <p
+              onClick={(e) => {
+                // following a link or selecting text is not a toggle
+                if (expandable && !(e.target as Element).closest("a") && (window.getSelection()?.isCollapsed ?? true))
+                  onToggle();
+              }}
+              className={cn("mt-1.5 text-sm leading-relaxed text-fog-muted", expandable && "cursor-pointer", !open && "line-clamp-1")}
+            >
+              {query.trim() ? (
+                <Highlight text={param.description.replace(/`/g, "")} query={query} />
+              ) : (
+                <InlineMarkdown text={param.description} />
+              )}
+            </p>
           )}
-        </button>
+        </div>
         <CopyButton
           text={flag}
           label={`Copy ${flag}`}

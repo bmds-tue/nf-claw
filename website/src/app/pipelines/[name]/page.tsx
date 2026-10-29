@@ -269,7 +269,8 @@ export default async function PipelinePage({ params }: { params: Promise<{ name:
               <CodeBlock code={h.header} label={`samplesheet.${h.format} header`} />
             </div>
           ))}
-          <div className="glass mt-4 overflow-x-auto">
+          {/* focusable, so a keyboard can scroll the table sideways on a narrow screen */}
+          <div tabIndex={0} role="region" aria-label="Samplesheet columns" className="glass mt-4 overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-white/[0.07] text-left text-[11px] uppercase tracking-wider text-fog-dim">

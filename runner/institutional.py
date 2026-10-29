@@ -18,6 +18,7 @@ import subprocess
 from pathlib import Path
 
 from runner.probes import capture
+from runner.settings import seconds
 
 REPOSITORY = "https://github.com/nf-core/configs"
 PARAM = "custom_config_version"
@@ -33,7 +34,7 @@ def _ls_remote(repository: str, ref: str) -> tuple[str | None, str | None]:
     try:
         result = capture(
             ["git", "ls-remote", "--exit-code", repository, f"refs/heads/{ref}"],
-            timeout=30,
+            timeout=seconds("NFCLAW_GIT_TIMEOUT", 30),
             env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
     except (OSError, subprocess.SubprocessError) as exc:
         return None, f"git ls-remote could not run: {exc}"

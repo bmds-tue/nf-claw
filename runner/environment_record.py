@@ -18,6 +18,7 @@ import whatever version of nfclaw happens to be installed later.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -355,11 +356,24 @@ def log_facts(log_path: Path, session_id: str | None) -> dict:
     return facts
 
 
+def _raise(error: OSError) -> None:
+    raise error
+
+
 def _tree_digest(root: Path) -> dict:
+    """One digest for a staged directory. A directory that cannot be listed, or a symlink back
+    into one of its own ancestors, leaves it without one rather than a digest of part of it."""
     lines = []
     count = size = 0
-    for directory, subdirs, files in os.walk(root, followlinks=True):
+    ancestors = {os.fspath(root): frozenset()}
+    for directory, subdirs, files in os.walk(root, followlinks=True, onerror=_raise):
+        real = os.path.realpath(directory)
+        chain = ancestors.pop(directory, frozenset())
+        if real in chain:
+            raise OSError(errno.ELOOP, "cyclic directory symlink", directory)
         subdirs.sort()
+        for name in subdirs:
+            ancestors[os.path.join(directory, name)] = chain | {real}
         for name in sorted(files):
             path = Path(directory, name)
             relative = path.relative_to(root).as_posix()

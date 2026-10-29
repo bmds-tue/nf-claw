@@ -21,7 +21,7 @@ tests, install `pip install -e ".[dev,yaml]"` to include pytest and YAML support
 
 ## To run a pipeline
 
-1. **Find it:** grep `catalog.json` (or `catalog.md`) for a keyword — do NOT read it whole.
+1. **Find it:** `nfclaw list <keywords>` (e.g. `nfclaw list variant calling`) ranks the library by assay, data type, method or tool, best match first; or grep `catalog.json` (or `catalog.md`) for a keyword — do NOT read it whole.
 2. **Read `pipelines/<name>/skill.md`:** the exact command, inputs, and required parameters for the pinned version.
 3. **Run:**
    ```bash
@@ -84,7 +84,7 @@ Every `nfclaw run` records itself at a fixed place — there is no need to redir
 nfclaw status <outdir>
 ```
 
-Prints `status: success`, `running (…)`, the outcome it ended with (`failed (exit status N)`, `timed out after N s`, `interrupted`, `terminated by SIGTERM`, `refused before launch`), or `stopped without an outcome` (nfclaw itself was killed with SIGKILL, ran out of memory, its disk filled up, or the machine restarted); then the log, and the recorded error or the run's last output. Exit code: 0 success, 3 running, 1 anything else. It works for replays too.
+Prints `status: success`, `running (…)`, the outcome it ended with (`failed (exit status N)`, `timed out after N s`, `interrupted`, `terminated by SIGTERM`, `refused before launch`), or `stopped without an outcome` (nfclaw itself was killed with SIGKILL, ran out of memory, its disk filled up, or the machine restarted); then the log, and the recorded error or the run's last output. A log that exists but cannot be read (another user's run, a directory you cannot search) is reported as `status: unknown` with the reason, never guessed. Exit code: 0 success, 3 running, 1 anything else. It works for replays too.
 
 **Success is not completeness.** A pipeline can exit 0 without some of its samples or tasks. When it says so in its completion summary (nf-core's "…, but with errored process(es)", rnaseq's skipped samples and failed strandedness checks), Nextflow ignored failed tasks, or a selected profile or a `--config` runs every task as a stub that writes placeholders instead of running its tool (`stubRun = true`, as proteinfold's `test` profile does — so its `--demo` computes nothing), `nfclaw status` reports `status: success — with caveats the pipeline reported about its results` and quotes them; `nfclaw run` prints them as warnings and records them in `provenance/run_manifest.json` (`completion_caveats`), and a chain lists them per stage. Read them before using the results.
 

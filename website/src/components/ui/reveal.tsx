@@ -11,7 +11,6 @@ export function Reveal({
 }: {
   children: ReactNode;
   delay?: number;
-  y?: number;
   className?: string;
 }) {
   const reduce = useReducedMotion();

@@ -85,8 +85,12 @@ source .venv/bin/activate
 # Editable install places `nfclaw` on PATH (or use `python3 -m runner <cmd>` without installation)
 pip install -e .
 
-# List all available pipelines and descriptions
+# List all available pipelines and descriptions, or search them by keyword
 nfclaw list
+nfclaw list variant calling
+
+# The nfclaw release and checkout commit (also recorded in every provenance bundle)
+nfclaw --version
 
 # Read the pinned release's inputs and required parameters before preparing data
 nfclaw show rnaseq

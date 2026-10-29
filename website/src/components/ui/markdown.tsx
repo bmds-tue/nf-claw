@@ -75,7 +75,7 @@ export function Markdown({
             <a
               href={`#${id}`}
               aria-label="Link to this section"
-              className="absolute -left-6 top-1/2 hidden -translate-y-1/2 p-1 text-fog-faint opacity-0 transition hover:text-claw-300 group-hover/h:opacity-100 md:block"
+              className="absolute -left-6 top-1/2 hidden -translate-y-1/2 p-1 text-fog-faint opacity-0 transition hover:text-claw-300 focus-visible:opacity-100 group-hover/h:opacity-100 md:block"
             >
               <Link2 className="h-4 w-4" />
             </a>

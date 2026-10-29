@@ -30,7 +30,10 @@ export function LiveStatus({
   repo: string | null;
 }) {
   const capturedAt = new Date().toISOString();
-  const autoUpdate = workflows.find((w) => w.schedule);
+  // Each tile reports its own workflow: the first scheduled one by name is not the auto-update, and
+  // a drift workflow enforces the gate on pull requests only if it runs on them.
+  const autoUpdate = workflows.find((w) => /^auto-update\.ya?ml$/.test(w.file) && w.schedule);
+  const drift = workflows.find((w) => /drift/i.test(w.name));
   const cron = humanizeCron(autoUpdate?.schedule ?? null);
   const gh = repo ? `https://github.com/${repo}` : null;
 
@@ -55,7 +58,9 @@ export function LiveStatus({
           <StatusTile
             icon={<ShieldCheck className="h-4 w-4" />}
             label="Drift gate"
-            value={workflows.some((w) => /drift/i.test(w.name)) ? "Enforced on every PR" : "Configured"}
+            value={
+              drift?.triggers.includes("pull_request") ? "Enforced on every PR" : drift ? "Configured" : "Not configured"
+            }
             sub="context matches the pinned submodule"
           />
           <StatusTile

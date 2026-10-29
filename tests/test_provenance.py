@@ -35,6 +35,19 @@ def test_writes_manifest_and_checksums(tmp_path):
     assert (prov / "commands.sh").exists()
 
 
+def test_manifest_names_the_nfclaw_that_wrote_it(tmp_path):
+    # The pipeline's revision was recorded, but not the wrapper's: a bundle could not say which
+    # nfclaw validated, launched and recorded it.
+    from runner import version
+    out = tmp_path / "out"
+    out.mkdir()
+    prov = provenance.write(outdir=out, pipeline="mini", command_str="nextflow run x",
+                            submodule=_st(tmp_path / "up"), input_paths=[])
+    manifest = json.loads((prov / "run_manifest.json").read_text())
+    assert manifest["nfclaw"] == version.identity()
+    assert manifest["nfclaw"]["version"] == version.package_version()
+
+
 def test_defensive_without_pipeline_info(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
