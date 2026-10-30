@@ -9,7 +9,7 @@ from librarian import write_skill
 from librarian.add_pipeline import read_sources, validate_pipeline_name
 from runner import submodule as submod
 from runner import budget, execution
-from runner.provenance import _atomic_bytes
+from runner.atomic import write_bytes
 from runner.probes import capture
 from runner.settings import seconds
 
@@ -116,7 +116,7 @@ def _bump(name: str, url: str, repo_root: Path) -> str | None:
                                   f"160000,{match[1]},{relative}"], check=True)]
         for path, content in saved.items():
             actions.append(lambda p=path, c=content: p.unlink(missing_ok=True) if c is None
-                           else _atomic_bytes(p, c[0], mode=c[1]))
+                           else write_bytes(p, c[0], mode=c[1]))
         for action in actions:
             try:
                 with budget.suspend():
