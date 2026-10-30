@@ -48,16 +48,6 @@ def test_discovery_step_fails_when_discovery_fails():
     assert "pipefail" in step
 
 
-def test_jobs_that_run_upstream_code_do_not_keep_a_write_token():
-    # Both jobs evaluate upstream pipeline code (`nextflow run -preview` parses each release's
-    # Groovy config) while holding contents: write; the checkout must not leave that token
-    # in .git/config.
-    for name in ("auto-update.yml", "discover-pipelines.yml"):
-        text = _text(name)
-        checkouts = text.count("uses: actions/checkout@")
-        assert checkouts == text.count("persist-credentials: false"), name
-
-
 def test_no_checkout_leaves_its_token_in_the_git_config():
     # A persisted token sits in .git/config for every later step, including the upstream pipeline
     # code these jobs parse or run, and in any artifact that uploads the workspace. No job here
@@ -68,23 +58,40 @@ def test_no_checkout_leaves_its_token_in_the_git_config():
             path.name
 
 
-@pytest.mark.parametrize('name', ['auto-update.yml', 'discover-pipelines.yml'])
-def test_maintenance_wires_candidate_gates_to_isolated_publication(name):
+@pytest.mark.parametrize('name, kind', [('auto-update.yml', 'update'),
+                                        ('discover-pipelines.yml', 'discover')])
+def test_maintenance_hands_its_frozen_candidate_to_the_shared_gate(name, kind):
     yaml = pytest.importorskip('yaml')
     jobs = yaml.load(_text(name), Loader=yaml.BaseLoader)['jobs']
+    assert set(jobs) == {'prepare', 'gate'}
+    assert jobs['prepare'].get('permissions', {}).get('contents', 'read') == 'read'
+    gate = jobs['gate']
+    assert gate['uses'] == './.github/workflows/maintenance-gate.yml'
+    assert gate['needs'] == 'prepare'
+    # Candidate consumers use the immutable producer ID, including on failed-job reruns.
+    assert gate['with'] == {'base_sha': '${{ needs.prepare.outputs.base }}',
+                            'candidate_sha': '${{ needs.prepare.outputs.sha }}',
+                            'candidate_artifact': '${{ needs.prepare.outputs.artifact }}',
+                            'pipelines': '${{ needs.prepare.outputs.pipelines }}', 'kind': kind}
+
+
+def test_the_shared_gate_wires_every_check_to_the_isolated_publisher():
+    yaml = pytest.importorskip('yaml')
+    jobs = yaml.load(_text('maintenance-gate.yml'), Loader=yaml.BaseLoader)['jobs']
     publisher = jobs['publish']
-    assert set(publisher['needs']) == {'prepare', 'validate', 'native', 'drift'}
+    assert set(publisher['needs']) == {'validate', 'native', 'drift'}
     assert jobs['validate']['uses'] == './.github/workflows/tests.yml'
     assert jobs['native']['uses'] == './.github/workflows/maintenance-native.yml'
-    for job in ('prepare', 'validate', 'native', 'drift'):
-        assert jobs[job].get('permissions', {}).get('contents', 'read') == 'read'
+    # The callers grant write for the publisher alone: every gate job drops back to read.
+    for job in ('validate', 'native', 'drift'):
+        assert jobs[job]['permissions'] == {'contents': 'read'}
     environment = publisher['steps'][-1]['env']
     for field, producer in [('VALIDATION_RESULT', 'validate'), ('DRIFT_RESULT', 'drift'),
                             ('NATIVE_RESULT', 'native')]:
         assert environment[field] == '${{ needs.' + producer + '.result }}'
-    # Candidate consumers use the immutable producer ID, including on failed-job reruns.
+    assert environment['UPDATE_KIND'] == '${{ inputs.kind }}'
     for job in ('validate', 'native'):
-        assert jobs[job]['with']['candidate_artifact'] == '${{ needs.prepare.outputs.artifact }}'
+        assert jobs[job]['with']['candidate_artifact'] == '${{ inputs.candidate_artifact }}'
 
 
 @pytest.mark.parametrize('parsing', ['..  [100%]\n',
