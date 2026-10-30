@@ -171,10 +171,12 @@ export function Nav({ repo }: { repo: string | null }) {
             <button
               onClick={openPalette}
               className="group hidden h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] pl-3 pr-1.5 text-sm text-fog-dim transition hover:border-white/20 hover:text-fog sm:inline-flex"
-              aria-label="Search (⌘K)"
+              aria-keyshortcuts="Meta+K Control+K"
             >
+              {/* Named by its visible text ("Search ⌘K"), so speech input can say what it shows;
+                  the word stays readable to assistive technology where it is not shown. */}
               <Search className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Search</span>
+              <span className="sr-only lg:not-sr-only">Search</span>
               <span className="kbd ml-1 h-6 px-2 group-hover:text-fog-muted">{mac ? "⌘K" : "Ctrl K"}</span>
             </button>
             <button

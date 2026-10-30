@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `SAMPLE_ID` | string | yes |  | matches ^\S+$ |
-| `RCC_FILE` | string (file path) | yes |  | matches ^\S+\.RCC$ |
-| `RCC_FILE_NAME` | string | yes |  | matches ^\S+\.RCC$ |
+| `SAMPLE_ID` | string | yes |  | matches `^\S+$` |
+| `RCC_FILE` | string (file path) | yes |  | matches `^\S+\.RCC$` |
+| `RCC_FILE_NAME` | string | yes |  | matches `^\S+\.RCC$` |
 | `TIME` | string or integer | no |  |  |
 | `TREATMENT` | string or integer | no |  |  |
 | `INCLUDE` | integer | no | `0`, `1` |  |
@@ -49,7 +49,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

@@ -12,7 +12,7 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email-on-fail` | string |  | yes |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary, only when pipeline fails. |
+| `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
 | `--hook-url` | string |  | yes |  |  |  | Incoming hook URL for messaging service |
@@ -20,40 +20,40 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 | `--multiqc-config` | string (file path) |  | yes |  |  |  | Custom config file to supply to MultiQC. |
 | `--multiqc-logo` | string |  | yes |  |  |  | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file |
 | `--multiqc-methods-description` | string |  |  |  |  |  | Custom MultiQC yaml file containing HTML including a methods description. |
-| `--pipelines-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/viralrecon | Base URL or local path to location of pipeline test dataset files |
+| `--pipelines-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/viralrecon` | Base URL or local path to location of pipeline test dataset files |
 | `--plaintext-email` | boolean |  | yes |  |  |  | Send plain-text email instead of HTML. |
-| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | copy | Method used to save pipeline results to output directory. |
+| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | `copy` | Method used to save pipeline results to output directory. |
 | `--show-hidden` | boolean |  |  |  |  |  | Display hidden parameters in the help message (only works when --help or --help_full are provided). |
 | `--trace-report-suffix` | string |  | yes |  |  |  | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. |
-| `--validate-params` | boolean |  | yes |  |  | true | Boolean whether to validate parameters against the schema at runtime |
+| `--validate-params` | boolean |  | yes |  |  | `true` | Boolean whether to validate parameters against the schema at runtime |
 | `--version` | boolean |  | yes |  |  |  | Display version and exit. |
 
 ## illumina_de_novo_assembly_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--assemblers` | string |  |  |  |  | spades | Specify which assembly algorithms you would like to use. Available options are 'spades', 'unicycler' and 'minia'. |
+| `--assemblers` | string |  |  |  |  | `spades` | Specify which assembly algorithms you would like to use. Available options are 'spades', 'unicycler' and 'minia'. |
 | `--blast-db` | string (file or directory path) |  |  |  |  |  | Path to directory or tar.gz archive for pre-built BLAST database. |
-| `--min-contig-length` | integer |  |  |  |  | 200 | Minimum contig length to filter from BLAST results. |
-| `--min-perc-contig-aligned` | number |  |  |  |  | 0.7 | Minimum percentage of contig aligned to filter from BLAST results. |
+| `--min-contig-length` | integer |  |  |  |  | `200` | Minimum contig length to filter from BLAST results. |
+| `--min-perc-contig-aligned` | number |  |  |  |  | `0.7` | Minimum percentage of contig aligned to filter from BLAST results. |
 | `--skip-abacas` | boolean |  |  |  |  |  | Skip ABACAS process for assembly contiguation. |
 | `--skip-assembly` | boolean |  |  |  |  |  | Specify this parameter to skip all of the de novo assembly steps in the pipeline. |
 | `--skip-assembly-quast` | boolean |  |  |  |  |  | Skip generation of QUAST aggregated report for assemblies. |
 | `--skip-bandage` | boolean |  |  |  |  |  | Skip Bandage image creation for assembly visualisation. |
 | `--skip-blast` | boolean |  |  |  |  |  | Skip blastn of assemblies relative to reference genome. |
 | `--skip-noninternal-primers` | boolean |  |  |  |  |  | Set this parameter to false to add an X at the begining or end of the primer's fasta sequence to specify cutadapt that they are non-internal 5' or 3' adapters, respectively. |
-| `--skip-plasmidid` | boolean |  |  |  |  | true | Skip assembly report generation by PlasmidID. |
+| `--skip-plasmidid` | boolean |  |  |  |  | `true` | Skip assembly report generation by PlasmidID. |
 | `--spades-hmm` | string (file path) |  |  |  |  |  | Path to profile HMMs specific for gene/organism to enhance SPAdes assembly. |
-| `--spades-mode` | string |  |  | `rnaviral`, `corona`, `metaviral`, `meta`, `metaplasmid`, `plasmid`, `isolate`, `rna`, `bio` |  | rnaviral | Specify the SPAdes mode you would like to run (default: 'rnaviral'). |
+| `--spades-mode` | string |  |  | `rnaviral`, `corona`, `metaviral`, `meta`, `metaplasmid`, `plasmid`, `isolate`, `rna`, `bio` |  | `rnaviral` | Specify the SPAdes mode you would like to run (default: 'rnaviral'). |
 | `--threeprime-adapters` | boolean |  |  |  |  |  | Set this parameter to true when the primer's for cutadapt are 3' adapters. Default value is false, as default primers are 5' adapters. |
 
 ## illumina_qc_read_trimming_and_filtering_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--kraken2-assembly-host-filter` | boolean |  |  |  |  | true | Remove host reads identified by Kraken2 before running aseembly steps in the pipeline. |
-| `--kraken2-db` | string (file or directory path) |  |  |  |  | s3://ngi-igenomes/test-data/viralrecon/kraken2_human.tar.gz | Full path to Kraken2 database built from host genome. |
-| `--kraken2-db-name` | string |  |  |  |  | human | Name for host genome as recognised by Kraken2 when using the 'kraken2 build' command. |
+| `--kraken2-assembly-host-filter` | boolean |  |  |  |  | `true` | Remove host reads identified by Kraken2 before running aseembly steps in the pipeline. |
+| `--kraken2-db` | string (file or directory path) |  |  |  |  | `s3://ngi-igenomes/test-data/viralrecon/kraken2_human.tar.gz` | Full path to Kraken2 database built from host genome. |
+| `--kraken2-db-name` | string |  |  |  |  | `human` | Name for host genome as recognised by Kraken2 when using the 'kraken2 build' command. |
 | `--kraken2-variants-host-filter` | boolean |  |  |  |  |  | Remove host reads identified by Kraken2 before running variant calling steps in the pipeline. |
 | `--save-trimmed-fail` | boolean |  |  |  |  |  | Save the trimmed FastQ files in the results directory. |
 | `--skip-cutadapt` | boolean |  |  |  |  |  | Skip the amplicon trimming step with Cutadapt when using --protocol amplicon. |
@@ -65,18 +65,18 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--consensus-caller` | string |  |  | `ivar`, `bcftools` |  | bcftools | Specify which consensus calling algorithm you would like to use. Available options are 'bcftools' and 'ivar' (default: 'bcftools'). |
+| `--consensus-caller` | string |  |  | `ivar`, `bcftools` |  | `bcftools` | Specify which consensus calling algorithm you would like to use. Available options are 'bcftools' and 'ivar' (default: 'bcftools'). |
 | `--filter-duplicates` | boolean |  |  |  |  |  | Filtered duplicates reads detected by Picard MarkDuplicates from alignments. |
 | `--ivar-trim-noprimer` | boolean |  |  |  |  |  | This option unsets the '-e' parameter in 'ivar trim' to discard reads without primers. |
 | `--ivar-trim-offset` | integer |  |  |  |  |  | This option sets the '-x' parameter in 'ivar trim' so that reads that occur at the specified offset positions relative to primer positions will also be trimmed. |
-| `--min-mapped-reads` | integer |  |  |  |  | 1000 | Minimum number of mapped reads below which samples are removed from further processing. Some downstream steps in the pipeline will fail if this threshold is too low. |
+| `--min-mapped-reads` | integer |  |  |  |  | `1000` | Minimum number of mapped reads below which samples are removed from further processing. Some downstream steps in the pipeline will fail if this threshold is too low. |
 | `--pango-database` | string (directory path) |  |  |  |  |  | Path to pangolin datadir. |
 | `--save-mpileup` | boolean |  |  |  |  |  | Save mpileup files generated when calling variants with iVar variants or iVar consensus. |
 | `--save-unaligned` | boolean |  |  |  |  |  | Save unaligned reads in FastQ format from Bowtie 2 to the results directory. |
 | `--skip-consensus` | boolean |  |  |  |  |  | Skip genome consensus creation step and any downstream QC. |
 | `--skip-consensus-plots` | boolean |  |  |  |  |  | Skip creation of consensus base density plots. |
 | `--skip-ivar-trim` | boolean |  |  |  |  |  | Skip iVar primer trimming step. Not recommended for --protocol amplicon. |
-| `--skip-markduplicates` | boolean |  |  |  |  | true | Skip picard MarkDuplicates step. |
+| `--skip-markduplicates` | boolean |  |  |  |  | `true` | Skip picard MarkDuplicates step. |
 | `--skip-picard-metrics` | boolean |  |  |  |  |  | Skip Picard CollectMultipleMetrics steps. |
 | `--skip-snpeff` | boolean |  |  |  |  |  | Skip SnpEff and SnpSift annotation of variants. |
 | `--skip-variants` | boolean |  |  |  |  |  | Specify this parameter to skip all of the variant calling and mapping steps in the pipeline. |
@@ -86,8 +86,8 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
-| `--input` | string (file path) |  |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about the samples you would like to analyse. |
+| `--email` | string |  |  |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary. |
+| `--input` | string (file path) |  |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about the samples you would like to analyse. |
 | `--multiqc-title` | string |  |  |  |  |  | MultiQC report title. Printed as page header, used for filename if not otherwise specified. |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--platform` | string |  |  | `illumina`, `nanopore` |  |  | NGS platform used to sequence the samples. |
@@ -101,19 +101,19 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 | `--config-profile-description` | string |  | yes |  |  |  | Institutional config description. |
 | `--config-profile-name` | string |  | yes |  |  |  | Institutional config name. |
 | `--config-profile-url` | string |  | yes |  |  |  | Institutional config URL link. |
-| `--custom-config-base` | string (directory path) |  | yes |  |  | https://raw.githubusercontent.com/nf-core/configs/master | Base directory for Institutional configs. |
-| `--custom-config-version` | string |  | yes |  |  | master | Git commit id for Institutional configs. |
+| `--custom-config-base` | string (directory path) |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
+| `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
 ## nanopore_illumina_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--freyja-barcodes` | string (file or directory path) |  |  |  |  |  | Lineage defining barcodes, default is most recent from UShER database. |
-| `--freyja-db-name` | string |  |  |  |  | freyja_db | Specify the name where to store UShER database (default: 'freyja_db'). |
-| `--freyja-depthcutoff` | integer |  |  |  | ≥ 0 | 0 | Specify a coverage depth minimum which excludes sites with coverage less than the specified value |
+| `--freyja-db-name` | string |  |  |  |  | `freyja_db` | Specify the name where to store UShER database (default: 'freyja_db'). |
+| `--freyja-depthcutoff` | integer |  |  |  | ≥ 0 | `0` | Specify a coverage depth minimum which excludes sites with coverage less than the specified value |
 | `--freyja-lineages` | string (file or directory path) |  |  |  |  |  | Metadata of lineages that match barcode, default is most recent from UShER database. |
-| `--freyja-repeats` | integer |  |  |  | ≥ 1 | 100 | Specify the number of bootstrap repeats to do. |
-| `--max-multiqc-email-size` | string |  | yes |  |  | 25.MB | File size limit when attaching MultiQC reports to summary emails. |
+| `--freyja-repeats` | integer |  |  |  | ≥ 1 | `100` | Specify the number of bootstrap repeats to do. |
+| `--max-multiqc-email-size` | string |  | yes |  |  | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
 | `--nextclade-dataset` | string |  |  |  |  |  | Full path to Nextclade dataset required for 'nextclade run' command. |
 | `--nextclade-dataset-name` | string |  |  |  |  |  | Name of Nextclade dataset to retrieve. A list of available datasets can be obtained using the 'nextclade dataset list' command. |
 | `--nextclade-dataset-tag` | string |  |  |  |  |  | Version tag of the dataset to download. A list of available datasets can be obtained using the 'nextclade dataset list' command. |
@@ -134,9 +134,9 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 | `--artic-minion-model-dir` | string |  |  |  |  |  | Path containing clair3 models. Defaults to models packaged with conda installation |
 | `--artic-scheme` | string |  |  |  |  |  | Primer scheme recognised by the artic minion command. |
 | `--fastq-dir` | string (directory path) |  |  |  |  |  | Path to a folder containing fastq files from the Nanopore run. |
-| `--min-barcode-reads` | integer |  |  |  |  | 100 | Minimum number of raw reads required per sample/barcode in order to be considered for the downstream processing steps. |
-| `--min-guppyplex-reads` | integer |  |  |  |  | 10 | Minimum number of reads required after the artic guppyplex process per sample/barcode in order to be considered for the downstream processing steps. |
-| `--sequencing-summary` | string (file path) |  |  |  | matches ^\S+\.txt$ |  | Sequencing summary file generated after Nanopore run completion. |
+| `--min-barcode-reads` | integer |  |  |  |  | `100` | Minimum number of raw reads required per sample/barcode in order to be considered for the downstream processing steps. |
+| `--min-guppyplex-reads` | integer |  |  |  |  | `10` | Minimum number of reads required after the artic guppyplex process per sample/barcode in order to be considered for the downstream processing steps. |
+| `--sequencing-summary` | string (file path) |  |  |  | matches `^\S+\.txt$` |  | Sequencing summary file generated after Nanopore run completion. |
 | `--skip-nanoplot` | boolean |  |  |  |  |  | Skip NanoPlot. |
 | `--skip-pycoqc` | boolean |  |  |  |  |  | Skip pycoQC. |
 
@@ -144,15 +144,15 @@ nf-core/viralrecon pipeline parameters. Every parameter from the pinned `nextflo
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--additional-annotation` | string (file path) |  |  |  | matches ^\S+(\.gff\|\.gtf)(\.gz)?$ |  | Full path to additional annotation file in GTF or GFF format. |
+| `--additional-annotation` | string (file path) |  |  |  | matches `^\S+(\.gff\|\.gtf)(\.gz)?$` |  | Full path to additional annotation file in GTF or GFF format. |
 | `--bowtie2-index` | string (file or directory path) |  |  |  |  |  | Path to directory or tar.gz archive for pre-built Bowtie2 index. |
-| `--fasta` | string (file path) |  |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ |  | Path to FASTA genome file. |
+| `--fasta` | string (file path) |  |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` |  | Path to FASTA genome file. |
 | `--genome` | string |  |  |  |  |  | Name of viral reference genome. |
-| `--gff` | string (file path) |  |  |  | matches ^\S+\.gff(\.gz)?$ |  | Full path to GFF annotation file. |
-| `--primer-bed` | string (file path) |  |  |  | matches ^\S+\.bed(\.gz)?$ |  | If the '--protocol amplicon' parameter is provided then iVar is used to trim primer sequences after read alignment and before variant calling. |
-| `--primer-fasta` | string (file path) |  |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ |  | If the '--protocol amplicon' parameter is provided then Cutadapt is used to trim primer sequences from FastQ files before de novo assembly. |
-| `--primer-left-suffix` | string |  |  |  |  | _LEFT | Suffix used in name field of '--primer_bed' to indicate left primer position. |
-| `--primer-right-suffix` | string |  |  |  |  | _RIGHT | Suffix used in name field of '--primer_bed' to indicate right primer position. |
+| `--gff` | string (file path) |  |  |  | matches `^\S+\.gff(\.gz)?$` |  | Full path to GFF annotation file. |
+| `--primer-bed` | string (file path) |  |  |  | matches `^\S+\.bed(\.gz)?$` |  | If the '--protocol amplicon' parameter is provided then iVar is used to trim primer sequences after read alignment and before variant calling. |
+| `--primer-fasta` | string (file path) |  |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` |  | If the '--protocol amplicon' parameter is provided then Cutadapt is used to trim primer sequences from FastQ files before de novo assembly. |
+| `--primer-left-suffix` | string |  |  |  |  | `_LEFT` | Suffix used in name field of '--primer_bed' to indicate left primer position. |
+| `--primer-right-suffix` | string |  |  |  |  | `_RIGHT` | Suffix used in name field of '--primer_bed' to indicate right primer position. |
 | `--primer-set` | string |  |  |  |  |  | The primer set to be used for the data analysis. |
 | `--primer-set-version` | number |  |  |  |  |  | Version of the primer set e.g. '--primer_set artic --primer_set_version 3'. |
 | `--save-reference` | boolean |  |  |  |  |  | If generated by the pipeline save reference genome related files to the results folder. |

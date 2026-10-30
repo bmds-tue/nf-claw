@@ -901,6 +901,17 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
             raise
         hand_path = _write_json(dest / "handoff.json",
                                 {**hand.record, "from_stage": prev.stage.id, "to_stage": stage.id})
+        if (kept := _unchanged_handoff(stage_dir, dest, hand_path)) is not None:
+            # The attempt being resumed ran on these very files: keep their paths, so its inputs
+            # (and Nextflow's cache) are unchanged; a new path alone would recompute every task.
+            shutil.rmtree(dest)
+            with contextlib.suppress(OSError):
+                dest.parent.rmdir()                       # `attempts/`, when nothing else is there
+            hand_path, recorded = kept
+            hand = handoff.Handoff(
+                {name: recorded["params"][name]["value"] for name in hand.params}, recorded)
+            _say(log, f"{stage.dirname}: its input from {prev.stage.dirname} is unchanged; kept "
+                      f"the handoff its previous attempt used ({hand_path.parent})")
         entry["handoff"] = str(hand_path)
         if warn:
             for name in sorted(explicit):
@@ -980,6 +991,37 @@ def _run_stage(p: Planned, prev: Planned | None, entry: dict, state: dict, *, sp
          + (" — with caveats the pipeline reported about its results" if caveats else ""))
     for caveat in caveats:
         _say(log, f"{stage.dirname}: caveat: {caveat}")
+
+
+def _unchanged_handoff(stage_dir: Path, fresh: Path, written: Path) -> tuple[Path, dict] | None:
+    """The handoff record (path, content) the stage's previous attempt ran on, when the one just
+    written to `fresh` matches it: the same record once `fresh` reads as its directory, and the same
+    bytes in every file. None when there is no such attempt, or its record changed since it ran."""
+    manifest = _read_json(stage_dir / "provenance" / "run_manifest.json")
+    chain_link = manifest.get("chain") if isinstance(manifest, dict) else None
+    upstream = chain_link.get("upstream") if isinstance(chain_link, dict) else None
+    if not isinstance(upstream, dict) or not isinstance(upstream.get("handoff"), str):
+        return None
+    previous = Path(upstream["handoff"])
+    if previous.parent == fresh or _sha(previous) != upstream.get("handoff_sha256"):
+        return None
+    try:
+        recorded = json.loads(previous.read_text(encoding="utf-8"))
+        text = written.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    moved = json.loads(text.replace(json.dumps(str(fresh))[1:-1],
+                                    json.dumps(str(previous.parent))[1:-1]))
+    if moved != recorded or not isinstance(recorded.get("params"), dict):
+        return None
+    for path in fresh.rglob("*"):
+        if path.is_file() and path != written:
+            try:
+                if (previous.parent / path.relative_to(fresh)).read_bytes() != path.read_bytes():
+                    return None
+            except OSError:
+                return None
+    return previous, recorded
 
 
 def _caveats(manifest: Any) -> list[str]:

@@ -27,7 +27,7 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | integer or string | no |  | matches ^\S+$ |
+| `sample` | integer or string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.(csv|tsv)$`.
 
@@ -41,29 +41,29 @@ sample
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--study-name` | string | study |  |  | A string identifier used to name result files in the output directory |
-| `--study-type` | string | rnaseq | `rnaseq`, `generic_matrix`, `affy_array`, `maxquant`, `geo_soft_file` |  | Input data format category used for input validation and routing (not for selecting analysis methods). |
-| `--input` | string (file path) |  |  | matches ^\S+\.(csv\|tsv)$ | Path to CSV/TSV file containing information about the samples in the experiment. |
+| `--study-name` | string | `study` |  |  | A string identifier used to name result files in the output directory |
+| `--study-type` | string | `rnaseq` | `rnaseq`, `generic_matrix`, `affy_array`, `maxquant`, `geo_soft_file` |  | Input data format category used for input validation and routing (not for selecting analysis methods). |
+| `--input` | string (file path) |  |  | matches `^\S+\.(csv\|tsv)$` | Path to CSV/TSV file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--observations-id-col` | string | sample |  |  | Column in the sample sheet to be used as the primary sample identifier |
-| `--observations-type` | string | sample |  |  | Type of observation |
-| `--features-id-col` | string | gene_id |  |  | Feature ID attribute in the abundance table as well as in the GTF file (e.g. the gene_id field) |
-| `--features-name-col` | string | gene_name |  |  | Feature name attribute in the abundance table as well as in the GTF file (e.g. the gene symbol field) |
-| `--features-type` | string | gene |  |  | Type of feature. Often 'gene' |
+| `--observations-id-col` | string | `sample` |  |  | Column in the sample sheet to be used as the primary sample identifier |
+| `--observations-type` | string | `sample` |  |  | Type of observation |
+| `--features-id-col` | string | `gene_id` |  |  | Feature ID attribute in the abundance table as well as in the GTF file (e.g. the gene_id field) |
+| `--features-name-col` | string | `gene_name` |  |  | Feature name attribute in the abundance table as well as in the GTF file (e.g. the gene symbol field) |
+| `--features-type` | string | `gene` |  |  | Type of feature. Often 'gene' |
 | `--filtering-min-abundance` | integer or boolean |  |  |  | Minimum abundance value. Set to false to disable abundance filtering. |
-| `--exploratory-clustering-method` | string | ward.D2 |  |  | Clustering method used in dendrogram creation |
-| `--exploratory-cor-method` | string | spearman |  |  | Correlation method used in dendrogram creation |
-| `--exploratory-n-features` | integer | 500 |  |  | Number of features selected before certain exploratory analyses. If -1, will use all features. |
-| `--exploratory-main-variable` | string | auto_pca |  |  | How should the main grouping variable be selected? 'auto_pca', 'contrasts', or a valid column name from the observations table. |
-| `--exploratory-palette-name` | string | Set1 |  |  | Valid R palette name |
-| `--differential-feature-id-column` | string | gene_id |  |  | The feature identifier column in differential results tables |
-| `--differential-min-fold-change` | number | 2 |  |  | Minimum fold change used to calculate differential feature numbers. Note that this number will be log2 transformed |
-| `--differential-max-pval` | number | 1 |  |  | Maximum p value used to calculate differential feature numbers |
-| `--differential-max-qval` | number | 0.05 |  |  | Maximum q value used to calculate differential feature numbers |
-| `--differential-palette-name` | string | Set1 |  |  | Valid R palette name |
-| `--report-file` | string (file path) | ${projectDir}/assets/differentialabundance_report.qmd |  | matches ^[^,\s]+\.(Rmd\|qmd\|ipynb)(\s*,\s*[^,\s]+\.(Rmd\|qmd\|ipynb))*$ | Qmd/Rmd/ipynb report template(s) from which to create the pipeline report. Supply a single path or a comma-separated list of paths to render multiple reports per paramset. |
-| `--logo-file` | string | ${projectDir}/docs/images/nf-core-differentialabundance_logo_light.png |  |  | A logo to display in the report instead of the generic pipeline logo. |
-| `--css-file` | string | ${projectDir}/assets/nf-core_style.css |  |  | CSS to use to style the output, in lieu of the default nf-core styling |
+| `--exploratory-clustering-method` | string | `ward.D2` |  |  | Clustering method used in dendrogram creation |
+| `--exploratory-cor-method` | string | `spearman` |  |  | Correlation method used in dendrogram creation |
+| `--exploratory-n-features` | integer | `500` |  |  | Number of features selected before certain exploratory analyses. If -1, will use all features. |
+| `--exploratory-main-variable` | string | `auto_pca` |  |  | How should the main grouping variable be selected? 'auto_pca', 'contrasts', or a valid column name from the observations table. |
+| `--exploratory-palette-name` | string | `Set1` |  |  | Valid R palette name |
+| `--differential-feature-id-column` | string | `gene_id` |  |  | The feature identifier column in differential results tables |
+| `--differential-min-fold-change` | number | `2` |  |  | Minimum fold change used to calculate differential feature numbers. Note that this number will be log2 transformed |
+| `--differential-max-pval` | number | `1` |  |  | Maximum p value used to calculate differential feature numbers |
+| `--differential-max-qval` | number | `0.05` |  |  | Maximum q value used to calculate differential feature numbers |
+| `--differential-palette-name` | string | `Set1` |  |  | Valid R palette name |
+| `--report-file` | string (file path) | `${projectDir}/assets/differentialabundance_report.qmd` |  | matches `^[^,\s]+\.(Rmd\|qmd\|ipynb)(\s*,\s*[^,\s]+\.(Rmd\|qmd\|ipynb))*$` | Qmd/Rmd/ipynb report template(s) from which to create the pipeline report. Supply a single path or a comma-separated list of paths to render multiple reports per paramset. |
+| `--logo-file` | string | `${projectDir}/docs/images/nf-core-differentialabundance_logo_light.png` |  |  | A logo to display in the report instead of the generic pipeline logo. |
+| `--css-file` | string | `${projectDir}/assets/nf-core_style.css` |  |  | CSS to use to style the output, in lieu of the default nf-core styling |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use the `reference_genome_options` group in [reference.md](reference.md) lists the reference options. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

@@ -7,7 +7,7 @@ repositories are refused. A private index preserves unrelated staging and build 
 
 ---
 
-### Navigation
+## Navigation
 
 [Overview](#overview) • [Gating Criteria](#publication-gating-criteria) • [Trusted-Base Publisher](#fresh-trusted-base-publisher) • [Verification Boundaries](#verification-boundaries)
 

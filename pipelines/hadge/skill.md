@@ -27,13 +27,13 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `rna_matrix` | string (file or directory path) | no |  | matches ^\S+$ |
-| `hto_matrix` | string (file or directory path) | no |  | matches ^\S+$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `barcodes` | string (file path) | no |  | matches ^\S+\.tsv$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `rna_matrix` | string (file or directory path) | no |  | matches `^\S+$` |
+| `hto_matrix` | string (file or directory path) | no |  | matches `^\S+$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `barcodes` | string (file path) | no |  | matches `^\S+\.tsv$` |
 | `n_samples` | integer | no |  | ≥ 1 |
-| `vcf` | string (file path) | no |  | matches ^\S+\.vcf$ |
+| `vcf` | string (file path) | no |  | matches `^\S+\.vcf$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -49,8 +49,8 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
-| `--mode` | string | rescue | `genetic`, `hashing`, `rescue`, `donor_match` |  | Mode of the pipeline. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
+| `--mode` | string | `rescue` | `genetic`, `hashing`, `rescue`, `donor_match` |  | Mode of the pipeline. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

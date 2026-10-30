@@ -27,13 +27,13 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
 | `fastq_2` | string | no |  |  |
 | `replicate` | integer | no |  |  |
-| `antibody` | string | no |  | matches ^\S+$ |
-| `control` | string | no |  | matches ^\S+$ |
-| `control_replicate` | string | no |  | matches ^\S+$ |
+| `antibody` | string | no |  | matches `^\S+$` |
+| `control` | string | no |  | matches `^\S+$` |
+| `control_replicate` | string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -49,9 +49,9 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--fasta` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path to FASTA genome file. |
+| `--fasta` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path to FASTA genome file. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

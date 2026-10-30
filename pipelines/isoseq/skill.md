@@ -27,8 +27,8 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `seq_data` | string (file path) | yes |  | matches ^\S+\.(bam\|fa\|fa\.gz)$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `seq_data` | string (file path) | yes |  | matches `^\S+\.(bam\|fa\|fa\.gz)$` |
 | `pbi` | string | no |  |  |
 | `start_from` | string | yes | `ccs`, `lima`, `refine`, `mapping` |  |
 
@@ -46,7 +46,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--aligner` | string |  | `minimap2`, `ultra` |  | Aligner to use for mapping: minimap2 or ultra |
 

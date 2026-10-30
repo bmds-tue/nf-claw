@@ -13,6 +13,7 @@ import {
   splitAllowed,
   isYes,
   unticked,
+  codeText,
 } from "./markdown";
 import { humanize } from "../utils";
 import type {
@@ -137,7 +138,7 @@ function parseSamplesheet(skill: string): SamplesheetColumn[] {
     type: r[1] ?? "",
     required: isYes(r[2] ?? ""),
     allowed: splitAllowed(r[3] ?? ""),
-    constraints: r[4] ?? "",
+    constraints: codeText(r[4] ?? ""),
   }));
 }
 
@@ -163,7 +164,7 @@ function parseRequired(skill: string): RequiredParam[] {
     name: unticked(r[0] ?? ""),
     type: r[1] ?? "",
     allowed: splitAllowed(r[3] ?? ""),
-    constraints: r[4] ?? "",
+    constraints: codeText(r[4] ?? ""),
     description: r[5] ?? "",
   }));
 }
@@ -184,8 +185,8 @@ function parseReference(reference: string): ParameterGroup[] {
       required: isYes(r[2] ?? ""),
       hidden: isYes(r[3] ?? ""),
       allowed: splitAllowed(r[4] ?? ""),
-      constraints: r[5] ?? "",
-      default: r[6] ?? "",
+      constraints: codeText(r[5] ?? ""),
+      default: codeText(r[6] ?? ""),
       description: r[7] ?? "",
       group: groupName,
     }));

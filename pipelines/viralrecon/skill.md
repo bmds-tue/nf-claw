@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string or integer | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
+| `sample` | string or integer | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
 | `barcode` | integer | no |  |  |
 
 `--input` must match `^\S+\.csv$`.

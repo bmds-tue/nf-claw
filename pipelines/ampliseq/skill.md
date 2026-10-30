@@ -27,10 +27,10 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^[a-zA-Z][a-zA-Z0-9_]+$ |
-| `fastq_1` | string (file path) | yes |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `run` | string or integer | no |  | matches ^\S+$ |
+| `sample` | string | yes |  | matches `^[a-zA-Z][a-zA-Z0-9_]+$` |
+| `fastq_1` | string (file path) | yes |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `run` | string or integer | no |  | matches `^\S+$` |
 | `control` | string | no | `control`, `sample` |  |
 | `quant_reading` | number | no |  |  |
 

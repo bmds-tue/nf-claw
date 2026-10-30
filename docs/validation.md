@@ -15,7 +15,7 @@ For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ---
 
-### Navigation
+## Navigation
 
 [Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
@@ -23,7 +23,7 @@ For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ## Environment
 
-| | |
+| Setting | Value |
 |---|---|
 | Host | de.NBI cloud VM, Linux amd64, 28 CPUs, 62 GB RAM, IPv6-only network (DNS64/NAT64) |
 | Containers | Docker 29.1.3 (`-profile docker`) |
@@ -320,6 +320,10 @@ every handoff against the checksums the upstream stage recorded.
 | fetchngs → taxprofiler | the test accessions that have ENA FastQ files (except `SRR9984183`), `perform_shortread_redundancyestimation false` | verified |
 
 [chaining.md](chaining.md) and the chain notes in [known-issues](known-issues.md) explain these settings.
+Run again on 2026-10-29 with exactly these settings, bamtofastq → rnaseq failed in rnaseq's Salmon
+pseudo-alignment: its test profile's prebuilt yeast index quantified the human reads. With
+`skip_pseudo_alignment` added, as the chain notes now say, it completed with verified lineage
+([deep audit](audit/2026-10-29-deep-audit.md), B09).
 
 The createtaxdb stage's outputs were deleted after its lineage had verified, to free disk for the sweep. From then on, `nfclaw chain status` reported the chain's lineage as `BROKEN`. It named the missing checksum record, the missing Bracken database, and each database file taxprofiler had consumed. This is the behaviour the lineage check is designed to have.
 

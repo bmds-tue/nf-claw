@@ -58,6 +58,16 @@ def test_jobs_that_run_upstream_code_do_not_keep_a_write_token():
         assert checkouts == text.count("persist-credentials: false"), name
 
 
+def test_no_checkout_leaves_its_token_in_the_git_config():
+    # A persisted token sits in .git/config for every later step, including the upstream pipeline
+    # code these jobs parse or run, and in any artifact that uploads the workspace. No job here
+    # pushes with it.
+    for path in sorted(WF.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false"), \
+            path.name
+
+
 @pytest.mark.parametrize('name', ['auto-update.yml', 'discover-pipelines.yml'])
 def test_maintenance_wires_candidate_gates_to_isolated_publication(name):
     yaml = pytest.importorskip('yaml')
@@ -236,6 +246,8 @@ def test_dependabot_keeps_every_pinned_action_and_the_website_dependencies_curre
     covered = {}
     for entry in config["updates"]:
         assert entry["schedule"]["interval"] in ("daily", "weekly", "monthly")
+        # A just-published release is where a hijacked or broken package lands; wait it out.
+        assert entry["cooldown"]["default-days"] >= 3, entry["package-ecosystem"]
         patterns = entry.get("directories") or [entry["directory"]]
         directories = {path for pattern in patterns
                        for path in ([ROOT] if not pattern.strip("/")

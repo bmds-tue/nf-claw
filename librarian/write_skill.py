@@ -23,8 +23,42 @@ def _cell(text: object) -> str:
     return " ".join(str(text).split()).replace("|", "\\|")
 
 
-def _reference_description(text: str, ps: ParamSchema) -> str:
-    """Keep upstream prose, but do not link to nonexistent parameter-table anchors."""
+def _code(text: object) -> str:
+    """A literal value as one inline code span, so Markdown shows it as it is: in plain text a
+    pattern's `\\.` loses its backslash, `[a-z]([a-z]*)` becomes a link and `*` pairs become
+    emphasis. A value holding backticks gets a longer fence (CommonMark code spans)."""
+    text = " ".join(str(text).split())
+    if not text:
+        return ""
+    runs = {len(run) for run in re.findall(r"`+", text)}
+    fence = "`" * next(n for n in range(1, len(text) + 2) if n not in runs)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
+# A Markdown link (not an image) to a relative target: not a URL, an absolute path or an anchor.
+_RELATIVE_LINK = re.compile(r"(?<!!)\[([^\]]+)\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|/|#)([^)\s]+)\)")
+
+
+def _source_links(text: str, st: SubmoduleStatus | None) -> str:
+    """Upstream prose links files relative to the pipeline's docs (`../assets/x.tsv`), which point
+    nowhere from these generated files. A link to a file of the pinned tree becomes a permalink at
+    the pinned commit; any other relative link keeps only its label."""
+    root = st.path.resolve() if st is not None else None
+
+    def permalink(match: re.Match) -> str:
+        label, target = match.groups()
+        path = target.split("#", 1)[0]
+        resolved = (root / "docs" / path).resolve() if root is not None and path else None
+        if resolved is None or not resolved.is_relative_to(root) or not resolved.exists():
+            return label
+        relative = resolved.relative_to(root).as_posix()
+        return f"[{label}](https://github.com/nf-core/{st.name}/blob/{st.commit}/{relative})"
+    return _RELATIVE_LINK.sub(permalink, text)
+
+
+def _reference_description(text: str, ps: ParamSchema, st: SubmoduleStatus | None = None) -> str:
+    """Keep upstream prose, but do not link to nonexistent parameter-table anchors or files."""
     def reference(match: re.Match) -> str:
         label, anchor = match.groups()
         if anchor in ps.groups() or anchor == "general":
@@ -32,13 +66,14 @@ def _reference_description(text: str, ps: ParamSchema) -> str:
         name = anchor.removeprefix("--").replace("-", "_")
         missing = name not in ps.params and label.strip("`") == anchor
         return label + (" (not declared in this pinned schema)" if missing else "")
+    text = _source_links(text, st)
     return _cell(re.sub(r"\[([^\]]+)\]\(#([\w-]+)\)", reference, text))
 
 
 def _allowed(values: tuple[str, ...] | None) -> str:
     """An allowed-values cell: each value its own code span, so a value that itself contains a comma
     (ampliseq's `bac,arc,mito,euk`) cannot be mistaken for several."""
-    return _cell(", ".join(f"`{v}`" for v in values)) if values else ""
+    return _cell(", ".join(_code(v) for v in values)) if values else ""
 
 
 # nf-schema's path formats (runner.schema.PATH_FORMATS), as the docs name them. `path` is either a
@@ -63,7 +98,7 @@ def _constraints(obj) -> str:
     Param and Column since they share these attributes."""
     parts: list[str] = []
     if obj.pattern:
-        parts.append(f"matches {obj.pattern}")
+        parts.append(f"matches {_code(obj.pattern)}")
     if obj.minimum is not None:
         parts.append(f"≥ {obj.minimum}")
     if obj.maximum is not None:
@@ -448,7 +483,8 @@ def _sheet_section(insch: InputSchema | None, ps: ParamSchema | None = None) -> 
     if not named:
         # A single unnamed column (e.g. nf-core/fetchngs id list): one value per line, no header.
         c = insch.columns[0] if insch.columns else None
-        constraint = f" Each value must match the pattern `{c.pattern}`." if c and c.pattern else ""
+        constraint = (f" Each value must match the pattern {_code(c.pattern)}."
+                      if c and c.pattern else "")
         return "Input is a plain text file with one value per line (no header)." + constraint + "\n"
     head = "| column | type | required | allowed values | constraints |\n|---|---|---|---|---|\n"
     rows = ""
@@ -543,24 +579,24 @@ def _dependent_rules_section(insch: InputSchema) -> str:
     return "Additional row validation rules from the schema:\n" + "\n".join(lines) + "\n\n"
 
 
-def _param_table(params: list[Param]) -> str:
+def _param_table(params: list[Param], st: SubmoduleStatus | None = None) -> str:
     out = ("| parameter | type | default | allowed values | constraints | description |\n"
            "|---|---|---|---|---|---|\n")
     for p in params:
         default = "" if p.default is None else json_scalar(p.default)
         out += (f"| `--{p.name.replace('_', '-')}` | {_type_with_fmt(p.type, p.fmt)} | "
-                f"{_cell(default)} | {_allowed(p.enum)} | {_constraints(p)} | "
-                f"{_cell(p.description)} |\n")
+                f"{_cell(_code(default))} | {_allowed(p.enum)} | {_constraints(p)} | "
+                f"{_cell(_source_links(p.description, st))} |\n")
     return out
 
 
-def _required_params(ps: ParamSchema) -> str:
+def _required_params(ps: ParamSchema, st: SubmoduleStatus | None = None) -> str:
     """Only the parameters the schema itself marks required — a fact, not a heuristic guess."""
     required = [p for p in ps.params.values() if p.required]
     if not required:
         return ("_The schema marks no parameter required; the pipeline runs with defaults. "
                 "See reference.md to customise._\n")
-    return _param_table(required)
+    return _param_table(required, st)
 
 
 def _is_mandatory_group(title: str) -> bool:
@@ -577,7 +613,7 @@ def _is_mandatory_group(title: str) -> bool:
     return "mandator" in t or t.startswith("required")
 
 
-def _mandatory_params(ps: ParamSchema) -> str:
+def _mandatory_params(ps: ParamSchema, st: SubmoduleStatus | None = None) -> str:
     """Parameters the schema groups as mandatory but does not list in `required` (see above)."""
     params = [p for p in ps.params.values()
               if _is_mandatory_group(p.group_title) and not p.required]
@@ -588,7 +624,7 @@ def _mandatory_params(ps: ParamSchema) -> str:
         "They are absent from the `required` list above only because each carries a default, so "
         "nf-schema will not stop a run that omits them — but the pipeline itself can reject the "
         "default at runtime. Set them deliberately.\n\n"
-        + _param_table(sorted(params, key=lambda p: p.name))
+        + _param_table(sorted(params, key=lambda p: p.name), st)
     )
 
 
@@ -820,7 +856,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
     engine_block = f"## Nextflow engine\n{engine}\n" if engine else ""
     chaining = _chaining_section(name, rules)
     chaining_block = f"## Chaining\n{chaining}\n" if chaining else ""
-    mandatory = _mandatory_params(ps)
+    mandatory = _mandatory_params(ps, st)
     mandatory_block = f"## Mandatory arguments\n{mandatory}\n" if mandatory else ""
     body = (
         f"# {name}\n\n{summary}\n\n"
@@ -832,7 +868,7 @@ def _render_skill(name: str, st: SubmoduleStatus, ps: ParamSchema,
         f"{version_note}"
         f"{correction_block}"
         f"## Inputs\n{_inputs_section(insch, ps)}\n"
-        f"## Required parameters\n{_required_params(ps)}\n"
+        f"## Required parameters\n{_required_params(ps, st)}\n"
         f"{mandatory_block}"
         f"{reference_block}"
         f"{store_block}"
@@ -871,7 +907,8 @@ def _render_reference(name: str, st: SubmoduleStatus, ps: ParamSchema,
             hid = "yes" if p.hidden else ""
             out += (f"| `--{p.name.replace('_', '-')}` | {_type_with_fmt(p.type, p.fmt)} | "
                     f"{req} | {hid} | {_allowed(p.enum)} | {_constraints(p)} | "
-                    f"{_cell(default)} | {_reference_description(p.description, ps)} |\n")
+                    f"{_cell(_code(default))} | "
+                    f"{_reference_description(p.description, ps, st)} |\n")
         out += "\n"
     out += f"<!-- Generated from nf-core/{name}@{st.commit}. Do not edit by hand. -->\n"
     return out

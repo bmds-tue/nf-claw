@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `input` | string | yes |  | matches ^\S+$ |
-| `output_path` | string | yes |  | matches ^\S+$ |
-| `checksum_md5` | string (file path) | no |  | matches ^\S+\.(tsv\|txt\|md5)$ |
-| `checksum_sha` | string (file path) | no |  | matches ^\S+\.(tsv\|txt\|sha256)$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `input` | string | yes |  | matches `^\S+$` |
+| `output_path` | string | yes |  | matches `^\S+$` |
+| `checksum_md5` | string (file path) | no |  | matches `^\S+\.(tsv\|txt\|md5)$` |
+| `checksum_sha` | string (file path) | no |  | matches `^\S+\.(tsv\|txt\|sha256)$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -47,7 +47,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

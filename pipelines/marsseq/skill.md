@@ -27,12 +27,12 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `batch` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
+| `batch` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
 | `fastq_2` | string | yes |  |  |
-| `amp_batches` | string | yes |  | matches ^\S+.xlsx$ |
-| `seq_batches` | string | yes |  | matches ^\S+.xlsx$ |
-| `well_cells` | string | yes |  | matches ^\S+.xlsx$ |
+| `amp_batches` | string | yes |  | matches `^\S+.xlsx$` |
+| `seq_batches` | string | yes |  | matches `^\S+.xlsx$` |
+| `well_cells` | string | yes |  | matches `^\S+.xlsx$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -46,7 +46,7 @@ batch,fastq_1,fastq_2,amp_batches,seq_batches,well_cells
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

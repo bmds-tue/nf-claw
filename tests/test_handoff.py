@@ -297,6 +297,24 @@ def test_rows_in_a_sheet_the_handoff_cannot_take_refuse_it(library, finished_run
     assert err.value.code is ErrorCode.HANDOFF_FAILED
 
 
+def test_a_refusing_pattern_never_refuses_the_sheet_it_hands_over(library, finished_run,
+                                                                  tmp_path):
+    # `refuse_rows_in` names the sheets beside the handed-over one; a pattern broad enough to match
+    # that sheet too refused every handoff with "pe.csv also holds … with pe.csv".
+    _, down = _trees(library("mini_up", "mini"))
+    files = {"pe.csv": "sample,fastq_1,fastq_2\nA,{outdir}/A_1.fq.gz,{outdir}/A_2.fq.gz\n",
+             "A_1.fq.gz": "a1", "A_2.fq.gz": "a2"}
+    rule = _rule({"params": {"input": {"samplesheet": "pe.csv",
+                                       "provides": ["sample", "fastq_1", "fastq_2"],
+                                       "refuse_rows_in": ["*.csv"]}}})
+    up = finished_run(tmp_path / "up", files)
+    handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    assert [r["sample"] for r in _rows(tmp_path / "h" / "input.csv")] == ["A"]
+    up = finished_run(tmp_path / "up2", {**files, "se.csv": "sample,fastq_1,fastq_2\nB,x,\n"})
+    with pytest.raises(NfclawError, match=r"se.csv also holds 1 row\(s\) \(B\)"):
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h2")
+
+
 def test_build_maps_output_files_into_rows(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"reads/B_1.fq.gz": "b1", "reads/A_1.fq.gz": "a1",

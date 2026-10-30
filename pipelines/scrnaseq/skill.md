@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | yes |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | yes |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | yes |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | yes |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
 | `fastq_barcode` | string | no |  |  |
 | `expected_cells` | integer | no |  |  |
 | `seq_center` | string | no |  |  |
@@ -50,7 +50,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Mandatory arguments
@@ -58,9 +58,9 @@ The schema groups these under **Mandatory arguments** — the pipeline authors' 
 
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--aligner` | string | simpleaf | `kallisto`, `star`, `simpleaf`, `cellranger`, `cellrangerarc`, `cellrangermulti` |  | Name of the tool to use for scRNA (pseudo-) alignment. |
+| `--aligner` | string | `simpleaf` | `kallisto`, `star`, `simpleaf`, `cellranger`, `cellrangerarc`, `cellrangermulti` |  | Name of the tool to use for scRNA (pseudo-) alignment. |
 | `--barcode-whitelist` | string (file path) |  |  |  | If not using the 10X Genomics platform, a custom barcode whitelist can be used with `--barcode_whitelist`. |
-| `--protocol` | string | auto |  |  | The protocol that was used to generate the single cell data, e.g. 10x Genomics v2 Chemistry. Can be 'auto' (cellranger only), '10XV1', '10XV2', '10XV3', '10XV4', or any other protocol string that will get directly passed the respective aligner. |
+| `--protocol` | string | `auto` |  |  | The protocol that was used to generate the single cell data, e.g. 10x Genomics v2 Chemistry. Can be 'auto' (cellranger only), '10XV1', '10XV2', '10XV3', '10XV4', or any other protocol string that will get directly passed the respective aligner. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

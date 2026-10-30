@@ -27,17 +27,17 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | no |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `bai` | string (file path) | no |  | matches ^\S+\.bai$ |
-| `cram` | string (file path) | no |  | matches ^\S+\.cram$ |
-| `crai` | string (file path) | no |  | matches ^\S+\.crai$ |
-| `vcf` | string (file path) | no |  | matches ^\S+\.vcf\.gz$ |
-| `tbi` | string (file path) | no |  | matches ^\S+\.vcf\.gz\.tbi$ |
-| `seq_platform` | string | no |  | matches ^\S+$ |
-| `seq_center` | string | no |  | matches ^\S+$ |
+| `sample` | string | no |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `bai` | string (file path) | no |  | matches `^\S+\.bai$` |
+| `cram` | string (file path) | no |  | matches `^\S+\.cram$` |
+| `crai` | string (file path) | no |  | matches `^\S+\.crai$` |
+| `vcf` | string (file path) | no |  | matches `^\S+\.vcf\.gz$` |
+| `tbi` | string (file path) | no |  | matches `^\S+\.vcf\.gz\.tbi$` |
+| `seq_platform` | string | no |  | matches `^\S+$` |
+| `seq_center` | string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.(csv|tsv|yaml|yml|json)$`.
 
@@ -66,10 +66,10 @@ sample,vcf
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.(csv\|tsv\|yaml\|yml\|json)$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.(csv\|tsv\|yaml\|yml\|json)$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--aligner` | string | star | `star` |  | Specifies the alignment algorithm to use. |
-| `--seq-platform` | string | illumina |  |  | Specify the sequencing platform used |
+| `--aligner` | string | `star` | `star` |  | Specifies the alignment algorithm to use. |
+| `--seq-platform` | string | `illumina` |  |  | Specify the sequencing platform used |
 
 ## Reference genome
 **This release resolves a reference genome remotely by default.** `--genome` defaults to `GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. The pinned configuration gives that key the FASTA `${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/genome.fa`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

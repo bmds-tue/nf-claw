@@ -12,27 +12,27 @@ nf-core/detaxizer pipeline parameters. Every parameter from the pinned `nextflow
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--bbduk-kmers` | integer |  |  |  |  | 27 | Length of k-mers for classification carried out by bbduk |
+| `--bbduk-kmers` | integer |  |  |  |  | `27` | Length of k-mers for classification carried out by bbduk |
 | `--fasta-bbduk` | string (file path) |  |  |  |  |  | Location of the fasta which contains the contaminant sequences. |
 
 ## blastn
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--blast-coverage` | number |  |  |  |  | 40.0 | Coverage is the percentage of the query sequence which can be found in the alignments of the sequence match. It can be used to fine-tune the validation step. |
-| `--blast-evalue` | number |  |  |  |  | 0.01 | The expected(e)-value contains information on how many hits of the same score can be found in a database of the size used in the query by chance. The parameter can be used to fine-tune the validation step. |
-| `--blast-identity` | number |  |  |  |  | 40.0 | Identity is the percentage of the exact matches in the query and the sequence found in the database. The parameter can be used to fine-tune the validation step. |
+| `--blast-coverage` | number |  |  |  |  | `40.0` | Coverage is the percentage of the query sequence which can be found in the alignments of the sequence match. It can be used to fine-tune the validation step. |
+| `--blast-evalue` | number |  |  |  |  | `0.01` | The expected(e)-value contains information on how many hits of the same score can be found in a database of the size used in the query by chance. The parameter can be used to fine-tune the validation step. |
+| `--blast-identity` | number |  |  |  |  | `40.0` | Identity is the percentage of the exact matches in the query and the sequence found in the database. The parameter can be used to fine-tune the validation step. |
 | `--fasta-blastn` | string (file path) |  |  |  |  |  | Location of the fasta from which the blastn database will be constructed. |
 
 ## fastp_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--fastp-cut-mean-quality` | integer |  |  |  |  | 1 | fastp option to define the mean quality for trimming |
+| `--fastp-cut-mean-quality` | integer |  |  |  |  | `1` | fastp option to define the mean quality for trimming |
 | `--fastp-eval-duplication` | boolean |  |  |  |  |  | fastp option if duplicates should be filtered or not before classification |
-| `--fastp-qualified-quality` | integer |  |  |  |  | 0 | fastp option to define the threshold of quality of an individual base |
+| `--fastp-qualified-quality` | integer |  |  |  |  | `0` | fastp option to define the threshold of quality of an individual base |
 | `--fastp-save-trimmed-fail` | boolean |  |  |  |  |  | fastp option defining if the reads which failed to be trimmed should be saved |
-| `--reads-minlength` | integer |  |  |  |  | 0 | fastp option defining the minimum readlength of a read |
+| `--reads-minlength` | integer |  |  |  |  | `0` | fastp option defining the minimum readlength of a read |
 | `--save-clipped-reads` | boolean |  |  |  |  |  | fastp option to define if the clipped reads should be saved |
 
 ## general_workflow_parameters
@@ -44,7 +44,7 @@ nf-core/detaxizer pipeline parameters. Every parameter from the pinned `nextflow
 | `--classification-kraken2-post-filtering` | boolean |  |  |  |  |  | If the filtered reads should be classified with kraken2. |
 | `--filter-trimmed` | boolean |  |  |  |  |  | Use the preprocessed reads in the filtering step. Enabling this parameter also enables preprocessing. |
 | `--filter-with-classification` | boolean |  |  |  |  |  | When a validation via blastn is wanted but the filtering should use the IDs from the classification process. |
-| `--filtering-tool` | string |  |  | `seqkit`, `bbmap` |  | seqkit | Select the read-filtering tool. seqkit normalizes FASTQ headers by temporarily renaming them. bbmap uses filterbyname.sh, which matches the first mate only, so second-mate read names are normalised to their first-mate form before filtering and names that do not follow a known mate convention are matched as-is. BBTools I/O forces any base that is N to Q=0. |
+| `--filtering-tool` | string |  |  | `seqkit`, `bbmap` |  | `seqkit` | Select the read-filtering tool. seqkit normalizes FASTQ headers by temporarily renaming them. bbmap uses filterbyname.sh, which matches the first mate only, so second-mate read names are normalised to their first-mate form before filtering and names that do not follow a known mate convention are matched as-is. BBTools I/O forces any base that is N to Q=0. |
 | `--output-removed-reads` | boolean |  |  |  |  |  | If the removed reads should also be written to the output folder. |
 | `--preprocessing` | boolean |  |  |  |  |  | If preprocessing with fastp should be turned on. |
 | `--save-intermediates` | boolean |  |  |  |  |  | Save intermediates to the results folder. |
@@ -56,34 +56,34 @@ nf-core/detaxizer pipeline parameters. Every parameter from the pinned `nextflow
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--generate-downstream-samplesheets` | boolean |  |  |  |  |  | Turn on generation of samplesheets for downstream pipelines. |
-| `--generate-pipeline-samplesheets` | string |  |  |  | matches ^(taxprofiler\|mag)(,(taxprofiler\|mag))*$ | taxprofiler,mag | Specify a comma separated string in quotes to specify which pipeline to generate a samplesheet for. |
+| `--generate-pipeline-samplesheets` | string |  |  |  | matches `^(taxprofiler\|mag)(,(taxprofiler\|mag))*$` | `taxprofiler,mag` | Specify a comma separated string in quotes to specify which pipeline to generate a samplesheet for. |
 
 ## generic_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email-on-fail` | string |  | yes |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary, only when pipeline fails. |
+| `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
-| `--max-multiqc-email-size` | string |  | yes |  | matches ^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$ | 25.MB | File size limit when attaching MultiQC reports to summary emails. |
+| `--max-multiqc-email-size` | string |  | yes |  | matches `^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$` | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
 | `--multiqc-config` | string (file path) |  | yes |  |  |  | Custom config file to supply to MultiQC. |
 | `--multiqc-logo` | string (file path) |  | yes |  |  |  | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file |
 | `--multiqc-methods-description` | string (file path) |  |  |  |  |  | Custom MultiQC yaml file containing HTML including a methods description. |
-| `--pipelines-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/ | Base URL or local path to location of pipeline test dataset files |
+| `--pipelines-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/` | Base URL or local path to location of pipeline test dataset files |
 | `--plaintext-email` | boolean |  | yes |  |  |  | Send plain-text email instead of HTML. |
-| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | copy | Method used to save pipeline results to output directory. |
+| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | `copy` | Method used to save pipeline results to output directory. |
 | `--show-hidden` | boolean |  |  |  |  |  | Display hidden parameters in the help message (only works when --help or --help_full are provided). |
 | `--trace-report-suffix` | string |  | yes |  |  |  | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. |
-| `--validate-params` | boolean |  | yes |  |  | true | Boolean whether to validate parameters against the schema at runtime |
+| `--validate-params` | boolean |  | yes |  |  | `true` | Boolean whether to validate parameters against the schema at runtime |
 | `--version` | boolean |  | yes |  |  |  | Display version and exit. |
 
 ## input_output_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
-| `--input` | string (file path) | yes |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about the samples in the experiment. |
+| `--email` | string |  |  |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary. |
+| `--input` | string (file path) | yes |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about the samples in the experiment. |
 | `--multiqc-title` | string |  |  |  |  |  | MultiQC report title. Printed as page header, used for filename if not otherwise specified. |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
@@ -95,32 +95,32 @@ nf-core/detaxizer pipeline parameters. Every parameter from the pinned `nextflow
 | `--config-profile-description` | string |  | yes |  |  |  | Institutional config description. |
 | `--config-profile-name` | string |  | yes |  |  |  | Institutional config name. |
 | `--config-profile-url` | string |  | yes |  |  |  | Institutional config URL link. |
-| `--custom-config-base` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/configs/master | Base directory for Institutional configs. |
-| `--custom-config-version` | string |  | yes |  |  | master | Git commit id for Institutional configs. |
+| `--custom-config-base` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
+| `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
 ## kraken2
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--cutoff-tax2filter` | integer |  |  |  |  | 0 | Minimum number of assigned k-mers for the taxon/taxa to be assessed or filtered. The pipeline ignores a read with fewer assigned k-mers. |
-| `--cutoff-tax2keep` | number |  |  |  | ≥ 0; ≤ 1 | 0.0 | Ratio per read of assigned to tax2filter k-mers to k-mers assigned to any other taxon (except unclassified). |
-| `--cutoff-unclassified` | number |  |  |  | ≥ 0; ≤ 1 | 0.0 | Ratio per read of assigned to tax2filter k-mers to unclassified k-mers. |
-| `--kraken2confidence` | number |  |  |  |  | 0.0 | Confidence in the classification of a read as a certain taxon. |
-| `--kraken2confidence-filtered` | number |  |  |  |  | 0.0 | Confidence in the classification of a read as a certain taxon. For the filtered reads. |
-| `--kraken2confidence-removed` | number |  |  |  |  | 0.0 | Confidence in the classification of a read as a certain taxon. For the removed reads. |
-| `--kraken2db` | string (file path) |  |  |  |  | https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20240605.tar.gz | The database which is used in the classification step. Please be aware that this default database will require ~60GB download and ~80GB RAM. |
+| `--cutoff-tax2filter` | integer |  |  |  |  | `0` | Minimum number of assigned k-mers for the taxon/taxa to be assessed or filtered. The pipeline ignores a read with fewer assigned k-mers. |
+| `--cutoff-tax2keep` | number |  |  |  | ≥ 0; ≤ 1 | `0.0` | Ratio per read of assigned to tax2filter k-mers to k-mers assigned to any other taxon (except unclassified). |
+| `--cutoff-unclassified` | number |  |  |  | ≥ 0; ≤ 1 | `0.0` | Ratio per read of assigned to tax2filter k-mers to unclassified k-mers. |
+| `--kraken2confidence` | number |  |  |  |  | `0.0` | Confidence in the classification of a read as a certain taxon. |
+| `--kraken2confidence-filtered` | number |  |  |  |  | `0.0` | Confidence in the classification of a read as a certain taxon. For the filtered reads. |
+| `--kraken2confidence-removed` | number |  |  |  |  | `0.0` | Confidence in the classification of a read as a certain taxon. For the removed reads. |
+| `--kraken2db` | string (file path) |  |  |  |  | `https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20240605.tar.gz` | The database which is used in the classification step. Please be aware that this default database will require ~60GB download and ~80GB RAM. |
 | `--save-output-fastqs` | boolean |  | yes |  |  |  | Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files. |
 | `--save-output-fastqs-filtered` | boolean |  |  |  |  |  | Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files. For the filtered reads. |
 | `--save-output-fastqs-removed` | boolean |  |  |  |  |  | Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files. For the removed reads. |
-| `--tax2filter` | string |  |  |  |  | Homo sapiens | The taxon or taxonomic group to be assessed or filtered by the pipeline. |
+| `--tax2filter` | string |  |  |  |  | `Homo sapiens` | The taxon or taxonomic group to be assessed or filtered by the pipeline. |
 
 ## reference_genome_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--genome` | string |  |  |  |  | GRCh38 | Name of iGenomes reference. |
-| `--igenomes-base` | string |  | yes |  |  | s3://ngi-igenomes/igenomes/ | The base path to the igenomes reference files |
+| `--genome` | string |  |  |  |  | `GRCh38` | Name of iGenomes reference. |
+| `--igenomes-base` | string |  | yes |  |  | `s3://ngi-igenomes/igenomes/` | The base path to the igenomes reference files |
 | `--igenomes-ignore` | boolean |  | yes |  |  |  | Do not load the iGenomes reference config. |
-| `--saveReference` | boolean |  |  |  |  | true | Save the reference genome and its index files in the results directory. |
+| `--saveReference` | boolean |  |  |  |  | `true` | Save the reference genome and its index files in the results directory. |
 
 <!-- Generated from nf-core/detaxizer@f348e37b6ba368a08edd4056af10e3fec8c10bb3. Do not edit by hand. -->

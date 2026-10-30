@@ -27,18 +27,18 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | no |  | matches ^\S+$ |
-| `id` | string | no |  | matches ^\S+$ |
-| `data_path` | string (file or directory path) | no |  | matches ^\S+$ |
-| `fastq_dir` | string (file or directory path) | no |  | matches ^\S+$ |
-| `cytaimage` | string (file or directory path) | no |  | matches ^\S+(tif\|tiff)$ |
-| `colorizedimage` | string (file or directory path) | no |  | matches ^\S+(tif\|tiff\|jpg\|jpeg\|btf)$ |
-| `darkimage` | string (file or directory path) | no |  | matches ^\S+(tif\|tiff\|jpg\|jpeg\|btf)$ |
-| `image` | string (file or directory path) | no |  | matches ^\S+(tif\|tiff\|jpg\|jpeg\|btf)$ |
-| `slide` | string | no |  | matches ^\S+$ |
-| `area` | string | no |  | matches ^\S+$ |
-| `manual_alignment` | string (file or directory path) | no |  | matches ^\S+json$ |
-| `slidefile` | string (file or directory path) | no |  | matches ^\S+json$ |
+| `sample` | string | no |  | matches `^\S+$` |
+| `id` | string | no |  | matches `^\S+$` |
+| `data_path` | string (file or directory path) | no |  | matches `^\S+$` |
+| `fastq_dir` | string (file or directory path) | no |  | matches `^\S+$` |
+| `cytaimage` | string (file or directory path) | no |  | matches `^\S+(tif\|tiff)$` |
+| `colorizedimage` | string (file or directory path) | no |  | matches `^\S+(tif\|tiff\|jpg\|jpeg\|btf)$` |
+| `darkimage` | string (file or directory path) | no |  | matches `^\S+(tif\|tiff\|jpg\|jpeg\|btf)$` |
+| `image` | string (file or directory path) | no |  | matches `^\S+(tif\|tiff\|jpg\|jpeg\|btf)$` |
+| `slide` | string | no |  | matches `^\S+$` |
+| `area` | string | no |  | matches `^\S+$` |
+| `manual_alignment` | string (file or directory path) | no |  | matches `^\S+json$` |
+| `slidefile` | string (file or directory path) | no |  | matches `^\S+json$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -52,9 +52,9 @@ sample,id,data_path,fastq_dir,cytaimage,colorizedimage,darkimage,image,slide,are
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--technology` | string | xenium | `xenium`, `merscope`, `cosmx`, `visium_hd`, `molecular_cartography`, `macsima`, `phenocycler`, `hyperion`, `ome_tif`, `toy_dataset` |  | Technology used for the spatial data, e.g., 'xenium', 'merscope', ... |
+| `--technology` | string | `xenium` | `xenium`, `merscope`, `cosmx`, `visium_hd`, `molecular_cartography`, `macsima`, `phenocycler`, `hyperion`, `ome_tif`, `toy_dataset` |  | Technology used for the spatial data, e.g., 'xenium', 'merscope', ... |
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

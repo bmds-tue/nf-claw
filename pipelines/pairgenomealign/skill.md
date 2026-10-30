@@ -27,8 +27,8 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fasta` | string (file path) | yes |  | matches ^\S+\.f(ast\|n)?(a\|q)(\.gz)?$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fasta` | string (file path) | yes |  | matches `^\S+\.f(ast\|n)?(a\|q)(\.gz)?$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -42,7 +42,7 @@ sample,fasta
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--target` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path or URL to a FASTA genome file for the _target_ genome. |
+| `--target` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path or URL to a FASTA genome file for the _target_ genome. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

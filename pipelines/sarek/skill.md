@@ -27,22 +27,22 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `patient` | string | yes |  | matches ^\S+$ |
-| `sample` | string | yes |  | matches ^\S+$ |
+| `patient` | string | yes |  | matches `^\S+$` |
+| `sample` | string | yes |  | matches `^\S+$` |
 | `sex` | string | no | `XX`, `XY`, `NA` |  |
 | `status` | integer | no | `0`, `1` |  |
-| `lane` | integer or string | no |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `spring_1` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz.spring$ |
-| `spring_2` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz.spring$ |
-| `table` | string (file path) | no |  | matches ^\S+\.table$ |
-| `cram` | string (file path) | no |  | matches ^\S+\.cram$ |
-| `crai` | string (file path) | no |  | matches ^\S+\.crai$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `bai` | string (file path) | no |  | matches ^\S+\.bai$ |
+| `lane` | integer or string | no |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `spring_1` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz.spring$` |
+| `spring_2` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz.spring$` |
+| `table` | string (file path) | no |  | matches `^\S+\.table$` |
+| `cram` | string (file path) | no |  | matches `^\S+\.cram$` |
+| `crai` | string (file path) | no |  | matches `^\S+\.crai$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `bai` | string (file path) | no |  | matches `^\S+\.bai$` |
 | `contamination` | number | no |  |  |
-| `vcf` | string (file path) | no |  | matches ^\S+\.vcf(\.gz)?$ |
+| `vcf` | string (file path) | no |  | matches `^\S+\.vcf(\.gz)?$` |
 | `variantcaller` | string | no |  |  |
 
 `--input` must match `^\S+\.(csv|tsv|yaml|yml|json)$`.
@@ -64,7 +64,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--step` | string | mapping | `mapping`, `markduplicates`, `prepare_recalibration`, `recalibrate`, `variant_calling`, `annotate` |  | Starting step |
+| `--step` | string | `mapping` | `mapping`, `markduplicates`, `prepare_recalibration`, `recalibrate`, `variant_calling`, `annotate` |  | Starting step |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

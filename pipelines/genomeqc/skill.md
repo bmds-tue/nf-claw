@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `assembly` | string | yes |  | matches ^\S+$ |
-| `ncbi` | string | no |  | matches ^GC[AF]_[0-9]{9}\.[0-9]+$ |
-| `fasta` | string (file path) | no |  | matches ^\S+\.(fa\|fasta\|fna)(\.gz)?$ |
-| `gff` | string (file path) | no |  | matches ^\S+\.(gff3?\|gtf)(\.gz)?$ |
-| `fastq` | string (file path) | no |  | matches ^\S+\.f(ast)?q(\.gz)?$ |
+| `assembly` | string | yes |  | matches `^\S+$` |
+| `ncbi` | string | no |  | matches `^GC[AF]_[0-9]{9}\.[0-9]+$` |
+| `fasta` | string (file path) | no |  | matches `^\S+\.(fa\|fasta\|fna)(\.gz)?$` |
+| `gff` | string (file path) | no |  | matches `^\S+\.(gff3?\|gtf)(\.gz)?$` |
+| `fastq` | string (file path) | no |  | matches `^\S+\.f(ast)?q(\.gz)?$` |
 | `taxid` | integer | no |  |  |
 
 `--input` must match `^\S+\.csv$`.
@@ -48,7 +48,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

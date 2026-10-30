@@ -31,7 +31,7 @@ This pipeline does not use a samplesheet; configure inputs via parameters.
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--marker-sheet` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the markers |
+| `--marker-sheet` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the markers |
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

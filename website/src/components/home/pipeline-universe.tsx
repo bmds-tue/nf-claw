@@ -130,7 +130,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.25, ease: EASE }}
+                transition={reduce ? { duration: 0 } : { duration: 0.25, ease: EASE }}
                 className="relative flex-1 overflow-hidden md:flex-none"
               >
                 <select
@@ -168,7 +168,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
                   <motion.span
                     layoutId="universe-view"
                     className="absolute inset-0 rounded-lg bg-white/10"
-                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
                 <Icon className="relative h-4 w-4" />
@@ -509,7 +509,7 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
             initial={{ opacity: 0, y: 20, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: 20, height: 0 }}
-            transition={{ duration: 0.4, ease: EASE }}
+            transition={reduce ? { duration: 0 } : { duration: 0.4, ease: EASE }}
             className="overflow-hidden"
           >
             <CompareTray
@@ -577,13 +577,14 @@ function Inspector({
   onCompare: () => void;
 }) {
   const { copied, failed, copy } = useCopy();
+  const reduce = useReducedMotion();
   const tools = p.tools.slice(0, 7);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.28, ease: EASE }}
+      transition={reduce ? { duration: 0 } : { duration: 0.28, ease: EASE }}
       className="relative flex h-full flex-col"
     >
       <div className="flex items-center gap-2">

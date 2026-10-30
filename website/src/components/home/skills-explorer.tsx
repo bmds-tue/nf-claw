@@ -38,6 +38,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
   const [mobileOpen, setMobileOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
   // Large screens show the selected skill beside the list (a listbox); small screens open it under
   // its row (a disclosure). The roles follow the layout, so a listbox never holds a skill's detail.
   const [compact, setCompact] = useState(false);
@@ -176,7 +177,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: EASE }}
+                          transition={reduce ? { duration: 0 } : { duration: 0.3, ease: EASE }}
                           className="overflow-hidden lg:hidden"
                         >
                           <div className="px-2 pb-3 pt-1">
@@ -209,7 +210,7 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.25, ease: EASE }}
+                    transition={reduce ? { duration: 0 } : { duration: 0.25, ease: EASE }}
                   >
                     <SkillDetail result={current} query={query} large />
                   </motion.div>

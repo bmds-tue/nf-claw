@@ -39,11 +39,11 @@ nf-core/createtaxdb pipeline parameters. Every parameter from the pinned `nextfl
 | `--kraken2-keepintermediate` | boolean |  |  |  |  |  | Retain intermediate Kraken2 build files for inspection. |
 | `--krakenuniq-build-options` | string |  |  |  |  |  | Specify parameters being given to krakenuniq build. Parameters must be supplied in quotes: `--<tool>_build_options "--your_param"`. |
 | `--krakenuniq-keepintermediate` | boolean |  |  |  |  |  | Save intermediate files otherwise not required for downstream classification. |
-| `--malt-build-options` | string |  |  |  |  | --sequenceType DNA | Specify parameters given to malt-build. Must include --sequenceType DNA or --sequenceType Protein. Parameters must be supplied in quotes: `--malt_build_options "--sequenceType DNA --your_param". |
+| `--malt-build-options` | string |  |  |  |  | `--sequenceType DNA` | Specify parameters given to malt-build. Must include --sequenceType DNA or --sequenceType Protein. Parameters must be supplied in quotes: `--malt_build_options "--sequenceType DNA --your_param". |
 | `--metacache-build-options` | string |  |  |  |  |  | Specify parameters being given to metacache build. |
-| `--sourmash-batch-size` | integer |  |  |  | ≥ 1 | 100 | Sourmash can perform the main build step in parallel batches. Set the size of the batches. |
-| `--sourmash-build-dna-options` | string |  |  |  |  | --param-string \'scaled=1000,k=31,noabund\ | Specify parameters given to sourmash sketch dna. Must start with sourmash sketch dna's '--param-string'. |
-| `--sourmash-build-protein-options` | string |  |  |  |  | --param-string \'scaled=200,k=10,noabund\ | Specify parameters given to sourmash sketch protein. Must start with sourmash sketch protein's '--param-string'. |
+| `--sourmash-batch-size` | integer |  |  |  | ≥ 1 | `100` | Sourmash can perform the main build step in parallel batches. Set the size of the batches. |
+| `--sourmash-build-dna-options` | string |  |  |  |  | `--param-string \'scaled=1000,k=31,noabund\` | Specify parameters given to sourmash sketch dna. Must start with sourmash sketch dna's '--param-string'. |
+| `--sourmash-build-protein-options` | string |  |  |  |  | `--param-string \'scaled=200,k=10,noabund\` | Specify parameters given to sourmash sketch protein. Must start with sourmash sketch protein's '--param-string'. |
 | `--sylph-build-options` | string |  |  |  |  |  | Specify parameters being given to sylph sketch. |
 
 ## generate_samplesheet_options
@@ -51,27 +51,27 @@ nf-core/createtaxdb pipeline parameters. Every parameter from the pinned `nextfl
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--generate-downstream-samplesheets` | boolean |  |  |  |  |  | Turn on generation of samplesheets for downstream pipelines. |
-| `--generate-pipeline-samplesheets` | string |  |  |  | matches ^(taxprofiler)(?:,(taxprofiler)){0,1} |  | Specify a comma separated string in quotes to specify which pipeline to generate a samplesheet for. |
+| `--generate-pipeline-samplesheets` | string |  |  |  | matches `^(taxprofiler)(?:,(taxprofiler)){0,1}` |  | Specify a comma separated string in quotes to specify which pipeline to generate a samplesheet for. |
 
 ## generic_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email-on-fail` | string |  | yes |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary, only when pipeline fails. |
+| `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
-| `--max-multiqc-email-size` | string |  | yes |  | matches ^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$ | 25.MB | File size limit when attaching MultiQC reports to summary emails. |
+| `--max-multiqc-email-size` | string |  | yes |  | matches `^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$` | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
 | `--multiqc-config` | string (file path) |  | yes |  |  |  | Custom config file to supply to MultiQC. |
 | `--multiqc-logo` | string |  | yes |  |  |  | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file |
 | `--multiqc-methods-description` | string |  |  |  |  |  | Custom MultiQC yaml file containing HTML including a methods description. |
-| `--pipelines-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/ | Base URL or local path to location of pipeline test dataset files |
+| `--pipelines-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/` | Base URL or local path to location of pipeline test dataset files |
 | `--plaintext-email` | boolean |  | yes |  |  |  | Send plain-text email instead of HTML. |
-| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | copy | Method used to save pipeline results to output directory. |
+| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | `copy` | Method used to save pipeline results to output directory. |
 | `--show-hidden` | boolean |  |  |  |  |  | Display hidden parameters in the help message (only works when --help or --help_full are provided). |
 | `--trace-report-suffix` | string |  | yes |  |  |  | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. |
-| `--unzip-batch-size` | integer | yes |  |  |  | 10000 | How many files to unzip in parallel in a single job. |
-| `--validate-params` | boolean |  | yes |  |  | true | Boolean whether to validate parameters against the schema at runtime |
+| `--unzip-batch-size` | integer | yes |  |  |  | `10000` | How many files to unzip in parallel in a single job. |
+| `--validate-params` | boolean |  | yes |  |  | `true` | Boolean whether to validate parameters against the schema at runtime |
 | `--version` | boolean |  | yes |  |  |  | Display version and exit. |
 
 ## input_file_preprocessing
@@ -88,9 +88,9 @@ nf-core/createtaxdb pipeline parameters. Every parameter from the pinned `nextfl
 |---|---|---|---|---|---|---|---|
 | `--accession2taxid` | string (file path) |  |  |  |  |  | NCBI-style four-column accession to taxonomy ID map file. |
 | `--dbname` | string | yes |  |  |  |  | Specify name that resulting databases will be prefixed with. |
-| `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
+| `--email` | string |  |  |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary. |
 | `--genomesizes` | string |  |  |  |  |  | Path to NCBI or GTDB genome sizes file. |
-| `--input` | string (file path) | yes |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) | yes |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about the samples in the experiment. |
 | `--malt-mapdb` | string (file path) |  |  |  |  |  | Path to MEGAN6/MALT mapping db file. |
 | `--malt-mapdb-format` | string |  |  | `mdb`, `a2t`, `s2t`, `a2ec`, `s2ec`, `t4ec`, `a2eggnog`, `s2eggnog`, `t4eggnog`, `a2gtdb`, `s2gtdb`, `t4gtdb`, `a2interpro2go`, `s2interpro2go`, `t4interprotogo`, `a2kegg`, `s2kegg`, `t4kegg`, `a2pgpt`, `s2pgpt`, `t4pgpt`, `a2seed`, `s2seed`, `t4seed` |  |  | Specify the type of MALT mapdb provided, based on the corresponding MALT flag. |
 | `--multiqc-title` | string |  |  |  |  |  | MultiQC report title. Printed as page header, used for filename if not otherwise specified. |
@@ -108,7 +108,7 @@ nf-core/createtaxdb pipeline parameters. Every parameter from the pinned `nextfl
 | `--config-profile-description` | string |  | yes |  |  |  | Institutional config description. |
 | `--config-profile-name` | string |  | yes |  |  |  | Institutional config name. |
 | `--config-profile-url` | string |  | yes |  |  |  | Institutional config URL link. |
-| `--custom-config-base` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/configs/master | Base directory for Institutional configs. |
-| `--custom-config-version` | string |  | yes |  |  | master | Git commit id for Institutional configs. |
+| `--custom-config-base` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
+| `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
 <!-- Generated from nf-core/createtaxdb@b01a0f8ed96a5990d15470828dfa92a22cf08bba. Do not edit by hand. -->

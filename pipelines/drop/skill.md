@@ -27,22 +27,22 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `RNA_ID` | string or integer | yes |  | matches ^\S+$ |
-| `RNA_BAM_FILE` | string (file path) | no |  | matches ^\S+\.(bam\|cram)$ |
-| `RNA_BAI_FILE` | string (file path) | no |  | matches ^\S+\.(bam\|cram)\.(bai\|crai)$ |
-| `DNA_ID` | string or integer | no |  | matches ^\S+$ |
-| `DNA_VCF_FILE` | string (file path) | no |  | matches ^\S+\.vcf.gz$ |
-| `DNA_TBI_FILE` | string (file path) | no |  | matches ^\S+\.vcf.gz.tbi$ |
-| `DROP_GROUP` | string | yes |  | matches ^\S+$ |
+| `RNA_ID` | string or integer | yes |  | matches `^\S+$` |
+| `RNA_BAM_FILE` | string (file path) | no |  | matches `^\S+\.(bam\|cram)$` |
+| `RNA_BAI_FILE` | string (file path) | no |  | matches `^\S+\.(bam\|cram)\.(bai\|crai)$` |
+| `DNA_ID` | string or integer | no |  | matches `^\S+$` |
+| `DNA_VCF_FILE` | string (file path) | no |  | matches `^\S+\.vcf.gz$` |
+| `DNA_TBI_FILE` | string (file path) | no |  | matches `^\S+\.vcf.gz.tbi$` |
+| `DROP_GROUP` | string | yes |  | matches `^\S+$` |
 | `PAIRED_END` | boolean | no |  |  |
 | `COUNT_MODE` | string | no | `union`, `IntersectionStrict`, `IntersectionNotEmpty` |  |
 | `COUNT_OVERLAPS` | boolean | no |  |  |
 | `STRAND` | string | yes | `yes`, `no`, `reverse` |  |
 | `HPO_TERMS` | string | no |  |  |
-| `GENE_COUNTS_FILE` | string (file path) | no |  | matches ^\S+\.tsv(\.gz)?$ |
+| `GENE_COUNTS_FILE` | string (file path) | no |  | matches `^\S+\.tsv(\.gz)?$` |
 | `GENE_ANNOTATION` | string | no |  |  |
 | `GENOME` | string | no | `ncbi`, `ucsc` |  |
-| `SPLICE_COUNTS_DIR` | string (file or directory path) | no |  | matches ^\S+$ |
+| `SPLICE_COUNTS_DIR` | string (file or directory path) | no |  | matches `^\S+$` |
 | `SEX` | string | no |  |  |
 | `TISSUE` | string | no |  |  |
 | `DISEASE` | string | no |  |  |
@@ -74,9 +74,9 @@ RNA_ID	DROP_GROUP	STRAND	SPLICE_COUNTS_DIR
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.tsv$ | Path to the samplesheet file used by the pipeline. The file should be a TSV file. Equivalent to the `sampleAnnotation` parameter in the snakemake pipeline. |
+| `--input` | string (file path) |  |  | matches `^\S+\.tsv$` | Path to the samplesheet file used by the pipeline. The file should be a TSV file. Equivalent to the `sampleAnnotation` parameter in the snakemake pipeline. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. Equivalent to the `root` parameter in the snakemake pipeline. |
-| `--genome` | string |  | `hg19`, `hs37d5 `, `hg38`, `GRCh38` |  | Equivalent to the `genomeAssembly` parameter in the snakemake pipeline. Either hg19/hs37d5 or hg38/GRCh38, depending on the genome assembly used for mapping |
+| `--genome` | string |  | `hg19`, `hs37d5`, `hg38`, `GRCh38` |  | Equivalent to the `genomeAssembly` parameter in the snakemake pipeline. Either hg19/hs37d5 or hg38/GRCh38, depending on the genome assembly used for mapping |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use the `input_output_options` group in [reference.md](reference.md) lists the reference options. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

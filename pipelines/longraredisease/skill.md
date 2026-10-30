@@ -27,14 +27,14 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
+| `sample` | string | yes |  | matches `^\S+$` |
 | `file_path` | string | yes |  |  |
-| `hpo_terms` | string | no |  | matches ^HP:\d{7}(;HP:\d{7})*$ |
+| `hpo_terms` | string | no |  | matches `^HP:\d{7}(;HP:\d{7})*$` |
 | `sex` | integer | no | `1`, `2`, `0` |  |
 | `phenotype` | integer | no | `1`, `2`, `0`, `-9` |  |
-| `family_id` | string | no |  | matches ^\S+$ |
-| `maternal_id` | string | no |  | matches ^\S+$ |
-| `paternal_id` | string | no |  | matches ^\S+$ |
+| `family_id` | string | no |  | matches `^\S+$` |
+| `maternal_id` | string | no |  | matches `^\S+$` |
+| `paternal_id` | string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -50,8 +50,8 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
-| `--fasta-file` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path to FASTA genome file. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
+| `--fasta-file` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path to FASTA genome file. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use the `reference_genome_options` group in [reference.md](reference.md) lists the reference options. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

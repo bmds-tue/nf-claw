@@ -4,7 +4,7 @@ nf-claw maintains synchronization with upstream nf-core pipeline releases throug
 
 ---
 
-### Navigation
+## Navigation
 
 [Version Policy](#1-version-policy--upstream-tracking) • [Daily Updates](#2-automated-daily-updates-auto-updateyml) • [Weekly Discovery](#3-automated-weekly-discovery-discover-pipelinesyml) • [Schema Drift Gate](#4-the-schema-drift-gate-librariancheck_driftpy) • [Maintenance Commands](#5-manual-maintenance-commands)
 

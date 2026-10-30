@@ -634,6 +634,38 @@ def test_resume_skips_succeeded_stages_and_resumes_the_failed_one(library, fake_
     assert [len(s["attempts"]) for s in _state(out)["stages"]] == [1, 2]
 
 
+@pytest.mark.parametrize("tampered", [False, True])
+def test_resume_keeps_the_handoff_paths_its_failed_attempt_ran_on(library, fake_runs, tmp_path,
+                                                                  tampered):
+    # A resumed stage got its unchanged samplesheet at a new path (handoffs/<stage>/attempts/<id>);
+    # --resume counts a new input path as changed input, so every task was recomputed.
+    fake_runs.failures["mini"] = [_boom()]
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    out = tmp_path / "c"
+    with pytest.raises(NfclawError):
+        chain.run_chain(_spec(), repo_root=root, outdir=out)
+    failed = fake_runs.calls[-1]
+    provenance = out / "02-mini" / "provenance"                 # what a failed run leaves behind
+    provenance.mkdir(parents=True)
+    (provenance / "run_manifest.json").write_text(
+        json.dumps({"outcome": "failed", "chain": failed["chain_link"]}))
+    record = Path(failed["chain_link"]["upstream"]["handoff"])
+    if tampered:
+        record.write_text(record.read_text().replace('"to_stage"', '"to_stage" ', 1))
+    fake_runs.calls.clear()
+    assert chain.run_chain(None, repo_root=root, outdir=out, resume=True).outcome == "success"
+    resumed = fake_runs.calls[-1]
+    attempts = out / "chain" / "handoffs" / "02-mini" / "attempts"
+    if tampered:                                  # a record that changed is never reused
+        assert resumed["input_path"] != failed["input_path"]
+        assert len(list(attempts.iterdir())) == 1
+        return
+    assert resumed["input_path"] == failed["input_path"]
+    assert resumed["chain_link"]["upstream"] == failed["chain_link"]["upstream"]
+    assert not attempts.exists()
+    assert _state(out)["stages"][1]["handoff"] == str(record)
+
+
 def test_resume_refuses_to_redefine_a_succeeded_stage(library, fake_runs, tmp_path):
     fake_runs.failures["mini"] = [_boom()]
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
