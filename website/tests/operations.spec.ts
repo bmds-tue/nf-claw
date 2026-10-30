@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { gotoHydrated } from './hydration';
 
 /** Open a pipeline page once React has hydrated it: before that, a click reaches server-rendered
  *  markup with no handlers. The page records the visit in an effect, which runs only after. */
@@ -53,7 +54,7 @@ for (const path of ['/docs/agents/', '/']) {
 
 test('mobile navigation contains keyboard focus and restores it on Escape', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/pipelines/');
+  await gotoHydrated(page, '/pipelines/');
   const toggle = page.getByRole('button', { name: 'Open menu' });
   await toggle.click();
   await expect(page.locator('#mobile-menu')).toBeVisible();
@@ -70,7 +71,7 @@ test('mobile navigation contains keyboard focus and restores it on Escape', asyn
 for (const trigger of ['button', 'shortcut']) {
   test(`mobile menu hands focus to search opened by ${trigger}`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/pipelines/');
+    await gotoHydrated(page, '/pipelines/');
     await page.getByRole('button', { name: 'Open menu' }).click();
     await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible();
     await expect(page.locator('main')).toHaveAttribute('inert', '');
@@ -86,8 +87,33 @@ for (const trigger of ['button', 'shortcut']) {
   });
 }
 
+for (const control of ['menu', 'search'] as const) {
+  test(`a ${control} tap right after the page hydrates is not undone`, async ({ page }) => {
+    // A hydrated page runs its effects a task after its first commit. Effects that closed the menu
+    // and the palette on navigation ran then too and undid a tap that landed in between, and the
+    // palette's open event reached no listener yet. Next's router replaces the history entry
+    // during that commit, so a microtask queued there taps in exactly that gap.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript((selector) => {
+      const state = window as unknown as { tapped?: boolean };
+      const replaceState = history.replaceState.bind(history);
+      history.replaceState = (...args: Parameters<History['replaceState']>) => {
+        replaceState(...args);
+        const button = document.querySelector<HTMLButtonElement>(selector);
+        if (state.tapped || !button) return;
+        state.tapped = true;
+        queueMicrotask(() => button.click());
+      };
+    }, control === 'menu' ? 'button[aria-controls="mobile-menu"]' : 'header button[aria-label="Search"]');
+    await page.goto('/pipelines/');
+    await page.waitForFunction(() => (window as unknown as { tapped?: boolean }).tapped);
+    if (control === 'menu') await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible();
+    else await expect(page.locator('input[role="combobox"]')).toBeFocused();
+  });
+}
+
 test('holding the search shortcut opens once and a new press closes it', async ({ page }) => {
-  await page.goto('/pipelines/');
+  await gotoHydrated(page, '/pipelines/');
   await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   const input = page.locator('input[role="combobox"]');
   await expect(input).toBeFocused();
@@ -112,7 +138,7 @@ test('a second shortcut press right after the palette takes focus closes it', as
   // Opening goes through a custom event, so React defers its effects to a later task while the
   // input takes focus during the commit. A press in between met a listener that still saw the
   // palette closed, and it stayed open (the holding test above failed this way under load).
-  await page.goto('/pipelines/');
+  await gotoHydrated(page, '/pipelines/');
   await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   const input = page.locator('input[role="combobox"]');
   await expect(input).toBeFocused();
@@ -131,7 +157,7 @@ test('a second shortcut press right after the palette takes focus closes it', as
 
 test('the search palette finds a documentation section and opens it at its heading', async ({ page }) => {
   // Titles alone could not find what a guide says: a query lists the sections whose headings match.
-  await page.goto('/pipelines/');
+  await gotoHydrated(page, '/pipelines/');
   await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   const input = page.locator('input[role="combobox"]');
   await expect(input).toBeFocused();
@@ -166,7 +192,7 @@ test('parameter search recovers from an initial network failure', async ({ page 
     if (requests === 1) await route.fulfill({ status: 503, body: 'temporarily unavailable' });
     else await route.continue();
   });
-  await page.goto('/#skills');
+  await gotoHydrated(page, '/#skills');
   const search = page.locator('#skills input[type="search"], #skills input').first();
   await search.fill('carveme-mediadb');
   await expect(page.locator('#skills')).toContainText('parameter search unavailable');
@@ -177,7 +203,7 @@ test('parameter search recovers from an initial network failure', async ({ page 
 });
 
 test('bacmodel example link points to its pinned upstream source', async ({ page }) => {
-  await page.goto('/pipelines/bacmodel/');
+  await gotoHydrated(page, '/pipelines/bacmodel/');
   await page.getByRole('button', { name: /carveme-mediadb/ }).first().click();
   const link = page.getByRole('link', { name: 'example file' });
   await expect(link).toHaveAttribute('href', /github\.com\/nf-core\/bacmodel\/blob\/[0-9a-f]{40}\/assets\/medium_carveme_mediadb_example\.tsv$/);
@@ -186,7 +212,7 @@ test('bacmodel example link points to its pinned upstream source', async ({ page
 test('copied parameter values preserve spaces and leading dashes through the shell', async ({ page }) => {
   const { spawnSync } = await import('node:child_process');
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto('/pipelines/bacmodel/');
+  await gotoHydrated(page, '/pipelines/bacmodel/');
   await page.getByRole('button', { name: /gapseq-doall-args/ }).first().click();
   await page.getByRole('button', { name: /^Copy: --gapseq-doall-args/ }).last().click();
   const snippet = await page.evaluate(() => navigator.clipboard.readText());

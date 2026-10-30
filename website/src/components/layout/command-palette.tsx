@@ -135,8 +135,9 @@ export function CommandPalette({ data }: { data: PaletteData }) {
 
   const close = useCallback(() => setOpen(false), []);
 
-  // Global shortcuts: ⌘K / Ctrl+K anywhere, "/" when not typing.
-  useEffect(() => {
+  // Global shortcuts: ⌘K / Ctrl+K anywhere, "/" when not typing. Attached during commit rather
+  // than after it: a Search click right after the page hydrates dispatched its event to no one.
+  useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable=true]");
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
@@ -172,8 +173,13 @@ export function CommandPalette({ data }: { data: PaletteData }) {
     };
   }, [open]);
 
-  // Any navigation — including browser back/forward — closes the palette.
-  useEffect(() => setOpen(false), [pathname]);
+  // Any navigation — including browser back/forward — closes the palette. The path is compared
+  // while rendering: an effect also ran once the page had hydrated, closing a palette opened before.
+  const [palettePath, setPalettePath] = useState(pathname);
+  if (palettePath !== pathname) {
+    setPalettePath(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => setActive(0), [query]);
 

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { gotoHydrated } from './hydration';
 
 // axe-core on every page of the static export, as built. Pages are generated from the repository's
 // own documents, so a heading level or table written in one of them reaches the site unreviewed;
@@ -99,7 +100,7 @@ for (const url of ['/', '/pipelines/', '/pipelines/rnaseq/', '/docs/', '/docs/ch
 }
 
 test('the open search palette has no axe violation', async ({ page }) => {
-  await page.goto('/pipelines/');
+  await gotoHydrated(page, '/pipelines/');
   await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   await expect(page.locator('input[role="combobox"]')).toBeFocused();
   await page.keyboard.type('rna');
