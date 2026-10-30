@@ -155,6 +155,32 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
                 )}
               </div>
             </header>
+            {/* below xl the sticky table of contents has no column: the same headings, folded */}
+            {headings.length > 1 && (
+              <details className="glass group mb-6 px-5 py-4 sm:px-8 xl:hidden">
+                <summary className="cursor-pointer select-none text-[11px] font-semibold uppercase tracking-[0.16em] text-fog-dim transition-colors hover:text-fog">
+                  On this page
+                  <span className="ml-1.5 font-normal tracking-normal">{headings.length}</span>
+                </summary>
+                <nav aria-label="On this page" className="mt-3">
+                  <ul className="space-y-0.5 border-l border-white/[0.07]">
+                    {headings.map((h) => (
+                      <li key={h.id}>
+                        <a
+                          href={`#${h.id}`}
+                          className={cn(
+                            "block py-1 text-[13px] leading-snug text-fog-dim transition-colors hover:text-fog",
+                            h.depth === 3 ? "pl-6" : "pl-3.5",
+                          )}
+                        >
+                          {h.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </details>
+            )}
             <div className="glass overflow-hidden px-5 py-7 sm:px-8 md:px-10 md:py-10">
               <div className="mx-auto max-w-prose">
                 <Markdown content={body} links={links} />

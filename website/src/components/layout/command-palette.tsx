@@ -13,13 +13,18 @@ import { EASE } from "@/lib/motion";
 
 export interface PaletteData {
   pipelines: { name: string; version: string; category: string; description: string }[];
-  docs: { slug: string; title: string; source: string }[];
+  /** Each document with its ## and ### headings, so a query finds the section it is about. */
+  docs: { slug: string; title: string; source: string; headings: { id: string; text: string }[] }[];
 }
 
 type Item =
   | { kind: "section"; id: string; label: string; hint: string; href: string }
   | { kind: "pipeline"; id: string; label: string; hint: string; href: string; color: string; version: string; description: string }
-  | { kind: "doc"; id: string; label: string; hint: string; href: string };
+  | { kind: "doc"; id: string; label: string; hint: string; href: string }
+  | { kind: "heading"; id: string; label: string; hint: string; href: string };
+
+// A query lists at most this many document sections: hundreds exist, and the best few are enough.
+const MAX_HEADINGS = 12;
 
 // The home page's sections, in page order.
 const SECTIONS = [
@@ -84,23 +89,35 @@ export function CommandPalette({ data }: { data: PaletteData }) {
         description: p.description,
       })),
       ...data.docs.map((d) => ({ kind: "doc" as const, id: `d-${d.slug}`, label: d.title, hint: d.source, href: `/docs/${d.slug}/` })),
+      ...data.docs.flatMap((d) =>
+        d.headings.map((h) => ({
+          kind: "heading" as const,
+          id: `h-${d.slug}-${h.id}`,
+          label: h.text,
+          hint: d.title,
+          href: `/docs/${d.slug}/#${h.id}`,
+        })),
+      ),
     ],
     [data],
   );
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return all;
-    return all
+    // Sections are found by a query only: listed unasked, they would bury everything else.
+    if (!q) return all.filter((item) => item.kind !== "heading");
+    const ranked = all
       .map((item) => ({ item, s: score(item, q) }))
       .filter((r) => r.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((r) => r.item);
+    const headings = ranked.filter((item) => item.kind === "heading").slice(0, MAX_HEADINGS);
+    return [...ranked.filter((item) => item.kind !== "heading"), ...headings];
   }, [all, query]);
 
   const groups = useMemo(() => {
-    const order: Item["kind"][] = query.trim() ? ["pipeline", "doc", "section"] : ["section", "pipeline", "doc"];
-    const titles = { section: "Jump to", pipeline: "Pipelines", doc: "Documentation" };
+    const order: Item["kind"][] = query.trim() ? ["pipeline", "doc", "heading", "section"] : ["section", "pipeline", "doc"];
+    const titles = { section: "Jump to", pipeline: "Pipelines", doc: "Documentation", heading: "In the docs" };
     const out = order
       .map((kind) => ({ key: kind as string, title: titles[kind], items: results.filter((r) => r.kind === kind) }))
       .filter((g) => g.items.length);

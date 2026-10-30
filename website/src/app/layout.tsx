@@ -7,6 +7,7 @@ import { CommandPalette, type PaletteData } from "@/components/layout/command-pa
 import { BackToTop } from "@/components/layout/back-to-top";
 import { getRepoMeta, getPipelines, getDocs } from "@/lib/data";
 import { categorize } from "@/lib/derive";
+import { docHeadings } from "@/lib/doc-meta";
 import { plainText } from "@/components/ui/inline-markdown";
 import { BASE_PATH, OG_IMAGE, SITE_ORIGIN } from "@/lib/site";
 
@@ -55,7 +56,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       category: categorize(p),
       description: p.description,
     })),
-    docs: getDocs().map((d) => ({ slug: d.slug, title: d.title, source: d.source })),
+    docs: getDocs().map((d) => ({
+      slug: d.slug,
+      title: d.title,
+      source: d.source,
+      // Every guide's "Navigation" bar is chrome, not a section anyone looks for.
+      headings: docHeadings(d.content)
+        .filter((h) => h.text !== "Navigation")
+        .map((h) => ({ id: h.id, text: h.text })),
+    })),
   };
 
   return (

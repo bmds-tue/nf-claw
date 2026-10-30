@@ -129,6 +129,36 @@ test('a second shortcut press right after the palette takes focus closes it', as
   await expect(input).toHaveCount(0);
 });
 
+test('the search palette finds a documentation section and opens it at its heading', async ({ page }) => {
+  // Titles alone could not find what a guide says: a query lists the sections whose headings match.
+  await page.goto('/pipelines/');
+  await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
+  const input = page.locator('input[role="combobox"]');
+  await expect(input).toBeFocused();
+  await expect(page.getByText('In the docs', { exact: false })).toHaveCount(0);   // none unasked
+  await input.fill('dependency stability during');
+  const option = page.getByRole('option', { name: /Dependency stability during execution/ });
+  await expect(option).toBeVisible();
+  await expect(option).toContainText('Replaying and verifying runs');
+  await option.click();
+  await expect(page).toHaveURL(/\/docs\/replay\/#dependency-stability-during-execution$/);
+  await expect(page.locator('#dependency-stability-during-execution')).toBeInViewport();
+});
+
+test('a document has a table of contents at phone width too', async ({ page }) => {
+  // The sticky "On this page" column exists only from the xl breakpoint; narrower screens had none.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/docs/replay/');
+  const toc = page.locator('details', { has: page.locator('summary', { hasText: 'On this page' }) });
+  await expect(toc).toBeVisible();
+  await toc.locator('summary').click();
+  const link = toc.getByRole('link', { name: 'Local inputs and resume' });
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page).toHaveURL(/\/docs\/replay\/#local-inputs-and-resume$/);
+  await expect(page.locator('#local-inputs-and-resume')).toBeInViewport();
+});
+
 test('parameter search recovers from an initial network failure', async ({ page }) => {
   let requests = 0;
   await page.route('**/search/params.json', async route => {
