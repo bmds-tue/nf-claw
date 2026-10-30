@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from runner import provenance, runlog
+from runner import provenance, replay_guard, runlog
 from runner.nextflow_command import shell_line
 from runner.submodule import SubmoduleStatus
 from result_checksums import output_checksums
@@ -345,6 +345,19 @@ def test_bundle_files_are_as_readable_as_any_new_file(tmp_path):
     assert {"run_manifest.json", "replay_guard.py", provenance.PIPELINE_ARCHIVE} <= modes.keys()
     assert set(modes.values()) == {0o644}, modes
     assert not [p.name for p in prov.iterdir() if p.name.startswith(".")]
+
+
+def test_the_run_logs_seek_index_is_as_readable_as_the_log(tmp_path):
+    # Another member of the results' group polls `nfclaw status` from run.log; its seek index was
+    # written through tempfile, so it was 0o600 beside a 0o644 log and their poll lost it.
+    previous = os.umask(0o022)
+    try:
+        log = runlog.RunLog.open(tmp_path, command=["nextflow"], launch_dir=tmp_path)
+    finally:
+        os.umask(previous)
+    cursor = replay_guard.log_cursor_path(log.path)
+    assert stat.S_IMODE(cursor.stat().st_mode) == stat.S_IMODE(log.path.stat().st_mode) == 0o644
+    assert not [p.name for p in log.path.parent.iterdir() if p.name.startswith(".")]
 
 
 def test_replay_logs_itself_into_the_target_bundle(tmp_path):
