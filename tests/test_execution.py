@@ -450,7 +450,7 @@ def test_a_second_interrupt_during_teardown_still_kills_the_group(monkeypatch):
             raise KeyboardInterrupt
         return 0
 
-    proc = types.SimpleNamespace(pid=4242, wait=interrupted_wait)
+    proc = types.SimpleNamespace(pid=4242, wait=interrupted_wait, returncode=None)
     with pytest.raises(KeyboardInterrupt):
         execution._terminate(proc, grace=5)
     assert sent == [signal.SIGTERM, signal.SIGKILL]
@@ -517,3 +517,62 @@ def test_nextflow_does_not_outlive_an_nfclaw_killed_with_sigkill(tmp_path):
     if not gone:
         os.kill(child, signal.SIGKILL)
     assert gone, "Nextflow outlived an nfclaw killed with SIGKILL"
+
+
+def test_no_python_runs_between_fork_and_exec(tmp_path, monkeypatch):
+    # nfclaw's container watch runs threads when Nextflow is launched, and Python code in a forked
+    # child of a threaded parent (`preexec_fn`) can deadlock before it reaches exec.
+    seen = []
+    popen = subprocess.Popen
+
+    def recording(args, **kwargs):
+        seen.append((list(args), kwargs))
+        return popen(args, **kwargs)
+
+    monkeypatch.setattr(execution.subprocess, "Popen", recording)
+    background = threading.Event()
+    watcher = threading.Thread(target=background.wait, daemon=True)
+    watcher.start()
+    try:
+        execution.run([PY, "-c", "print('hi')"], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
+    finally:
+        background.set()
+    (args, kwargs), = [(a, k) for a, k in seen if a[-3:] == [PY, "-c", "print('hi')"]]
+    assert "preexec_fn" not in kwargs
+    assert (tmp_path / "logs" / "stdout.txt").read_text().strip() == "hi"
+
+
+def test_a_missing_program_is_refused_before_launch(tmp_path):
+    with pytest.raises(NfclawError) as exc:
+        execution.run(["nfclaw-no-such-program"], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                      timeout_seconds=30)
+    assert "Could not launch process" in str(exc.value)
+    assert "nfclaw-no-such-program" in str(exc.value)
+    assert read_state(tmp_path / "logs" / "run.log").outcome == "could not launch"
+
+
+def test_a_relative_program_is_found_from_the_launch_directory(tmp_path):
+    (tmp_path / "tool").write_text("#!/bin/sh\necho relative\n")
+    (tmp_path / "tool").chmod(0o755)
+    res = execution.run(["./tool"], cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30)
+    assert res.exit_code == 0
+    assert (tmp_path / "logs" / "stdout.txt").read_text().strip() == "relative"
+
+
+def test_the_launched_program_keeps_the_pid_nfclaw_recorded(tmp_path):
+    # On Linux the death-signal launcher execs the program in place: the pid in the run log is
+    # Nextflow's own, and the request the launcher made is still in force after the exec.
+    linux = sys.platform.startswith("linux")
+    probe = "import os; print(os.getpid())"
+    if linux:
+        probe += ("; import ctypes; requested = ctypes.c_int(); "
+                  "ctypes.CDLL(None).prctl(2, ctypes.byref(requested), 0, 0, 0); "  # GET_PDEATHSIG
+                  "print(requested.value)")
+    res = execution.run([PY, "-c", probe], cwd=tmp_path, logs_dir=tmp_path / "logs",
+                        timeout_seconds=30)
+    assert res.exit_code == 0
+    printed = (tmp_path / "logs" / "stdout.txt").read_text().split()
+    assert read_state(tmp_path / "logs" / "run.log").nextflow_pid == int(printed[0])
+    if linux:
+        assert int(printed[1]) == signal.SIGTERM

@@ -134,13 +134,19 @@ def _stopped(exc: BaseException, log: Path) -> int:
 def _chain(args: argparse.Namespace, parser: argparse.ArgumentParser, root: Path, warn) -> int:
     if args.chain_cmd == "edges":
         try:
+            if args.name is not None:                  # a typo is not "no handoff rule"
+                discovery.find(args.name, root / "pipelines")
             rules = handoff.load_registry(root)
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        for (up, down), rule in sorted(rules.items()):
-            if args.name in (None, up, down):
-                print(f"{up}\t{down}\t{rule.description}")
+        shown = [(up, down, rule) for (up, down), rule in sorted(rules.items())
+                 if args.name in (None, up, down)]
+        for up, down, rule in shown:
+            print(f"{up}\t{down}\t{rule.description}")
+        if args.name is not None and not shown:
+            print(f"No handoff rule feeds or follows {args.name}; a chain stage can still name "
+                  "its inputs with an inline \"handoff\" (docs/chaining.md).", file=sys.stderr)
         return 0
     if args.chain_cmd == "status":
         try:
@@ -148,14 +154,16 @@ def _chain(args: argparse.Namespace, parser: argparse.ArgumentParser, root: Path
                                else chain.status(Path(args.outdir)))
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
-            if args.json:
+            if args.json:                              # the same keys and types as a found chain
                 print(json.dumps({"version": STATUS_JSON_VERSION, "exit_code": 1, "chain": None,
-                                  "problems": [], "error": exc.message}, indent=2))
+                                  "problems": [], "error": [exc.message],
+                                  "report": f"{exc}\n"}, indent=2))
             return 1
         report, code = chain.format_status(state, problems), chain.status_exit_code(state, problems)
         if args.json:
             print(json.dumps({"version": STATUS_JSON_VERSION, "exit_code": code, "chain": state,
-                              "problems": problems, "report": report}, indent=2, default=str))
+                              "problems": problems, "error": [], "report": report},
+                             indent=2, default=str))
         else:
             print(report, end="")
         return code

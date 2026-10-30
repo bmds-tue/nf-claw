@@ -22,6 +22,9 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `nfclaw --version`, `nfclaw list <keywords>`, run manifests that record which nfclaw ran them, and
   a security policy (`SECURITY.md`) (#218).
 - An accessibility check of every website page in the browser tests (#219).
+- MCP `read_doc(guide, search)`: an nf-claw guide, or only its sections that hold every word
+  searched. Agents checking a warning against `known-issues` (about 120 KB) get its section
+  (under 1 KB); the server's instructions now say so.
 
 ### Changed
 
@@ -52,6 +55,16 @@ each change, are in [`docs/audit/`](docs/audit/).
   that cannot pass the gate can be set to the `hold` policy in `sources.tsv` so that the others
   publish ([maintenance.md](docs/maintenance.md)).
 - `nfclaw mcp` answers a message nested too deeply to parse instead of stopping (#219).
+- `nfclaw chain edges <name>` refuses a pipeline the library lacks (exit 1) instead of printing
+  nothing, which read as "no handoff exists"; for a pipeline without rules it says so.
+- `nfclaw chain status --json` gives a missing chain the same keys as a found one, with `error` a
+  list as in `nfclaw status --json`.
+- On Linux, Nextflow is launched without Python code between fork and exec (`preexec_fn`), which
+  can deadlock a parent running threads, as nfclaw's container watch does: a single-threaded
+  launcher requests the parent-death signal and execs Nextflow in place.
+- Stopping a run or replay whose process group has already ended no longer searches or signals
+  that group's number, which another process group may hold by then.
+- `CITATION.cff` no longer gives 1.0.0 a release date (2026-06-15) that no release had.
 - Robustness of `nfclaw status` with unreadable logs and damaged records, the job supervisor and
   the container watcher (#218).
 
