@@ -14,7 +14,7 @@ from librarian import write_catalog, write_skill
 from librarian.add_pipeline import read_sources
 from runner import discovery, handoff
 from runner import submodule as submod
-from runner.errors import NfclawError
+from runner.errors import ErrorCode, NfclawError
 
 
 def _duplicates(names: list[str]) -> list[str]:
@@ -90,7 +90,10 @@ def _gitlinks(repo: Path) -> dict[str, str]:
     try:
         out = subprocess.run(["git", "-C", str(repo), "ls-files", "-s", "--", "pipelines"],
                              capture_output=True, text=True, timeout=60, check=True).stdout
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        if (repo / ".git").exists():
+            raise NfclawError(ErrorCode.ENVIRONMENT,
+                              f"Could not establish repository source pins: {exc}") from exc
         return {}
     links = {}
     for line in out.splitlines():
@@ -130,7 +133,10 @@ def check(pipelines_dir: Path) -> list[str]:
         rules = handoff.load_registry(repo)          # skill.md documents them
     except NfclawError:
         rules = {}                                   # reported by _handoff_drift below
-    gitlinks = _gitlinks(repo)
+    try:
+        gitlinks = _gitlinks(repo)
+    except NfclawError as exc:
+        return [exc.message]
     for d in pipeline_dirs:
         name = d.name
         st = submod.resolve(name, pipelines_dir)
@@ -140,6 +146,15 @@ def check(pipelines_dir: Path) -> list[str]:
                 f"{name}/upstream is incomplete (missing {missing}; "
                 f"run `git submodule update --init pipelines/{name}/upstream`)"
             )
+            continue
+        try:
+            source_issues = submod.tree_issues(st, d / "skill.md")
+        except NfclawError as exc:
+            source_issues = [exc.message]
+        if name in gitlinks and not st.commit:
+            source_issues.append(f"{name}/upstream Git identity cannot be verified")
+        if source_issues:
+            drift.extend(source_issues)
             continue
         # The docs are generated from the checked-out tree; they describe the pin only if that tree
         # is the commit the repository records (CI checks out gitlinks; a local tree may differ).

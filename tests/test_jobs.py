@@ -313,9 +313,10 @@ def test_frozen_replay_status_uses_effective_custom_engine_log(
     monkeypatch.setenv('NXF_LOG_FILE', 'wrong-ambient.log' if recorded else raw)
     log = out / 'provenance/logs/run.log'
     log.parent.mkdir(parents=True)
-    engine = Path(raw) if absolute else out / raw
+    engine = (Path(raw) if absolute else out / raw) if recorded else out / '.nextflow.log'
     engine.write_text('Workflow completed > WorkflowStats[ignoredCount=2; cachedCount=0]\n')
-    (out / '.nextflow.log').write_text('Workflow completed > WorkflowStats[ignoredCount=0]\n')
+    decoy = out / '.nextflow.log' if recorded else (Path(raw) if absolute else out / raw)
+    decoy.write_text('Workflow completed > WorkflowStats[ignoredCount=0]\n')
     replay_guard.start_replay_log(log, str(original), '222')
     with log.open('a') as stream:
         stream.write('==> nfclaw replay finished 2026-10-26T00:00:03Z: success\n')

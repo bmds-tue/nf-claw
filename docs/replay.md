@@ -34,6 +34,11 @@ After Nextflow succeeds, a replay records its own `environment.json` and compare
 
 ## Dependency stability during execution
 
+Replay restores the recorded Nextflow environment, including the absence of unrecorded `NXF_*`
+settings. Sensitive recorded values remain redacted; export every required redacted variable
+before replay. Newly inherited Nextflow settings are removed before launching. A production
+bundle with incomplete pipeline identity or checksum metadata is refused.
+
 Before declaring success, nfclaw compares declared local input bytes and namespaces, generated/user configuration files, tracked pipeline source bytes and its Git revision with the launch snapshots. A visible change or unreadable dependency fails the run even when Nextflow exits zero. Results and launch hashes remain available for inspection; provenance records `dependency_stability`. Restoring the original bytes does not validate cached tasks from that attempt: resume archives the failed run and recomputes, and standalone replay refuses its tainted bundle. The check also applies with `--no-provenance`; that flag skips the bundle rather than the dependency checks. Standalone replay rechecks its original bundle after Nextflow finishes. These are checkpoint comparisons, not filesystem locks or immutable input copies: transient edits restored between checks, remote inputs and indirect configuration dependencies are outside their scope. Keep scientific inputs stable for the full execution.
 
 ## Local inputs and resume

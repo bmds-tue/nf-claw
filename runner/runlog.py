@@ -17,6 +17,7 @@ written — and names the files that hold the rest; the reader (or agent) does t
 from __future__ import annotations
 
 import os
+import json
 import re
 import shlex
 import socket
@@ -31,7 +32,7 @@ from pathlib import Path
 from runner import nextflow_command
 from runner.errors import NfclawError
 from runner.locking import output_writer
-from runner.replay_guard import host_identity, quote_console
+from runner.replay_guard import host_identity, quote_console, log_cursor_path, write_log_cursor
 
 RUN_LOG_NAME = "run.log"
 ERROR_MARK = "==> nfclaw error:"          # precedes the error nfclaw records, up to the last line
@@ -367,9 +368,17 @@ class RunLog:
             text = text.replace("\r", "\\r").replace("\n", "\\n")
         else:
             text = text.replace("\n", "\n| ")
-        if _STARTED.fullmatch(text):
+        started = bool(_STARTED.fullmatch(text))
+        if started:
+            try:
+                log_cursor_path(self.path).unlink(missing_ok=True)
+            except OSError:
+                pass
+            offset = self._fh.tell() + int(self._needs_separator or not self._console_line_start)
             text += "\n    console format: prefixed"
         self._write((text + "\n").encode("utf-8"), stream=None)
+        if started:
+            write_log_cursor(self.path, offset)
 
     def write(self, chunk: bytes, stream: str = "out") -> None:
         """Child bytes; retain raw tails and quote log lines so they cannot forge controls."""
@@ -455,8 +464,11 @@ def record_unlaunched(log: Path, *, command: str, outcome: str, error: str) -> N
         # Validation precedes the main writer lock. A refused attempt must not append status
         # markers to a live writer's log; use that same lock around this separate append.
         with output_writer(log.parent.parent.parent):
+            log_cursor_path(log).unlink(missing_ok=True)
             with log.open("a", encoding="utf-8") as fh:
+                offset = fh.tell() + 1
                 fh.write("\n" + "\n".join(lines) + "\n")
+            write_log_cursor(log, offset)
     except OSError:
         pass                                             # never mask the refusal itself
     except NfclawError:
@@ -578,8 +590,8 @@ def _unreadable(log: Path, exc: OSError) -> RunState:
 
 def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
     """The state of the last launch in `log`, deterministically: its last line if it has one,
-    otherwise whether the nfclaw that wrote it is still running. One pass finds where the last
-    launch starts; only that launch's header and the tail of the file are then parsed, so a
+    otherwise whether the nfclaw that wrote it is still running. A writer index locates the latest
+    launch; legacy logs are searched backward in blocks. Only its header and tail are parsed, so a
     days-long run's log stays cheap to check. A log that exists but cannot be read (another
     user's run, a directory that cannot be searched) is `unreadable`, never a traceback."""
     try:
@@ -594,24 +606,56 @@ def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
     offset = 0
     try:
         with log.open("rb") as fh:
-            for raw in fh:
-                if (raw.startswith(_CONTROL_PREFIX)
-                        and _STARTED.match(raw[:64].decode("utf-8", errors="replace"))):
-                    start = offset
-                offset += len(raw)
+            info = os.fstat(fh.fileno())
+            offset = info.st_size
+            start = None
+            try:
+                with log_cursor_path(log).open("rb") as cursor_file:
+                    cursor_bytes = cursor_file.read(4097)
+                if len(cursor_bytes) > 4096:
+                    raise ValueError("oversized log cursor")
+                cursor = json.loads(cursor_bytes)
+                position = cursor["start"]
+                if (cursor["device"] == info.st_dev and cursor["inode"] == info.st_ino
+                        and type(position) is int and 0 <= position < cursor["size"] <= offset):
+                    fh.seek(max(0, position - 1))
+                    prefix = fh.read(1) if position else b"\n"
+                    header = fh.read(128).decode("utf-8", errors="replace")
+                    if prefix == b"\n" and _STARTED.match(header):
+                        start = position
+            except (OSError, ValueError, KeyError, TypeError):
+                pass
+            if start is None:
+                # Legacy logs have no seek index. Scan backward in bounded blocks, stopping at
+                # the newest header; never materialize the whole log or split a huge child line.
+                end, overlap = offset, b""
+                pattern = re.compile(rb"(?:^|\n)==> nfclaw (?:run|replay|chain) started [^\r\n ]+")
+                while end > 0 and start is None:
+                    begin = max(0, end - _STATE_TAIL_BYTES)
+                    fh.seek(begin)
+                    block = fh.read(end - begin) + overlap
+                    matches = list(pattern.finditer(block))
+                    matches = [m for m in matches if m.start() > 0 or begin == 0]
+                    if matches:
+                        match = matches[-1]
+                        start = begin + match.start() + int(block[match.start():].startswith(b"\n"))
+                    overlap = block[:256]
+                    end = begin
             if start is None:
                 return RunState(log, "missing")
             fh.seek(start)
             head = _physical_lines(fh.read(_HEAD_BYTES))
             tail_from = max(start, offset - _STATE_TAIL_BYTES)
             fh.seek(tail_from)
-            tail = _physical_lines(fh.read())
+            tail = _physical_lines(fh.read(offset - tail_from))
     except OSError as exc:
         return _unreadable(log, exc)
     if tail_from > start and tail:
         tail = tail[1:]                                  # the first line may be cut mid-way
 
-    m = _STARTED.match(head[0])
+    m = _STARTED.match(head[0]) if head else None
+    if m is None:
+        return RunState(log, "missing")  # The log was truncated or replaced while reading.
     st = RunState(log, "missing", kind=m.group(1), started=m.group(2))
     header_lines = 1
     prefixed_console = False

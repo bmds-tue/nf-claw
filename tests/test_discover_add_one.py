@@ -138,6 +138,8 @@ def test_bump_pins_gitlink_to_new_tag(tmp_path, monkeypatch):
     url = (tmp_path / "origin").as_uri()
 
     assert dp.add_one("mini", url, "1.0.0", repo)              # start pinned at the old release
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "record the discovered release before updating")
     assert up_mod.bump("mini", url, repo) == "1.1.0"           # auto-update to the newest tag
     _assert_pinned_to(repo, "mini", "1.1.0", commits["1.1.0"])
 

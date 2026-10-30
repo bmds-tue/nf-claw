@@ -176,6 +176,30 @@ test('parameter search recovers from an initial network failure', async ({ page 
   expect(requests).toBeGreaterThanOrEqual(2);
 });
 
+for (const width of [1280, 390]) {
+  test(`skills arrows follow the focused row at width ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/#skills');
+    const input = page.locator('#skills input').first();
+    const index = page.waitForResponse(response => response.url().endsWith('/search/params.json'));
+    await input.focus();
+    await (await index).finished();
+    await input.fill('rna');
+    const rows = page.locator('#skills [data-skill]:visible');
+    await expect(rows.first()).toHaveAttribute('data-skill', /^rna/);
+    await expect(rows.nth(1)).toBeVisible();
+    await rows.first().focus();
+    await expect(rows.first()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(rows.nth(1)).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(rows.first()).toBeFocused();
+    await input.focus();
+    await input.press('Escape');
+    await expect(input).toHaveValue('');
+  });
+}
+
 test('bacmodel example link points to its pinned upstream source', async ({ page }) => {
   await page.goto('/pipelines/bacmodel/');
   await page.getByRole('button', { name: /carveme-mediadb/ }).first().click();

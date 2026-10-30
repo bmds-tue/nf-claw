@@ -95,7 +95,8 @@ export function SkillsExplorer({ skills }: { skills: SkillCard[] }) {
     // Only rows on screen: small screens hide everything past the first page until "Show all".
     const pool = !showAll && compact ? results.slice(0, MOBILE_PAGE) : results;
     if (!pool.length) return;
-    const i = pool.findIndex((r) => r.skill.name === selected);
+    const focused = (e.target as HTMLElement).closest<HTMLElement>("[data-skill]")?.dataset.skill;
+    const i = pool.findIndex((r) => r.skill.name === (focused ?? selected));
     let next = -1;
     if (e.key === "ArrowDown") next = Math.min(pool.length - 1, i + 1);
     else if (e.key === "ArrowUp") next = Math.max(0, i - 1);

@@ -182,14 +182,25 @@ def test_maintenance_git_calls_are_bounded_and_noninteractive(monkeypatch, tmp_p
 
     def capture(command, **kwargs):
         seen.append((command, kwargs))
-        return subprocess.CompletedProcess(command, 0, "a\trefs/tags/1.0.0\n", "")
+        if 'ls-files' in command:
+            output = '160000 ' + 'a' * 40 + ' 0\tpipelines/p/upstream\0'
+        elif 'config' in command:
+            output = 'https://example.invalid/p.git\n'
+        elif 'symbolic-ref' in command:
+            return subprocess.CompletedProcess(command, 1, '', '')  # detached HEAD
+        elif 'ls-remote' in command:
+            output = "a\trefs/tags/1.0.0\n"
+        else:
+            output = ''
+        return subprocess.CompletedProcess(command, 0, output, "")
 
     monkeypatch.setattr(update_pipelines, "capture", capture, raising=False)
     monkeypatch.setattr(subprocess, "run", capture)
     monkeypatch.setattr(update_pipelines.submod, "is_git_tree", lambda path: True)
+    monkeypatch.setattr(update_pipelines.submod, "_own_head", lambda path: 'a' * 40)
     monkeypatch.setattr(update_pipelines.write_skill, "generate", lambda *args, **kwargs: None)
     assert update_pipelines.bump("p", "https://example.invalid/p.git", tmp_path) == "1.0.0"
-    assert len(seen) == 4
+    assert {'fetch', 'checkout', 'add', 'status'} <= {word for cmd, _ in seen for word in cmd}
     assert all(kw.get("timeout") == 0.25 for _, kw in seen)
     assert all(kw.get("env", {}).get("GIT_TERMINAL_PROMPT") == "0" for _, kw in seen)
 

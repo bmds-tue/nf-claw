@@ -31,14 +31,19 @@ def parse_nxf_env(items: list[str] | dict[str, str]) -> dict[str, str]:
     meaningful); any other environment a run needs is still inherited from the shell."""
     pairs: list[tuple[str, object]] = []
     if isinstance(items, dict):
-        pairs = [(str(k), v) for k, v in items.items()]
-    else:
+        if not all(isinstance(k, str) for k in items):
+            raise NfclawError(ErrorCode.PARAMS_INVALID, "nxf_env keys must be strings.")
+        pairs = list(items.items())
+    elif isinstance(items, list) and all(isinstance(item, str) for item in items):
         for item in items:
             key, sep, value = item.partition("=")
             if not sep:
                 raise NfclawError(ErrorCode.PARAMS_INVALID,
                                   f"--nxf-env must be KEY=VALUE (got {item!r}).")
             pairs.append((key, value))
+    else:
+        raise NfclawError(ErrorCode.PARAMS_INVALID,
+                          "nxf_env must be an object or a list of KEY=VALUE strings.")
     env: dict[str, str] = {}
     for key, value in pairs:
         key = key.strip()
@@ -118,15 +123,16 @@ class ResourceLimits:
 def parse(cpus: int | None, memory: str | None, time: str | None) -> ResourceLimits:
     """Validate the three limits and return them. Raises NfclawError on a value Nextflow
     could not parse, naming the offending flag — a deterministic check, not a guess."""
-    if cpus is not None and cpus <= 0:
+    if cpus is not None and (type(cpus) is not int or cpus <= 0):
         raise NfclawError(ErrorCode.PARAMS_INVALID,
                           f"--limit-cpus must be a positive whole number of CPUs (got {cpus}).")
-    if memory is not None and not _MEMORY_RE.fullmatch(memory.strip()):
+    if memory is not None and (not isinstance(memory, str)
+                               or not _MEMORY_RE.fullmatch(memory.strip())):
         raise NfclawError(
             ErrorCode.PARAMS_INVALID,
             f"--limit-memory is not a Nextflow memory value: {memory!r}.",
             fix="Use a number and a unit, e.g. 15.GB, 16 GB or 512.MB.")
-    if time is not None and not _TIME_RE.fullmatch(time.strip()):
+    if time is not None and (not isinstance(time, str) or not _TIME_RE.fullmatch(time.strip())):
         raise NfclawError(
             ErrorCode.PARAMS_INVALID,
             f"--limit-time is not a Nextflow duration value: {time!r}.",

@@ -16,7 +16,6 @@ code change under it, and provenance records exactly which commit ran.
 from __future__ import annotations
 
 import re
-import shutil
 import subprocess
 from dataclasses import replace
 from pathlib import Path
@@ -330,13 +329,25 @@ def _fetch_tag(upstream: Path, tag: str) -> None:
 
 def _add_worktree(upstream: Path, dest: Path, rev: str) -> None:
     """Check `rev` (a `tags/<tag>` or a commit) out at `dest` as a detached worktree."""
+    if any(parent.is_symlink() for parent in (dest.parent, dest.parent.parent)):
+        raise NfclawError(ErrorCode.SUBMODULE_INCOMPLETE,
+                          f"Version cache parent is a symlink: {dest.parent}.",
+                          fix="Use a real cache directory; preserve and move the alias aside.")
     dest.parent.mkdir(parents=True, exist_ok=True)
     capture(["git", "-C", str(upstream), "worktree", "prune"],
             timeout=seconds("NFCLAW_GIT_TIMEOUT", 30), env=submod._git_env())
-    if dest.exists():                                          # stale/partial — start clean
-        shutil.rmtree(dest)
+    if dest.is_symlink() or dest.exists():
+        # An incomplete checkout is not proof of a disposable cache. It may contain deleted
+        # tracked files, untracked research notes, or an unrelated repository. Never erase it.
+        if dest.is_symlink() or not dest.is_dir() or any(dest.iterdir()):
+            raise NfclawError(
+                ErrorCode.SUBMODULE_INCOMPLETE,
+                f"Incomplete version cache already exists: {dest}.",
+                fix="Preserve its contents and move this directory aside, then retry. "
+                    "nfclaw will not delete an existing checkout or local work.")
+        dest.rmdir()  # Only a proven empty directory; rmdir also refuses a concurrent write.
     result = capture(
-        ["git", "-C", str(upstream), "worktree", "add", "--force", "--detach",
+        ["git", "-C", str(upstream), "worktree", "add", "--detach",
          str(dest), rev],
         timeout=seconds("NFCLAW_GIT_TIMEOUT", _GIT_TIMEOUT), env=submod._git_env())
     result.check_returncode()
