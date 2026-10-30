@@ -2,6 +2,7 @@
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -46,7 +47,11 @@ def _accept(tmp_path, log, exit_code, *, timeout_available=True, timeout_tool='t
     registry = tmp_path / "exceptions.tsv"
     registry.write_text(exceptions)
     result = tmp_path / "verdict.tsv"
+    # The gate's helpers run on $PYTHON: the interpreter running these tests, whatever python3 is.
+    _executable(fake / "python", f'#!/bin/sh\nprintf "%s\\n" "$*" >> "$FAKE_PYTHON_CALLS"\n'
+                f'exec "{sys.executable}" "$@"\n')
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+           "PYTHON": str(fake / "python"), "FAKE_PYTHON_CALLS": str(tmp_path / "python-calls.txt"),
            "RUNNER_TEMP": str(tmp_path), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
            "NFCLAW_RESULT_FILE": str(result), "NFCLAW_KEEP_SUBMODULES": "1",
            "NFCLAW_LOG_DIR": str(tmp_path / "retained-logs"),
@@ -122,12 +127,40 @@ def test_preview_stager_is_bounded_by_either_platform_timeout(tmp_path, timeout_
     assert args[0] == '-log' and 'run' in args and '-preview' in args
 
 
-def test_unavailable_timeout_cannot_launch_an_unbounded_preview(tmp_path):
+def test_without_gnu_timeout_the_preview_is_bounded_by_the_bundled_supervisor(tmp_path):
+    # macOS without coreutils has neither tool: the gate used to refuse every preview there.
     process, verdict = _accept(tmp_path, "* PREVIEW *\n", 0, timeout_available=False)
-    assert process.returncode != 0, "a bounded acceptance gate must not silently run unbounded"
-    assert verdict == "mini\trejected\n"
-    assert not (tmp_path / "nextflow-args.txt").exists()
-    assert "timeout" in process.stdout.lower()
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert verdict == "mini\taccepted\n"
+    assert not (tmp_path / "timeouts.txt").exists()
+    supervisor = str(ROOT / "scripts" / "run_with_timeout.py")
+    launches = [line.split() for line in (tmp_path / "python-calls.txt").read_text().splitlines()
+                if supervisor in line]
+    assert len(launches) == 1
+    python = str(tmp_path / "bin" / "python")
+    assert launches[0][:5] == [supervisor, "--kill-after", "10", "900", python]
+    assert launches[0][5] == str(ROOT / "scripts" / "nextflow_preview.py")
+    assert "-preview" in (tmp_path / "nextflow-args.txt").read_text().splitlines()
+
+
+@pytest.mark.parametrize("python", ["old", "missing"])
+def test_an_unsuitable_python_is_refused_before_any_preview(tmp_path, python):
+    # macOS ships python3 3.9; the helpers need nfclaw's 3.11+. Say so instead of failing each
+    # preview with an ImportError that reads as a rejected pipeline.
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    _executable(fake / "nextflow", '#!/bin/sh\ntouch "$FAKE_NXF_CALLED"\n')
+    interpreter = fake / "python3.9"
+    if python == "old":
+        _executable(interpreter, "#!/bin/sh\nexit 1\n")
+    env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+           "PYTHON": str(interpreter), "RUNNER_TEMP": str(tmp_path),
+           "FAKE_NXF_CALLED": str(tmp_path / "launched")}
+    process = subprocess.run(["bash", str(ROOT / "scripts" / "nextflow_accept.sh"), "mini"],
+                             cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert process.returncode == 1
+    assert "needs Python 3.11+" in process.stdout and str(interpreter) in process.stdout
+    assert not (tmp_path / "launched").exists()
 
 
 def test_failed_preview_retains_console_and_engine_evidence_after_cleanup(tmp_path):
@@ -407,7 +440,7 @@ def test_preview_preserves_existing_submodule_and_untracked_files(tmp_path, dive
     _executable(fake / 'timeout', '#!/bin/sh\n[ "$1" = --kill-after=10s ] || exit 2\n'
                 'shift\nshift\nexec "$@"\n')
     env = {**os.environ, 'PATH': f'{fake}{os.pathsep}{os.environ["PATH"]}',
-           'RUNNER_TEMP': str(tmp_path)}
+           'PYTHON': sys.executable, 'RUNNER_TEMP': str(tmp_path)}
     env.pop('NFCLAW_KEEP_SUBMODULES', None)
     process = subprocess.run(['bash', str(ROOT / 'scripts/nextflow_accept.sh'), 'mini'],
                              cwd=root, env=env, capture_output=True, text=True, timeout=30)

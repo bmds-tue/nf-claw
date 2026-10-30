@@ -196,7 +196,7 @@ for line in sys.stdin:
                "NATIVE_EVIDENCE_DIR": str(native), 'CANDIDATE_SHA': metadata['sha'],
                'VALIDATION_RESULT': 'success', 'DRIFT_RESULT': 'success',
                'NATIVE_RESULT': 'success' if metadata['pipelines'] else 'skipped',
-               "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+               "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}", "PYTHON": sys.executable,
                "CALLS": str(calls), "REMOTE": str(remote), "BASE_SHA": base,
                "UPDATE_KIND": kind, "GITHUB_REPOSITORY": "owner/repo",
                "GITHUB_SHA": "e" * 40, "GITHUB_SERVER_URL": "https://github.com",
@@ -260,6 +260,19 @@ def test_check_or_rule_failure_never_publishes_or_deploys(publication, failure):
     assert not any(call[:2] == ["workflow", "run"] for call in calls)
     if "FAIL_CHECK" in failure:
         assert not any(call[0] == "git-push" for call in calls)
+
+
+def test_an_unsuitable_python_publishes_nothing(publication, tmp_path):
+    # A python3 older than nfclaw's 3.11 (macOS ships 3.9) is named, not run into an ImportError.
+    repo, remote, base, run = publication
+    (repo / "catalog.md").write_text("regenerated\n")
+    old = tmp_path / "python3.9"
+    old.write_text("#!/bin/sh\nexit 1\n")
+    old.chmod(0o755)
+    result, calls, _ = run(PYTHON=str(old))
+    assert result.returncode == 1
+    assert "needs Python 3.11+" in result.stdout and str(old) in result.stdout
+    assert git(remote, "rev-parse", "main") == base and not calls
 
 
 def test_a_concurrent_main_update_is_preserved_for_the_next_scheduled_run(publication):
