@@ -16,4 +16,4 @@ export {
 } from "./repo";
 export { getWorkflows } from "./workflows";
 export { getLiveRuns } from "./github";
-export { getQuickstart, type Quickstart } from "./quickstart";
+export { getQuickstart } from "./quickstart";
