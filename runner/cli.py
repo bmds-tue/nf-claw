@@ -650,7 +650,7 @@ def _main(argv: list[str] | None = None) -> int:
             runlog.record_unlaunched(log_path,
                                      command=shlex.join(redaction.argv(["nfclaw", *argv])),
                                      outcome=outcome,
-                                     error=redaction.text(error, redaction.argv_env(argv)))
+                                     error=redaction.text(error, redaction.assignments(argv)))
 
         try:
             if not args.input:
@@ -679,7 +679,7 @@ def _main(argv: list[str] | None = None) -> int:
                     limits=resources.parse(args.limit_cpus, args.limit_memory, args.limit_time),
                     on_warning=warn, sheet_set=sheet_set)
         except NfclawError as exc:
-            print(redaction.text(str(exc), redaction.argv_env(argv)), file=sys.stderr)
+            print(redaction.text(str(exc), redaction.assignments(argv)), file=sys.stderr)
             if not exc.details.get("active_run") and not exc.details.get("unsafe_write_boundary"):
                 unlaunched("refused before launch", str(exc))
             return 1

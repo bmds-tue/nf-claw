@@ -90,7 +90,10 @@ def test_chain_records_secret_references_and_requires_environment_on_resume(
 
 
 @pytest.mark.parametrize("equals", [False, True])
-def test_refused_run_cannot_persist_or_print_a_secret(tmp_path, monkeypatch, capsys, equals):
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_refused_run_cannot_persist_or_print_a_secret(
+    tmp_path, monkeypatch, capsys, equals, duplicate
+):
     monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
     out = tmp_path / "out"
     log = out / "provenance/logs/run.log"
@@ -104,8 +107,12 @@ def test_refused_run_cannot_persist_or_print_a_secret(tmp_path, monkeypatch, cap
     monkeypatch.setattr(orchestration, "run_pipeline", refuse)
     option = f"NXF_GITHUB_TOKEN={secret}"
     args = [f"--nxf-env={option}"] if equals else ["--nxf-env", option]
+    overwritten = "overwritten-private-placeholder"
+    if duplicate:
+        args = ["--nxf-env", f"NXF_GITHUB_TOKEN={overwritten}", *args]
     assert cli.main(["run", "mini", "--outdir", str(out), *args]) == 1
     assert secret not in log.read_text()
+    assert overwritten not in log.read_text()
     captured = capsys.readouterr()
     assert secret not in captured.out + captured.err
     assert "<redacted>" in log.read_text()
