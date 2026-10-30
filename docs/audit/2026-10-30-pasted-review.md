@@ -66,7 +66,7 @@ original failed attempt is retained. All 33 GitHub checks passed on `dbcded2`, i
 Python 3.11–3.15 Linux/macOS matrix, real Nextflow/container tasks, website and source drift.
 Subsequent main changes are integrated before the final PR checks.
 
-Server evidence is retained under `/mnt/volume/nfclaw-review-hardening-20261030.65E7ia/`:
+Server evidence is retained in the isolated validation workspace:
 `final-pytest.xml`, `final-pytest.log`, `followup-final-pytest.xml`, `final-website.log` and
 `final-website-sarek-retry.log`. The corresponding checkouts are `final/` and `followup/`.
 Earlier `repo/` and `current/` records are exploratory runs, not the final proof. Final PR
