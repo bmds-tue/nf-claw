@@ -9,6 +9,7 @@ import {
   LifeBuoy,
   RefreshCw,
   Scale,
+  ShieldAlert,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ function iconFor(slug: string): LucideIcon {
   if (/notice|licen/.test(slug)) return Scale;
   if (/architect/.test(slug)) return Boxes;
   if (/compat/.test(slug)) return ShieldCheck;
+  if (/secur/.test(slug)) return ShieldAlert;
   if (/issue|trouble/.test(slug)) return LifeBuoy;
   if (/updat/.test(slug)) return RefreshCw;
   return FileText;

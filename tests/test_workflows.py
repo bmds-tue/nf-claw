@@ -227,6 +227,28 @@ def test_every_action_is_pinned_to_a_full_commit():
                 assert pinned, f"{path.name}: {ref}"
 
 
+def test_dependabot_keeps_every_pinned_action_and_the_website_dependencies_current():
+    # Commit-pinned actions never move by themselves: every directory that pins one, and the
+    # website's npm manifest, must be under a version-update entry that names a real directory.
+    yaml = pytest.importorskip('yaml')
+    config = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
+    assert config["version"] == 2
+    covered = {}
+    for entry in config["updates"]:
+        assert entry["schedule"]["interval"] in ("daily", "weekly", "monthly")
+        patterns = entry.get("directories") or [entry["directory"]]
+        directories = {path for pattern in patterns
+                       for path in ([ROOT] if not pattern.strip("/")
+                                    else ROOT.glob(pattern.strip("/")))
+                       if path.is_dir()}
+        assert directories, f"{entry['package-ecosystem']}: {patterns} names no directory"
+        covered.setdefault(entry["package-ecosystem"], set()).update(directories)
+    pinning = {ROOT} | {path.parent for path in (ROOT / ".github" / "actions").glob("*/action.yml")
+                        if "uses:" in path.read_text(encoding="utf-8")}
+    assert pinning <= covered["github-actions"]
+    assert (ROOT / "website") in covered["npm"] and (ROOT / "website" / "package.json").is_file()
+
+
 def test_nextflow_launcher_download_has_connect_and_total_limits():
     action = (ROOT / ".github" / "actions" / "setup-nextflow" / "action.yml").read_text()
     command = action.split("curl ", 1)[1].split("\n        echo ", 1)[0].replace("\\\n", " ")

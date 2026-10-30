@@ -216,6 +216,26 @@ def test_archiving_preserves_links_through_internal_external_publications(
     assert (archive / "indirect.txt").read_bytes() == b"external scientific reads"
 
 
+def test_a_previous_run_whose_log_cannot_be_read_is_not_moved(tmp_path, monkeypatch):
+    # Whether its engine still runs cannot be judged: the tree may be live, so it stays put.
+    out = tmp_path / "analysis"
+    (out / "provenance" / "logs").mkdir(parents=True)
+    log = out / "provenance" / "logs" / "run.log"
+    log.write_text("==> nfclaw run started 2026-10-28T00:00:00+00:00\n    pid: 1\n")
+    (out / "reads.txt").write_text("retained")
+    original = Path.open
+
+    def refused(self, *args, **kwargs):
+        if self == log:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", refused)
+    with pytest.raises(NfclawError, match="its run log cannot be read"):
+        resume_safety.archive_previous_run(out, {}, [])
+    assert (out / "reads.txt").read_text() == "retained"
+    assert not list(tmp_path.glob("analysis.previous-*"))
+
+
 @pytest.mark.skipif(os.geteuid() == 0, reason="requires non-root permissions")
 def test_unwritable_publication_directory_leaves_original_results_readable(tmp_path):
     out = tmp_path / "analysis"

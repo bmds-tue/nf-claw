@@ -10,8 +10,10 @@ that nfclaw changed none of them, using upstream's expectations rather than a re
 nf-test names each checksummed file by its basename and hashes the decompressed content of a `.gz`
 file, so an entry matches any published file of that name, a `.gz` file by either digest. Every
 expected path must exist; extra files are not judged, because the snapshot does not carry the
-patterns its test ignores. nfclaw's own `provenance/` is not a published result. Exits 1 when an
-expected path is missing or a checksum differs.
+patterns its test ignores. nfclaw's own `provenance/` and Nextflow's own state (`.nextflow/`,
+`.nextflow.log*`) are not published results. Files are hashed in chunks, so a large result is never
+read into memory whole. Exits 1 when an expected path is missing or a checksum differs, 2 when the
+snapshot or the run cannot be read.
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ import hashlib
 import json
 import re
 import sys
+import zlib
 from pathlib import Path
 
 _MD5_ENTRY = re.compile(r"^(?P<name>.+):md5,(?P<md5>[0-9a-f]{32})$")
@@ -32,6 +35,8 @@ def expectations(snapshot: dict,
 
     The paths are the content part that lists only plain strings (nf-core's `stable_path`); the
     checksums are every `name:md5,<hash>` string anywhere in the content."""
+    if not isinstance(snapshot, dict):
+        raise ValueError("the snapshot is not a JSON object of tests")
     if test is None:
         if len(snapshot) != 1:
             raise ValueError(f"the snapshot records {len(snapshot)} tests; name one with --test: "
@@ -39,7 +44,7 @@ def expectations(snapshot: dict,
         test = next(iter(snapshot))
     if test not in snapshot:
         raise ValueError(f"no test {test!r} in the snapshot: " + ", ".join(map(repr, snapshot)))
-    content = snapshot[test].get("content")
+    content = snapshot[test].get("content") if isinstance(snapshot[test], dict) else None
     if not isinstance(content, list):
         raise ValueError(f"test {test!r} records no content list")
     paths: list[str] = []
@@ -60,25 +65,52 @@ def expectations(snapshot: dict,
     return paths, checksums
 
 
+_CHUNK = 1024 * 1024
+
+
+def _md5(stream) -> str:
+    digest = hashlib.md5()
+    for chunk in iter(lambda: stream.read(_CHUNK), b""):
+        digest.update(chunk)
+    return digest.hexdigest()
+
+
 def digests(path: Path) -> set[str]:
-    raw = path.read_bytes()
-    found = {hashlib.md5(raw).hexdigest()}
+    """The md5 of a file's bytes and, for a `.gz` file, of its decompressed content."""
+    with path.open("rb") as stream:
+        found = {_md5(stream)}
     if path.name.endswith(".gz"):
         try:
-            found.add(hashlib.md5(gzip.decompress(raw)).hexdigest())
-        except (OSError, EOFError):
+            with gzip.open(path, "rb") as stream:
+                found.add(_md5(stream))
+        except (OSError, EOFError, zlib.error):         # not (valid) gzip: its raw bytes only
             pass
     return found
+
+
+def _published(relative: Path) -> bool:
+    """A run result, not nfclaw's provenance bundle or Nextflow's own state in the outdir."""
+    head = relative.parts[0]
+    return head not in ("provenance", ".nextflow") and not head.startswith(".nextflow.log")
 
 
 def compare(snapshot: dict, outdir: Path, test: str | None = None) -> dict[str, list[str]]:
     """`missing_paths`, `missing_files`, `different` and `identical`, each a list of names."""
     paths, checksums = expectations(snapshot, test)
     published: dict[str, list[Path]] = {}
+    if not outdir.is_dir():
+        raise ValueError(f"not a run directory: {outdir}")
     for path in sorted(outdir.rglob("*")):
         relative = path.relative_to(outdir)
-        if relative.parts[0] != "provenance" and path.is_file():
+        if _published(relative) and path.is_file():
             published.setdefault(path.name, []).append(path)
+    hashed: dict[Path, set[str]] = {}
+
+    def matches(path: Path, md5: str) -> bool:
+        if path not in hashed:
+            hashed[path] = digests(path)
+        return md5 in hashed[path]
+
     result: dict[str, list[str]] = {"missing_paths": [p for p in paths
                                                       if not (outdir / p).exists()],
                                     "missing_files": [], "different": [], "identical": []}
@@ -86,7 +118,7 @@ def compare(snapshot: dict, outdir: Path, test: str | None = None) -> dict[str, 
         candidates = published.get(name, [])
         if not candidates:
             result["missing_files"].append(name)
-        elif any(md5 in digests(p) for p in candidates):
+        elif any(matches(p, md5) for p in candidates):
             result["identical"].append(name)
         else:
             result["different"].append(name)

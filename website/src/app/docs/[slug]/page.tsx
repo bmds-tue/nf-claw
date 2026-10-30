@@ -130,7 +130,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             ))}
           </div>
 
-          <Reveal y={12}>
+          <Reveal>
             <header className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-3">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-claw-400">
                 <FileText className="h-5 w-5" />

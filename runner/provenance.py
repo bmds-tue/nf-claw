@@ -33,6 +33,7 @@ from runner.samplesheet import delimiter_for, serialized_rows
 from runner.schema import InputSchema
 from runner.settings import seconds
 from runner.submodule import SubmoduleStatus
+from runner.version import identity as nfclaw_identity
 
 
 _SENSITIVE_KEY_PARTS = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "API_KEY",
@@ -520,6 +521,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         "dependency_inventory_version": 1,
         "output_inventory_version": 1,
         "provenance_real_path": str(prov.resolve()),
+        # The nfclaw that wrote this bundle: its package version and checkout commit.
+        "nfclaw": nfclaw_identity(),
     }
     if validation_scope is not None:
         manifest['validation_scope'] = validation_scope

@@ -1,0 +1,36 @@
+# Version updates for what this repository pins itself. Security updates are enabled in the
+# repository settings; these keep the pins from silently ageing between advisories.
+# - GitHub Actions: every workflow and local composite action runs third-party actions by full
+#   commit SHA (tests/test_workflows.py enforces it); Dependabot moves the SHA and its version
+#   comment together, so a pin never falls back to a movable tag.
+# - The website's npm dependencies (website/package.json and its lockfile).
+# Pipelines are not here: their pins move through the validated maintenance workflows
+# (docs/updating.md). The Python package has no runtime dependencies, and its development tools
+# are bounded on purpose in pyproject.toml.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: "/website"
+    schedule:
+      interval: weekly
+    groups:
+      website-minor-and-patch:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 5

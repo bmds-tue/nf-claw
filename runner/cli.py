@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import shlex
+import stat
 import sys
 from pathlib import Path
 
@@ -78,6 +79,37 @@ def _collect_overrides(extras: list[str]) -> dict:
     return out
 
 
+def _catalog_rows(root: Path) -> list[dict]:
+    """The library as `catalog.json` lists it (what the MCP search reads), else each pipeline's
+    skill.md frontmatter — the source the catalog is generated from."""
+    try:
+        rows = exact_json.loads((root / "catalog.json").read_text(encoding="utf-8"))
+        if isinstance(rows, list) and all(isinstance(row, dict) for row in rows):
+            return rows
+    except (OSError, ValueError):
+        pass
+    return [{**p.frontmatter, "name": p.name} for p in discovery.discover(root / "pipelines")]
+
+
+def _present(path: Path) -> bool:
+    """Whether `path` is a file, or may be one that cannot be inspected: before Python 3.14,
+    `Path.is_file` raises PermissionError under a directory that cannot be searched, where
+    `runlog.read_state` reports the log as unreadable rather than missing."""
+    try:
+        return path.is_file()
+    except OSError:
+        return True
+
+
+def _file_size(path: Path) -> int | None:
+    """The size of an existing regular file, or None (also when it cannot be inspected)."""
+    try:
+        metadata = path.stat()
+    except OSError:
+        return None
+    return metadata.st_size if stat.S_ISREG(metadata.st_mode) else None
+
+
 def _existing_path(token: str) -> bool:
     """Whether a stray token names an existing file (what an unquoted glob expands to)."""
     try:
@@ -94,7 +126,7 @@ def _stopped(exc: BaseException, log: Path) -> int:
     """Say that a stop signal (or Ctrl-C) ended the run, and return the shell's exit status
     for it."""
     print(f"nfclaw: {_stop_words(exc)}; any Nextflow run it had started was shut down."
-          + (f" Log: {log}" if log.is_file() else ""), file=sys.stderr)
+          + (f" Log: {log}" if _present(log) else ""), file=sys.stderr)
     return 128 + exc.signum if isinstance(exc, execution.Terminated) else 130
 
 
@@ -160,6 +192,10 @@ def _status_report(st: runlog.RunState) -> str:
                 "nfclaw has not launched a run into this --outdir. A run it refuses before "
                 "launching (invalid parameters or samplesheet, a failed preflight check) leaves a "
                 "fresh --outdir untouched: run the same command in the foreground to see why.\n")
+    if st.state == "unreadable":
+        return (f"status: unknown — the log {st.log} cannot be read: "
+                f"{'; '.join(st.error)}.\n"
+                "Make it readable, or ask as the user who launched the run.\n")
     if st.state == "success":
         lines.append("status: success" + (" — with caveats the pipeline reported about its results"
                                           if st.caveats else ""))
@@ -174,7 +210,8 @@ def _status_report(st: runlog.RunState) -> str:
         lines.append(f"status: unknown here — launched on {st.host} and not finished; "
                      "run `nfclaw status` there")
     else:
-        lines.append(f"status: stopped without an outcome — {who} (pid {st.pid}) is no longer "
+        pid = f" (pid {st.pid})" if st.pid else ""
+        lines.append(f"status: stopped without an outcome — {who}{pid} is no longer "
                      "running and never recorded how the run ended: it was killed with SIGKILL, "
                      "ran out of memory, its disk filled up, or the machine restarted")
     times = f"started: {st.started}" + (f" · finished: {st.finished}" if st.finished else "")
@@ -216,26 +253,65 @@ def main(argv: list[str] | None = None) -> int:
         os.dup2(devnull, sys.stdout.fileno())
         os.close(devnull)
         return _EXIT_BROKEN_PIPE
+    except OSError as exc:
+        # A path nfclaw could not reach (before Python 3.14, even `Path.exists` raises under a
+        # directory that cannot be searched): name it, as for any other refusal.
+        print(str(_os_error(exc)), file=sys.stderr)
+        return 1
+
+
+def _os_error(exc: OSError) -> NfclawError:
+    """An operating-system error, as nfclaw reports any other refusal: the path it concerns and
+    why, never a traceback."""
+    reason = exc.strerror or str(exc)
+    if exc.filename:
+        return NfclawError(ErrorCode.ENVIRONMENT, f"cannot access {exc.filename}: {reason}",
+                           fix="Check the path and its permissions (every directory above it "
+                               "must be searchable), then retry.")
+    return NfclawError(ErrorCode.ENVIRONMENT, f"operating-system error: {reason}",
+                       fix="Resolve the condition it names (disk space, permissions, limits), "
+                           "then retry.")
+
+
+class _Version(argparse.Action):
+    """`nfclaw --version`: read only when asked, so building the parser stays cheap."""
+
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, default=argparse.SUPPRESS,
+                 help=None):
+        super().__init__(option_strings, dest=dest, default=default, nargs=0, help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        from runner import version
+        print(version.describe())
+        parser.exit()
 
 
 def build_parser() -> argparse.ArgumentParser:
     """The `nfclaw` command line. One definition, shared by the CLI and the MCP server — which reads
     `run`'s own option names from it, so a pipeline parameter can never shadow one."""
-    parser = argparse.ArgumentParser(prog="nfclaw")
-    sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("list")
-    p_show = sub.add_parser("show")
-    p_show.add_argument("name")
-    p_show.add_argument("--pipeline-version", dest="pipeline_version")
-    p_versions = sub.add_parser("versions")
-    p_versions.add_argument("name")
+    parser = argparse.ArgumentParser(
+        prog="nfclaw", description="Run pinned nf-core pipelines with validation before launch "
+                                   "and a provenance bundle after (see AGENTS.md).")
+    parser.add_argument("--version", action=_Version, help="print nfclaw's version and exit")
+    sub = parser.add_subparsers(dest="cmd", required=True, metavar="COMMAND")
+    p_list = sub.add_parser("list", help="list the pipelines, or search them by keyword")
+    p_list.add_argument("query", nargs="*",
+                        help="words to search for (assay, data type, method or tool); the best "
+                             "matches come first")
+    p_show = sub.add_parser("show", help="print a pipeline's skill.md: how to run it")
+    p_show.add_argument("name", help="pipeline name, as `nfclaw list` shows it")
+    p_show.add_argument("--pipeline-version", dest="pipeline_version", metavar="VERSION",
+                        help="another release (or `dev`): its skill.md is generated from that "
+                             "release's schema")
+    p_versions = sub.add_parser("versions", help="list a pipeline's releases and its dev head")
+    p_versions.add_argument("name", help="pipeline name, as `nfclaw list` shows it")
     # The state of a run from its log alone — running, finished and how, or stopped without an
     # outcome (nfclaw killed outright) — so nobody has to read or interpret the log to know.
-    p_status = sub.add_parser("status")
+    p_status = sub.add_parser("status", help="report how a run (or replay, or chain) stands")
     p_status.add_argument("outdir", help="--outdir of the run (or replay target) to report on")
     # Compare a replay against the run it reproduces. Keyed on path, because comparing the raw
     # `outputs.sha256` lines counts one changed file as both a missing and an extra one.
-    p_verify = sub.add_parser("verify")
+    p_verify = sub.add_parser("verify", help="compare a replay with the run it reproduces")
     p_verify.add_argument("replay", help="--outdir of the replayed run")
     p_verify.add_argument("--against", dest="against", required=True,
                           help="--outdir of the original run it should reproduce")
@@ -258,9 +334,10 @@ def build_parser() -> argparse.ArgumentParser:
                          help="fresh reference directory whose name contains DRAMP")
     # Several pipelines in sequence, each started only after the previous one succeeded, with its
     # inputs prepared from that one's outputs (runner.chain; rules in handoffs/).
-    p_chain = sub.add_parser("chain")
-    chain_sub = p_chain.add_subparsers(dest="chain_cmd", required=True)
-    pc_run = chain_sub.add_parser("run", allow_abbrev=False)
+    p_chain = sub.add_parser("chain", help="run pipelines in sequence, each fed by the one "
+                                           "before (see docs/chaining.md)")
+    chain_sub = p_chain.add_subparsers(dest="chain_cmd", required=True, metavar="COMMAND")
+    pc_run = chain_sub.add_parser("run", allow_abbrev=False, help="run (or --check) a chain spec")
     pc_run.add_argument("spec", nargs="?",
                         help="chain spec (JSON, or YAML with pyyaml); optional with --resume, "
                              "which then re-reads the recorded one")
@@ -272,20 +349,25 @@ def build_parser() -> argparse.ArgumentParser:
                         help="continue the chain recorded in --outdir")
     pc_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
                         help="stop the whole chain after SECONDS (default: no limit)")
-    pc_status = chain_sub.add_parser("status")
+    pc_status = chain_sub.add_parser("status",
+                                     help="report a chain's stages and verify their lineage")
     pc_status.add_argument("outdir", help="a chain's --outdir, or the outdir of one of its stages")
     pc_status.add_argument("--quick", action="store_true",
                            help="report execution state without hashing data; lineage "
                                 "is not checked")
-    pc_edges = chain_sub.add_parser("edges")
+    pc_edges = chain_sub.add_parser("edges", help="list which pipeline can feed which")
     pc_edges.add_argument("name", nargs="?", help="only the handoffs from or to this pipeline")
     # allow_abbrev=False: `run` forwards every unknown flag to the pipeline (via parse_known_args
     # → _collect_overrides). With abbreviation on, a pipeline flag that is a prefix of a reserved
     # nfclaw flag (e.g. `--res`, `--time`) would be silently swallowed as `--resume`/`--timeout`
     # instead of passed through. Turning it off keeps reserved flags exact and lets everything else
     # reach Nextflow. Full flag names and single-dash `-profile` are unaffected.
-    p_run = sub.add_parser("run", allow_abbrev=False)
-    p_run.add_argument("name")
+    p_run = sub.add_parser(
+        "run", allow_abbrev=False, help="validate and run a pipeline",
+        epilog="Pipeline parameters follow as --param value or --param=value, named as in the "
+               "pipeline's reference.md (hyphens or underscores). Unknown parameters and invalid "
+               "values are refused before launch.")
+    p_run.add_argument("name", help="pipeline name, as `nfclaw list` shows it")
     # One value as before (a samplesheet, a directory, an accession, `false`), or — repeated — the
     # data files nfclaw generates the samplesheet from. Repeated rather than multi-valued: a value
     # list would swallow a pipeline name written after it (`run --input s.csv rnaseq`).
@@ -298,10 +380,16 @@ def build_parser() -> argparse.ArgumentParser:
                        help="a column of the samplesheet nfclaw generates from --input data files "
                             "(repeatable): a constant, or a template using {sample}/{lane}; an "
                             "empty VALUE leaves the column empty")
-    p_run.add_argument("--outdir", required=True)
-    p_run.add_argument("-profile", "--profile", dest="profile", default="docker")
-    p_run.add_argument("--params-file", dest="params_file")
-    p_run.add_argument("--pipeline-version", dest="pipeline_version")
+    p_run.add_argument("--outdir", required=True,
+                       help="results directory: new or empty (unless --resume), outside the "
+                            "repository or git-ignored; the run log and provenance go in it")
+    p_run.add_argument("-profile", "--profile", dest="profile", default="docker",
+                       help="Nextflow profile(s), comma-separated (default: docker)")
+    p_run.add_argument("--params-file", dest="params_file", metavar="PATH",
+                       help="pipeline parameters as JSON (or YAML with pyyaml); command-line "
+                            "values override it")
+    p_run.add_argument("--pipeline-version", dest="pipeline_version", metavar="VERSION",
+                       help="run another release (X.Y.Z) or `dev` instead of the pinned one")
     p_run.add_argument("--nxf-ver", dest="nxf_ver", type=_nxf_version,
                        help="pin the Nextflow engine version for this run (sets NXF_VER)")
     p_run.add_argument("--nxf-env", dest="nxf_env", action="append", default=[],
@@ -326,10 +414,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--allow-spaces", dest="allow_spaces", action="store_true",
                        help="run even if a path contains spaces (off by default; spaces break "
                             "many bioinformatics tools and Nextflow's work dir)")
-    p_run.add_argument("--check", action="store_true")
-    p_run.add_argument("--demo", action="store_true")
-    p_run.add_argument("--resume", action="store_true")
-    p_run.add_argument("--no-provenance", action="store_true")
+    p_run.add_argument("--check", action="store_true",
+                       help="validate and print the Nextflow command; launch nothing, write "
+                            "nothing into --outdir")
+    p_run.add_argument("--demo", action="store_true",
+                       help="run the pinned release's bundled test profile")
+    p_run.add_argument("--resume", action="store_true",
+                       help="continue the run in --outdir from Nextflow's cache")
+    p_run.add_argument("--no-provenance", action="store_true",
+                       help="skip the replay bundle and checksum records (the run log, "
+                            "parameters and dependency checks remain)")
     # No wall-clock limit by default: a real nf-core run (a sarek WGS, a large rnaseq) can take
     # days, and Nextflow already bounds each task with its own `time` directive.
     p_run.add_argument("--timeout", type=_positive_int, default=None, metavar="SECONDS",
@@ -406,10 +500,19 @@ def _main(argv: list[str] | None = None) -> int:
         return mcp_server.serve(root)
 
     if args.cmd == "list":
-        for p in discovery.discover(pdir):
-            fm = p.frontmatter
-            print(f"{p.name}\t{fm.get('version', '')}\t{fm.get('description', '')}")
-        return 0
+        if not args.query:
+            for p in discovery.discover(pdir):
+                fm = p.frontmatter
+                print(f"{p.name}\t{fm.get('version', '')}\t{fm.get('description', '')}")
+            return 0
+        query = " ".join(args.query)
+        found = discovery.search(_catalog_rows(root), query)
+        for row in found:
+            print(f"{row.get('name', '')}\t{row.get('version', '')}\t{row.get('description', '')}")
+        if not found:
+            print(f"No pipeline matches {query!r}; `nfclaw list` shows the whole library.",
+                  file=sys.stderr)
+        return 0 if found else 1
 
     if args.cmd == "show":
         try:
@@ -475,7 +578,7 @@ def _main(argv: list[str] | None = None) -> int:
         log = _run_log_path(args.outdir)
         chain_log = (Path(args.outdir).expanduser().resolve() / chain.RECORD_DIRNAME / "logs"
                      / chain.LOG_NAME)
-        if not log.is_file() and chain_log.is_file():       # the --outdir of a chain
+        if not _present(log) and _present(chain_log):       # the --outdir of a chain
             log = chain_log
         st = runlog.read_state(log)
         print(_status_report(st), end="")
@@ -495,7 +598,7 @@ def _main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "run":
         log_path = _run_log_path(args.outdir)
-        size_before = log_path.stat().st_size if log_path.is_file() else None
+        size_before = _file_size(log_path)
 
         def unlaunched(outcome: str, error: str) -> None:
             # An attempt that ended before launching wrote nothing; if the --outdir already holds a
@@ -542,6 +645,13 @@ def _main(argv: list[str] | None = None) -> int:
             print(str(exc), file=sys.stderr)
             if not exc.details.get("active_run") and not exc.details.get("unsafe_write_boundary"):
                 unlaunched("refused before launch", str(exc))
+            return 1
+        except BrokenPipeError:
+            raise
+        except OSError as exc:
+            err = _os_error(exc)
+            print(str(err), file=sys.stderr)
+            unlaunched("refused before launch", str(err))
             return 1
         except (execution.Terminated, KeyboardInterrupt) as exc:
             code = _stopped(exc, log_path)

@@ -495,6 +495,50 @@ def test_state_without_a_run_log(tmp_path):
     assert st.state == "missing"
 
 
+def _refuse(monkeypatch, method, path):
+    """Make `Path.<method>` of `path` fail as it does for another user's log, whoever runs this."""
+    original = getattr(Path, method)
+
+    def refused(self, *args, **kwargs):
+        if self == path:
+            raise PermissionError(13, "Permission denied", str(path))
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, method, refused)
+
+
+@pytest.mark.parametrize("method", ["open", "stat"])
+def test_an_unreadable_log_is_reported_not_raised(tmp_path, monkeypatch, capsys, method):
+    # `nfclaw status` on another user's run (or under a directory it cannot search) ended in a
+    # PermissionError traceback. The log exists, so nothing is known: say so and exit 1.
+    out = tmp_path / "out"
+    log = out / "provenance" / "logs" / "run.log"
+    log.parent.mkdir(parents=True)
+    log.write_text(_block(pid=1, end="success"))
+    _refuse(monkeypatch, method, log)
+    st = runlog.read_state(log)
+    assert st.state == "unreadable" and st.error == ["Permission denied"]
+    assert cli.main(["status", str(out)]) == 1
+    printed = capsys.readouterr().out
+    assert printed.startswith(f"status: unknown — the log {log} cannot be read: Permission denied")
+
+
+@pytest.mark.parametrize("value", ["²", "١٢", "99999999999999999999", "2147483648", "0", "-1",
+                                   "12 34", ""])
+def test_a_pid_no_process_can_have_is_not_probed(tmp_path, monkeypatch, value):
+    # `str.isdigit` accepts superscripts and other scripts' digits that `int()` refuses, and a
+    # pid beyond the platform's range made `os.kill` raise OverflowError: either one turned a
+    # damaged log into a `nfclaw status` traceback.
+    probed = []
+    monkeypatch.setattr(runlog, "_argv", lambda pid: probed.append(pid) or [])
+    st = runlog.read_state(_log(tmp_path, _block(pid=value, nextflow_pid=value)))
+    assert st.pid is None and st.nextflow_pid is None
+    assert st.state == "dead" and not st.nextflow_alive and probed == []
+
+
+def test_a_pid_beyond_the_platform_range_is_not_a_process():
+    assert runlog._is_process(2**63, ("nfclaw",)) is False
+
+
 def test_causes_are_read_from_a_log_in_any_jvm_locale(tmp_path):
     # A real `.nextflow.log` from Nextflow 25.10.4 under a Spanish JVM locale: its entries start
     # `oct-12 …`, not `Oct-12 …`. The English-only pattern found no entry, so the `Caused by:` chain

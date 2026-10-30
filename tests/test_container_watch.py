@@ -134,3 +134,16 @@ def test_a_digest_reference_identifies_an_image_the_engine_removed(monkeypatch):
     image = env_record.resolve_registry_image("docker", f"quay.io/tool@{DIGEST}", None)
     assert image["kind"] == "registry" and image["digest"] == DIGEST
     assert image["source"] == "reference digest"
+
+
+def test_an_events_stream_that_ignores_sigterm_is_killed_and_reaped(tmp_path, monkeypatch):
+    # After SIGKILL the stream was never waited for: each such run left a zombie behind.
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "docker").write_text("#!/usr/bin/env bash\ntrap '' TERM\nexec sleep 600\n")
+    (bin_dir / "docker").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    watch = container_watch.ContainerWatch("docker", None, dict(os.environ)).start()
+    time.sleep(0.5)                                   # let the shell install its trap
+    assert watch.stop(timeout=5) == {}
+    assert watch._process.returncode is not None

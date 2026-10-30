@@ -80,7 +80,7 @@ non-interactive shell's environment.
 
 | Tool | Runs | What it is for |
 |---|---|---|
-| `list_pipelines` | reads `catalog.json` | Find a pipeline by assay, data type, method or tool; shows its input and what it can feed. |
+| `list_pipelines` | reads `catalog.json` | Find a pipeline by assay, data type, method or tool; shows its input and what it can feed. Ranks as `nfclaw list <keywords>` does. |
 | `show_pipeline` | `nfclaw show` | The pipeline's `skill.md` (default) or `reference.md`; `grep` returns only matching lines; `version` reads another release's docs. |
 | `list_versions` | `nfclaw versions` | Published releases, the pinned one marked, plus `dev`. |
 | `chain_edges` | `nfclaw chain edges` | Which pipeline can follow which in a chain. |
@@ -131,7 +131,8 @@ provenance included; `finishing` for the moment between that record and the job'
 `succeeded`, `failed`, `cancelled`, or `lost` (the supervisor was killed outright or the host
 restarted; the status report then says whether nfclaw itself still runs). Once a run has reached its
 run log, the result includes `nfclaw status`'s report — the outcome, the error with Nextflow's own
-message, completion caveats, and the log paths.
+message, completion caveats, and the log paths. A finished job whose own report could not be
+retained says why in `status_error`; `run_status(outdir)` then reads the live log.
 
 Long-poll with `get_job(job_id, wait_seconds=N)`, keeping `N` below your client's tool timeout; the
 job is not affected when a call returns or is cancelled. Clients that send a progress token receive

@@ -93,7 +93,7 @@ Check a run — in the foreground or the background — with `nfclaw status <out
 Run bamtofastq as one stage of a chain: `nfclaw chain run spec.json --outdir DIR` starts each stage only after the one before it succeeded, and prepares its inputs from that stage's outputs. The rules live in `handoffs/` (format and spec in [docs/chaining.md](../../docs/chaining.md)); list them with `nfclaw chain edges bamtofastq`.
 
 Feeds into:
-- `rnaseq` — bamtofastq publishes converted paired-end reads as reads/<sample>_1.merged.fastq.gz and _2; one rnaseq row per sample, strandedness detected by rnaseq (auto). Single-end conversions (reads/<sample>.merged.fastq.gz) need an inline handoff.
+- `rnaseq` — bamtofastq publishes converted paired-end reads as reads/<sample>_1.merged.fastq.gz and _2; one rnaseq row per sample, strandedness detected by rnaseq (auto). Single-end conversions are published as reads/<sample>_other.fq.gz: a run with any fails this handoff instead of leaving them out, and needs an inline handoff.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: FastQC, fastq_utils, MultiQC, SAMtools.

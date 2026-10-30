@@ -48,8 +48,9 @@ export function ReleaseTimeline({ items }: { items: TimelineItem[] }) {
   const visible = expanded ? groups : groups.slice(0, initialGroups);
   const hiddenCount = groups.slice(initialGroups).reduce((n, g) => n + g.items.length, 0);
 
-  const releases = items.filter((i) => i.kind === "release" && i.date);
-  const years = releases.map((i) => new Date(i.date!).getUTCFullYear());
+  // Every pinned release counts, dated or not (a release date needs its submodule checked out).
+  const releases = items.filter((i) => i.kind === "release");
+  const years = releases.filter((i) => i.date).map((i) => new Date(i.date!).getUTCFullYear());
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : null;
 
   const collapse = () => {

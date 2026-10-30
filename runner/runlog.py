@@ -20,6 +20,7 @@ import os
 import re
 import shlex
 import socket
+import stat
 import subprocess
 import sys
 import threading
@@ -472,6 +473,10 @@ _HEADER = re.compile(r"^    (command|launch dir|nextflow log|replay of|host|host
 _HEAD_BYTES = 64 * 1024
 _STATE_TAIL_BYTES = 512 * 1024
 _LAST_OUTPUT_LINES = 5
+# A recorded pid as nfclaw writes it: ASCII digits within the platform's pid range (`str.isdigit`
+# also accepts superscripts and other scripts' digits, which `int()` then refuses).
+_PID = re.compile(r"[0-9]{1,10}")
+_PID_MAX = 2**31 - 1
 # What the recorded pid must be running, so a pid reused after a restart is not taken for the run:
 # the `nfclaw` entry point (or `python -m runner`) for a run, the replay script for a replay.
 _RUN_NAMES = {"run": ("nfclaw", "runner"), "replay": ("commands.sh",),
@@ -484,7 +489,8 @@ class RunState:
 
     `state` is one of: `success`; `ended` (finished any other way — see `outcome`); `running`;
     `dead` (no last line and its nfclaw is gone: killed with SIGKILL, out of memory, a restart);
-    `elsewhere` (unfinished, launched on another host — not judged from here); `missing`."""
+    `elsewhere` (unfinished, launched on another host — not judged from here); `missing`;
+    `unreadable` (the log exists but cannot be read — `error` says why — so nothing is known)."""
 
     log: Path
     state: str
@@ -540,7 +546,7 @@ def _is_process(pid: int | None, names: tuple[str, ...]) -> bool:
         return False
     except PermissionError:
         pass                                             # alive, but another user's
-    except OSError:
+    except (OSError, OverflowError):                     # beyond this platform's pid range
         return False
     argv = _argv(pid)
     if argv is None:
@@ -557,28 +563,51 @@ def _physical_lines(data: bytes) -> list[str]:
     return [line.removesuffix("\r") for line in lines]  # retain legacy CRLF logs
 
 
+def _pid(value: str) -> int | None:
+    """A header's pid, or None for a value no process can have (a damaged or edited log)."""
+    if not _PID.fullmatch(value):
+        return None
+    pid = int(value)
+    return pid if 0 < pid <= _PID_MAX else None
+
+
+def _unreadable(log: Path, exc: OSError) -> RunState:
+    where = f" ({exc.filename})" if exc.filename and str(exc.filename) != str(log) else ""
+    return RunState(log, "unreadable", error=[f"{exc.strerror or exc}{where}"])
+
+
 def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
     """The state of the last launch in `log`, deterministically: its last line if it has one,
     otherwise whether the nfclaw that wrote it is still running. One pass finds where the last
     launch starts; only that launch's header and the tail of the file are then parsed, so a
-    days-long run's log stays cheap to check."""
-    if not log.is_file():
+    days-long run's log stays cheap to check. A log that exists but cannot be read (another
+    user's run, a directory that cannot be searched) is `unreadable`, never a traceback."""
+    try:
+        metadata = log.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return RunState(log, "missing")
+    except OSError as exc:
+        return _unreadable(log, exc)
+    if not stat.S_ISREG(metadata.st_mode):
         return RunState(log, "missing")
     start = None
     offset = 0
-    with log.open("rb") as fh:
-        for raw in fh:
-            if (raw.startswith(_CONTROL_PREFIX)
-                    and _STARTED.match(raw[:64].decode("utf-8", errors="replace"))):
-                start = offset
-            offset += len(raw)
-        if start is None:
-            return RunState(log, "missing")
-        fh.seek(start)
-        head = _physical_lines(fh.read(_HEAD_BYTES))
-        tail_from = max(start, offset - _STATE_TAIL_BYTES)
-        fh.seek(tail_from)
-        tail = _physical_lines(fh.read())
+    try:
+        with log.open("rb") as fh:
+            for raw in fh:
+                if (raw.startswith(_CONTROL_PREFIX)
+                        and _STARTED.match(raw[:64].decode("utf-8", errors="replace"))):
+                    start = offset
+                offset += len(raw)
+            if start is None:
+                return RunState(log, "missing")
+            fh.seek(start)
+            head = _physical_lines(fh.read(_HEAD_BYTES))
+            tail_from = max(start, offset - _STATE_TAIL_BYTES)
+            fh.seek(tail_from)
+            tail = _physical_lines(fh.read())
+    except OSError as exc:
+        return _unreadable(log, exc)
     if tail_from > start and tail:
         tail = tail[1:]                                  # the first line may be cut mid-way
 
@@ -599,12 +628,12 @@ def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
             st.host = value
         elif key == "host id":
             st.host_id = value
-        elif key == "pid" and value.isdigit():
-            st.pid = int(value)
-        elif key == "nextflow pid" and value.isdigit():
-            st.nextflow_pid = int(value)
-        elif key == "replay supervisor pid" and value.isdigit():
-            st.supervisor_pid = int(value)
+        elif key == "pid":
+            st.pid = _pid(value)
+        elif key == "nextflow pid":
+            st.nextflow_pid = _pid(value)
+        elif key == "replay supervisor pid":
+            st.supervisor_pid = _pid(value)
         elif key == "nextflow log":
             st.nextflow_log = value
         elif key == "caveat":

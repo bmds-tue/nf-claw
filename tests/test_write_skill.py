@@ -762,6 +762,16 @@ def test_cli_requires_a_pipeline_name_or_all():
     assert exc.value.code == 2
 
 
+@pytest.mark.parametrize("name", ["nope", "../mini", "mini/upstream"])
+def test_cli_refuses_a_name_that_is_no_library_pipeline(tmp_path, capsys, name):
+    # An unknown name ended in a FileNotFoundError traceback; a path-like one reached outside
+    # the pipeline directory.
+    pdir = _seed(tmp_path, "mini")
+    assert write_skill.main([name, "--pipelines-dir", str(pdir)]) == 1
+    assert "pipeline_not_found" in capsys.readouterr().err
+    assert write_skill.main(["mini", "--pipelines-dir", str(pdir)]) == 0
+
+
 def test_outputs_section_says_where_the_run_is_logged(tmp_path):
     # The skill is what an agent reads right before running; it must not have to ask where the
     # log is.

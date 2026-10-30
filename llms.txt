@@ -5,7 +5,7 @@
 nf-claw provides AI agents with structured, machine-actionable instructions and CLI tooling to discover, configure, execute, and chain production-grade nf-core bioinformatic pipelines using pinned parameter references and a shared runner.
 
 Key conventions for AI agents navigating this repository:
-- Discover without token bloat: Do not read full catalogs or directory listings. Grep `catalog.json` (or `catalog.md`) for keywords.
+- Discover without token bloat: Do not read full catalogs or directory listings. Run `nfclaw list <keywords>` (ranked matches) or grep `catalog.json` (or `catalog.md`) for keywords.
 - Inspect pipeline skills: Read `pipelines/<name>/skill.md` for required inputs, parameters, and schema-derived run commands. Consult `pipelines/<name>/reference.md` for complete parameter constraints.
 - Run a pipeline: Execute with `nfclaw run <name> --input <file> --outdir <dir> -profile <profile>` (or `python3 -m runner run ...`). Use Python 3.11+; pass `--check` for explicit-value preflight and command inspection without launching pipeline tasks. It leaves the output directory untouched but can initialize sources and probe the engine.
 - No samplesheet yet: pass the data files as `--input` (a directory, a quoted glob, or files with `--input` once each) and nfclaw generates the samplesheet from the pipeline's own schema; set the columns no file name determines with `--sheet-set COLUMN=VALUE` (listed under Inputs in each `skill.md`).
@@ -49,5 +49,6 @@ Key conventions for AI agents navigating this repository:
 ## Optional
 
 - [Contributing Guidelines (CONTRIBUTING.md)](https://github.com/bmds-tue/nf-claw/blob/main/CONTRIBUTING.md): Guide for contributing new pipelines, modifying librarian automation, and running tests.
+- [Security Policy (SECURITY.md)](https://github.com/bmds-tue/nf-claw/blob/main/SECURITY.md): How to report a suspected vulnerability privately, and what is in scope.
 - [Live Web Portal](https://bmds-tue.github.io/nf-claw/): Interactive web portal for exploring pipelines, parameter schemas, live GitHub Actions workflows, and system architecture.
 - [Academic Citation (CITATION.cff)](https://github.com/bmds-tue/nf-claw/blob/main/CITATION.cff): Citation Metadata Format file for referencing nf-claw and wrapped nf-core pipelines.

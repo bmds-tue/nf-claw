@@ -33,6 +33,9 @@ together.
 
 ## Reporting Bugs
 
+A suspected security vulnerability is not a public issue: report it privately as
+[SECURITY.md](SECURITY.md) describes.
+
 Before opening a bug report, determine which category the issue falls into:
 
 ### 1. Categorizing the Issue

@@ -228,7 +228,8 @@ def test_load_recovers_supervisor_identity_after_submitter_crash(tmp_path):
 
 @pytest.mark.parametrize('damage', [None, [], {'kind': 'invalid'}, {'id': 'wrong'},
                                     {'created_at': []}, {'argv': 'run demo'}, {'dir': '/other'},
-                                    {'supervisor_pid': 'not-a-pid'}])
+                                    {'supervisor_pid': 'not-a-pid'},
+                                    {'supervisor_pid': 2**40}, {'supervisor_pid': 0}])
 def test_malformed_job_is_isolated_from_listing_and_new_submissions(tmp_path, damage):
     import json
     first = _launch(tmp_path, _py('pass'))
@@ -322,3 +323,41 @@ def test_frozen_replay_status_uses_effective_custom_engine_log(
     frozen = json.loads((d / jobs.STATUS_FILE).read_text())
     assert frozen['caveats'] is True
     assert 'Nextflow ignored 2 failed task(s)' in frozen['status_report']
+
+
+@pytest.mark.parametrize('pid', [2**40, 0, -3, 'x', 1.5])
+def test_a_supervisor_record_with_an_impossible_pid_is_refused(tmp_path, pid):
+    # A pid beyond the platform's range made `cancel_job` raise OverflowError from os.kill.
+    import json
+    job = _launch(tmp_path, _py('pass'))
+    assert _finished(job.id)
+    record = json.loads((job.dir / jobs.SUPERVISOR_FILE).read_text())
+    (job.dir / jobs.SUPERVISOR_FILE).write_text(json.dumps({**record, 'child_pid': pid}))
+    with pytest.raises(jobs.JobError, match='malformed supervisor record'):
+        jobs.load(job.id)
+
+
+def test_the_exit_code_is_recorded_whatever_freezing_the_status_raises(tmp_path, monkeypatch):
+    # Only OSError/ValueError were caught: any other exception while freezing the run's status
+    # killed the supervisor before it recorded the exit code, and a finished job read as `lost`.
+    import json
+    handlers = {sig: signal.getsignal(sig)
+                for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+
+    def broken(job_dir, spec):
+        raise RuntimeError('unexpected')
+    monkeypatch.setattr(jobs, '_freeze_run_status', broken)
+    d = jobs.create_dir('demo')
+    job = jobs.Job(id=d.name, kind='run', argv=['run', 'demo'], command=_py('pass'),
+                   cwd=str(tmp_path), outdir=str(tmp_path / 'out'), created_at=jobs._now(),
+                   log_path=str(tmp_path / 'out/provenance/logs/run.log'), dir=d)
+    (d / jobs.JOB_FILE).write_text(json.dumps(job.spec()))
+    try:
+        assert jobs.supervise(d) == 0
+    finally:
+        for sig, handler in handlers.items():
+            signal.signal(sig, handler)
+    loaded = jobs.load(d.name)
+    assert loaded.exit_code == 0 and loaded.finished_at
+    assert loaded.status_error == ("could not freeze this job's run status: "
+                                   "RuntimeError: unexpected")

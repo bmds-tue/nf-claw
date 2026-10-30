@@ -576,7 +576,7 @@ function Inspector({
   compareFull: boolean;
   onCompare: () => void;
 }) {
-  const { copied, copy } = useCopy();
+  const { copied, failed, copy } = useCopy();
   const tools = p.tools.slice(0, 7);
   return (
     <motion.div
@@ -637,7 +637,7 @@ function Inspector({
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-xs font-medium text-fog-muted transition hover:border-white/20 hover:text-fog"
         >
           {copied ? <Check className="h-3.5 w-3.5 text-claw-400" /> : <span className="font-mono text-claw-400">$</span>}
-          {copied ? "Copied" : "Copy run command"}
+          {copied ? "Copied" : failed ? "Copy failed" : "Copy run command"}
         </button>
         <button
           onClick={onCompare}
@@ -692,7 +692,8 @@ function CompareTray({
           <X className="h-3.5 w-3.5" /> Clear
         </button>
       </div>
-      <div className="overflow-x-auto">
+      {/* focusable, so a keyboard can scroll the table sideways on a narrow screen */}
+      <div tabIndex={0} role="region" aria-label="Pipeline comparison" className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-fog-dim">

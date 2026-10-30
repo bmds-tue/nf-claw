@@ -704,3 +704,29 @@ def test_an_extracted_source_edited_while_replay_ran_fails_it(tmp_path, fake_too
     log = (target / 'provenance' / 'logs' / 'run.log').read_text()
     assert log.rstrip().endswith('failed after Nextflow succeeded (local dependencies changed)')
     assert 'pipeline source content changed' in log
+
+
+def test_a_staged_directory_with_a_symlink_cycle_has_no_tree_digest(tmp_path):
+    # Following the cycle hashed the same files again until the OS refused the path length.
+    staged = tmp_path / "db"
+    (staged / "sub").mkdir(parents=True)
+    (staged / "sub" / "x").write_text("1")
+    (staged / "sub" / "loop").symlink_to("..")
+    record = env_record.remote_inputs({"s3://bucket/db/": str(staged)})
+    assert "cyclic directory symlink" in record["s3://bucket/db/"]["unresolved"]
+
+
+def test_a_staged_directory_that_cannot_be_listed_has_no_tree_digest(tmp_path, monkeypatch):
+    # os.walk skipped an unlistable subdirectory silently, recording a digest of part of it.
+    staged = tmp_path / "db"
+    (staged / "sub").mkdir(parents=True)
+    (staged / "sub" / "x").write_text("1")
+    listing = os.scandir
+
+    def refused(path="."):
+        if os.fspath(path) == str(staged / "sub"):
+            raise PermissionError(13, "Permission denied", os.fspath(path))
+        return listing(path)
+    monkeypatch.setattr(os, "scandir", refused)
+    record = env_record.remote_inputs({"s3://bucket/db/": str(staged)})
+    assert "Permission denied" in record["s3://bucket/db/"]["unresolved"]

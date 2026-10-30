@@ -45,6 +45,7 @@ LOCK_FILE = "lock"
 _IMPORT_ROOT = Path(__file__).resolve().parent.parent
 _ID = re.compile(r"^\d{8}T\d{6}-[a-z0-9][a-z0-9-]{0,39}-[0-9a-f]{6}$")
 _TAIL_BYTES = 64 * 1024
+_PID_MAX = 2**31 - 1                       # what os.kill accepts as a pid on every platform
 
 
 class JobError(Exception):
@@ -104,13 +105,14 @@ class Job:
     exit_code: int | None = None
     finished_at: str | None = None
     error: str | None = None
+    status_error: str | None = None            # why its own run report could not be retained
     cancel_requested: bool = False
     dir: Path = field(default=Path("."), repr=False)
 
     def spec(self) -> dict:
         """What job.json holds: the fields the server writes."""
-        own = {"child_pid", "started_at", "exit_code", "finished_at", "error", "cancel_requested",
-               "dir"}
+        own = {"child_pid", "started_at", "exit_code", "finished_at", "error", "status_error",
+               "cancel_requested", "dir"}
         return {k: v for k, v in asdict(self).items() if k not in own}
 
 
@@ -199,6 +201,9 @@ def load(job_id: str) -> Job:
     def optional(value, kind):
         return value is None or type(value) is kind
 
+    def pid(value):
+        return value is None or type(value) is int and 0 < value <= _PID_MAX
+
     required = {"id", "kind", "argv", "command", "cwd", "outdir", "created_at"}
     if (not required <= spec.keys() or spec.get("id") != job_id
             or spec.get("kind") not in ("run", "chain", "replay") or "dir" in spec
@@ -212,8 +217,7 @@ def load(job_id: str) -> Job:
             or not optional(spec.get("log_path"), str)
             or not optional(spec.get("log_size_before"), int)
             or spec.get("log_size_before") is not None and spec["log_size_before"] < 0
-            or not optional(spec.get("supervisor_pid"), int)
-            or spec.get("supervisor_pid") is not None and spec["supervisor_pid"] <= 0):
+            or not pid(spec.get("supervisor_pid"))):
         raise JobError(f"malformed job record: {job_id}")
     try:
         datetime.fromisoformat(spec["created_at"])
@@ -223,10 +227,10 @@ def load(job_id: str) -> Job:
     job = Job(**{k: v for k, v in spec.items() if k in known}, dir=job_dir)
     sup = _read_json(job_dir / SUPERVISOR_FILE)
     for key, kind in (("supervisor_pid", int), ("child_pid", int), ("exit_code", int),
-                      ("started_at", str), ("finished_at", str), ("error", str)):
+                      ("started_at", str), ("finished_at", str), ("error", str),
+                      ("status_error", str)):
         if key in sup:
-            if not optional(sup[key], kind) or (key.endswith("_pid")
-                                               and sup[key] is not None and sup[key] <= 0):
+            if not (pid(sup[key]) if key.endswith("_pid") else optional(sup[key], kind)):
                 raise JobError(f"malformed supervisor record: {job_id}")
             setattr(job, key, sup[key])
     job.cancel_requested = (job_dir / CANCEL_FILE).exists()
@@ -425,8 +429,9 @@ def supervise(job_dir: Path) -> int:
     code = proc.wait()
     try:
         _freeze_run_status(job_dir, {**spec, "child_pid": proc.pid})
-    except (OSError, ValueError) as exc:
-        record["status_error"] = f"could not freeze this job's run status: {exc}"
+    except Exception as exc:          # the exit code below must be recorded whatever happens here
+        record["status_error"] = (f"could not freeze this job's run status: "
+                                  f"{type(exc).__name__}: {exc}")
     record.update(exit_code=code, finished_at=_now())
     _write_json(record_path, record)
     return 0

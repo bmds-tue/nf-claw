@@ -64,8 +64,14 @@ def test_a_rule_file_that_is_not_json_fails_clearly(library):
      r"'\{t\}', which is not captured"),
     ({"params": {"input": {"build": {"rows": "r/x.fq", "columns": {"x": "y"}}}}},
      "placeholder"),
+    ({"params": {"input": {"build": {"rows": "r/{s}.fq", "columns": {"x": "{s}"},
+                                     "exhaustive": "../r/*.fq"}}}},
+     "'exhaustive' must be a relative pattern"),
     ({"params": {"input": {"samplesheet": "s.csv", "provides": ["a"], "set": {"b": 1}}}},
      "'set' must map column names to strings"),
+    ({"params": {"input": {"samplesheet": "s.csv", "provides": ["a"],
+                           "refuse_rows_in": ["/up/se.csv"]}}},
+     "'refuse_rows_in' must list relative paths"),
     ({"params": {"x": {"file": "a"}}, "surprise": 1}, "unknown keys"),
 ])
 def test_malformed_rules_fail_clearly(body, msg):
@@ -263,6 +269,34 @@ def test_a_rename_onto_an_existing_column_is_refused(library, finished_run, tmp_
         handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
 
 
+@pytest.mark.parametrize("other, refused", [
+    (None, False),                                          # not written at all
+    ("sample,fastq_1,fastq_2\n", False),                    # written, but with no sample in it
+    ("sample,fastq_1,fastq_2\nB,{outdir}/B.fq.gz,\nC,{outdir}/C.fq.gz,\n", True),
+])
+def test_rows_in_a_sheet_the_handoff_cannot_take_refuse_it(library, finished_run, tmp_path,
+                                                            other, refused):
+    # detaxizer writes paired-end samples to mag-pe.csv and the rest to mag-se.csv; a rule
+    # handing over mag-pe.csv alone left the others out of the downstream analysis unseen.
+    _, down = _trees(library("mini_up", "mini"))
+    files = {"pe.csv": "sample,fastq_1,fastq_2\nA,{outdir}/A_1.fq.gz,{outdir}/A_2.fq.gz\n",
+             "A_1.fq.gz": "a1", "A_2.fq.gz": "a2", "B.fq.gz": "b", "C.fq.gz": "c"}
+    up = finished_run(tmp_path / "up", {**files, **({"se.csv": other} if other else {})})
+    rule = _rule({"params": {"input": {"samplesheet": "pe.csv",
+                                       "provides": ["sample", "fastq_1", "fastq_2"],
+                                       "refuse_rows_in": ["se.csv"], "optional": True}}})
+    if not refused:
+        hand = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down,
+                                   dest=tmp_path / "h")
+        assert [r["sample"] for r in _rows(tmp_path / "h" / "input.csv")] == ["A"]
+        assert hand.params["input"] == str(tmp_path / "h" / "input.csv")
+        return
+    with pytest.raises(NfclawError, match=r"se.csv also holds 2 row\(s\) \(B, C\) that this "
+                       "handoff cannot hand over with pe.csv") as err:
+        handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    assert err.value.code is ErrorCode.HANDOFF_FAILED
+
+
 def test_build_maps_output_files_into_rows(library, finished_run, tmp_path):
     _, down = _trees(library("mini_up", "mini"))
     up = finished_run(tmp_path / "up", {"reads/B_1.fq.gz": "b1", "reads/A_1.fq.gz": "a1",
@@ -289,6 +323,33 @@ def test_build_with_no_matching_file_fails_the_handoff(library, finished_run, tm
     with pytest.raises(NfclawError, match="no file in .* matches 'reads/{sample}_1.fq.gz'") as err:
         handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
     assert err.value.code is ErrorCode.HANDOFF_FAILED
+
+
+def test_an_exhaustive_build_refuses_files_no_row_uses(library, finished_run, tmp_path):
+    # bamtofastq converts single-end samples beside paired ones in one run: a rows pattern for the
+    # paired files alone left the single-end sample out of the downstream sheet without a word.
+    _, down = _trees(library("mini_up", "mini"))
+    paired = {"reads/A_1.fq.gz": "a1", "reads/A_2.fq.gz": "a2"}
+    build = {"rows": "reads/{sample}_1.fq.gz",
+             "columns": {"sample": "{sample}", "fastq_1": "reads/{sample}_1.fq.gz",
+                         "fastq_2": "reads/{sample}_2.fq.gz?"}}
+    mixed = finished_run(tmp_path / "mixed", {**paired, "reads/C_other.fq.gz": "c"})
+    handoff.materialize(_rule({"params": {"input": {"build": build}}}), upstream_outdir=mixed,
+                        downstream_tree=down, dest=tmp_path / "lenient")
+    assert [r["sample"] for r in _rows(tmp_path / "lenient" / "input.csv")] == ["A"]
+    for optional in (False, True):
+        rule = _rule({"params": {"input": {"build": {**build, "exhaustive": "reads/*q.gz"},
+                                           "optional": optional}}})
+        with pytest.raises(NfclawError, match=r"1 upstream file\(s\) matching 'reads/\*q.gz' "
+                           r"would reach no row of the sheet \(reads/C_other.fq.gz\)") as err:
+            handoff.materialize(rule, upstream_outdir=mixed, downstream_tree=down,
+                                dest=tmp_path / f"strict-{optional}")
+        assert err.value.code is ErrorCode.HANDOFF_FAILED
+    # Every matched file used, the companion `_2` included: the sheet is built as before.
+    up = finished_run(tmp_path / "paired", paired)
+    hand = handoff.materialize(rule, upstream_outdir=up, downstream_tree=down, dest=tmp_path / "h")
+    assert [r["sample"] for r in _rows(tmp_path / "h" / "input.csv")] == ["A"]
+    assert set(hand.record["params"]["input"]["derived_from"]) == set(paired)
 
 
 @pytest.mark.parametrize("files, msg", [
