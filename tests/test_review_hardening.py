@@ -89,6 +89,13 @@ def test_chain_records_secret_references_and_requires_environment_on_resume(
     )
 
 
+def test_null_stage_engine_keeps_existing_inheritance_semantics():
+    spec = chain.parse_spec(
+        {"nxf_ver": "25.10.4", "stages": [{"pipeline": "mini", "nxf_ver": None}]}
+    )
+    assert chain.options(spec, spec.stages[0]).nxf_ver == "25.10.4"
+
+
 @pytest.mark.parametrize("equals", [False, True])
 @pytest.mark.parametrize("duplicate", [False, True])
 def test_refused_run_cannot_persist_or_print_a_secret(

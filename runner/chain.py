@@ -158,9 +158,8 @@ def _parse_options(raw: dict, where: str) -> dict:
                        and (not os.environ.get(key) or os.environ[key] == "<redacted>")]
             out["nxf_env"] = {key: os.environ.get(key, value) if value == "<redacted>" else value
                               for key, value in env.items()}
-        if "nxf_ver" in raw:
-            out["nxf_ver"] = (None if raw["nxf_ver"] is None else
-                              resources.check_nxf_version(raw["nxf_ver"]))
+        if "nxf_ver" in raw and raw["nxf_ver"] is not None:
+            out["nxf_ver"] = resources.check_nxf_version(raw["nxf_ver"])
         if "limits" in raw:
             lim = raw["limits"] or {}
             parsed = resources.parse(lim.get("cpus"), lim.get("memory"), lim.get("time"))
