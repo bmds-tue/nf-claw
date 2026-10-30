@@ -10,7 +10,8 @@ result does and does not show.
 The versions and observations below describe the 2026-10-14 to 2026-10-15 validation,
 not a fresh execution after every repository change. Releases bumped and pipelines added since then
 that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep);
-the automated updater itself gates a release on its preview, tests and drift checks, not on an execution.
+the automated updater itself gates a release on its preview, tests, drift checks and one bundled analysis
+on a hosted runner ([publication evidence policy](maintenance.md)).
 For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ---
@@ -208,7 +209,7 @@ pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 Each release below was validated separately on the same host, in one uninterrupted `nfclaw run <name> --demo`
 on the engine its `skill.md` names: before its pin was updated or its pipeline was added, or, for a release the
 automated updater published itself (rnastructurome 1.1.0 and genomeassembler 2.0.1), right after. This execution evidence is additional to
-the automated updater's preview, test and drift gates.
+the automated updater's gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
 |---|---|---|---|---|---|
