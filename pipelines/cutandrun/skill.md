@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `group` | string | yes |  | matches ^\S+$ |
-| `replicate` | integer | yes |  | matches ^[0-9]*$ |
-| `fastq_1` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `control` | string | yes |  | matches ^\S+$ |
+| `group` | string | yes |  | matches `^\S+$` |
+| `replicate` | integer | yes |  | matches `^[0-9]*$` |
+| `fastq_1` | string | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `fastq_2` | string | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `control` | string | yes |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -45,8 +45,8 @@ group,replicate,fastq_1,fastq_2,control
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
-| `--outdir` | string (directory path) | ./results |  |  | The output directory where the results will be saved. You have to use absolute paths to store on Cloud infrastructure. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
+| `--outdir` | string (directory path) | `./results` |  |  | The output directory where the results will be saved. You have to use absolute paths to store on Cloud infrastructure. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. A genome name alone does not specify where reference files come from. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running. To supply your own reference, use e.g. `--fasta`; the `reference_data_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely.

@@ -27,10 +27,10 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^[a-zA-Z0-9_-]+$ |
-| `tools` | string | no |  | matches ^[a-zA-Z0-9_]+$ |
-| `file` | string | yes |  | matches ^\S+\.(bam\|cram)\|((vcf\|bcf)(\.gz))?$ |
-| `index` | string | yes |  | matches ^\S+\.(bai\|crai\|tbi\|csi)$ |
+| `sample` | string | yes |  | matches `^[a-zA-Z0-9_-]+$` |
+| `tools` | string | no |  | matches `^[a-zA-Z0-9_]+$` |
+| `file` | string | yes |  | matches `^\S+\.(bam\|cram)\|((vcf\|bcf)(\.gz))?$` |
+| `index` | string | yes |  | matches `^\S+\.(bai\|crai\|tbi\|csi)$` |
 
 `--input` must match `^\S+\.(csv|tsv|yaml|json)$`.
 

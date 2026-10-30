@@ -30,12 +30,12 @@ This pipeline does not use a samplesheet; configure inputs via parameters.
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--models` | string | NaiveDrugMeanPredictor |  |  | Model to be tested. |
-| `--baselines` | string | NaiveMeanEffectsPredictor |  |  | Baselines to be tested. |
-| `--run-id` | string | my_run |  |  | Run name for the pipeline. The subdirectory in results will be named like this. |
-| `--dataset-name` | string | CTRPv2 |  |  | Name of the dataset. Pre-supplied datasets are CTRPv2, CTRPv1, CCLE, GDSC1, GDSC2, TOYv1, TOYv2, BeatAML2, and PDX_Bruna. |
-| `--outdir` | string (directory path) | results |  |  | The output directory where the results will be saved. Default is results/ |
-| `--test-mode` | string | LCO |  | matches ^((LPO\|LCO\|LTO\|LDO)?,?)*(?<!,)$ | Run the pipeline in test mode LPO (Leave-random-Pairs-Out), LCO (Leave-Cell-line-Out), LTO (Leave-Tissue-Out), or LDO (Leave-Drug-Out). |
+| `--models` | string | `NaiveDrugMeanPredictor` |  |  | Model to be tested. |
+| `--baselines` | string | `NaiveMeanEffectsPredictor` |  |  | Baselines to be tested. |
+| `--run-id` | string | `my_run` |  |  | Run name for the pipeline. The subdirectory in results will be named like this. |
+| `--dataset-name` | string | `CTRPv2` |  |  | Name of the dataset. Pre-supplied datasets are CTRPv2, CTRPv1, CCLE, GDSC1, GDSC2, TOYv1, TOYv2, BeatAML2, and PDX_Bruna. |
+| `--outdir` | string (directory path) | `results` |  |  | The output directory where the results will be saved. Default is results/ |
+| `--test-mode` | string | `LCO` |  | matches `^((LPO\|LCO\|LTO\|LDO)?,?)*(?<!,)$` | Run the pipeline in test mode LPO (Leave-random-Pairs-Out), LCO (Leave-Cell-line-Out), LTO (Leave-Tissue-Out), or LDO (Leave-Drug-Out). |
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

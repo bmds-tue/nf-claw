@@ -7,7 +7,7 @@ from the process exit status. Existing `verify`, `verify --strict` and
 
 ---
 
-### Navigation
+## Navigation
 
 [Usage & Setup](#usage--setup) • [Contract Specification](#contract-specification) • [Supported Formats](#supported-formats-and-comparison-scope) • [Tolerances & Exclusions](#tolerances-samples-and-exclusions) • [Shipped Contracts](#shipped-contracts-and-coverage)
 

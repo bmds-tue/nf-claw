@@ -7,7 +7,7 @@ The pinned pipeline and container code remain unchanged.
 
 ---
 
-### Navigation
+## Navigation
 
 [Overview](#overview) • [Download Dataset](#downloading-the-general-amp-dataset) • [Prepare Reference](#preparing-the-reference-directory) • [Build Index](#building-the-mmseqs2-index) • [Run with Funcscan](#execution-with-funcscan)
 

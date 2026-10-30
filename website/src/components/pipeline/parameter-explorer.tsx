@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Code2, Eye, EyeOff, Search, Star } from "lucide-react";
 import type { ParamLite, SkillGroupLite } from "@/lib/derive";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -203,10 +203,11 @@ function ParamRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const reduce = useReducedMotion();
   const expandable = Boolean(param.description || param.allowed.length || param.constraints || param.default);
   const flag = param.name.startsWith("-") ? param.name : `--${param.name}`;
   const candidate = param.allowed[0] ?? (param.default && param.default.length < 40
-    ? param.default.replace(/^`|`$/g, "") : null);
+    ? param.default : null);
   const concrete = candidate !== null && !/\$|\bparams\.|\bprojectDir\b|^<|^\[|^\{/.test(candidate);
   const boolean = param.type.startsWith("boolean");
   const copyable = boolean || concrete;
@@ -243,7 +244,7 @@ function ParamRow({
               )}
               {param.default && !open && (
                 <span className="hidden max-w-[16rem] truncate font-mono text-[11px] text-fog-dim sm:inline">
-                  = {param.default.replace(/`/g, "")}
+                  = {param.default}
                 </span>
               )}
             </span>
@@ -283,13 +284,13 @@ function ParamRow({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: EASE }}
+            transition={reduce ? { duration: 0 } : { duration: 0.28, ease: EASE }}
             className="overflow-hidden"
           >
             <div className="grid gap-4 border-t border-white/[0.05] px-4 py-3.5 text-xs sm:grid-cols-3">
               <Field label="Default">
                 {param.default ? (
-                  <code className="break-all font-mono text-cream">{param.default.replace(/`/g, "")}</code>
+                  <code className="break-all font-mono text-cream">{param.default}</code>
                 ) : (
                   <span className="text-fog-dim">—</span>
                 )}

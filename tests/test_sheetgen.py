@@ -571,6 +571,19 @@ def test_resume_note_names_added_and_removed_samples(tmp_path):
         tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})) is None
 
 
+def test_resume_note_compares_a_previous_sheet_that_is_not_utf8(tmp_path):
+    # The sheet a previous launch used, damaged into bytes that are not UTF-8, ended
+    # `nfclaw run --resume` (and a chain's resume check) with a UnicodeDecodeError traceback.
+    data = tmp_path / "data"
+    pair(data, "A_R1.fastq.gz", "A_R2.fastq.gz")
+    generated = gen(tmp_path, S.RNASEQ, [data], {"strandedness": "auto"})
+    before = sheetgen.write(generated, tmp_path / "prev")
+    before.write_bytes(before.read_bytes().replace(b"A_R1", b"A_\xffR1"))
+    assert "same samples, other files or values" in sheetgen.resume_note(before, generated)
+    before.write_bytes(before.read_bytes().replace(b"\nA,", b"\n\xff,"))
+    assert "added: A" in sheetgen.resume_note(before, generated)
+
+
 @pytest.mark.parametrize("items, message", [
     (["strandedness"], "COLUMN=VALUE"),
     (["=auto"], "COLUMN=VALUE"),

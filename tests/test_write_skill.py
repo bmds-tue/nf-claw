@@ -39,6 +39,46 @@ def test_reference_description_distinguishes_missing_parameters_from_groups():
     assert "[options](#options)" in text
 
 
+def test_literal_values_are_code_spans_markdown_cannot_reinterpret():
+    # As plain table text, `\.` lost its backslash, `[a-z]([a-z]*)` became a link and `*` pairs
+    # became emphasis: GitHub and the site showed patterns nf-schema does not enforce.
+    assert write_skill._code(r"^\S+\.bed$") == r"`^\S+\.bed$`"
+    assert write_skill._code("a`b") == "``a`b``"            # a fence longer than any run inside
+    assert write_skill._code("`x`") == "`` `x` ``"          # padded where a backtick touches it
+    assert write_skill._code("a ``b`` c") == "`a ``b`` c`"
+    assert write_skill._code("") == ""
+    ps = ParamSchema("p", "", {
+        "hmm": Param("hmm", "string", "*.hmm", None, "d", None, False, "g",
+                     pattern=r"^(?!\.$)[a-z.]([a-z0-9._]*)?$"),
+    })
+    st = SubmoduleStatus("p", Path("/x"), True, True, "1.0.0", "abc1234", ())
+    row = next(line for line in write_skill._render_reference("p", st, ps, None).splitlines()
+               if line.startswith("| `--hmm`"))
+    assert r"matches `^(?!\.$)[a-z.]([a-z0-9._]*)?$`" in row and "| `*.hmm` |" in row
+
+
+def test_relative_upstream_links_become_permalinks_at_the_pinned_commit(tmp_path):
+    upstream = tmp_path / "upstream"
+    (upstream / "assets").mkdir(parents=True)
+    (upstream / "docs").mkdir()
+    (upstream / "assets" / "media.tsv").write_text("x\n")
+    (tmp_path / "outside.tsv").write_text("x\n")
+    st = SubmoduleStatus("bacmodel", upstream, True, True, "1.0.0", "abc1234", ())
+    ps = ParamSchema("p", "", {})
+    text = write_skill._reference_description(
+        "See [example](../assets/media.tsv), [gone](../assets/none.tsv), "
+        "[escaped](../../outside.tsv), [site](https://nf-co.re) and ![logo](../assets/media.tsv).",
+        ps, st)
+    assert ("[example](https://github.com/nf-core/bacmodel/blob/abc1234/assets/media.tsv)"
+            in text)
+    assert ", gone, escaped, [site](https://nf-co.re)" in text  # no target here: the label stays
+    assert "![logo](../assets/media.tsv)" in text                # images are left as written
+    row = write_skill._param_table(
+        [Param("db", "string", None, None, "See [example](../assets/media.tsv).", None, True,
+               "g")], st)
+    assert "blob/abc1234/assets/media.tsv" in row
+
+
 def test_resource_example_retains_required_pipeline_arguments():
     ps = ParamSchema("p", "", {
         "input_format": Param("input_format", "string", None, None, "", None, True, "g"),

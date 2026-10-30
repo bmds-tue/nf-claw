@@ -192,10 +192,14 @@ class Server:
                     continue
                 try:
                     message = json.loads(line)
-                except ValueError as exc:
+                except (ValueError, RecursionError) as exc:  # nesting too deep for the parser
                     self._send(_error(None, PARSE_ERROR, f"parse error: {exc}"))
                     continue
-                self._receive(message)
+                try:
+                    self._receive(message)
+                except Exception as exc:              # one message never ends the session
+                    self._send(_error(_reply_id(message), INTERNAL_ERROR,
+                                      f"internal error: {type(exc).__name__}: {exc}"))
         except (KeyboardInterrupt, BrokenPipeError):
             pass
         finally:
@@ -469,6 +473,13 @@ class Server:
 def _key(request_id: Any) -> str:
     """Request ids may be strings or numbers; `1` and `"1"` are different requests."""
     return json.dumps(request_id)
+
+
+def _reply_id(message: Any) -> Any:
+    """The id to answer a message with: its own when JSON-RPC allows one (string, number, null),
+    else null, as for a message whose id cannot be determined."""
+    rid = message.get("id") if isinstance(message, dict) else None
+    return rid if isinstance(rid, (str, *json.NUMBER_TYPES)) and not isinstance(rid, bool) else None
 
 
 def _error(rid: Any, code: int, message: str, data: Any = None) -> dict:

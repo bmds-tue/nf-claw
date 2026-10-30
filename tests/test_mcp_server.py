@@ -154,6 +154,31 @@ def test_protocol_errors_carry_the_jsonrpc_codes(session):
     assert session.request(5, "resources/read", {"uri": "x://b"})["error"]["code"] == -32002
 
 
+def test_a_message_nested_too_deeply_to_parse_is_a_parse_error_not_a_dead_server(session):
+    # The parser raises RecursionError, not ValueError, past its nesting limit: the read loop let it
+    # escape and the server exited, leaving every later request unanswered.
+    session.initialize()
+    session.send(b"[" * 200_000 + b"]" * 200_000)
+    reply = session.recv()
+    assert reply["id"] is None and reply["error"]["code"] == -32700
+    assert session.request(1, "ping")["result"] == {}
+
+
+def test_a_message_that_fails_before_dispatch_is_answered_and_the_session_continues(monkeypatch):
+    s = Session()
+    try:
+        s.initialize()
+        monkeypatch.setattr(s.server, "_track", lambda message: 1 / 0)
+        reply = s.request(1, "ping")
+        assert reply["error"]["code"] == -32603 and "ZeroDivisionError" in reply["error"]["message"]
+        s.send({"jsonrpc": "2.0", "id": {"not": "an id"}, "method": "ping"})
+        assert s.recv()["id"] is None                 # an id JSON-RPC does not allow is not echoed
+        monkeypatch.undo()
+        assert s.request(2, "ping")["result"] == {}
+    finally:
+        s.close()
+
+
 def test_string_and_numeric_request_ids_are_kept_apart(session):
     session.initialize()
     assert session.request("7", "ping")["id"] == "7"

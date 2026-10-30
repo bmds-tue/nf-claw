@@ -27,12 +27,12 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fasta` | string (file path) | yes |  | matches ^\S+\.(f(ast)?a\|fna)(\.gz)?$ |
-| `medium_gapseq` | string | no | ``, `ALLmed`, `FT`, `LBmed`, `LBmed_glucose_suppl`, `M9_serine_galacturonate`, `M9_vit_aa`, `MM_anaerobic_Acetate`, `MM_anaerobic_Acetate_H2`, `MM_anaerobic_CO2_H2`, `MM_glu-thm`, `MM_glu`, `TSBmed`, `autotrophic`, `dsmz_1611_YCFA`, `gut`, `meerwasser` |  |
-| `medium_gapseq_csv` | string | no |  | matches ^(\S+\.csv)?$ |
-| `medium_carveme` | string | no |  | matches ^[^\s/]*$ |
-| `medium_carveme_tsv` | string | no |  | matches ^(\S+\.tsv)?$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fasta` | string (file path) | yes |  | matches `^\S+\.(f(ast)?a\|fna)(\.gz)?$` |
+| `medium_gapseq` | string | no | , `ALLmed`, `FT`, `LBmed`, `LBmed_glucose_suppl`, `M9_serine_galacturonate`, `M9_vit_aa`, `MM_anaerobic_Acetate`, `MM_anaerobic_Acetate_H2`, `MM_anaerobic_CO2_H2`, `MM_glu-thm`, `MM_glu`, `TSBmed`, `autotrophic`, `dsmz_1611_YCFA`, `gut`, `meerwasser` |  |
+| `medium_gapseq_csv` | string | no |  | matches `^(\S+\.csv)?$` |
+| `medium_carveme` | string | no |  | matches `^[^\s/]*$` |
+| `medium_carveme_tsv` | string | no |  | matches `^(\S+\.tsv)?$` |
 
 `--input` must match `^\S+\.(csv|tsv)$`.
 
@@ -48,7 +48,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.(csv\|tsv)$ | Path to comma-separated or tab-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.(csv\|tsv)$` | Path to comma-separated or tab-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

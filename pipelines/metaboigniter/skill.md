@@ -27,10 +27,10 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `type` | string | yes |  | matches ^\S+$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `type` | string | yes |  | matches `^\S+$` |
 | `level` | string | yes | `MS1`, `MS2`, `MS12` |  |
-| `msfile` | string (file path) | yes |  | matches ^\S+\.mzML |
+| `msfile` | string (file path) | yes |  | matches `^\S+\.mzML` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -44,7 +44,7 @@ sample,type,level,msfile
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

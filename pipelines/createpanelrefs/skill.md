@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `bai` | string (file path) | no |  | matches ^\S+\.bai$ |
-| `cram` | string (file path) | no |  | matches ^\S+\.cram$ |
-| `crai` | string (file path) | no |  | matches ^\S+\.crai$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `bai` | string (file path) | no |  | matches `^\S+\.bai$` |
+| `cram` | string (file path) | no |  | matches `^\S+\.cram$` |
+| `crai` | string (file path) | no |  | matches `^\S+\.crai$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -52,9 +52,9 @@ sample,cram
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--tools` | string |  |  | matches ^((cnvkit\|germlinecnvcaller\|gens\|mutect2)?,?)*(?<!,)$ | Tools to use for building Panel of Normals or models. |
+| `--tools` | string |  |  | matches `^((cnvkit\|germlinecnvcaller\|gens\|mutect2)?,?)*(?<!,)$` | Tools to use for building Panel of Normals or models. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

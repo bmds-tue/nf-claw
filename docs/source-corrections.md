@@ -4,7 +4,7 @@ Three pinned releases need source changes that a process configuration cannot su
 
 ---
 
-### Navigation
+## Navigation
 
 [Overview](#overview) • [Source Cache & Isolation](#source-cache-and-isolation) • [Preflight & Provenance](#preflight-checks-resume-and-provenance) • [Bactmap Matched Demo](#bactmap-matched-demo-fixture) • [FastQRepair Runtime Corrections](#runtime-configuration-corrections-fastqrepair-111)
 

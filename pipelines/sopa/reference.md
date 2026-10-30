@@ -20,14 +20,14 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--baysor-scale` | number |  |  |  |  | -1.0 | Baysor `scale` parameter |
-| `--baysor-scale-std` | string |  |  |  |  | 25% | Baysor `scale_std` parameter |
+| `--baysor-scale` | number |  |  |  |  | `-1.0` | Baysor `scale` parameter |
+| `--baysor-scale-std` | string |  |  |  |  | `25%` | Baysor `scale_std` parameter |
 | `--confidence-nn-id` | number |  |  |  |  |  | Baysor `confidence_nn_id` parameter |
-| `--force-2d` | boolean |  |  |  |  | true | Baysor `force_2d` parameter |
-| `--min-molecules-per-cell` | number |  |  |  |  | 20.0 | Baysor `min_molecules_per_cell` parameter |
-| `--min-molecules-per-gene` | number |  |  |  |  | 10.0 | Baysor `min_molecules_per_gene` parameter |
+| `--force-2d` | boolean |  |  |  |  | `true` | Baysor `force_2d` parameter |
+| `--min-molecules-per-cell` | number |  |  |  |  | `20.0` | Baysor `min_molecules_per_cell` parameter |
+| `--min-molecules-per-gene` | number |  |  |  |  | `10.0` | Baysor `min_molecules_per_gene` parameter |
 | `--min-molecules-per-segment` | number |  |  |  |  |  | Baysor `min_molecules_per_segment` parameter |
-| `--prior-segmentation-confidence` | number |  |  |  |  | 0.2 | Baysor `prior_segmentation_confidence` parameter |
+| `--prior-segmentation-confidence` | number |  |  |  |  | `0.2` | Baysor `prior_segmentation_confidence` parameter |
 | `--use-baysor` | boolean |  |  |  |  |  | Whether to run baysor segmentation |
 
 ## cellpose
@@ -49,10 +49,10 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--allow-disconnected-polygon` | boolean |  |  |  |  |  | Comseg `allow_disconnected_polygon` parameter |
-| `--alpha` | number |  |  |  |  | 0.5 | Comseg `alpha` parameter |
-| `--max-cell-radius` | number |  |  |  |  | 15.0 | Comseg `max_cell_radius` parameter |
-| `--mean-cell-diameter` | number |  |  |  |  | 10.0 | Comseg `mean_cell_diameter` parameter |
-| `--min-rna-per-cell` | number |  |  |  |  | 1.0 | Comseg `min_rna_per_cell` parameter |
+| `--alpha` | number |  |  |  |  | `0.5` | Comseg `alpha` parameter |
+| `--max-cell-radius` | number |  |  |  |  | `15.0` | Comseg `max_cell_radius` parameter |
+| `--mean-cell-diameter` | number |  |  |  |  | `10.0` | Comseg `mean_cell_diameter` parameter |
+| `--min-rna-per-cell` | number |  |  |  |  | `1.0` | Comseg `min_rna_per_cell` parameter |
 | `--norm-vector` | boolean |  |  |  |  |  | Comseg `norm_vector` parameter |
 | `--use-comseg` | boolean |  |  |  |  |  | Whether to run comseg segmentation |
 
@@ -60,16 +60,16 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--lazy` | boolean |  |  |  |  | true | If `True`, will not load the full images in memory (except if the image memory is below `ram_threshold_gb`) |
-| `--pixel-size` | number |  |  |  |  | 0.2125 | Number of microns in a pixel. Invalid value can lead to inconsistent scales in the Explorer. |
-| `--ram-threshold-gb` | number |  |  |  |  | 4.0 | Threshold (in gygabytes) from which image can be loaded in memory. |
+| `--lazy` | boolean |  |  |  |  | `true` | If `True`, will not load the full images in memory (except if the image memory is below `ram_threshold_gb`) |
+| `--pixel-size` | number |  |  |  |  | `0.2125` | Number of microns in a pixel. Invalid value can lead to inconsistent scales in the Explorer. |
+| `--ram-threshold-gb` | number |  |  |  |  | `4.0` | Threshold (in gygabytes) from which image can be loaded in memory. |
 
 ## filtering
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--min-area-microns2` | number |  |  |  |  | 0.0 | Cells with an area less than this value will be filtered. The unit is in microns^2, and used by Baysor/Comseg. Not used by Proseg. |
-| `--min-area-pixels2` | number |  |  |  |  | 0.0 | Cells with an area less than this value will be filtered. The unit is in pixels^2, and used by Stardist/Cellpose. |
+| `--min-area-microns2` | number |  |  |  |  | `0.0` | Cells with an area less than this value will be filtered. The unit is in microns^2, and used by Baysor/Comseg. Not used by Proseg. |
+| `--min-area-pixels2` | number |  |  |  |  | `0.0` | Cells with an area less than this value will be filtered. The unit is in pixels^2, and used by Stardist/Cellpose. |
 | `--min-intensity-ratio` | number |  |  |  |  |  | Cells whose mean channel intensity is less than `min_intensity_ratio * quantile_90` will be filtered. |
 | `--min-transcripts` | number |  |  |  |  |  | Cells with less transcripts than this value will be filtered. |
 
@@ -85,16 +85,16 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email-on-fail` | string |  | yes |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary, only when pipeline fails. |
+| `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
-| `--pipelines-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/ | Base URL or local path to location of pipeline test dataset files |
+| `--pipelines-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/` | Base URL or local path to location of pipeline test dataset files |
 | `--plaintext-email` | boolean |  | yes |  |  |  | Send plain-text email instead of HTML. |
-| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | copy | Method used to save pipeline results to output directory. |
+| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | `copy` | Method used to save pipeline results to output directory. |
 | `--show-hidden` | boolean |  |  |  |  |  | Display hidden parameters in the help message (only works when --help or --help_full are provided). |
 | `--trace-report-suffix` | string |  | yes |  |  |  | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. |
-| `--validate-params` | boolean |  | yes |  |  | true | Boolean whether to validate parameters against the schema at runtime |
+| `--validate-params` | boolean |  | yes |  |  | `true` | Boolean whether to validate parameters against the schema at runtime |
 | `--version` | boolean |  | yes |  |  |  | Display version and exit. |
 
 ## image_preprocessing
@@ -109,8 +109,8 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
-| `--input` | string (file path) | yes |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about the samples in the experiment. |
+| `--email` | string |  |  |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary. |
+| `--input` | string (file path) | yes |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## institutional_config_options
@@ -121,8 +121,8 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 | `--config-profile-description` | string |  | yes |  |  |  | Institutional config description. |
 | `--config-profile-name` | string |  | yes |  |  |  | Institutional config name. |
 | `--config-profile-url` | string |  | yes |  |  |  | Institutional config URL link. |
-| `--custom-config-base` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/configs/master | Base directory for Institutional configs. |
-| `--custom-config-version` | string |  | yes |  |  | master | Git commit id for Institutional configs. |
+| `--custom-config-base` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
+| `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
 ## patches
 
@@ -149,7 +149,7 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--technology` | string | yes |  | `xenium`, `merscope`, `cosmx`, `visium_hd`, `molecular_cartography`, `macsima`, `phenocycler`, `hyperion`, `ome_tif`, `toy_dataset` |  | xenium | Technology used for the spatial data, e.g., 'xenium', 'merscope', ... |
+| `--technology` | string | yes |  | `xenium`, `merscope`, `cosmx`, `visium_hd`, `molecular_cartography`, `macsima`, `phenocycler`, `hyperion`, `ome_tif`, `toy_dataset` |  | `xenium` | Technology used for the spatial data, e.g., 'xenium', 'merscope', ... |
 | `--visium-hd-imread-page` | number |  |  |  |  |  | Optional page for the imageio reader |
 
 ## scanpy_preprocessing
@@ -165,8 +165,8 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--spaceranger-probeset` | string (file path) |  |  |  | matches ^\S+\.csv$ |  | Location of Space Ranger probeset file. |
-| `--spaceranger-reference` | string (file or directory path) |  |  |  |  | https://cf.10xgenomics.com/supp/spatial-exp/refdata-gex-GRCh38-2020-A.tar.gz | Location of Space Ranger reference directory. May be packed as `tar.gz` file. |
+| `--spaceranger-probeset` | string (file path) |  |  |  | matches `^\S+\.csv$` |  | Location of Space Ranger probeset file. |
+| `--spaceranger-reference` | string (file or directory path) |  |  |  |  | `https://cf.10xgenomics.com/supp/spatial-exp/refdata-gex-GRCh38-2020-A.tar.gz` | Location of Space Ranger reference directory. May be packed as `tar.gz` file. |
 
 ## stardist
 

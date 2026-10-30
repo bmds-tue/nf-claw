@@ -27,19 +27,19 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
+| `sample` | string | yes |  | matches `^\S+$` |
 | `lane` | integer or string | no |  |  |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `spring_1` | string (file path) | no |  | matches ^\S+.spring$ |
-| `spring_2` | string (file path) | no |  | matches ^\S+.spring$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `bai` | string (file path) | no |  | matches ^\S+\.bai$ |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `spring_1` | string (file path) | no |  | matches `^\S+.spring$` |
+| `spring_2` | string (file path) | no |  | matches `^\S+.spring$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `bai` | string (file path) | no |  | matches `^\S+\.bai$` |
 | `sex` | integer or string | yes |  |  |
 | `phenotype` | integer | yes | `0`, `1`, `2` |  |
 | `paternal_id` | string | no |  |  |
 | `maternal_id` | string | no |  |  |
-| `case_id` | string | yes |  | matches ^\S+$ |
+| `case_id` | string | yes |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.(csv|tsv|json|yaml|yml)$`.
 
@@ -62,9 +62,9 @@ Any of the optional columns above may be appended to the header when your data n
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--fasta` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path to FASTA genome file. |
-| `--intervals-wgs` | string (file or directory path) |  |  | matches ^\S+\.intervals?(_list)?$ | Path to the interval list of the genome (autosomes, sex chromosomes, and mitochondria). |
-| `--intervals-y` | string (file or directory path) |  |  | matches ^\S+\.intervals?(_list)?$ | Path to the interval list of the Y chromosome. |
+| `--fasta` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path to FASTA genome file. |
+| `--intervals-wgs` | string (file or directory path) |  |  | matches `^\S+\.intervals?(_list)?$` | Path to the interval list of the genome (autosomes, sex chromosomes, and mitochondria). |
+| `--intervals-y` | string (file or directory path) |  |  | matches `^\S+\.intervals?(_list)?$` | Path to the interval list of the Y chromosome. |
 
 ## Reference genome
 **This release resolves a reference genome remotely by default.** `--genome` defaults to `GRCh38`; the schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`. The pinned configuration gives that key the FASTA `${params.igenomes_base}/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/genome.fa`. Resolving references through that default needs access to this source. For a self-contained run, pass your own reference instead (e.g. `--fasta`; the `reference_file_options` group in [reference.md](reference.md) lists every reference option). Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

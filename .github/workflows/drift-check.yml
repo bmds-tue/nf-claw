@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: recursive
+          persist-credentials: false
       # `git describe --tags` resolves each pinned release version, but actions/checkout does
       # not fetch submodule tags — without them the version falls back to a commit hash and the
       # drift gate fails spuriously. Fetch the tags so resolution is deterministic.

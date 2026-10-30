@@ -27,18 +27,18 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `bam` | string (file path) | no |  | matches ^\S+\.bam$ |
-| `bai` | string (file path) | no |  | matches ^\S+\.bam\.bai$ |
-| `cram` | string (file path) | no |  | matches ^\S+\.cram$ |
-| `crai` | string (file path) | no |  | matches ^\S+\.cram\.crai$ |
-| `junctions` | string (file path) | no |  | matches ^\S+\.junction$ |
-| `splice_junctions` | string (file path) | no |  | matches ^\S+\.SJ.out.tab$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `bam` | string (file path) | no |  | matches `^\S+\.bam$` |
+| `bai` | string (file path) | no |  | matches `^\S+\.bam\.bai$` |
+| `cram` | string (file path) | no |  | matches `^\S+\.cram$` |
+| `crai` | string (file path) | no |  | matches `^\S+\.cram\.crai$` |
+| `junctions` | string (file path) | no |  | matches `^\S+\.junction$` |
+| `splice_junctions` | string (file path) | no |  | matches `^\S+\.SJ.out.tab$` |
 | `strandedness` | string | yes | `forward`, `reverse`, `unstranded`, `unknown` |  |
-| `seq_platform` | string | no |  | matches ^\S+$ |
-| `seq_center` | string | no |  | matches ^\S+$ |
+| `seq_platform` | string | no |  | matches `^\S+$` |
+| `seq_center` | string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.(csv|yaml|yml|json)$`.
 
@@ -60,7 +60,7 @@ Any of the optional columns above may be appended to the header when your data n
 |---|---|---|---|---|---|
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--genomes-base` | string |  |  |  | Path to reference folder |
-| `--tools` | string |  |  | matches ^((arriba\|ctatsplicing\|fusioncatcher\|starfusion\|stringtie\|fusionreport\|fastp\|salmon\|fusioninspector\|all)?,?)*(?<!,)$ | Comma-delimited list of tools to run |
+| `--tools` | string |  |  | matches `^((arriba\|ctatsplicing\|fusioncatcher\|starfusion\|stringtie\|fusionreport\|fastp\|salmon\|fusioninspector\|all)?,?)*(?<!,)$` | Comma-delimited list of tools to run |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. A genome name alone does not specify where reference files come from. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option.

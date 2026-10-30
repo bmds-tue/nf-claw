@@ -33,9 +33,9 @@ This release publishes no samplesheet schema for `--input`, so nfclaw does not p
 | `--input` | string (file or directory path) |  |  |  | Root directory or tarball of all satellite imagery. |
 | `--dem` | string (file or directory path) |  |  |  | Digital elevation model. |
 | `--wvdb` | string (file or directory path) |  |  |  | Water vapor dataset. |
-| `--data-cube` | string (file path) |  |  | matches ^\S+\.prj$ | Datacube definition. |
-| `--aoi` | string (file path) |  |  | matches ^\S+\.(gpkg\|shp)$ | Area of interest. |
-| `--endmember` | string (file path) |  |  | matches ^\S+\.txt$ | Endmember definition. |
+| `--data-cube` | string (file path) |  |  | matches `^\S+\.prj$` | Datacube definition. |
+| `--aoi` | string (file path) |  |  | matches `^\S+\.(gpkg\|shp)$` | Area of interest. |
+| `--endmember` | string (file path) |  |  | matches `^\S+\.txt$` | Endmember definition. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `patient` | string | yes |  | matches ^\S+$ |
+| `patient` | string | yes |  | matches `^\S+$` |
 | `status` | integer | yes | `0`, `1` |  |
-| `sample` | string | yes |  | matches ^\S+$ |
-| `vcf` | string (file path) | yes |  | matches ^\S+\.vcf(\.gz)?$ |
-| `cna` | string (file path) | no |  | matches ^\S+\.(cns\|txt)$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `vcf` | string (file path) | yes |  | matches `^\S+\.vcf(\.gz)?$` |
+| `cna` | string (file path) | no |  | matches `^\S+\.(cns\|txt)$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -47,7 +47,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference genome

@@ -30,9 +30,9 @@ This is the pinned latest release. To run a different one, list the available re
 | `ID` | integer | yes |  |  |
 | `Sample` | string or integer | yes |  |  |
 | `Condition` | string or integer | yes |  |  |
-| `ReplicateFileName` | string (file or directory path) | yes |  | matches ^\S+\.(raw\|RAW\|mzML\|mzML.gz\|d\|d.tar\|d.tar.gz\|d.zip)$ |
-| `Fasta` | string (file or directory path) | no |  | matches ^\S+\.(fasta\|fa\|fas\|fna\|faa\|ffn)$ |
-| `SearchPreset` | string | no |  | matches ^[a-zA-Z0-9_]+$ |
+| `ReplicateFileName` | string (file or directory path) | yes |  | matches `^\S+\.(raw\|RAW\|mzML\|mzML.gz\|d\|d.tar\|d.tar.gz\|d.zip)$` |
+| `Fasta` | string (file or directory path) | no |  | matches `^\S+\.(fasta\|fa\|fas\|fna\|faa\|ffn)$` |
+| `SearchPreset` | string | no |  | matches `^[a-zA-Z0-9_]+$` |
 
 `--input` must match `^(PXD\d{6,}|\S+\.sdrf\.tsv|\S+\.tsv)$`.
 
@@ -48,7 +48,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string |  |  | matches ^(PXD\d{6,}\|\S+\.sdrf\.tsv\|\S+\.tsv)$ | Input: samplesheet TSV, SDRF file (.sdrf.tsv), or PRIDE accession (PXD...) |
+| `--input` | string |  |  | matches `^(PXD\d{6,}\|\S+\.sdrf\.tsv\|\S+\.tsv)$` | Input: samplesheet TSV, SDRF file (.sdrf.tsv), or PRIDE accession (PXD...) |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

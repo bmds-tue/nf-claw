@@ -29,14 +29,14 @@ This is the pinned latest release. To run a different one, list the available re
 
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `group_id` | string | yes |  | matches ^\S+$ |
-| `subject_id` | string | yes |  | matches ^\S+$ |
-| `sample_id` | string | yes |  | matches ^\S+$ |
-| `sample_type` | string | yes | `normal`, `tumor`, `donor`, `tumor_normal` | matches ^\S+$ |
-| `sequence_type` | string | yes | `dna`, `rna`, `dna_rna` | matches ^\S+$ |
-| `info` | string | no |  | matches ^\S+$ |
-| `filetype` | string | yes |  | matches ^\S+$ |
-| `filepath` | string | yes |  | matches ^\S+$ |
+| `group_id` | string | yes |  | matches `^\S+$` |
+| `subject_id` | string | yes |  | matches `^\S+$` |
+| `sample_id` | string | yes |  | matches `^\S+$` |
+| `sample_type` | string | yes | `normal`, `tumor`, `donor`, `tumor_normal` | matches `^\S+$` |
+| `sequence_type` | string | yes | `dna`, `rna`, `dna_rna` | matches `^\S+$` |
+| `info` | string | no |  | matches `^\S+$` |
+| `filetype` | string | yes |  | matches `^\S+$` |
+| `filepath` | string | yes |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.csv$`.
 

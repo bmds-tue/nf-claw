@@ -4,7 +4,7 @@ Welcome! nf-claw provides AI agents and bioinformaticians with a token-minimal, 
 
 ---
 
-### Navigation
+## Navigation
 
 [Core Tenets](#core-development-tenets) • [Repository Structure](#repository-structure) • [Reporting Bugs](#reporting-bugs) • [Proposing New Features](#proposing-new-features) • [Fixing Inconsistencies](#fixing-inconsistencies--schema-drift) • [Contribution Workflow](#contribution-workflow) • [Coding Standards](#coding-standards--implementation-guidelines) • [Adding Pipelines](#adding-a-new-pipeline) • [Chaining Handoff Rules](#adding-a-chaining-handoff-rule) • [Testing & Quality](#testing-requirements--quality-assurance) • [Agent Guidance](#agent-guidance)
 
@@ -145,7 +145,11 @@ Before opening a PR:
    npm --prefix website ci
    npm --prefix website run typecheck
    npm --prefix website run build
+   npx --prefix website playwright install chromium   # once
+   npm --prefix website run test:browser
    ```
+   The browser tests include an axe-core accessibility check of every built page: every document
+   under `docs/` becomes a page, so a skipped heading level or a table without headers fails it.
 
 When submitting the PR on GitHub:
 - Provide a clear description of the problem solved and the implementation approach.

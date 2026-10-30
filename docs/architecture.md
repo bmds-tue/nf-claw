@@ -4,7 +4,7 @@ nf-claw derives its parameter documentation and general input validation from ea
 
 ---
 
-### Navigation
+## Navigation
 
 [System Overview](#system-overview) • [1. pipelines/ Library](#1-pipelines--the-library-content) • [2. runner/ Engine](#2-runner--the-runtime-engine-nfclaw) • [3. handoffs/ Rules](#3-handoffs--chaining-rules) • [4. librarian/ Maintenance](#4-librarian--maintenance--code-generation)
 

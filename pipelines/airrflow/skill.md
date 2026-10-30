@@ -27,19 +27,19 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample_id` | string or number | yes |  | matches ^\S+$ |
-| `subject_id` | string or number | yes |  | matches ^\S+$ |
+| `sample_id` | string or number | yes |  | matches `^\S+$` |
+| `subject_id` | string or number | yes |  | matches `^\S+$` |
 | `species` | string | yes | `mouse`, `human` |  |
 | `pcr_target_locus` | string | yes | `TR`, `IG`, `ig`, `tr`, `Ig`, `Tr` |  |
 | `tissue` | string | yes |  |  |
 | `sex` | string | yes |  |  |
 | `age` | string or number | yes |  |  |
 | `biomaterial_provider` | string | yes |  |  |
-| `single_cell` | boolean | yes |  | matches ^\S+$ |
-| `filename_R1` | string | no |  | matches ^\S+$ |
-| `filename_R2` | string | no |  | matches ^\S+$ |
-| `filename_I1` | string | no |  | matches ^\S+$ |
-| `filename` | string | no |  | matches ^\S+$ |
+| `single_cell` | boolean | yes |  | matches `^\S+$` |
+| `filename_R1` | string | no |  | matches `^\S+$` |
+| `filename_R2` | string | no |  | matches `^\S+$` |
+| `filename_I1` | string | no |  | matches `^\S+$` |
+| `filename` | string | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.tsv$`.
 
@@ -55,7 +55,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.tsv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.tsv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

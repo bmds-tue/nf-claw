@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `nuclear_image` | string (file path) | yes |  | matches ^\S+\.(tif\|tiff)$ |
-| `spot_table` | string (file path) | yes |  | matches ^\S+\.(txt\|tsv)$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `nuclear_image` | string (file path) | yes |  | matches `^\S+\.(tif\|tiff)$` |
+| `spot_table` | string (file path) | yes |  | matches `^\S+\.(txt\|tsv)$` |
 | `membrane_image` | string | no |  |  |
 
 `--input` must match `^\S+\.csv$`.
@@ -46,8 +46,8 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--segmentation-method` | string | mesmer |  |  | List of segmentation tools to apply to the image. Allowed values: mesmer, cellpose, stardist, ilastik. Use a comma-separated string without whitespaces for multiple methods. |
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--segmentation-method` | string | `mesmer` |  |  | List of segmentation tools to apply to the image. Allowed values: mesmer, cellpose, stardist, ilastik. Use a comma-separated string without whitespaces for multiple methods. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

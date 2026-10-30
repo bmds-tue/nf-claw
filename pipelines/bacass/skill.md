@@ -27,7 +27,7 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `ID` | string | yes |  | matches ^\S+$ |
+| `ID` | string | yes |  | matches `^\S+$` |
 | `R1` | ['string', 'null'] or string | no |  |  |
 | `R2` | ['string', 'null'] or string | no |  |  |
 | `LongFastQ` | ['string', 'null'] or string | no |  |  |

@@ -12,7 +12,7 @@ launch, and is not a byte-readability guarantee.
 
 ---
 
-### Navigation
+## Navigation
 
 [Schema Subset](#wrapper-schema-subset) • [Replay Integrity Limits](#replay-integrity-limits) • [Generation Boundaries](#generation-boundaries) • [Support Matrix](#support-matrix-for-the-95-audited-pins)
 

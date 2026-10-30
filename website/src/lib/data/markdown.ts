@@ -151,6 +151,26 @@ export function proseUnder(md: string, heading: string): string {
     .trim();
 }
 
+// A CommonMark code span: a backtick run, then anything up to a closing run of the same length. The
+// librarian writes literal values this way (patterns, defaults, allowed values), with a longer fence
+// around a value that holds backticks.
+const CODE_SPAN = /(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)/g;
+
+/** A code span's content as CommonMark reads it: one space each side is padding, not content. */
+function spanText(body: string): string {
+  return body.startsWith(" ") && body.endsWith(" ") && body.trim()
+    ? body.slice(1, -1)
+    : body;
+}
+
+/**
+ * A cell with each code span read as its literal text: `matches \`^\S+\.bed$\`` is
+ * "matches ^\S+\.bed$". Used for cells the site shows as plain text (constraints, defaults).
+ */
+export function codeText(cell: string): string {
+  return (cell || "").replace(CODE_SPAN, (_match, _fence, body: string) => spanText(body)).trim();
+}
+
 /**
  * Split an "allowed values" cell into a clean list. The librarian writes each value as its own code
  * span (`bac,arc`, `vst`) so a value containing a comma stays whole; a plain comma-separated cell
@@ -158,7 +178,7 @@ export function proseUnder(md: string, heading: string): string {
  */
 export function splitAllowed(cell: string): string[] {
   if (!cell || !cell.trim()) return [];
-  const spans = [...cell.matchAll(/`([^`]*)`/g)].map((m) => m[1].trim()).filter(Boolean);
+  const spans = [...cell.matchAll(CODE_SPAN)].map((m) => spanText(m[2]).trim()).filter(Boolean);
   if (spans.length) return spans;
   return cell
     .split(",")

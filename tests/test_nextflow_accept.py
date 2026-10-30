@@ -402,12 +402,18 @@ def test_preview_preserves_existing_submodule_and_untracked_files(tmp_path, dive
     fake = tmp_path / 'bin'
     fake.mkdir()
     _executable(fake / 'nextflow', '#!/bin/sh\nexit 0\n')
+    # The gate refuses an unbounded preview; a host without GNU timeout (macOS without coreutils)
+    # stopped it there, so the selected-release case passed without being checked at all.
+    _executable(fake / 'timeout', '#!/bin/sh\n[ "$1" = --kill-after=10s ] || exit 2\n'
+                'shift\nshift\nexec "$@"\n')
     env = {**os.environ, 'PATH': f'{fake}{os.pathsep}{os.environ["PATH"]}',
            'RUNNER_TEMP': str(tmp_path)}
     env.pop('NFCLAW_KEEP_SUBMODULES', None)
     process = subprocess.run(['bash', str(ROOT / 'scripts/nextflow_accept.sh'), 'mini'],
                              cwd=root, env=env, capture_output=True, text=True, timeout=30)
     assert process.returncode == (1 if diverged else 0), process.stdout + process.stderr
+    assert ('checkout differs from the pinned commit' in process.stdout) == diverged, \
+        process.stdout + process.stderr
     assert sentinel.exists(), 'preview deleted a preexisting untracked file'
     assert sentinel.read_text() == 'existing user data\n'
     assert (sentinel.parent / 'main.nf').exists()

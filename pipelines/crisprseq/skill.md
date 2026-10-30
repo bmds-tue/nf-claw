@@ -27,13 +27,13 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `condition` | string | no |  | matches ^\S+$ |
-| `reference` | string | no |  | matches ^[ACTGNactgn]+$ |
-| `protospacer` | string | no |  | matches ^[ACTGNactgn]+$ |
-| `template` | string | no |  | matches ^[ACTGNactgn]+$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `condition` | string | no |  | matches `^\S+$` |
+| `reference` | string | no |  | matches `^[ACTGNactgn]+$` |
+| `protospacer` | string | no |  | matches `^[ACTGNactgn]+$` |
+| `template` | string | no |  | matches `^[ACTGNactgn]+$` |
 
 `--input` must match `^\S+\.csv$`.
 

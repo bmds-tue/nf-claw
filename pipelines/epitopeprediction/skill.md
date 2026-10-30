@@ -29,10 +29,10 @@ This is the pinned latest release. To run a different one, list the available re
 |---|---|---|---|---|
 | `sample` | integer or string | yes |  |  |
 | `alleles` | string | yes |  |  |
-| `mhc_class` | string | yes |  | matches ^(I\|II)$ |
-| `filename` | string (file path) | yes |  | matches ^\S+\.(vcf\|vcf.gz\|tsv\|fasta\|fa)$ |
-| `germline_vcf` | string (file path) | no |  | matches ^\S+\.vcf(\.gz)?$ |
-| `tumor_sample` | string | no |  | matches ^\S+$ |
+| `mhc_class` | string | yes |  | matches `^(I\|II)$` |
+| `filename` | string (file path) | yes |  | matches `^\S+\.(vcf\|vcf.gz\|tsv\|fasta\|fa)$` |
+| `germline_vcf` | string (file path) | no |  | matches `^\S+\.vcf(\.gz)?$` |
+| `tumor_sample` | string | no |  | matches `^\S+$` |
 
 The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
 ```csv

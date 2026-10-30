@@ -17,7 +17,7 @@ nfclaw chain status /abs/chain                           # inspect stage outcome
 
 ---
 
-### Navigation
+## Navigation
 
 [Specification Format](#1-the-specification-file-specjson) • [Execution Lifecycle](#2-execution-lifecycle) • [Handoff Rules](#3-handoff-rules-and-transformations) • [Failure & Resume](#4-failure-recovery-and-resume) • [Cryptographic Lineage](#5-provenance-and-cryptographic-lineage)
 
@@ -193,7 +193,7 @@ When `samplesheet` is used, transformations are applied in a strict, predictable
 `refuse_rows_in` lists other sheets the upstream writes for the same downstream that the handoff
 cannot take with this one, such as detaxizer's `mag-se.csv` for samples without a second short-read
 file beside `mag-pe.csv`: a row in any of them fails the handoff, naming the samples, instead of
-leaving them out.
+leaving them out. A pattern that also matches the handed-over sheet never refuses that sheet.
 
 > [!IMPORTANT]
 > **Metagenomic Co-Assembly Safety:**
@@ -237,7 +237,7 @@ Omit `spec.json` to reuse the recorded specification unchanged.
 
 When resuming:
 1. **Succeeded Stages Frozen:** Succeeded stages are frozen and verified; modifying the spec for an already-succeeded stage is rejected.
-2. **Cached Retries:** The failed stage resumes using Nextflow's cache when declared local input bytes and namespaces are unchanged. Changed inputs or an unavailable previous snapshot archive that stage's prior run and recompute all its tasks.
+2. **Cached Retries:** The failed stage resumes using Nextflow's cache when declared local input bytes and namespaces are unchanged. A handoff prepared again from unchanged upstream outputs keeps the files its failed attempt ran on, at the same paths. Changed inputs or an unavailable previous snapshot archive that stage's prior run and recompute all its tasks.
 3. **Pipeline Extension:** New stages may be appended to the end of a completed chain to extend an existing analysis.
 
 ---

@@ -27,13 +27,13 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `run` | string or integer | no |  | matches ^\S+$ |
-| `group` | string or integer | yes |  | matches ^\S+$ |
-| `short_reads_1` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `short_reads_2` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `run` | string or integer | no |  | matches `^\S+$` |
+| `group` | string or integer | yes |  | matches `^\S+$` |
+| `short_reads_1` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `short_reads_2` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz$` |
 | `short_reads_platform` | string | no | `ILLUMINA`, `BGISEQ`, `LS454`, `ION_TORRENT`, `DNBSEQ`, `ELEMENT`, `ULTIMA`, `VELA_DIAGNOSTICS`, `GENAPSYS`, `GENEMIND`, `TAPESTRI` |  |
-| `long_reads` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz$ |
+| `long_reads` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz$` |
 | `long_reads_platform` | string | no | `OXFORD_NANOPORE`, `OXFORD_NANOPORE_HQ`, `PACBIO_CLR`, `PACBIO_HIFI` |  |
 
 `--input` must match `^\S+\.csv$`.
@@ -55,7 +55,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | CSV samplesheet file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | CSV samplesheet file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

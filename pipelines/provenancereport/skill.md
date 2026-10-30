@@ -27,8 +27,8 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `id` | string | yes |  | matches ^[A-Za-z_][A-Za-z0-9_]*$ |
-| `path` | string (file path) | yes |  | matches ^[^\s,]+$ |
+| `id` | string | yes |  | matches `^[A-Za-z_][A-Za-z0-9_]*$` |
+| `path` | string (file path) | yes |  | matches `^[^\s,]+$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -42,7 +42,7 @@ id,path
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing ids and file paths to include in the report. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing ids and file paths to include in the report. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

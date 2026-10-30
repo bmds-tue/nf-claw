@@ -25,7 +25,7 @@ source changed while it ran. [AGENTS.md](AGENTS.md) states each rule,
 [docs/architecture.md](docs/architecture.md) how it is enforced, and
 [docs/known-issues.md](docs/known-issues.md) where its checks stop.
 
-### Navigation
+## Navigation
 
 [Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance & Adding Pipelines](#maintain) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
 

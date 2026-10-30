@@ -12,42 +12,42 @@ nf-core/phyloplace pipeline parameters. Every parameter from the pinned `nextflo
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--email-on-fail` | string |  | yes |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary, only when pipeline fails. |
+| `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
-| `--max-multiqc-email-size` | string |  | yes |  | matches ^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$ | 25.MB | File size limit when attaching MultiQC reports to summary emails. |
-| `--modules-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/ | Base URL or local path to location of shared module test dataset files |
+| `--max-multiqc-email-size` | string |  | yes |  | matches `^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$` | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
+| `--modules-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/` | Base URL or local path to location of shared module test dataset files |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
-| `--multiqc-config` | string (file path) |  | yes |  | matches ^\S+\.(yml\|yaml)$ |  | Custom config file to supply to MultiQC. |
+| `--multiqc-config` | string (file path) |  | yes |  | matches `^\S+\.(yml\|yaml)$` |  | Custom config file to supply to MultiQC. |
 | `--multiqc-logo` | string |  | yes |  |  |  | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file |
 | `--multiqc-methods-description` | string |  |  |  |  |  | Custom MultiQC yaml file containing HTML including a methods description. |
-| `--pipelines-testdata-base-path` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/test-datasets/ | Base URL or local path to location of pipeline test dataset files |
+| `--pipelines-testdata-base-path` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/test-datasets/` | Base URL or local path to location of pipeline test dataset files |
 | `--plaintext-email` | boolean |  | yes |  |  |  | Send plain-text email instead of HTML. |
-| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | copy | Method used to save pipeline results to output directory. |
+| `--publish-dir-mode` | string |  | yes | `symlink`, `rellink`, `link`, `copy`, `copyNoFollow`, `move` |  | `copy` | Method used to save pipeline results to output directory. |
 | `--show-hidden` | boolean |  |  |  |  |  | Display hidden parameters in the help message (only works when --help or --help_full are provided). |
 | `--trace-report-suffix` | string |  | yes |  |  |  | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. |
-| `--validate-params` | boolean |  | yes |  |  | true | Boolean whether to validate parameters against the schema at runtime |
+| `--validate-params` | boolean |  | yes |  |  | `true` | Boolean whether to validate parameters against the schema at runtime |
 | `--version` | boolean |  | yes |  |  |  | Display version and exit. |
 
 ## input_output_options
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--alignmethod` | string |  |  | `hmmer`, `clustalo`, `mafft` |  | clustalo | Method used to align query sequences with. |
-| `--email` | string |  |  |  | matches ^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$ |  | Email address for completion summary. |
-| `--hmmfile` | string (file path) |  |  |  | matches ^(\S+\.(hmm)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | HMM file. If provided, will be used to align both the reference and query sequences. |
-| `--id` | string |  |  |  |  | placement | Name of analysis |
+| `--alignmethod` | string |  |  | `hmmer`, `clustalo`, `mafft` |  | `clustalo` | Method used to align query sequences with. |
+| `--email` | string |  |  |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary. |
+| `--hmmfile` | string (file path) |  |  |  | matches `^(\S+\.(hmm)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | HMM file. If provided, will be used to align both the reference and query sequences. |
+| `--id` | string |  |  |  |  | `placement` | Name of analysis |
 | `--model` | string |  |  |  |  |  | Evolutionary model to use for placement, e.g. 'LG'. |
 | `--multiqc-title` | string |  |  |  |  |  | MultiQC report title. Printed as page header, used for filename if not otherwise specified. |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--phyloplace-input` | string (file path) |  |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about phylogenetic placements to perform. |
-| `--phylosearch-input` | string (file path) |  |  |  | matches ^\S+\.csv$ |  | Path to comma-separated file containing information about phylogenetic searches to perform. |
-| `--queryseqfile` | string (file path) |  |  |  | matches ^(\S+\.(fa\|fna\|faa\|fasta)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | Fasta file with query sequences |
-| `--refphylogeny` | string (file path) |  |  |  | matches ^(\S+\.(newick\|nwk\|tree)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | Newick file with the reference phylogeny. |
-| `--refseqfile` | string (file path) |  |  |  | matches ^(\S+\.(aln\|alnfa\|alnfaa\|alnfna\|mfa\|fa\|fna\|faa\|fasta\|ph\|phy\|phylip)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | File with reference sequences. Any format supported by HMMER tools. |
+| `--phyloplace-input` | string (file path) |  |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about phylogenetic placements to perform. |
+| `--phylosearch-input` | string (file path) |  |  |  | matches `^\S+\.csv$` |  | Path to comma-separated file containing information about phylogenetic searches to perform. |
+| `--queryseqfile` | string (file path) |  |  |  | matches `^(\S+\.(fa\|fna\|faa\|fasta)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | Fasta file with query sequences |
+| `--refphylogeny` | string (file path) |  |  |  | matches `^(\S+\.(newick\|nwk\|tree)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | Newick file with the reference phylogeny. |
+| `--refseqfile` | string (file path) |  |  |  | matches `^(\S+\.(aln\|alnfa\|alnfaa\|alnfna\|mfa\|fa\|fna\|faa\|fasta\|ph\|phy\|phylip)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | File with reference sequences. Any format supported by HMMER tools. |
 | `--save-domtblout` | boolean |  |  |  |  |  | Save the per-domain hit table (`--domtblout`) from hmmsearch. |
-| `--search-fasta` | string (file path) |  |  |  | matches ^(\S+\.(fa\|fna\|faa\|fasta)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | Fasta file with sequences to be searched with HMM profiles. |
-| `--taxonomy` | string (file path) |  |  |  | matches ^(\S+\.(tsv\|tax)(\.gz)?\|https?://\S*/[^/.\s]+)$ |  | Tab-separated file with taxonomy assignments of reference sequences. |
+| `--search-fasta` | string (file path) |  |  |  | matches `^(\S+\.(fa\|fna\|faa\|fasta)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | Fasta file with sequences to be searched with HMM profiles. |
+| `--taxonomy` | string (file path) |  |  |  | matches `^(\S+\.(tsv\|tax)(\.gz)?\|https?://\S*/[^/.\s]+)$` |  | Tab-separated file with taxonomy assignments of reference sequences. |
 
 ## institutional_config_options
 
@@ -57,7 +57,7 @@ nf-core/phyloplace pipeline parameters. Every parameter from the pinned `nextflo
 | `--config-profile-description` | string |  | yes |  |  |  | Institutional config description. |
 | `--config-profile-name` | string |  | yes |  |  |  | Institutional config name. |
 | `--config-profile-url` | string |  | yes |  |  |  | Institutional config URL link. |
-| `--custom-config-base` | string |  | yes |  |  | https://raw.githubusercontent.com/nf-core/configs/master | Base directory for Institutional configs. |
-| `--custom-config-version` | string |  | yes |  |  | master | Git commit id for Institutional configs. |
+| `--custom-config-base` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
+| `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
 <!-- Generated from nf-core/phyloplace@68db179c0f034bd0a6133b62a8a9fa37f8a3c517. Do not edit by hand. -->

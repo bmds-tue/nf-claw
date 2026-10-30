@@ -30,13 +30,13 @@ This is the pinned latest release. To run a different one, list the available re
 | `sample_id` | string | no |  |  |
 | `name` | string | no |  |  |
 | `description` | string | no |  |  |
-| `path` | string | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `path_2` | string | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
-| `ncbi_accession` | string | no |  | matches ^[A-Z]{3,6}[0-9]+$ |
+| `path` | string | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `path_2` | string | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
+| `ncbi_accession` | string | no |  | matches `^[A-Z]{3,6}[0-9]+$` |
 | `ncbi_query` | string | no |  |  |
 | `ncbi_query_max` | integer | no |  | ≥ 1 |
-| `sequence_type` | string | no |  | matches (?i)illumina\|nanopore\|pacbio\|bgiseq |
-| `report_group_ids` | string | no |  | matches ^[a-zA-Z0-9_ -]+(?:;[a-zA-Z0-9_ -]+)*$ |
+| `sequence_type` | string | no |  | matches `(?i)illumina\|nanopore\|pacbio\|bgiseq` |
+| `report_group_ids` | string | no |  | matches `^[a-zA-Z0-9_ -]+(?:;[a-zA-Z0-9_ -]+)*$` |
 | `color_by` | string | no |  |  |
 | `ploidy` | integer | no |  | ≥ 1 |
 | `enabled` | boolean | no |  |  |
@@ -54,7 +54,7 @@ sample_id,name,description,path,path_2,ncbi_accession,ncbi_query,ncbi_query_max,
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.[ct]sv$ | Path to comma/tab-separated file containing information about samples. |
+| `--input` | string (file path) |  |  | matches `^\S+\.[ct]sv$` | Path to comma/tab-separated file containing information about samples. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage if running on Cloud infrastructure. |
 
 ## Secrets

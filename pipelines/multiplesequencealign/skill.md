@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `id` | string | yes |  | matches ^\S+$ |
-| `fasta` | string (file path) | no |  | matches ^\S+\.f(n\|ast)?a$ |
-| `reference` | string (file path) | no |  | matches ^\S+\.(f(n\|ast)?a\|ref)$ |
+| `id` | string | yes |  | matches `^\S+$` |
+| `fasta` | string (file path) | no |  | matches `^\S+\.f(n\|ast)?a$` |
+| `reference` | string (file path) | no |  | matches `^\S+\.(f(n\|ast)?a\|ref)$` |
 | `optional_data` | string | no |  |  |
-| `template` | string (file path) | no |  | matches ^\S+\.txt$ |
+| `template` | string (file path) | no |  | matches `^\S+\.txt$` |
 
 `--input` must match `^\S+\.(csv|tsv|yaml|yml|json)$`.
 

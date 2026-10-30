@@ -31,10 +31,10 @@ For this exact commit, `nfclaw run` applies `createtaxdb-sourmash-copy-sort-v1` 
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `id` | string | yes |  | matches ^\S+$ |
+| `id` | string | yes |  | matches `^\S+$` |
 | `taxid` | integer | yes |  |  |
-| `fasta_dna` | string (file path) | no |  | matches ^\S+\.(fasta\|fas\|fa\|fna)(\.gz)?$ |
-| `fasta_aa` | string (file path) | no |  | matches ^\S+\.(fasta\|fas\|fa\|faa)(\.gz)?$ |
+| `fasta_dna` | string (file path) | no |  | matches `^\S+\.(fasta\|fas\|fa\|fna)(\.gz)?$` |
+| `fasta_aa` | string (file path) | no |  | matches `^\S+\.(fasta\|fas\|fa\|faa)(\.gz)?$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -50,10 +50,10 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--dbname` | string |  |  |  | Specify name that resulting databases will be prefixed with. |
-| `--unzip-batch-size` | integer | 10000 |  |  | How many files to unzip in parallel in a single job. |
+| `--unzip-batch-size` | integer | `10000` |  |  | How many files to unzip in parallel in a single job. |
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

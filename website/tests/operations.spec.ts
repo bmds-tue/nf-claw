@@ -88,7 +88,7 @@ for (const trigger of ['button', 'shortcut']) {
 
 test('holding the search shortcut opens once and a new press closes it', async ({ page }) => {
   await page.goto('/pipelines/');
-  await page.getByRole('button', { name: 'Search (⌘K)' }).click();
+  await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   const input = page.locator('input[role="combobox"]');
   await expect(input).toBeFocused();
   await page.keyboard.press('Escape');
@@ -113,7 +113,7 @@ test('a second shortcut press right after the palette takes focus closes it', as
   // input takes focus during the commit. A press in between met a listener that still saw the
   // palette closed, and it stayed open (the holding test above failed this way under load).
   await page.goto('/pipelines/');
-  await page.getByRole('button', { name: 'Search (⌘K)' }).click();
+  await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
   const input = page.locator('input[role="combobox"]');
   await expect(input).toBeFocused();
   await page.keyboard.press('Escape');

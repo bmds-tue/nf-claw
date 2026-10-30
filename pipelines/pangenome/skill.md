@@ -30,7 +30,7 @@ This release publishes no samplesheet schema for `--input`, so nfclaw does not p
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path to BGZIPPED input FASTA to build the pangenome graph from. |
+| `--input` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path to BGZIPPED input FASTA to build the pangenome graph from. |
 | `--n-haplotypes` | number |  |  |  | The number of haplotypes in the input FASTA. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 

@@ -28,8 +28,8 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `id` | string | yes |  | matches ^\S+$ |
-| `samplesheet` | string (file path) | yes |  | matches ^\S+\.csv$ |
+| `id` | string | yes |  | matches `^\S+$` |
+| `samplesheet` | string (file path) | yes |  | matches `^\S+\.csv$` |
 | `lane` | integer | no |  | ≥ 1; ≤ 8 |
 | `flowcell` | string (file or directory path) | yes |  |  |
 | `per_flowcell_manifest` | string (file path) | no |  |  |
@@ -49,7 +49,7 @@ Any of the optional columns above may be appended to the header when your data n
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--demultiplexer` | string | bclconvert | `bases2fastq`, `bcl2fastq`, `bclconvert`, `fqtk`, `sgdemux`, `mkfastq`, `mgikit` |  | Demultiplexer to use. |
+| `--demultiplexer` | string | `bclconvert` | `bases2fastq`, `bcl2fastq`, `bclconvert`, `fqtk`, `sgdemux`, `mkfastq`, `mgikit` |  | Demultiplexer to use. |
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):

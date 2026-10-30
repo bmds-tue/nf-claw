@@ -7,6 +7,8 @@
 # Pipelines are not here: their pins move through the validated maintenance workflows
 # (docs/updating.md). The Python package has no runtime dependencies, and its development tools
 # are bounded on purpose in pyproject.toml.
+# A version update waits a week after its release (`cooldown`), so a compromised or broken release
+# is usually withdrawn before it is proposed here; security updates are not delayed.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -22,6 +24,8 @@ updates:
       prefix: chore
       include: scope
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: "/website"
@@ -34,3 +38,5 @@ updates:
       prefix: chore
       include: scope
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7

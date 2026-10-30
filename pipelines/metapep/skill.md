@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `condition` | string | yes |  | matches ^\S+$ |
+| `condition` | string | yes |  | matches `^\S+$` |
 | `type` | string | yes | `bins`, `assembly`, `taxa` |  |
-| `microbiome_path` | string (file path) | yes |  | matches ^\S+$ |
+| `microbiome_path` | string (file path) | yes |  | matches `^\S+$` |
 | `alleles` | string | yes |  |  |
-| `weights_path` | string (file path) | no |  | matches ^\S+$ |
+| `weights_path` | string (file path) | no |  | matches `^\S+$` |
 
 `--input` must match `^\S+\.csv$`.
 

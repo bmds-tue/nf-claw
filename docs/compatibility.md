@@ -4,7 +4,7 @@ nf-claw wraps each nf-core pipeline **unmodified**, pinned to a commit resolved 
 
 ---
 
-### Navigation
+## Navigation
 
 [DSL2 Invariant](#1-only-dsl2-pipelines-are-supported) • [Nextflow Engine Matching](#2-matching-nextflow-engine-to-pinned-releases) • [Parser Transition](#the-parser-transition) • [Engine Controls](#runtime-engine-controls-in-nfclaw) • [Continuous Validation](#3-automated-continuous-validation) • [Host Requirements](#4-host-environment-requirements)
 

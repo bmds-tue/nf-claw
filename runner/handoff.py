@@ -586,8 +586,8 @@ def _direct(src: Source, root: Path, sheet_schema, dest: Path, downstream: str
     # the same run (detaxizer puts single-end samples in mag-se.csv): a sample in one would
     # otherwise be left out of the downstream analysis without a word.
     for pattern in src.spec.get("refuse_rows_in", []):
-        for other in sorted(p for p in root.glob(pattern)
-                            if p.is_file() and is_result(p.relative_to(root))):
+        for other in sorted(p for p in root.glob(pattern) if p != sheet
+                            and p.is_file() and is_result(p.relative_to(root))):
             try:
                 with other.open(newline="", encoding="utf-8-sig") as fh:
                     left = list(csv.DictReader(fh, delimiter=samplesheet.delimiter_for(other)))

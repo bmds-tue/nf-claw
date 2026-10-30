@@ -30,7 +30,7 @@ This release publishes no samplesheet schema for `--input`, so nfclaw does not p
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.(csv\|tsv\|yaml\|yml\|json)$ | Path to samplesheet describing the data to be submitted (supported formats: csv, tsv, yaml, yml, json). Columns/fields depend on the pipeline mode |
+| `--input` | string (file path) |  |  | matches `^\S+\.(csv\|tsv\|yaml\|yml\|json)$` | Path to samplesheet describing the data to be submitted (supported formats: csv, tsv, yaml, yml, json). Columns/fields depend on the pipeline mode |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--centre-name` | string |  |  |  | Name of the submitter's organisation (mandatory for broker accounts). |
 | `--mode` | string |  | `mags`, `bins`, `metagenomic_assemblies`, `reads` |  | Type of the data to be submitted |

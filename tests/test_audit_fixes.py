@@ -120,7 +120,7 @@ def test_required_params_show_defaults_for_required_defaulted_params():
     })
     out = write_skill._required_params(ps)
     row = next(line for line in out.splitlines() if line.startswith("| `--step`"))
-    assert "| mapping |" in row
+    assert "| `mapping` |" in row
 
 
 def test_param_groups_maps_every_group_with_counts():
@@ -286,7 +286,7 @@ def test_inputs_section_surfaces_constraints_and_directory_path():
     ))
     out = write_skill._inputs_section(insch)
     assert "| constraints |" in out                    # unified constraints column header
-    assert r"matches ^\S+\.fq\.gz$" in out             # a real column pattern rendered (a fact)
+    assert r"matches `^\S+\.fq\.gz$`" in out           # a real column pattern rendered (a fact)
     assert "string (file path)" in out                 # file-path marker
     assert "string (directory path)" in out            # directory-path marker (was lost before)
 
@@ -340,7 +340,7 @@ def test_required_params_shows_constraints_column():
     })
     out = write_skill._required_params(ps)
     assert "| constraints |" in out
-    assert r"matches ^\S+\.csv$" in out
+    assert r"matches `^\S+\.csv$`" in out
 
 
 def test_run_invocation_omits_input_without_samplesheet():
@@ -375,7 +375,7 @@ def test_reference_renders_boolean_default_as_json_literal():
     })
     out = write_skill._render_reference("p", st, ps, None)
     row = next(line for line in out.splitlines() if line.startswith("| `--validate-params`"))
-    assert "| true |" in row and "True" not in row
+    assert "| `true` |" in row and "True" not in row
 
 
 # --- Value constraints: pattern/min/max/length/deprecated are captured on BOTH Param and Column
@@ -385,7 +385,7 @@ def test_constraints_helper_renders_all_and_excludes_enum():
               pattern=r"^(a|b)$", minimum=1, maximum=10, min_length=2, max_length=8,
               deprecated=True)
     out = write_skill._constraints(p)
-    assert r"matches ^(a\|b)$" in out  # pattern rendered, pipe escaped for the table
+    assert r"matches `^(a\|b)$`" in out  # pattern rendered, pipe escaped for the table
     assert "≥ 1" in out and "≤ 10" in out               # numeric bounds
     assert "length ≥ 2" in out and "length ≤ 8" in out  # length bounds
     assert "deprecated" in out
@@ -441,7 +441,7 @@ def test_reference_has_constraints_column_with_real_pattern():
     out = write_skill._render_reference("pZ", st, ps, None)
     assert "| constraints |" in out                                  # column present
     input_row = next(line for line in out.splitlines() if line.startswith("| `--input`"))
-    assert r"matches ^\S+\.(csv\|tsv)$" in input_row  # pattern in the right cell, pipe escaped
+    assert r"matches `^\S+\.(csv\|tsv)$`" in input_row  # in the right cell, pipe escaped
     n_row = next(line for line in out.splitlines() if line.startswith("| `--n`"))
     assert "≥ 1" in n_row
 

@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from librarian import write_skill
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "website"
 TSC = WEB / "node_modules" / "typescript" / "bin" / "tsc"
@@ -71,3 +73,28 @@ def test_samplesheet_headers_are_read_as_generated(markdown_js):
     assert "\t" in sheets["mhcquant"][0]["code"] and "," not in sheets["mhcquant"][0]["code"]
     # createpanelrefs' column groups exclude each other: one header per group, never all at once.
     assert [b["code"] for b in sheets["createpanelrefs"]] == ["sample,bam", "sample,cram"]
+
+
+_CELLS = """
+const md = require(process.argv[1]);
+const cells = JSON.parse(process.argv[2]);
+process.stdout.write(JSON.stringify(cells.map((line) => {
+  const [constraint, allowed] = md.splitRow(line);
+  return { constraint: md.codeText(constraint), allowed: md.splitAllowed(allowed) };
+})));
+"""
+
+
+def test_literal_cells_read_back_as_the_librarian_wrote_them(markdown_js):
+    # The librarian writes patterns, defaults and allowed values as code spans so Markdown shows
+    # them as they are; the site reads those cells back to the literal values it shows as text.
+    values = [r"^\S+\.(bed|interval_list)$", r"^(?!\.$)[a-zA-Z.]([a-zA-Z0-9._]*)?$", "*.hmm",
+              r"-i\'FORMAT/DP>10\\", "a`b", "`x`", "x ``y`` z", "two  spaces"]
+    lines = [f"| {write_skill._cell('matches ' + write_skill._code(v))} | "
+             f"{write_skill._allowed((v, 'plain'))} |" for v in values]
+    r = subprocess.run(["node", "-e", _CELLS, str(markdown_js), json.dumps(lines)],
+                       check=True, capture_output=True, text=True)
+    for value, parsed in zip(values, json.loads(r.stdout), strict=True):
+        literal = " ".join(value.split())
+        assert parsed["constraint"] == f"matches {literal}", value
+        assert parsed["allowed"] == [literal, "plain"], value

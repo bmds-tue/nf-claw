@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | yes |  | matches ^\S+\.f(ast)?q\.gz$ |
-| `fastq_2` | string (file path) | no |  | matches ^\S+\.f(ast)?q\.gz$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | yes |  | matches `^\S+\.f(ast)?q\.gz$` |
+| `fastq_2` | string (file path) | no |  | matches `^\S+\.f(ast)?q\.gz$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -45,7 +45,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--assay-type` | string |  | `CoPRO`, `GROcap`, `PROcap`, `CAGE`, `NETCAGE`, `RAMPAGE`, `csRNAseq`, `STRIPEseq`, `PROseq`, `GROseq`, `R_5`, `R_3`, `R1_5`, `R1_3`, `R2_5`, `R2_3` |  | What type of nascent or TSS assay the sample is. |
 

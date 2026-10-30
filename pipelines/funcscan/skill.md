@@ -30,11 +30,11 @@ For this exact commit, `nfclaw run` applies `funcscan-hmm-metadata-v1` in a sepa
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample` | string | yes |  | matches ^\S+$ |
-| `fasta` | string (file path) | yes |  | matches ^\S+\.(fasta\|fas\|fna\|fa)(\.gz)?$ |
-| `protein` | string (file path) | no |  | matches ^\S+\.(faa\|fasta)(\.gz)?$ |
-| `gbk` | string (file path) | no |  | matches ^\S+\.(gbk\|gbff)(\.gz)?$ |
-| `gff` | string (file path) | no |  | matches ^\S+\.(gff\|gff3)(\.gz)?$ |
+| `sample` | string | yes |  | matches `^\S+$` |
+| `fasta` | string (file path) | yes |  | matches `^\S+\.(fasta\|fas\|fna\|fa)(\.gz)?$` |
+| `protein` | string (file path) | no |  | matches `^\S+\.(faa\|fasta)(\.gz)?$` |
+| `gbk` | string (file path) | no |  | matches `^\S+\.(gbk\|gbff)(\.gz)?$` |
+| `gff` | string (file path) | no |  | matches `^\S+\.(gff\|gff3)(\.gz)?$` |
 | `gff_type` | string | no | `NCBI_prok`, `prodigal`, `NCBI_euk`, `JGI` |  |
 
 `--input` must match `^\S+\.csv$`.
@@ -56,7 +56,7 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing sample names and paths to corresponding FASTA files, and optional annotation files. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing sample names and paths to corresponding FASTA files, and optional annotation files. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Reference database

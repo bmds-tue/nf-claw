@@ -1178,7 +1178,8 @@ def sheet_changes(previous: Path, generated: Generated) -> str | None:
     """How `generated` differs from the samplesheet at `previous` (None when identical or when
     there is none): the samples added and removed, or that only files or values changed."""
     try:
-        before = previous.read_text(encoding="utf-8")
+        # Bytes that are not UTF-8 are not the text nfclaw wrote: still compare the samples.
+        before = previous.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
     if before == generated.text:

@@ -29,12 +29,12 @@ This is the pinned latest release. To run a different one, list the available re
 
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `group` | string | yes |  | matches ^\S+$ |
-| `replicate` | integer | yes |  | matches ^\d+$; ≥ 1 |
-| `barcode` | string | no |  | matches ^\d+$ |
+| `group` | string | yes |  | matches `^\S+$` |
+| `replicate` | integer | yes |  | matches `^\d+$`; ≥ 1 |
+| `barcode` | string | no |  | matches `^\d+$` |
 | `input_file` | string (file or directory path) | no |  |  |
 | `fasta` | string | no |  |  |
-| `gtf` | string (file path) | no |  | matches ^\S+\.gtf(\.gz)?$ |
+| `gtf` | string (file path) | no |  | matches `^\S+\.gtf(\.gz)?$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -48,7 +48,7 @@ group,replicate,barcode,input_file,fasta,gtf
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) | ./samplesheet.csv |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) | `./samplesheet.csv` |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--protocol` | string |  |  |  | Input sample type. Valid options: 'DNA', 'cDNA', and 'directRNA'. |
 
 ## Other parameters

@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `sample_id` | string | yes |  | matches ^\S+$ |
-| `img_directory` | string | yes |  | matches ^(https?://.*\.zip\|.*\.zip\|.*/)$ |
-| `parameter_file` | string (file path) | yes |  | matches ^\S+\.csv$ |
+| `sample_id` | string | yes |  | matches `^\S+$` |
+| `img_directory` | string | yes |  | matches `^(https?://.*\.zip\|.*\.zip\|.*/)$` |
+| `parameter_file` | string (file path) | yes |  | matches `^\S+\.csv$` |
 
 The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
 ```csv

@@ -27,9 +27,9 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `id` | string | no |  | matches ^\S+$ |
-| `query` | string | no |  | matches ^\S+$ |
-| `fasta` | string (file path) | no |  | matches ^\S+\.fa(sta)?$ |
+| `id` | string | no |  | matches `^\S+$` |
+| `query` | string | no |  | matches `^\S+$` |
+| `fasta` | string (file path) | no |  | matches `^\S+\.fa(sta)?$` |
 
 `--input` must match `^\S+\.csv$`.
 
@@ -43,7 +43,7 @@ id,query,fasta
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.csv$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.csv$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 
 ## Other parameters

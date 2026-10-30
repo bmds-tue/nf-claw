@@ -10,7 +10,7 @@ job id. The agent docs (`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are se
 
 ---
 
-### Navigation
+## Navigation
 
 [Setup](#setup) • [Tools](#tools) • [Jobs](#jobs-long-analyses-and-chains) • [Resources and prompt](#resources-and-prompt) • [Environment](#environment) • [Protocol](#protocol)
 

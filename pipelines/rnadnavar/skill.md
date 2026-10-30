@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `patient` | string | yes |  | matches ^\S+$ |
-| `sample` | string | yes |  | matches ^\S+$ |
+| `patient` | string | yes |  | matches `^\S+$` |
+| `sample` | string | yes |  | matches `^\S+$` |
 | `status` | integer | no |  | ≥ 0; ≤ 2 |
-| `lane` | string | no |  | matches ^\S+$ |
-| `fastq_1` | string (file path) | no |  | matches ^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$ |
+| `lane` | string | no |  | matches `^\S+$` |
+| `fastq_1` | string (file path) | no |  | matches `^([\S\s]*\/)?[^\s\/]+\.f(ast)?q\.gz$` |
 | `fastq_2` | string (file path) | no |  |  |
 | `table` | string (file path) | no |  |  |
 | `cram` | string (file path) | no |  |  |
@@ -41,7 +41,7 @@ This is the pinned latest release. To run a different one, list the available re
 | `vcf` | string (file path) | no |  |  |
 | `variantcaller` | string | no |  |  |
 | `maf` | string (file path) | no |  |  |
-| `normal_id` | string | no |  | matches ^\S+$ |
+| `normal_id` | string | no |  | matches `^\S+$` |
 
 The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
 ```csv

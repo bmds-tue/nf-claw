@@ -27,11 +27,11 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `test_vcf` | string (file path) | no |  | matches \S+\.(vcf\|bcf)(\.gz)?$ |
-| `test_regions` | string (file path) | no |  | matches ^\S+\.(vcf\|bed\|txt\|cnn\|csv\|cns\|gz_CNVs)(\.gz)?$ |
-| `id` | string | yes |  | matches ^\S+$; length ≥ 1 |
-| `caller` | string | yes |  | matches ^\S+$; length ≥ 1 |
-| `subsample` | string | no |  | matches ^\S+$; length ≥ 1 |
+| `test_vcf` | string (file path) | no |  | matches `\S+\.(vcf\|bcf)(\.gz)?$` |
+| `test_regions` | string (file path) | no |  | matches `^\S+\.(vcf\|bed\|txt\|cnn\|csv\|cns\|gz_CNVs)(\.gz)?$` |
+| `id` | string | yes |  | matches `^\S+$`; length ≥ 1 |
+| `caller` | string | yes |  | matches `^\S+$`; length ≥ 1 |
+| `subsample` | string | no |  | matches `^\S+$`; length ≥ 1 |
 | `normshift` | number | no |  | ≥ 0; ≤ 1 |
 | `normdist` | number | no |  | ≥ 0; ≤ 1 |
 | `normsizediff` | number | no |  | ≥ 0; ≤ 1 |
@@ -68,13 +68,13 @@ Any of the optional columns above may be appended to the header when your data n
 ## Required parameters
 | parameter | type | default | allowed values | constraints | description |
 |---|---|---|---|---|---|
-| `--input` | string (file path) |  |  | matches ^\S+\.(csv\|tsv\|yaml\|yml\|json)$ | Path to comma-separated file containing information about the samples in the experiment. |
+| `--input` | string (file path) |  |  | matches `^\S+\.(csv\|tsv\|yaml\|yml\|json)$` | Path to comma-separated file containing information about the samples in the experiment. |
 | `--outdir` | string (directory path) |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
 | `--analysis` | string |  | `germline`, `somatic` |  | The analysis type used by the input files |
 | `--variant-type` | string |  | `small`, `snv`, `indel`, `structural`, `copynumber` |  | Variant types to benchmark |
-| `--method` | string |  |  | matches ^((truvari\|svanalyzer\|happy\|sompy\|rtgtools\|wittyer\|intersect\|bndeval\|concordance)?,?)*(?<!,)$ | The benchmarking methods to use. For germline small variants (SNV and INDEL) use happy and/or rtgtools, for somatic small variants (SNV and INDEL) use sompy and/or rtgtools, for structural variants use wittyer, truvari and/or svanalyzer, for copy number variations use wittyer and/or truvari. Use intersect to intersect BED files. Should be a comma-separate list of one or more of the following options: truvari, svanalyzer, happy, sompy, rtgtools, wittyer, intersect |
-| `--fasta` | string (file path) |  |  | matches ^\S+\.fn?a(sta)?(\.gz)?$ | Path to FASTA genome file. |
-| `--fai` | string (file path) |  |  | matches ^\S+\.fai$ | Path to FAI genome file. |
+| `--method` | string |  |  | matches `^((truvari\|svanalyzer\|happy\|sompy\|rtgtools\|wittyer\|intersect\|bndeval\|concordance)?,?)*(?<!,)$` | The benchmarking methods to use. For germline small variants (SNV and INDEL) use happy and/or rtgtools, for somatic small variants (SNV and INDEL) use sompy and/or rtgtools, for structural variants use wittyer, truvari and/or svanalyzer, for copy number variations use wittyer and/or truvari. Use intersect to intersect BED files. Should be a comma-separate list of one or more of the following options: truvari, svanalyzer, happy, sompy, rtgtools, wittyer, intersect |
+| `--fasta` | string (file path) |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` | Path to FASTA genome file. |
+| `--fai` | string (file path) |  |  | matches `^\S+\.fai$` | Path to FAI genome file. |
 
 ## Reference genome
 No reference genome is set by default: supply your own reference. The schema declares AWS iGenomes at `s3://ngi-igenomes/igenomes/`; selecting `--genome <id>` uses the paths in the pipeline's reference configuration. Access to that remote source is required. To supply your own reference, use e.g. `--fasta`; the `reference_genome_options` group in [reference.md](reference.md) lists every reference option. Set `--igenomes-ignore true` to disable the lookup entirely. Confirm the selected reference's paths and source in the pinned `upstream/nextflow.config` and `upstream/conf/` before running.

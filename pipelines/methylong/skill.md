@@ -27,10 +27,10 @@ This is the pinned latest release. To run a different one, list the available re
 ## Inputs
 | column | type | required | allowed values | constraints |
 |---|---|---|---|---|
-| `group` | string | yes |  | matches ^\S+$ |
-| `sample` | string | yes |  | matches ^\S+$ |
+| `group` | string | yes |  | matches `^\S+$` |
+| `sample` | string | yes |  | matches `^\S+$` |
 | `path` | string | yes |  |  |
-| `ref` | string (file path) | yes |  | matches ^\S+\.(fa\|fasta\|fna)(\.gz)?$ |
+| `ref` | string (file path) | yes |  | matches `^\S+\.(fa\|fasta\|fna)(\.gz)?$` |
 | `method` | string | yes | `ont`, `pacbio` |  |
 
 The samplesheet is a CSV with this header (the columns the schema requires); fill each value per the table above and `reference.md` (no example value is invented here):
