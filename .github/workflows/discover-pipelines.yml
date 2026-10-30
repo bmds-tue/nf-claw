@@ -31,7 +31,7 @@ jobs:
       NXF_ANSI_LOG: "false"
       NFCLAW_KEEP_SUBMODULES: "1"   # keep newly-added submodules initialised for publication
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Bind preparation to the same commit as the reusable workflow definitions.
           ref: ${{ github.sha }}
@@ -47,7 +47,7 @@ jobs:
       # pinned version deterministically (the drift gate compares regenerated context).
       - name: Fetch submodule tags
         run: git submodule foreach 'git fetch -q --tags origin 2>/dev/null || true'
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
       # The YAML extra lets the final gate run the YAML params/samplesheet tests, as tests.yml does.
@@ -99,7 +99,7 @@ jobs:
         env:
           BASE_SHA: ${{ steps.base.outputs.sha }}
         run: python scripts/maintenance_candidate.py prepare --directory "$RUNNER_TEMP/candidate" --base "$BASE_SHA" --kind discover
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         id: archive
         if: steps.candidate.outputs.changed == 'true'
         with:
@@ -138,12 +138,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
       - uses: ./.github/actions/restore-maintenance-candidate
@@ -169,24 +169,24 @@ jobs:
       checks: write
     steps:
       # Trusted base only: do not check out or execute candidate/upstream code in this job.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ needs.prepare.outputs.artifact }}
           path: ${{ runner.temp }}/maintenance-candidate
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: maintenance-pytest-${{ needs.prepare.outputs.sha }}-*
           path: ${{ runner.temp }}/maintenance-matrix
           merge-multiple: true
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: needs.prepare.outputs.pipelines != '[]'
         with:
           pattern: maintenance-native-${{ needs.prepare.outputs.sha }}-*
