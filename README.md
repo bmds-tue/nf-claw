@@ -21,7 +21,8 @@ A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelin
 nfclaw checks a run before it starts and again before it reports success. It refuses unknown flags,
 invalid values, unsafe input filenames or sample identities and outputs that overlap their inputs
 rather than silently correcting them, and it fails a run whose declared inputs, configs or pipeline
-source changed while it ran. [AGENTS.md](AGENTS.md) states each rule,
+source changed while it ran. [AGENTS.md](AGENTS.md) states each rule in brief,
+[docs/preflight.md](docs/preflight.md#inputs-refused-before-launch) in full,
 [docs/architecture.md](docs/architecture.md) how it is enforced, and
 [docs/known-issues.md](docs/known-issues.md) where its checks stop.
 
@@ -137,7 +138,7 @@ nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' 
 ```
 
 The pinned schema decides the columns, sample names come unaltered from file names, and gaps,
-ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings; [AGENTS.md](AGENTS.md) gives the pairing and identity rules,
+ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings; [AGENTS.md](AGENTS.md) gives the pairing and identity rules ([in full](docs/preflight.md#inputs-refused-before-launch)),
 and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
 releases whose contracts were corrected from their pinned source.
 
