@@ -1,8 +1,8 @@
 # Exhaustive repository audit, 2026-10-30
 
 Audited: `6576243` (the [2026-10-29 deep audit](2026-10-29-deep-audit.md), B01–B16, on the
-[2026-10-28 audit](2026-10-28-repository-audit.md), A01–A27); applied on `main` at `c5c599c`, the
-merge of both. Server: `denbi_instance`, Python
+[2026-10-28 audit](2026-10-28-repository-audit.md), A01–A27). Applied on `main` at `1d637b6` (both
+merged, plus the Actions and website dependency updates #225 and #220). Server: `denbi_instance`, Python
 3.12.3, Nextflow 26.04.3, Docker 29.1.3, every pipeline submodule initialised. Local: macOS, Python
 3.13, Node 22.
 
@@ -45,7 +45,43 @@ adds none of its own for them.
 
 ## Evidence
 
-To be completed from the final server runs.
+Server `denbi_instance`, in a separate clone (`/mnt/volume/claude-audit-20261030`), every submodule
+initialised, `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true` as this IPv6-only host
+needs. The host was shared with two other sessions' test suites and pipelines throughout (load
+average 15–23 at times), which is why Docker operations below take seconds.
+
+| Gate | Result |
+|---|---|
+| `pytest` (complete suite, server, final head) | 3502 run, 0 failed, 0 errors, 1 skipped (the declared `rnasplice is no longer pinned at the audited commit` fixture) |
+| `pytest` (complete suite, macOS, Python 3.13, no submodules) | 3448 run, 0 failed, 0 errors, 227 skipped (pinned sources the clone lacks) |
+| `ruff check .`, actionlint, shellcheck | clean |
+| Website: `npm audit`, typecheck, export, served `llms.txt` | 0 vulnerabilities; typecheck and export pass (the new `replay` and `changelog` pages included); `llms.txt` identical |
+| Website Playwright (operational and accessibility) | 154 passed on the server at the final head and 154 locally. One earlier server run lost one page load to `net::ERR_NETWORK_CHANGED` (Docker network churn from other work on the host, as the deep audit records); that test passed when rerun |
+| `nfclaw run <name> --demo --check`, all 95 pipelines | 95 of 95 succeeded |
+
+Real executions with the changed code:
+
+- **C01 reproduction** ([record](evidence/2026-10-30-task-container-cleanup.json)): a two-task
+  workflow whose containers' PID 1 ignores SIGTERM, stopped through `runner.execution`. Before the
+  fix: with the default grace both containers stayed behind exited, never removed; with a 3 s grace
+  both were still running after the supervisor exited. After: none left in any state, with 3 s and
+  10 s grace.
+- **rnaseq 3.27.0 demo stopped by SIGTERM** while tasks ran: `nfclaw: removed 4 task container(s)
+  the stopped run left behind`, none left; `nfclaw status --json` gave `ended` / `terminated by
+  SIGTERM` / exit 1. `--resume` succeeded (226 tasks run, 8 cached). The `commands.sh` replay
+  succeeded, and `nfclaw verify` reported the same files and directories with an identical execution
+  environment once C09 was fixed (before it: 6 missing, 1 extra, from the stopped attempt's run
+  metadata).
+- **fetchngs 1.13.0 → rnaseq chain** stopped by SIGTERM during stage 2: no task container left;
+  the chain log ended `terminated by SIGTERM (stage 02-rnaseq)`; `--resume` completed both stages;
+  `nfclaw chain status --json` exited 0 with `success`, lineage `verified`, no problems.
+- **MCP**, through the official SDK: a detached rnaseq job cancelled with `cancel_job` while two
+  task containers ran ended `cancelled` with no container left, and `run_status` returned the
+  parsed record (`ended`, `terminated by SIGTERM`, exit 1).
+- **demo 1.2.0**: run, `commands.sh` replay and `nfclaw verify` passed;
+  `--require-environment` refused, by design, because its test profile reads a remote samplesheet.
+- **C03 benchmark**: eight 400 MB files, page-cached, hashed with the repository's chunked
+  SHA-256: 10.2 s one at a time, 3.1 s with four threads, 1.3 s with eight.
 
 ## Examined without a defect
 
