@@ -10,6 +10,9 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Added
 
+- `nfclaw jobs list`, `nfclaw jobs status` and `nfclaw jobs cancel` manage MCP's persisted jobs
+  from a shell, with shared reports, bounded output tails and versioned `--json` responses (#238).
+
 - `nfclaw status --json` and `nfclaw chain status --json` print one machine-readable object (state,
   outcome, times, pids, logs, caveats, recorded error, last output, and the human report) with the
   same exit codes; the MCP `run_status` tool returns it as `run`.

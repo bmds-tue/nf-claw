@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    exact_json, preflight, resources, runlog, sheetgen, verify, versions)
+                    exact_json, job_reports, jobs, preflight, resources, runlog, sheetgen,
+                    verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -30,6 +31,13 @@ def _positive_int(raw: str) -> int:
     value = int(raw)
     if value <= 0:
         raise argparse.ArgumentTypeError("must be a positive integer")
+    return value
+
+
+def _nonnegative_int(raw: str) -> int:
+    value = int(raw)
+    if value < 0:
+        raise argparse.ArgumentTypeError("must be a nonnegative integer")
     return value
 
 
@@ -263,6 +271,66 @@ def _status_record(st: runlog.RunState, report: str, code: int) -> dict:
             "last_output": st.last_output, "report": report}
 
 
+# Job envelopes have an independent version from run-log status reports.
+JOBS_JSON_VERSION = 1
+
+
+def _read_status(outdir: str) -> tuple[runlog.RunState, str, int]:
+    log = _run_log_path(outdir)
+    chain_log = Path(outdir).expanduser().resolve() / chain.RECORD_DIRNAME / "logs" / chain.LOG_NAME
+    if not _present(log) and _present(chain_log):
+        log = chain_log
+    st = runlog.read_state(log)
+    report = _status_report(st)
+    if st.kind == "chain":
+        report += (f"chain: `nfclaw chain status {outdir}` lists its stages and verifies "
+                   "their lineage\n")
+    return st, report, 0 if st.state == "success" else 3 if st.state == "running" else 1
+
+
+def _live_job_status(outdir: str) -> dict:
+    st, report, code = _read_status(outdir)
+    return {"status_report": report.rstrip("\n"),
+            "run_state": {0: "success", 3: "running"}.get(code, "not successful"),
+            "caveats": bool(st.caveats)}
+
+
+def _jobs(args: argparse.Namespace) -> int:
+    key = "jobs" if args.jobs_cmd == "list" else "job"
+    result = {"version": JOBS_JSON_VERSION, "exit_code": 0}
+    try:
+        if args.jobs_cmd == "list":
+            rows = job_reports.list_views(state=args.state, limit=args.limit)
+            result[key] = rows
+            report = job_reports.render_list(rows)
+        else:
+            job = jobs.load(args.job_id)
+            cancelling = args.jobs_cmd == "cancel"
+            if cancelling:
+                result["cancel_requested"] = jobs.cancel(job)
+                job = jobs.load(job.id)
+            view = job_reports.view(job, log_lines=20 if cancelling else args.log_lines,
+                                    live_status=_live_job_status, cli=True)
+            result[key] = view
+            result["exit_code"] = (0 if cancelling else
+                                   {"succeeded": 0, "running": 3}.get(view["state"], 1))
+            report = job_reports.render(view)
+            if cancelling:
+                acknowledgement = ("Cancellation requested; inspect status to confirm shutdown."
+                                   if result["cancel_requested"] else
+                                   "Job is not running; nothing to stop.")
+                report = acknowledgement + "\n" + report
+    except (jobs.JobError, OSError) as exc:
+        result.update({"exit_code": 1, key: [] if key == "jobs" else None, "error": str(exc)})
+        report = f"nfclaw jobs: {exc}"
+        print(report, file=sys.stderr)
+    if args.json:
+        print(json.dumps(result, indent=2))
+    elif "error" not in result:
+        print(report)
+    return result["exit_code"]
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run one nfclaw command. Output piped into a reader that stops early (`nfclaw versions X |
     head -1`, `nfclaw list | grep -m1 rna`) ends the command quietly, as it would a Unix tool,
@@ -331,6 +399,23 @@ def build_parser() -> argparse.ArgumentParser:
                              "release's schema")
     p_versions = sub.add_parser("versions", help="list a pipeline's releases and its dev head")
     p_versions.add_argument("name", help="pipeline name, as `nfclaw list` shows it")
+    p_jobs = sub.add_parser("jobs", help="list, inspect or cancel detached MCP jobs")
+    job_commands = p_jobs.add_subparsers(dest="jobs_cmd", required=True)
+    for command, help_text in (("list", "list jobs, newest first"),
+                               ("status", "inspect one job and its output"),
+                               ("cancel", "request shutdown without waiting for completion")):
+        p_job = job_commands.add_parser(command, help=help_text)
+        p_job.add_argument("--json", action="store_true", help="print one versioned JSON object")
+        if command == "list":
+            p_job.add_argument("--state", choices=["running", "succeeded", "failed", "cancelled",
+                                                   "lost"], help="only jobs in this state")
+            p_job.add_argument("--limit", type=_positive_int, default=20,
+                               help="maximum jobs to list (default 20)")
+        else:
+            p_job.add_argument("job_id", help="job id from MCP or nfclaw jobs list")
+        if command == "status":
+            p_job.add_argument("--log-lines", type=_nonnegative_int, default=20,
+                               help="output tail lines (default 20; 0 hides output)")
     # The state of a run from its log alone — running, finished and how, or stopped without an
     # outcome (nfclaw killed outright) — so nobody has to read or interpret the log to know.
     p_status = sub.add_parser("status", help="report how a run (or replay, or chain) stands")
@@ -501,6 +586,8 @@ def _main(argv: list[str] | None = None) -> int:
     # typo that must not be ignored: `show X --pipeline-versoin 1.0.0` printed the *latest* docs.
     if extras and args.cmd != "run":
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if args.cmd == "jobs":
+        return _jobs(args)
     if args.cmd == "prepare-dramp":
         from runner import dramp
         try:
@@ -607,17 +694,7 @@ def _main(argv: list[str] | None = None) -> int:
         return 0 if outputs_match and evidence_matches else 1
 
     if args.cmd == "status":
-        log = _run_log_path(args.outdir)
-        chain_log = (Path(args.outdir).expanduser().resolve() / chain.RECORD_DIRNAME / "logs"
-                     / chain.LOG_NAME)
-        if not _present(log) and _present(chain_log):       # the --outdir of a chain
-            log = chain_log
-        st = runlog.read_state(log)
-        report = _status_report(st)
-        if st.kind == "chain":
-            report += (f"chain: `nfclaw chain status {args.outdir}` lists its stages and verifies "
-                       "their lineage\n")
-        code = 0 if st.state == "success" else 3 if st.state == "running" else 1
+        st, report, code = _read_status(args.outdir)
         print(json.dumps(_status_record(st, report, code), indent=2) if args.json else report,
               end="\n" if args.json else "")
         return code
