@@ -40,6 +40,9 @@ each change, are in [`docs/audit/`](docs/audit/).
   --dist worksteal`, pytest-xdist in the `dev` extra) and still reports every case; the suite ran
   one test at a time for 16–34 minutes a lane. On the validation server, four workers took 9
   minutes instead of 29.
+- A new push to a pull request cancels that pull request's previous, now superseded CI run; it
+  had stayed queued for hours behind the macOS runners. Runs for main, schedules, dispatches and
+  the maintenance gate are never cancelled.
 
 ### Fixed
 
