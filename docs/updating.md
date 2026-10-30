@@ -16,7 +16,9 @@ Tracking policies are declared in `sources.tsv`:
 - Each row contains `name<TAB>url<TAB>version-policy`.
 - The primary policy is `latest-release`, directing automation to select the highest numeric
   `X.Y.Z` release tag (optional `v` prefix); prereleases and two-component tags are excluded
-  from automated bumping. Other policies are skipped by the updater. Explicit runtime
+  from automated bumping. Other policies are skipped by the updater: `hold` keeps a pipeline at
+  its current pin, for a release that cannot pass the native publication gate and would otherwise
+  hold back every other bump ([publication evidence policy](maintenance.md)). Explicit runtime
   version selection also supports older `X.Y` tags.
 - Submodules pin exact commits resolved from release tags. Tags can be moved upstream, but a
   committed gitlink remains tied to its recorded commit until deliberately updated.

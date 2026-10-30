@@ -24,7 +24,8 @@ jobs:
       matrix:
         pipeline: ${{ fromJSON(inputs.pipelines) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # nfclaw's --timeout bounds the analysis; the rest is setup and evidence upload.
+    timeout-minutes: 110
     env:
       PIPELINE: ${{ matrix.pipeline }}
       BASE_SHA: ${{ inputs.base_sha }}
@@ -55,8 +56,10 @@ jobs:
       - name: Execute actual bundled tasks
         run: |
           set -euo pipefail
+          # 90 minutes for the whole analysis: ampliseq 3.1.0's bundled test, about 100 tasks that
+          # each fit the 30-minute task ceiling, was still running at 30 minutes on this runner.
           nfclaw run "$PIPELINE" --demo --outdir "$RUNNER_TEMP/analysis" --nxf-ver "$NXF_VER" \
-            --limit-cpus 2 --limit-memory 6.GB --limit-time 30.min --timeout 1800
+            --limit-cpus 2 --limit-memory 6.GB --limit-time 30.min --timeout 5400
           nfclaw status "$RUNNER_TEMP/analysis"
           evidence="$RUNNER_TEMP/native-evidence/$PIPELINE"
           mkdir -p "$evidence/provenance" "$evidence/pipeline_info"
