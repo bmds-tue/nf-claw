@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Github, Menu, Search, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
@@ -69,9 +69,15 @@ export function Nav({ repo }: { repo: string | null }) {
     setMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
   }, []);
 
-  // Close the mobile menu on navigation and on Escape.
-  useEffect(() => setOpen(false), [pathname]);
-  useEffect(() => {
+  // Close the mobile menu on navigation and on Escape. The path is compared while rendering: an
+  // effect also ran once the page had hydrated, and undid a tap on the menu that landed before it.
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setOpen(false);
+  }
+  // Attached during commit, so that a search opened right after hydration finds it.
+  useLayoutEffect(() => {
     const onSearch = () => setOpen(false);
     window.addEventListener(OPEN_PALETTE_EVENT, onSearch);
     return () => window.removeEventListener(OPEN_PALETTE_EVENT, onSearch);
