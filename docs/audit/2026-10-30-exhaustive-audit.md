@@ -1,7 +1,8 @@
 # Exhaustive repository audit, 2026-10-30
 
 Audited: `6576243` (the [2026-10-29 deep audit](2026-10-29-deep-audit.md), B01–B16, on the
-[2026-10-28 audit](2026-10-28-repository-audit.md), A01–A27). Server: `denbi_instance`, Python
+[2026-10-28 audit](2026-10-28-repository-audit.md), A01–A27); applied on `main` at `c5c599c`, the
+merge of both. Server: `denbi_instance`, Python
 3.12.3, Nextflow 26.04.3, Docker 29.1.3, every pipeline submodule initialised. Local: macOS, Python
 3.13, Node 22.
 
@@ -40,6 +41,7 @@ adds none of its own for them.
 | C06 | Missing component | No changelog. The only release notes were the GitHub draft for 1.0.0 (2026-10-22), and 24 pull requests have changed user-visible behaviour since. | [`CHANGELOG.md`](../../CHANGELOG.md) starts at the draft, lists this change, #218 and #219, and the merged pull requests since; CONTRIBUTING asks for an entry per user-visible change; the site and llms.txt link it. |
 | C07 | Missing feature | The website's search palette found documents by title only (the 2026-10-26 audit's O12), and a document's table of contents existed only from the `xl` breakpoint (1280 px): tablets and phones had none (O11). | The palette also lists the ## and ### sections whose headings match a query (at most twelve, none until something is typed) and opens the page at that heading. Below `xl` a document opens with the same headings in a folded "On this page" (`<details>`, so it works without JavaScript too). Browser tests search for a section of the replay guide and land on it, and follow the folded contents at phone width. |
 | C08 | Defect (latent) | `version.package_version` named `PackageNotFoundError` in an `except` clause whose import was inside the `try`: had the import failed, the handler itself would have raised `NameError` (pyright). | The import precedes the `try`. |
+| C09 | Defect | `nfclaw verify` failed every replay of a resumed run. Found by this audit's own server run: rnaseq stopped mid-run (C01's check), resumed into the same `--outdir`, then replayed. The original's `pipeline_info/` held both launches' report, timeline, trace, DAG and params file; the replay, one launch, had one of each, so six files were "missing" and the two `params_<time>.json` against one were deliberately left unpaired. | When the original's recorded command resumed, launch-stamped run metadata older than the newest of its kind is listed as `earlier attempts` and not compared: launches into one `--outdir` run one after another under its lock, so the newest is the recorded launch's. Results are never set apart, and without a recorded resume two such files for one still fail. Re-verified on the same server data: 0 missing, 0 extra, 5 earlier attempts, environment identical. |
 
 ## Evidence
 
