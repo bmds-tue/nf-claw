@@ -209,12 +209,13 @@ def load(job_id: str) -> Job:
             or spec.get("kind") not in ("run", "chain", "replay") or "dir" in spec
             or not strings(spec.get("argv")) or not strings(spec.get("command"))
             or not spec["command"]
-            or any(not isinstance(spec.get(key), str) or not Path(spec[key]).is_absolute()
-                   for key in ("cwd", "outdir"))
+            or any(not isinstance(spec.get(key), str) or "\0" in spec[key]
+                   or not Path(spec[key]).is_absolute() for key in ("cwd", "outdir"))
             or not isinstance(spec["created_at"], str)
             or type(spec.get("check", False)) is not bool
             or not optional(spec.get("pipeline"), str)
             or not optional(spec.get("log_path"), str)
+            or spec.get("log_path") is not None and "\0" in spec["log_path"]
             or not optional(spec.get("log_size_before"), int)
             or spec.get("log_size_before") is not None and spec["log_size_before"] < 0
             or not pid(spec.get("supervisor_pid"))):

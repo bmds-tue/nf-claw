@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, discovery, jobs, parameters, settings
+from runner import chain, cli, discovery, job_reports, jobs, parameters, settings
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
@@ -681,15 +681,7 @@ class NfclawTools:
         return self._job_result(job, log_lines=200 if job.check else 20, submitted=True)
 
     def _launched(self, job: jobs.Job) -> bool:
-        """Whether nfclaw has opened this job's run (or chain) log: it passed validation and
-        preflight and is starting Nextflow."""
-        if not job.log_path or job.check:
-            return False
-        try:
-            size = Path(job.log_path).stat().st_size
-        except OSError:
-            return False
-        return job.log_size_before is None or size > job.log_size_before
+        return job_reports.launched(job)
 
     def _wait(self, job_id: str, seconds: int, ctx: Context, *,
               until_launched: bool = False) -> jobs.Job:
@@ -712,44 +704,20 @@ class NfclawTools:
             delay = min(delay * 2, 5.0)
 
     def job_view(self, job: jobs.Job, *, log_lines: int) -> dict:
-        state = jobs.state(job)
-        command = job.command if job.kind == "replay" else ["nfclaw", *job.argv]
-        view = {"job_id": job.id, "kind": job.kind, "pipeline": job.pipeline, "state": state,
-                "check": job.check, "outdir": job.outdir,
-                "command": shlex.join(command),
-                "cwd": job.cwd,
-                "created_at": job.created_at, "finished_at": job.finished_at,
-                "exit_code": job.exit_code}
-        launched = self._launched(job)
-        frozen = jobs.run_status(job) if state != "running" else {}
-        if frozen:
-            view.update(frozen)
-            view["log"] = job.log_path
-        elif launched and state == "running":
-            res = self._cli(["status", job.outdir])
-            view["status_report"] = res.text
-            view["run_state"] = {0: "success", 3: "running"}.get(res.code, "not successful")
-            view["caveats"] = "with caveats" in (res.stdout.splitlines() or [""])[0]
-            view["log"] = job.log_path
-        if state == "running":
-            view["phase"] = ("launched" if view.get("run_state") == "running"
-                             else "finishing" if launched else "preparing")
-        if job.error:
-            view["error"] = job.error
-        if job.status_error and not frozen:
-            # The job ended, but its own run report was not retained: say why it is absent.
-            view["status_error"] = job.status_error
-        view["output_tail"] = jobs.output_tail(job, log_lines)
-        view["output_log"] = str(job.dir / jobs.OUTPUT_LOG)
-        view["next"] = _next_step(view)
-        return view
+        return job_reports.view(job, log_lines=log_lines, live_status=self._job_status)
+
+    def _job_status(self, outdir: str) -> dict:
+        res = self._cli(["status", outdir])
+        return {"status_report": res.text,
+                "run_state": {0: "success", 3: "running"}.get(res.code, "not successful"),
+                "caveats": "with caveats" in (res.stdout.splitlines() or [""])[0]}
 
     def _job_result(self, job: jobs.Job, *, log_lines: int, submitted: bool = False) -> dict:
         """A job as a tool result. Only a submission that already failed (refused before launch, an
         invalid check) is a failed tool call; reporting a failed job is a successful one."""
         view = self.job_view(job, log_lines=log_lines)
         failed = submitted and view["state"] in ("failed", "lost")
-        return tool_result(_render_job(view), view, error=failed)
+        return tool_result(job_reports.render(view), view, error=failed)
 
     def _tool_get_job(self, args: dict, ctx: Context) -> dict:
         job = jobs.load(args["job_id"])
@@ -807,20 +775,8 @@ class NfclawTools:
         return tool_result(content, result)
 
     def _tool_list_jobs(self, args: dict, ctx: Context) -> dict:
-        wanted = args.get("state")
-        rows = []
-        for job in jobs.list_jobs():
-            state = jobs.state(job)
-            if wanted and state != wanted:
-                continue
-            rows.append({"job_id": job.id, "kind": job.kind, "pipeline": job.pipeline,
-                         "state": state, "check": job.check, "outdir": job.outdir,
-                         "created_at": job.created_at, "finished_at": job.finished_at})
-            if len(rows) >= (args.get("limit") or 20):
-                break
-        text = "\n".join(f"{r['job_id']}  {r['state']:<9}  {'check ' if r['check'] else ''}"
-                         f"{r['kind']}  {r['outdir']}" for r in rows) or "No jobs."
-        return tool_result(text, {"jobs": rows})
+        rows = job_reports.list_views(state=args.get("state"), limit=args.get("limit") or 20)
+        return tool_result(job_reports.render_list(rows), {"jobs": rows})
 
     def _tool_cancel_job(self, args: dict, ctx: Context) -> dict:
         job = jobs.load(args["job_id"])
@@ -828,7 +784,7 @@ class NfclawTools:
             view = self.job_view(job, log_lines=5)
             return tool_result(f"job {job.id} is not running ({view['state']}); "
                                "nothing to stop.\n\n"
-                               + _render_job(view), view)
+                               + job_reports.render(view), view)
         wait = args.get("wait_seconds")
         def complete():
             stopped = self._wait(job.id, 15 if wait is None else wait, ctx)
@@ -905,49 +861,3 @@ def _grep(text: str, pattern: str, label: str) -> str:
     if not out:
         return f"No line of {label} contains any of: {pattern}"
     return f"Lines of {label} matching {pattern!r}:\n" + "\n".join(out).strip("\n")
-
-
-def _next_step(view: dict) -> str:
-    state, jid = view["state"], view["job_id"]
-    if state == "running":
-        return (f"get_job(job_id={jid!r}, wait_seconds=60) to follow it; "
-                f"cancel_job(job_id={jid!r}) to stop it.")
-    if view["kind"] == "replay":
-        if state == "succeeded":
-            return (f"Replay results are in {view['outdir']}. Retain the original replay bundle "
-                    "and compare the outputs with verify_replay before using them.")
-        return "Inspect this replay's status and logs; retry into a new empty destination."
-    if state == "succeeded":
-        if view["check"]:
-            return "Validation passed: run the same arguments without check to launch it."
-        return (f"Results are in {view['outdir']} (provenance/ holds the replay bundle)."
-                + (" Read the caveats in status_report before using them." if view.get("caveats")
-                   else ""))
-    if state == "cancelled":
-        return "Stopped. Resubmit with resume=true to continue from Nextflow's cache."
-    if state == "lost":
-        return ("The job's supervisor was killed (or the host restarted). status_report says "
-                "whether nfclaw itself is still running; otherwise resubmit with resume=true.")
-    return ("Read status_report / output_tail for the cause (docs: nfclaw://docs/known-issues), "
-            "fix it, then resubmit" + (" with resume=true." if view.get("status_report") and
-                                   not view["check"] else "."))
-
-
-def _render_job(view: dict) -> str:
-    phase = f" ({view['phase']})" if view.get("phase") else ""
-    kind = ("check " if view["check"] else "") + view["kind"]
-    lines = [f"job {view['job_id']}: {view['state']}{phase}",
-             f"{kind}: {view['command']}", f"outdir: {view['outdir']}"]
-    if view.get("exit_code") is not None:
-        lines.append(f"exit code: {view['exit_code']}")
-    if view.get("error"):
-        lines.append(f"error: {view['error']}")
-    if view.get("status_error"):
-        lines.append(f"status: {view['status_error']}; run_status(outdir) reads the live log")
-    if view.get("status_report"):
-        lines += ["", "nfclaw status:", view["status_report"]]
-    if view.get("output_tail"):
-        lines += ["", f"output (last {len(view['output_tail'])} lines of {view['output_log']}):",
-                  *view["output_tail"]]
-    lines += ["", f"next: {view['next']}"]
-    return "\n".join(lines)
