@@ -73,8 +73,14 @@ for (const url of all) {
     // error page), which axe would report as something else: name it instead.
     const broken: string[] = [];
     page.on('pageerror', (error) => broken.push(`page error: ${error.message}`));
-    page.on('requestfailed', (request) => broken.push(
-      `request failed: ${request.url()} (${request.failure()?.errorText})`));
+    page.on('requestfailed', (request) => {
+      // Next's router sends a HEAD request for each linked page it prefetches and cancels it once
+      // answered, then fetches the page's segment files: a request the page abandoned itself is
+      // not one it could not load.
+      const error = request.failure()?.errorText;
+      if (request.method() === 'HEAD' && error === 'net::ERR_ABORTED') return;
+      broken.push(`request failed: ${request.url()} (${error})`);
+    });
     await page.goto(url);
     await page.waitForLoadState('networkidle');
     expect(broken).toEqual([]);
