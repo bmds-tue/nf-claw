@@ -217,6 +217,27 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+# SHA-256 runs at a few hundred MB/s on one core (314 MB/s on the validation server), well below
+# what storage delivers, and hashlib releases the GIL while it hashes: eight threads hashed cached
+# data 7.7x faster there. Every run hashes its inputs twice and its outputs once.
+_HASH_WORKERS = max(1, min(8, os.cpu_count() or 1))
+
+
+def hash_files(paths: list[Path],
+                hash_file: Callable[[Path], str] | None = None) -> dict[Path, str]:
+    """The digest of each distinct path (SHA-256 unless `hash_file` says otherwise), several files
+    at once. An error is the one hashing the files one by one, in order, would have raised first."""
+    hash_file = hash_file or _sha256
+    unique = list(dict.fromkeys(paths))
+    if len(unique) < 2 or _HASH_WORKERS == 1:
+        return {path: hash_file(path) for path in unique}
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(_HASH_WORKERS, len(unique))) as pool:
+        digests = list(pool.map(hash_file, unique))
+    return {path: digests[index] for index, path in enumerate(unique)}
+
+
 def _glob_patterns(pattern: str) -> list[str]:
     """Expand Java/Nextflow brace alternatives and its recursive ``**.ext`` shorthand."""
     if match := re.search(r"\{([^{}]+)\}", pattern):
@@ -294,7 +315,7 @@ def inspect_input_paths(paths: list[Path], visit: Callable[[Path], None]) -> Non
 
 def hash_inputs(paths: list[Path]) -> dict[str, str]:
     """Content snapshot of local sources, including directory and glob contents."""
-    return {str(path): _sha256(path) for path in input_files(paths)}
+    return {str(path): digest for path, digest in hash_files(input_files(paths)).items()}
 
 
 def _capture_input_inventory(paths: list[Path]) -> tuple[list[Path], dict[str, dict[str, str]]]:
@@ -321,14 +342,9 @@ def _capture_input_inventory(paths: list[Path]) -> tuple[list[Path], dict[str, d
 def snapshot_inputs(paths: list[Path]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     """Capture file bytes and the logical input namespace, including empty directory aliases."""
     files, inventory = _capture_input_inventory(paths)
-    digests = {}
-    checksums = {}
-    for path in files:
-        real = Path(inventory[str(path)].get("resolved_path", str(path)))
-        if real not in digests:
-            digests[real] = _sha256(real)
-        checksums[str(path)] = digests[real]
-    return checksums, inventory
+    reals = {path: Path(inventory[str(path)].get("resolved_path", str(path))) for path in files}
+    digests = hash_files(list(reals.values()))
+    return {str(path): digests[real] for path, real in reals.items()}, inventory
 
 
 def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
@@ -1011,13 +1027,122 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
                              f"extra: {extra}; type or link changed: {changed}")
 
 
-def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> None:
-    """Give the replay's tasks a shutdown grace period, then stop all survivors."""
+# Nextflow names each task container `nxf-<id>` (`docker run … --name nxf-…`). The engine's client
+# runs in the run's process group, but the container belongs to the engine's daemon (Docker) or its
+# own monitor (Podman): stopping the group stops the client, not the container. A task wrapper
+# stops and removes its container when it is signalled, unless the grace period ends first (Docker
+# waits 10 s before it kills a container whose PID 1 ignores SIGTERM, and nfclaw's grace is also 10
+# s): its container then keeps running, or stays behind exited, and is never removed.
+_TASK_CONTAINER = re.compile(r"nxf-[A-Za-z0-9]+")
+_CONTAINER_ENGINES = ("docker", "podman")
+
+
+def _group_commands(pgid: int) -> list[list[str]]:
+    """The command lines of the processes in process group `pgid`, best effort."""
+    commands = []
+    if os.path.isdir("/proc/self"):
+        try:
+            entries = os.listdir("/proc")
+        except OSError:
+            entries = []
+        for entry in entries:
+            if not entry.isdigit():
+                continue
+            try:
+                with open(f"/proc/{entry}/stat", encoding="utf-8", errors="replace") as handle:
+                    stat_line = handle.read()
+                # `pid (comm) state ppid pgrp …`: comm may hold spaces and parentheses.
+                if int(stat_line[stat_line.rindex(")") + 2:].split()[2]) != pgid:
+                    continue
+                with open(f"/proc/{entry}/cmdline", "rb") as handle:
+                    raw = handle.read()
+            except (OSError, ValueError, IndexError):
+                continue                              # gone meanwhile, or not ours to read
+            commands.append([arg for arg in raw.decode("utf-8", "replace").split("\0") if arg])
+        return commands
+    try:
+        listing = subprocess.run(["ps", "-A", "-ww", "-o", "pgid=", "-o", "args="],
+                                 stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                 errors="replace", timeout=10, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return commands
+    for line in listing.stdout.splitlines():
+        group, _, args = line.strip().partition(" ")
+        if group == str(pgid):
+            commands.append(args.split())
+    return commands
+
+
+def task_containers(pgid: int) -> dict[tuple[str, ...], set[str]]:
+    """The Nextflow task containers that members of process group `pgid` are running, keyed by
+    the engine command that started them (`("docker",)`, `("sudo", "docker")`)."""
+    found: dict[tuple[str, ...], set[str]] = {}
+    for argv in _group_commands(pgid):
+        at = next((i for i, word in enumerate(argv)
+                   if os.path.basename(word) in _CONTAINER_ENGINES), None)
+        if at is None or argv[at + 1:at + 2] != ["run"]:
+            continue
+        for i in range(at + 2, len(argv)):
+            word = argv[i]
+            name = (argv[i + 1] if word == "--name" and i + 1 < len(argv)
+                    else word[len("--name="):] if word.startswith("--name=") else None)
+            if name is not None:
+                if _TASK_CONTAINER.fullmatch(name):
+                    found.setdefault(tuple(argv[:at + 1]), set()).add(name)
+                break
+    return found
+
+
+def remove_task_containers(containers: dict[tuple[str, ...], set[str]],
+                           timeout: float = 60) -> tuple[list[str], list[str]]:
+    """Force-remove the given task containers once their run is stopped, all at once: a busy
+    daemon takes seconds for each, and a run can stop with dozens running.
+
+    Returns the names removed and any problem the engine reported. A container the task wrapper
+    already removed is not a problem."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def remove(engine: tuple[str, ...], name: str) -> tuple[bool, list[str]]:
+        command = [*engine, "rm", "-f", name]
+        if os.path.basename(command[0]) == "sudo":   # `docker.sudo`: never wait on a password
+            command.insert(1, "-n")
+        try:
+            result = subprocess.run(command, stdin=subprocess.DEVNULL,
+                                    capture_output=True, text=True, errors="replace",
+                                    timeout=timeout, check=False)
+        except subprocess.TimeoutExpired:
+            return False, [f"`{' '.join(engine)} rm -f {name}` did not finish within "
+                           f"{timeout:g} s"]
+        except OSError as exc:
+            return False, [f"`{' '.join(engine)} rm -f` could not run: {exc}"]
+        return (name in (line.strip() for line in result.stdout.splitlines()),
+                [line.strip() for line in result.stderr.splitlines()
+                 if line.strip() and "no such container" not in line.lower()])
+
+    work = [(engine, name) for engine, names in sorted(containers.items())
+            for name in sorted(names)]
+    removed: list[str] = []
+    problems: list[str] = []
+    if not work:
+        return removed, problems
+    with ThreadPoolExecutor(max_workers=min(16, len(work))) as pool:
+        outcomes = list(pool.map(lambda job: remove(*job), work))
+    for index, (gone, found) in enumerate(outcomes):
+        if gone:
+            removed.append(work[index][1])
+        problems += [problem for problem in found if problem not in problems]
+    return sorted(removed), problems
+
+
+def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
+    """Give the replay's tasks a shutdown grace period, then stop all survivors, including task
+    containers they left behind. Returns what was done about those containers, for the log."""
+    containers = task_containers(proc.pid)
     try:
         os.killpg(proc.pid, signal.SIGTERM)
     except ProcessLookupError:
         proc.wait()
-        return
+        return []
     deadline = time.monotonic() + grace
     try:
         while time.monotonic() < deadline:
@@ -1028,11 +1153,20 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> None:
                 break
             time.sleep(0.05)
     finally:
+        for engine, names in task_containers(proc.pid).items():
+            containers.setdefault(engine, set()).update(names)
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
         proc.wait(timeout=2)
+    if not containers:
+        return []
+    removed, problems = remove_task_containers(containers)
+    return ([f"nfclaw replay: removed {len(removed)} task container(s) the stopped replay left "
+             f"behind: {', '.join(removed)}"] if removed else []) + \
+        [f"nfclaw replay: a task container could not be removed: {problem}"
+         for problem in problems]
 
 
 def run_replay_command(command: list[str], *, log: Path, grace: float = 10) -> int:
@@ -1108,9 +1242,10 @@ def run_replay_command(command: list[str], *, log: Path, grace: float = 10) -> i
         elif status < 0:
             status = 128 - status
     finally:
+        cleanup: list[str] = []
         try:
             if proc is not None:
-                _stop_replay_group(proc, grace=grace)
+                cleanup = _stop_replay_group(proc, grace=grace) or []
         finally:
             reader_done.set()
             if reader is not None:
@@ -1118,6 +1253,13 @@ def run_replay_command(command: list[str], *, log: Path, grace: float = 10) -> i
                 if reader.is_alive():
                     reader_errors.append("console forwarding did not stop")
             if console_log is not None and (reader is None or not reader.is_alive()):
+                for message in cleanup:               # after the console's last line
+                    print(message, file=sys.stderr)
+                    try:
+                        console_log.write(message.encode("utf-8") + b"\n")
+                        console_log.flush()
+                    except OSError:
+                        pass
                 console_log.close()
             for sig, handler in handlers.items():
                 signal.signal(sig, handler)

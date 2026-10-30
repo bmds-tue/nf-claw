@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from runner import budget, runlog, settings
+from runner import budget, replay_guard, runlog, settings
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -181,7 +181,7 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
             code = proc.wait(timeout=budget.remaining(timeout_seconds))
             budget.check()
         except subprocess.TimeoutExpired as exc:
-            _terminate(proc, grace=grace)
+            _terminate(proc, grace=grace, run_log=run_log)
             _join(readers)
             elapsed_budget = timeout_seconds
             try:
@@ -205,7 +205,7 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
                        if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details
                        else stop_outcome(exc))
             run_log.fail(outcome)
-            _terminate(proc, grace=grace)
+            _terminate(proc, grace=grace, run_log=run_log)
             _join(readers)
             raise
         _join(readers)
@@ -339,7 +339,8 @@ def _group_alive(pgid: int) -> bool:
     return True
 
 
-def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS) -> None:
+def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
+               run_log: runlog.RunLog | None = None) -> None:
     """Stop the child and everything it launched.
 
     Signals the whole process group, because killing just the child would orphan the task processes
@@ -347,12 +348,18 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS) -> None:
     then SIGKILL for whatever is still running once the grace period is over. The group is waited
     on, not just its leader — Nextflow exiting does not mean its tasks did, and a task that ignores
     or is still handling SIGTERM would otherwise be left running in the background.
+
+    A task container is not in the group: the engine runs it, and only its client is. The
+    containers the group's clients started are noted before each signal and removed once the group
+    is gone, whichever of them the task wrappers did not remove in time (see
+    `replay_guard.task_containers`).
     """
     if not hasattr(os, "killpg"):                     # Windows: no process groups to signal
         proc.kill()
         proc.wait()
         return
     pgid = proc.pid                                   # start_new_session: the child leads its group
+    containers = replay_guard.task_containers(pgid)
     deadline = time.monotonic() + grace
     try:
         os.killpg(pgid, signal.SIGTERM)
@@ -369,7 +376,27 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS) -> None:
         # Also on a second Ctrl-C during the grace period: that asks to stop now, not to leave the
         # group running — skip the rest of the wait, but still kill it.
         try:
-            os.killpg(pgid, signal.SIGKILL)
-        except OSError:
-            pass                                      # the group is already gone
-        proc.wait()
+            for engine, names in replay_guard.task_containers(pgid).items():
+                containers.setdefault(engine, set()).update(names)
+        finally:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass                                  # the group is already gone
+            proc.wait()
+        if containers:                                # a second Ctrl-C still stops them too
+            _remove_task_containers(containers, run_log)
+
+
+def _remove_task_containers(containers: dict[tuple[str, ...], set[str]],
+                            run_log: runlog.RunLog | None) -> None:
+    """Remove the task containers a stopped run left behind, and say so."""
+    removed, problems = replay_guard.remove_task_containers(containers)
+    messages = ([f"nfclaw: removed {len(removed)} task container(s) the stopped run left behind: "
+                 f"{', '.join(removed)}"] if removed else []) + \
+        [f"nfclaw: a task container of the stopped run could not be removed: {problem}"
+         for problem in problems]
+    for message in messages:
+        print(message, file=sys.stderr, flush=True)
+        if run_log is not None:
+            run_log.note(message)

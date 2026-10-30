@@ -1,0 +1,77 @@
+# Replaying and verifying runs
+
+How a run's provenance bundle replays it, what that replay checks before and after Nextflow runs,
+and how `nfclaw verify` and `nfclaw assess` compare a replay with the run it reproduces. The agent
+guide ([AGENTS.md](../AGENTS.md)) gives the commands; this page gives the guarantees and their
+limits.
+
+---
+
+## Navigation
+
+[Replaying](#replaying-a-run) • [Bundle Contents](#what-the-bundle-carries) • [Dependency Stability](#dependency-stability-during-execution) • [Local Inputs and Resume](#local-inputs-and-resume) • [Verifying](#checking-a-replay-nfclaw-verify) • [Output Contracts](#scientific-output-contracts-nfclaw-assess)
+
+---
+
+## Replaying a run
+
+`<outdir>/provenance/commands.sh` re-runs the recorded command. It reproduces the run into a **fresh** directory (default `<outdir>.replay`, or pass one: `./commands.sh /path/to/fresh-dir`) and refuses a target that already holds files. That is deliberate: an nf-core pipeline publishes into `--outdir` and cannot re-publish over a previous run's files, so replaying in place fails immediately on `pipeline_info/execution_trace_*.txt` (and on sarek's `manifest_*.bco.json`). A replay re-executes the pipeline — it is a reproduction, not a `--resume` — and the result can be compared against the original bundle's `outputs.sha256`. It logs itself the same way, to `<target>/provenance/logs/run.log`, ending with its outcome: `nfclaw status <target>` reads it, and `kill <replay pid>` stops Nextflow with it.
+
+Before launching Nextflow, `commands.sh` runs `provenance/replay_guard.py` against the original bundle. The guard checks the recorded pipeline revision and tracked source bytes (`pipeline.sha256`), declared local input content including data paths referenced in samplesheets (`inputs.sha256`), and parameters and configuration (`configs.sha256`). The `inputs.inventory.json` and `configs.inventory.json` records also preserve directory entries (including empty directories), entry types and symlink identities. Changed or missing dependencies and incomplete bundles are refused, rather than producing silently divergent scientific results. Replay targets inside a recorded input directory are refused before creating their locks or logs. New replay bundles acquire the same output-directory writer lock as `nfclaw run`, so overlapping runs and replays cannot write into that directory concurrently.
+
+Invoke `commands.sh` by an absolute or relative path. A moved bundle replays its own params, configs, config copies, pin config and source archive; external input data must still exist at their recorded paths and pass their checksum checks, as must a config that uses `includeConfig`.
+
+Replay runs the recorded analysis into a fresh directory, removes `-resume`, and pins the observed engine version; warning text can vary with plugin resolution and cached configuration even when scientific outputs agree. Upstream warnings that are not faults are catalogued in [known issues](known-issues.md).
+
+## What the bundle carries
+
+New bundles archive tracked pipeline source and copy replayable external configs; they do not embed scientific input data, container images or plugins. Replay still needs Python, Bash, Nextflow and its compatible Java runtime, the selected execution tools, and access to recorded external data and software. Inspect the manifest for recording gaps; configs using `includeConfig` retain the original-path requirement below.
+- **Pipeline source:** `pipeline-source.tar.gz`, a deterministic archive of exactly the tracked files `pipeline.sha256` records. A replay runs the recorded checkout while it still holds that exact revision and source bytes, so paths that embed the pipeline directory (nf-core's `${projectDir}/assets/...` defaults) keep their values. Otherwise it extracts the archive into `<target>/provenance/pipeline`, checking every file, and runs that copy, so a bundle still replays after the checkout has moved to another release, been edited or been deleted. `<target>/provenance/pipeline-source.json` says which ran. The archive and the actual working source tree (the checkout or extracted copy) are checked again after Nextflow finishes. Archive fallback changes `${projectDir}`; absolute paths already stored in params are not rewritten.
+- **Configuration:** the params file, generated configs and a copy of each external `--config` file (`configs/`). A config that uses `includeConfig` resolves relative includes against its own directory, so it replays from its original path. For recognized nf-core/configs includes, the release's default branch is resolved before launch and passed as `custom_config_version`, recorded in `params.json` and the manifest (`institutional_configs`). Explicit `custom_config_version` or `custom_config_base` values, a nonempty `NXF_OFFLINE`, or an unrecognized include bypass automatic pinning; a resumed run reuses its prior commit when applicable. A failed lookup is announced and leaves the release default.
+- **Execution environment:** `environment.json`, read after the run from Nextflow's own records (`nextflow log`, `.nextflow.log`): available container identities by registry digest and local image ID (Docker, Podman) or image-file SHA-256 (Singularity, Apptainer), the engine version, the plugins and Java runtime Nextflow loaded, and remote inputs recovered from its staging and validation logs. Staged local copies are hashed after execution; supported validation-only HTTP/HTTPS/FTP URLs are fetched again, up to 100 MiB, so those hashes describe the refetched bytes rather than proving what validation originally consumed. `containers.config` is generated only for eligible Docker/Podman processes with one known registry digest and no containerless tasks, and `commands.sh` passes it last. Multiple or unresolved images and ephemeral Wave references have no pin; Singularity/Apptainer image files are hashed rather than pinned this way. Inspect unresolved entries and `issues` for recording gaps; recorded issues are also printed as advisories.
+
+After Nextflow succeeds, a replay records its own `environment.json` and compares it with the recording in `<target>/provenance/environment_check.json`. Another image digest, plugin set, container engine, or remote file content or set fails the replay with `failed after Nextflow succeeded (execution environment differs from the recording)`; entries no record can decide (an image without a comparable identity, a Singularity image converted on another host) are reported as unverified and do not fail standalone replay. A differing Java runtime and processes present in only one run are notes. The comparator checks the container engine name, plugin list, images of shared processes and recorded remote URLs/hashes; Nextflow build, container engine version, host platform and task counts are not equality gates.
+
+## Dependency stability during execution
+
+Before declaring success, nfclaw compares declared local input bytes and namespaces, generated/user configuration files, tracked pipeline source bytes and its Git revision with the launch snapshots. A visible change or unreadable dependency fails the run even when Nextflow exits zero. Results and launch hashes remain available for inspection; provenance records `dependency_stability`. Restoring the original bytes does not validate cached tasks from that attempt: resume archives the failed run and recomputes, and standalone replay refuses its tainted bundle. The check also applies with `--no-provenance`; that flag skips the bundle rather than the dependency checks. Standalone replay rechecks its original bundle after Nextflow finishes. These are checkpoint comparisons, not filesystem locks or immutable input copies: transient edits restored between checks, remote inputs and indirect configuration dependencies are outside their scope. Keep scientific inputs stable for the full execution.
+
+## Local inputs and resume
+
+Ordinary Nextflow caching can miss file byte changes when size and timestamp are preserved, as well as recursive directory changes when root metadata is unchanged. Before a real `--resume`, nfclaw compares the prelaunch directory namespace and the SHA-256 of every explicitly declared local input file, including samplesheet data paths, with the previous bundle. An unchanged namespace and content retain normal caching; a changed namespace, changed file content, or an unavailable inventory preserves the complete previous run in a sibling `<outdir>.previous-<id>` archive, announces its path, and recomputes all tasks in a fresh Nextflow cache session. Prior logs remain in the archive and are copied forward so the current run log still appends. Previous publications cannot contaminate the fresh result inventory. Archiving refuses active engine database locks and dependencies that overlap the run directory. This safeguard also applies when the new launch disables provenance. Without a valid earlier input snapshot, local-input runs start fresh because unchanged data cannot be established. It covers explicitly declared local inputs, not remote or indirectly configured inputs.
+
+## Checking a replay (`nfclaw verify`)
+
+```bash
+nfclaw verify <replay-outdir> --against <original-outdir>
+nfclaw verify <replay-outdir> --against <original-outdir> --strict
+```
+
+Hashes the replay's live files and compares them **by path** with the original recorded `outputs.sha256` (or live originals when no manifest exists). It reports `identical` / `changed` / `missing` / `extra` for files, missing/extra directories, and changed link identities from `outputs.inventory.json`. Missing or extra files or directories fail the structural check. The nf-core run-metadata files the template names from its launch clock (`pipeline_info/params_<time>.json`, the execution report/timeline/trace/DAG of releases without `trace_report_suffix`, and the nf-co2footprint plugin's `co2footprint_{report,summary,trace}_<time>` files) are paired one to one, listed under `renamed` as `original -> replay`, and compared by bytes; so are the files `kraken2-build` adds to `library/added/` under random `mktemp` names (`XXXXXXXXXX.fna`, its `.fna.masked` copy and `prelim_map_XXXXXXXXXX.txt`, as in createtaxdb's Kraken2 and Bracken databases), within their own directory. Any other dated or differently named path keeps its exact identity. A historical file-only manifest cannot certify its original directory structure; verification reports that gap and exits unsuccessfully. Without any historical checksum manifest, both live directory trees can still be compared. Changed bytes may reflect metadata or different scientific results; inspect them using a format-aware comparison. File structure alone establishes no analytical agreement. When both execution-environment records (`provenance/environment.json`) can be read as JSON objects, it also reports the comparison of container images, plugins, the container engine name and remote inputs (`environment: identical`, `differs` with the mismatches, or `unverified`). Add `--strict` to require identical file bytes, recorded link identities and an `identical` environment comparison when available. If either environment record is missing, unreadable or not a JSON object, verification reports `not recorded by both runs` and strict mode enforces only the output checks; it cannot establish environment agreement. Links into independently generated task work directories can differ; inspect those changes explicitly.
+
+When the original was a resumed launch (`-resume` in its recorded command), its `pipeline_info/`
+also holds the run metadata of the launches before it: a stopped or failed attempt's report,
+timeline, trace, DAG and params file. A replay makes one launch, so those files are listed
+separately as `earlier attempts` and not compared; only launch-stamped run metadata older than the
+newest of its kind is set apart this way, never a result. Without a recorded resume, two such files
+for one remain unexplained and fail the structural check.
+
+For a stronger recorded-environment guarantee, add `--require-environment` (and optionally
+`--strict` for output bytes). It refuses missing or incomplete environment observations,
+containerless tasks, changed process sets/platforms/engine builds, and hashes of validation
+inputs fetched again after execution. A successful ordinary replay may still fail this stronger
+check. It verifies the recorded evidence and cannot discover undeclared dependencies.
+
+Replay requires Python 3 and checks the recorded local data, configurations, parameters and archived pipeline source before launching. A changed dependency or incomplete bundle is refused. It pins the observed Nextflow version and, where recorded and eligible, container image digests and the nf-core/configs commit, then compares the recorded environment evidence. Retain the original bundle: standalone replay writes logs and source/environment records into the target, rather than generating another complete replay bundle. Files a task downloads by itself, Conda environments and a config's own `includeConfig` targets are not frozen.
+
+## Scientific output contracts (`nfclaw assess`)
+
+```bash
+nfclaw assess results.replay --contract runner/output_contracts/tumourevo-1.0.0-demo.json
+nfclaw assess results.replay --against results --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
+```
+
+This is separate from file/environment verification. The
+[output-contract guide](scientific-output-contracts.md) defines sample coverage, exact parsed
+comparisons, reasoned numeric tolerances and explicit exclusions for tables/BAM/VCF/FASTA and
+selected H5AD matrices. Two exact-pin demo contracts are supplied; other branches need their own.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import stat
@@ -147,9 +148,17 @@ def _chain(args: argparse.Namespace, parser: argparse.ArgumentParser, root: Path
                                else chain.status(Path(args.outdir)))
         except NfclawError as exc:
             print(str(exc), file=sys.stderr)
+            if args.json:
+                print(json.dumps({"version": STATUS_JSON_VERSION, "exit_code": 1, "chain": None,
+                                  "problems": [], "error": exc.message}, indent=2))
             return 1
-        print(chain.format_status(state, problems), end="")
-        return chain.status_exit_code(state, problems)
+        report, code = chain.format_status(state, problems), chain.status_exit_code(state, problems)
+        if args.json:
+            print(json.dumps({"version": STATUS_JSON_VERSION, "exit_code": code, "chain": state,
+                              "problems": problems, "report": report}, indent=2, default=str))
+        else:
+            print(report, end="")
+        return code
     if args.spec is None and not args.resume:
         parser.error("chain run needs a spec file (or --resume an existing chain)")
     outdir = Path(args.outdir).expanduser().resolve()
@@ -237,6 +246,21 @@ def _status_report(st: runlog.RunState) -> str:
     return "\n".join(lines) + "\n"
 
 
+# The `--json` reports keep their keys; a change that removes or redefines one bumps this.
+STATUS_JSON_VERSION = 1
+
+
+def _status_record(st: runlog.RunState, report: str, code: int) -> dict:
+    """`nfclaw status --json`: the parsed state of the log's last launch, and the report."""
+    return {"version": STATUS_JSON_VERSION, "exit_code": code, "state": st.state,
+            "kind": st.kind, "outcome": st.outcome, "started": st.started,
+            "finished": st.finished, "log": str(st.log), "nextflow_log": st.nextflow_log,
+            "host": st.host, "pid": st.pid, "nextflow_pid": st.nextflow_pid,
+            "nextflow_alive": st.nextflow_alive, "supervisor_pid": st.supervisor_pid,
+            "supervisor_alive": st.supervisor_alive, "caveats": st.caveats, "error": st.error,
+            "last_output": st.last_output, "report": report}
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run one nfclaw command. Output piped into a reader that stops early (`nfclaw versions X |
     head -1`, `nfclaw list | grep -m1 rna`) ends the command quietly, as it would a Unix tool,
@@ -309,6 +333,9 @@ def build_parser() -> argparse.ArgumentParser:
     # outcome (nfclaw killed outright) — so nobody has to read or interpret the log to know.
     p_status = sub.add_parser("status", help="report how a run (or replay, or chain) stands")
     p_status.add_argument("outdir", help="--outdir of the run (or replay target) to report on")
+    p_status.add_argument("--json", action="store_true",
+                          help="print one JSON object instead: the state, outcome, times, pids, "
+                               "logs, caveats, recorded error and last output, and this report")
     # Compare a replay against the run it reproduces. Keyed on path, because comparing the raw
     # `outputs.sha256` lines counts one changed file as both a missing and an extra one.
     p_verify = sub.add_parser("verify", help="compare a replay with the run it reproduces")
@@ -352,6 +379,9 @@ def build_parser() -> argparse.ArgumentParser:
     pc_status = chain_sub.add_parser("status",
                                      help="report a chain's stages and verify their lineage")
     pc_status.add_argument("outdir", help="a chain's --outdir, or the outdir of one of its stages")
+    pc_status.add_argument("--json", action="store_true",
+                           help="print one JSON object instead: the chain state, its stages, the "
+                                "broken links found and this report")
     pc_status.add_argument("--quick", action="store_true",
                            help="report execution state without hashing data; lineage "
                                 "is not checked")
@@ -581,11 +611,14 @@ def _main(argv: list[str] | None = None) -> int:
         if not _present(log) and _present(chain_log):       # the --outdir of a chain
             log = chain_log
         st = runlog.read_state(log)
-        print(_status_report(st), end="")
+        report = _status_report(st)
         if st.kind == "chain":
-            print(f"chain: `nfclaw chain status {args.outdir}` lists its stages and verifies "
-                  "their lineage")
-        return 0 if st.state == "success" else 3 if st.state == "running" else 1
+            report += (f"chain: `nfclaw chain status {args.outdir}` lists its stages and verifies "
+                       "their lineage\n")
+        code = 0 if st.state == "success" else 3 if st.state == "running" else 1
+        print(json.dumps(_status_record(st, report, code), indent=2) if args.json else report,
+              end="\n" if args.json else "")
+        return code
 
     shown: list[str] = []
 

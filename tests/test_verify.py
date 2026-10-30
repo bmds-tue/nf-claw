@@ -230,6 +230,56 @@ def test_identical_launch_stamped_files_count_as_identical(tmp_path):
     assert cmp.structurally_equal and cmp.byte_identical and len(cmp.identical) == 1
 
 
+def _resumed(outdir, resumed=True):
+    command = "nextflow run /p -params-file /o/params.json" + (" -resume" if resumed else "")
+    (outdir / "provenance/run_manifest.json").write_text(json.dumps({"command": command}))
+    return outdir
+
+
+def test_a_resumed_runs_earlier_attempts_are_set_apart_not_missing(tmp_path):
+    # Reproduced on the server: rnaseq stopped mid-run, then resumed into the same --outdir. Its
+    # pipeline_info held both launches' report, timeline, trace, DAG and params file; the replay
+    # (one launch, with the recorded `trace_report_suffix`) had one of each, so verify reported six
+    # files missing and failed every replay of a resumed run.
+    first, final = "2026-10-30_00-31-54", "2026-10-30_00-33-28"
+    original = {f"pipeline_info/execution_report_{first}.html": "stopped attempt",
+                f"pipeline_info/execution_report_{final}.html": "final",
+                "pipeline_info/params_2026-10-30_00-32-18.json": '{"a": 1}',
+                "pipeline_info/params_2026-10-30_00-33-49.json": '{"a": 1}',
+                "counts.tsv": "gene\t1\n"}
+    replayed = {f"pipeline_info/execution_report_{final}.html": "final",
+                "pipeline_info/params_2026-10-30_00-50-39.json": '{"a": 1}',
+                "counts.tsv": "gene\t1\n"}
+    orig = _resumed(_bundle(tmp_path, "orig", original))
+    cmp = verify.compare(orig, _bundle(tmp_path, "replay", replayed))
+    assert cmp.earlier_attempts == [f"pipeline_info/execution_report_{first}.html",
+                                    "pipeline_info/params_2026-10-30_00-32-18.json"]
+    assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
+    assert cmp.renamed == ["pipeline_info/params_2026-10-30_00-33-49.json -> "
+                           "pipeline_info/params_2026-10-30_00-50-39.json"]
+    assert cmp.byte_identical
+    text = verify.report(cmp)
+    assert "earlier attempts : 2" in text and "same set of files" in text
+
+    # Without a recorded resume, two launch-stamped files for one stay unexplained.
+    _resumed(orig, resumed=False)
+    cmp = verify.compare(orig, tmp_path / "replay")
+    assert cmp.earlier_attempts == [] and not cmp.structurally_equal
+
+
+def test_an_earlier_attempt_never_hides_a_missing_result(tmp_path):
+    # Only run metadata of the same kind with an older launch stamp is set apart.
+    orig = _resumed(_bundle(tmp_path, "orig", {
+        "pipeline_info/params_2026-10-30_00-32-18.json": "{}",
+        "pipeline_info/params_2026-10-30_00-33-49.json": "{}",
+        "results/calls_2026-10-30_00-32-18.vcf": "x", "counts.tsv": "1"}))
+    replay = _bundle(tmp_path, "replay", {"pipeline_info/params_2026-10-30_00-50-39.json": "{}"})
+    cmp = verify.compare(orig, replay)
+    assert cmp.earlier_attempts == ["pipeline_info/params_2026-10-30_00-32-18.json"]
+    assert cmp.missing == ["counts.tsv", "results/calls_2026-10-30_00-32-18.vcf"]
+    assert not cmp.structurally_equal
+
+
 @pytest.mark.parametrize("original,replayed", [
     # Two launch-stamped candidates for one: an earlier attempt's report is not paired by guess.
     ({"pipeline_info/params_2026-10-12_04-22-27.json": "{}",

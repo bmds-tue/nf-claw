@@ -23,10 +23,10 @@ def package_version() -> str:
             return found
     except (OSError, ValueError, AttributeError):
         pass
+    from importlib.metadata import PackageNotFoundError, version
     try:
-        from importlib.metadata import PackageNotFoundError, version
         return version("nfclaw")
-    except (ImportError, PackageNotFoundError):
+    except PackageNotFoundError:
         return "unknown"
 
 

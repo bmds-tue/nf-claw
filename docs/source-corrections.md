@@ -107,5 +107,7 @@ FastQRepair 1.1.1 receives its corrections through a recorded runtime configurat
 - **Separated Publications:** Distinguishes read, log, and MultiQC report publication channels.
 
 The complete standalone implementation and its digest are recorded in provenance bundles for replay;
-internal recipe prefixes invalidate prior task caches. See [`AGENTS.md`](../AGENTS.md) and
+internal recipe prefixes invalidate prior task caches. See
 [`docs/architecture.md`](architecture.md#25-provenance-bundles--dependency-hashing).
+
+The exact affected fastqrepair 1.1.1 commit receives `provenance/fastqrepair_compat.config`: a splitter whose chunks wipe exactly as the whole file, exact report gathering, the missing BBMap shell continuation and distinct read/log/report publication. The complete standalone implementation and its source digest are recorded for replay; internal recipe prefixes invalidate prior task caches. The pinned source tree remains unchanged, while generated task scripts explicitly incorporate these corrections. Input with no line where a split is invisible to fastqwiper is wiped whole beside an empty placeholder chunk. Inspect actual task `.command.sh` files and retained read/report inventories; process success alone does not establish read conservation or biological accuracy.

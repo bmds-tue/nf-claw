@@ -1,0 +1,23 @@
+{
+  "record": "Task containers left behind by a stopped run (audit 2026-10-30, C01)",
+  "host": "denbi_instance: Linux amd64, Docker 29.1.3 (overlayfs, data root on /mnt/volume), Nextflow 26.04.3",
+  "method": "A two-task workflow (`sleep 400` in quay.io/nf-core/ubuntu:22.04; bash as the container's PID 1 ignores SIGTERM) supervised by runner.execution.run, SIGTERM to the supervisor once both task containers ran; containers attributed by their working directory under the trial's own work dir.",
+  "trials": [
+    {"id": "t1", "code": "3367a5f (before)", "shutdown_grace_s": 10, "sigterm_to_exit_s": 10.2,
+     "running_at_sigterm": 2, "after_exit": {"exited": 2}, "after_15_s": {"exited": 2},
+     "note": "never removed: each wrapper's own `docker rm` was killed with it"},
+    {"id": "t2", "code": "3367a5f (before)", "shutdown_grace_s": 3, "sigterm_to_exit_s": 3.2,
+     "running_at_sigterm": 2, "after_exit": {"running": 2}, "after_15_s": {"exited": 2},
+     "note": "still running after nfclaw reported the run stopped"},
+    {"id": "t3", "code": "fix, removals one after another", "shutdown_grace_s": 3, "sigterm_to_exit_s": 17.5,
+     "running_at_sigterm": 2, "after_exit": {}, "after_15_s": {}},
+    {"id": "t4", "code": "fix, concurrent removals", "shutdown_grace_s": 3, "sigterm_to_exit_s": 14.0,
+     "running_at_sigterm": 2, "after_exit": {}, "after_15_s": {}},
+    {"id": "t5", "code": "fix, concurrent removals", "shutdown_grace_s": 10, "sigterm_to_exit_s": 31.8,
+     "running_at_sigterm": 2, "after_exit": {}, "after_15_s": {},
+     "note": "host load average 15-23 during t4/t5: `docker rm -f` of two already exited containers alone took 17.9 s"}
+  ],
+  "real_pipeline": {"pipeline": "rnaseq 3.27.0 --demo", "signal": "SIGTERM to nfclaw while tasks ran",
+                    "run_log": "nfclaw: removed 4 task container(s) the stopped run left behind",
+                    "left_after_exit": 0, "outcome": "terminated by SIGTERM"}
+}

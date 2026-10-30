@@ -150,6 +150,8 @@ Before opening a PR:
    ```
    The browser tests include an axe-core accessibility check of every built page: every document
    under `docs/` becomes a page, so a skipped heading level or a table without headers fails it.
+5. Note a user-visible change (a command, flag, output, documented behaviour or fix) in
+   [`CHANGELOG.md`](CHANGELOG.md) under **Unreleased**, with the pull request's number.
 
 When submitting the PR on GitHub:
 - Provide a clear description of the problem solved and the implementation approach.

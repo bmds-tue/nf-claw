@@ -639,6 +639,47 @@ def test_status_without_a_run_log_says_why(tmp_path, monkeypatch, capsys):
     assert "status: no run log" in out and "in the foreground" in out
 
 
+def test_status_json_is_the_parsed_state_with_the_same_exit_code(tmp_path, monkeypatch, capsys):
+    # Agents branch on the outcome without parsing prose: one JSON object on stdout.
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+    body = ("ERROR ~ x\n==> nfclaw error:\n[execution_failed] Nextflow execution failed "
+            "(exit status 1).\n")
+    log = _write_run_log(tmp_path / "out", _finished_block("failed (exit status 1)", body))
+    assert cli.main(["status", str(tmp_path / "out"), "--json"]) == 1
+    record = json.loads(capsys.readouterr().out)
+    assert record["version"] == 1 and record["exit_code"] == 1
+    assert (record["state"], record["kind"], record["outcome"]) == (
+        "ended", "run", "failed (exit status 1)")
+    assert record["started"] == "2026-10-06T10:00:00+00:00"
+    assert record["finished"] == "2026-10-06T10:05:00+00:00"
+    assert record["log"] == str(log) and record["pid"] == 1
+    assert record["error"] == ["[execution_failed] Nextflow execution failed (exit status 1)."]
+    assert record["report"].startswith("status: failed (exit status 1)\n")
+
+    _write_run_log(tmp_path / "ok", _finished_block("success"))
+    assert cli.main(["status", str(tmp_path / "ok"), "--json"]) == 0
+    record = json.loads(capsys.readouterr().out)
+    assert (record["state"], record["outcome"], record["caveats"]) == ("success", "success", [])
+
+    assert cli.main(["status", str(tmp_path / "never"), "--json"]) == 1
+    assert json.loads(capsys.readouterr().out)["state"] == "missing"
+
+
+def test_chain_status_json_carries_state_problems_and_report(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.chain, "status", lambda p: ({"chain_id": "c", "outcome": "success",
+                                                          "stages": []}, ["a broken link"]))
+    assert cli.main(["chain", "status", str(tmp_path), "--json"]) == 1
+    record = json.loads(capsys.readouterr().out)
+    assert record["exit_code"] == 1 and record["problems"] == ["a broken link"]
+    assert record["chain"]["chain_id"] == "c" and "lineage: BROKEN" in record["report"]
+
+    monkeypatch.undo()
+    assert cli.main(["chain", "status", str(tmp_path / "none"), "--json"]) == 1
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["error"].startswith("no chain recorded")
+    assert "no chain recorded" in captured.err
+
+
 # --- a refused relaunch must not leave the previous attempt's outcome as the last line -----------
 
 def test_refused_relaunch_is_recorded_in_the_existing_run_log(tmp_path, monkeypatch):

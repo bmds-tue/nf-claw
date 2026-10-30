@@ -76,7 +76,7 @@ export function getDefaultBranch(): string {
 
 let docsCache: DocPage[] | null = null;
 
-/** README, the root guides (CONTRIBUTING, AGENTS, SECURITY, NOTICE) and every docs/*.md. Read once per build. */
+/** README, the root guides (CONTRIBUTING, AGENTS, SECURITY, CHANGELOG, NOTICE) and every docs/*.md. Read once per build. */
 export function getDocs(): DocPage[] {
   if (docsCache) return docsCache;
   const docs: DocPage[] = [];
@@ -91,6 +91,7 @@ export function getDocs(): DocPage[] {
     ["CONTRIBUTING.md", "Contributing"],
     ["AGENTS.md", "Agent guide"],
     ["SECURITY.md", "Security policy"],
+    ["CHANGELOG.md", "Changelog"],
     ["NOTICE", "Notice & credits"],
   ];
   for (const [f, title] of extras) {

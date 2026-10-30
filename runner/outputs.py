@@ -7,6 +7,8 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from runner import replay_guard
+
 
 @dataclass(frozen=True)
 class OutputsReport:
@@ -95,7 +97,7 @@ def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *,
                 return {"scope": "outdir", "path": raw[len(prefix):] or "."}
         return {"scope": "external", "path": raw}
 
-    hashes, inventory, raw_inventory, digests = {}, {}, {}, {}
+    hashes, inventory, raw_inventory, targets = {}, {}, {}, {}
     for path, kind in result_entries(outdir, only=only):
         relative = path.relative_to(outdir).as_posix()
         entry = {"type": kind}
@@ -112,9 +114,10 @@ def snapshot(outdir: Path, hash_file: Callable[[Path], str] | None = None, *,
         inventory[relative] = entry
         raw_inventory[str(path.absolute())] = raw_entry
         if hash_file is not None and kind == "file":
-            if real not in digests:
-                digests[real] = hash_file(real)
-            hashes[relative] = digests[real]
+            targets[relative] = real
+    if targets:
+        digests = replay_guard.hash_files(list(targets.values()), hash_file)
+        hashes = {relative: digests[real] for relative, real in targets.items()}
     return hashes, inventory, raw_inventory
 
 

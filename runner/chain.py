@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from runner import (budget, consumption, discovery, engine_version, execution, handoff, inputs,
-                    input_safety, nextflow_command, orchestration, parameters, preflight,
+                    input_safety, locking, nextflow_command, orchestration, parameters, preflight,
                     provenance, resources, runlog, sheetgen, source_corrections, versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
@@ -448,21 +448,22 @@ def _record_attempted_release(entry: dict, stage_dir: Path, before: bytes | None
 @contextlib.contextmanager
 def _lock(record: Path, outdir: Path) -> Iterator[None]:
     """One chain process per --outdir: two would race on the same stages and state."""
+    if fcntl is None:
+        raise locking.posix_required("nfclaw chain run")
     fd = None
     try:
         record.mkdir(parents=True, exist_ok=True, mode=0o700)
         record.chmod(0o700)
         fd = os.open(record / ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o644)
-        if fcntl is not None:
-            try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                os.close(fd)
-                fd = None
-                raise NfclawError(
-                    ErrorCode.ENVIRONMENT, f"another nfclaw chain is running in {outdir}",
-                    fix=f"Wait for it (tail -n 1 {record / 'logs' / LOG_NAME}) or stop it with "
-                        "kill <its pid>.") from None
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            os.close(fd)
+            fd = None
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT, f"another nfclaw chain is running in {outdir}",
+                fix=f"Wait for it (tail -n 1 {record / 'logs' / LOG_NAME}) or stop it with "
+                    "kill <its pid>.") from None
     except OSError as exc:
         if fd is not None:
             os.close(fd)

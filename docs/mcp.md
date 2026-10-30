@@ -139,8 +139,9 @@ job is not affected when a call returns or is cancelled. Clients that send a pro
 progress notifications while a call waits.
 
 `cancel_job` sends the job SIGTERM, requesting the same process-group shutdown and outcome
-recording as `kill <nfclaw pid>` from a shell. Detached containers, scheduler jobs and host crashes
-can leave external work running or evidence unfinished. Inspect the executor and reconcile that
+recording as `kill <nfclaw pid>` from a shell, including removal of the Docker/Podman task
+containers the run started. Scheduler jobs, other detached work and host crashes can leave
+external work running or evidence unfinished. Inspect the executor and reconcile that
 work before continuing with `resume: true`; a cancelled or lost MCP label alone does not prove
 every task has stopped. A second job into an
 `outdir` that a running job holds is refused with that job's id (nfclaw's own `--outdir` lock is the

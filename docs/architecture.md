@@ -93,8 +93,12 @@ nfclaw keeps its own schema checks where they act before Nextflow could:
   and attempts to record the termination outcome and provenance before exiting.
 - Shutdown grace defaults to 10 seconds and is configurable with `NFCLAW_SHUTDOWN_GRACE`.
   Runs have no overall deadline unless `--timeout SECONDS` is supplied; see [timeouts](timeouts.md).
+- A task container belongs to the engine, not to the process group: before each signal nfclaw
+  notes the `nxf-…` containers the group's `docker run`/`podman run` clients started, and once the
+  group is gone force-removes those still present, recording it in the run log
+  (`replay_guard.task_containers`; a replay's supervisor does the same).
 - On Linux, `PR_SET_PDEATHSIG` signals the direct Nextflow child if nfclaw dies abruptly. It does
-  not by itself guarantee cleanup of detached processes, remote tasks, or containers.
+  not by itself guarantee cleanup of detached processes or remote tasks.
 
 ### 2.4 Structured Logging & Status Inspection
 - **`<outdir>/provenance/logs/run.log`**: Authoritative execution log containing nfclaw launch metadata (command, PID, host, advisories), followed by Nextflow's console stream.

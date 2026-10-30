@@ -13,12 +13,25 @@ except ImportError:
     fcntl = None
 
 
+def posix_required(what: str) -> NfclawError:
+    """The refusal for a run or chain where POSIX file locks are not available (native Windows):
+    Nextflow itself runs only on POSIX systems, and an unlocked writer would race another one."""
+    return NfclawError(
+        ErrorCode.ENVIRONMENT,
+        f"{what} needs a POSIX system with file locking (Linux or macOS); this Python has no "
+        "`fcntl`.",
+        fix="On Windows, install and run nfclaw inside WSL 2, where Nextflow and its container "
+            "engines run too.")
+
+
 @contextmanager
 def output_writer(outdir: Path, *, check_only: bool = False):
     """Acquire only after dependency separation is checked; keep it through final recording."""
-    if check_only or fcntl is None:
+    if check_only:
         yield
         return
+    if fcntl is None:
+        raise posix_required("nfclaw run")
     outdir = outdir.expanduser().resolve()
     # A persistent sibling file leaves a fresh output directory untouched. Never unlink it:
     # a third process could otherwise lock a new inode while a second still holds the old one.
