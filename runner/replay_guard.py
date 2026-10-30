@@ -217,6 +217,27 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+# SHA-256 runs at a few hundred MB/s on one core (314 MB/s on the validation server), well below
+# what storage delivers, and hashlib releases the GIL while it hashes: eight threads hashed cached
+# data 7.7x faster there. Every run hashes its inputs twice and its outputs once.
+_HASH_WORKERS = max(1, min(8, os.cpu_count() or 1))
+
+
+def hash_files(paths: list[Path],
+                hash_file: Callable[[Path], str] | None = None) -> dict[Path, str]:
+    """The digest of each distinct path (SHA-256 unless `hash_file` says otherwise), several files
+    at once. An error is the one hashing the files one by one, in order, would have raised first."""
+    hash_file = hash_file or _sha256
+    unique = list(dict.fromkeys(paths))
+    if len(unique) < 2 or _HASH_WORKERS == 1:
+        return {path: hash_file(path) for path in unique}
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(_HASH_WORKERS, len(unique))) as pool:
+        digests = list(pool.map(hash_file, unique))
+    return {path: digests[index] for index, path in enumerate(unique)}
+
+
 def _glob_patterns(pattern: str) -> list[str]:
     """Expand Java/Nextflow brace alternatives and its recursive ``**.ext`` shorthand."""
     if match := re.search(r"\{([^{}]+)\}", pattern):
@@ -294,7 +315,7 @@ def inspect_input_paths(paths: list[Path], visit: Callable[[Path], None]) -> Non
 
 def hash_inputs(paths: list[Path]) -> dict[str, str]:
     """Content snapshot of local sources, including directory and glob contents."""
-    return {str(path): _sha256(path) for path in input_files(paths)}
+    return {str(path): digest for path, digest in hash_files(input_files(paths)).items()}
 
 
 def _capture_input_inventory(paths: list[Path]) -> tuple[list[Path], dict[str, dict[str, str]]]:
@@ -321,14 +342,9 @@ def _capture_input_inventory(paths: list[Path]) -> tuple[list[Path], dict[str, d
 def snapshot_inputs(paths: list[Path]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     """Capture file bytes and the logical input namespace, including empty directory aliases."""
     files, inventory = _capture_input_inventory(paths)
-    digests = {}
-    checksums = {}
-    for path in files:
-        real = Path(inventory[str(path)].get("resolved_path", str(path)))
-        if real not in digests:
-            digests[real] = _sha256(real)
-        checksums[str(path)] = digests[real]
-    return checksums, inventory
+    reals = {path: Path(inventory[str(path)].get("resolved_path", str(path))) for path in files}
+    digests = hash_files(list(reals.values()))
+    return {str(path): digests[real] for path, real in reals.items()}, inventory
 
 
 def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
