@@ -207,15 +207,15 @@ def test_materialize_refuses_complete_copied_files_without_cache_git_metadata(tm
     assert (dest / "main.nf").read_text() == "copied user file"
 
 
-def test_materialize_rebuilds_a_partial_cache(tmp_path):
+def test_materialize_preserves_a_partial_cache(tmp_path):
     pdir = tmp_path / "pipelines"
     _upstream_repo_with_tag(pdir, "p", "1.2.0")
     dest = versions.cache_dir("p", "1.2.0", pdir) / "upstream"
     dest.mkdir(parents=True)
     (dest / "main.nf").write_text("partial\n")               # old check mistook this for complete
-    st = versions.materialize("p", "1.2.0", pipelines_dir=pdir, repo_root=tmp_path)
-    assert st.complete is True
-    assert (st.path / "nextflow_schema.json").exists()
+    with pytest.raises(NfclawError, match="Incomplete version cache already exists"):
+        versions.materialize("p", "1.2.0", pipelines_dir=pdir, repo_root=tmp_path)
+    assert (dest / "main.nf").read_text() == "partial\n"
 
 
 def test_materialize_failure_is_a_structured_error(tmp_path, monkeypatch):

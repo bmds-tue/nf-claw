@@ -569,6 +569,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         manifest['source_corrections'] = {'file': correction_file.name,
                                          'sha256': sha256_file(correction_file)}
     if pipeline_checksums is not None or actual_source.is_dir():
+        manifest["pipeline_identity_version"] = 1
         manifest["pipeline_path"] = str(actual_source.absolute())
         manifest["pipeline_git_head"] = (
             (submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
@@ -685,7 +686,22 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     #    archive, extracted into the replay's provenance/ directory and checked file by file; the
     #    bundle's copies of external `--config` files; and a config pinning every process to the
     #    container image digest it ran.
-    env_exports = "".join(
+    # Absence is part of the recorded environment. Keep only required redacted secrets from
+    # the caller, then restore the recorded overlay and the observed engine pin.
+    preserved = "|".join(shlex.quote(name) for name in redacted_env
+                         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name))
+    env_exports = 'for _nfclaw_env in ${!NXF_@}; do\n'
+    if preserved:
+        env_exports += f'  case "$_nfclaw_env" in {preserved}) continue ;; esac\n'
+    env_exports += '  unset "$_nfclaw_env"\ndone\nunset _nfclaw_env\n'
+    for key in redacted_env:
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            env_exports += (f'if [ -z "${{{key}:-}}" ] || '
+                            f'[ "${{{key}}}" = "<redacted>" ]; then\n'
+                            f'  echo "nfclaw replay: export required secret {key} '
+                            'before replay" >&2\n'
+                            '  exit 1\nfi\n')
+    env_exports += "".join(
         f"export {shlex.quote(key)}={shlex.quote(value)}\n"
         for key, value in sorted(nxf_env.items())
         if key not in redacted_env

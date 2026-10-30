@@ -20,12 +20,41 @@ import stat
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache, partial
 from pathlib import Path
+
+
+def log_cursor_path(log: Path) -> Path:
+    return log.with_name(log.name + ".cursor.json")
+
+
+def write_log_cursor(log: Path, start: int) -> None:
+    """An optional seek index. Failure leaves no stale index for a later status poll."""
+    cursor, temporary = log_cursor_path(log), None
+    try:
+        info = log.stat()
+        with tempfile.NamedTemporaryFile(dir=log.parent, prefix=".nfclaw-cursor-",
+                                         delete=False) as fh:
+            temporary = Path(fh.name)
+            fh.write(json.dumps({"device": info.st_dev, "inode": info.st_ino,
+                                 "start": start, "size": info.st_size}).encode())
+        os.replace(temporary, cursor)
+    except OSError:
+        try:
+            cursor.unlink(missing_ok=True)
+        except OSError:
+            pass
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def quote_console(data: bytes, at_line_start: bool) -> tuple[bytes, bool]:
@@ -76,7 +105,9 @@ def _recorded_stub_sources(original: str) -> tuple[list[str], list[str]]:
 
 def _effective_replay_env(manifest: dict) -> dict:
     redacted = manifest.get("redacted_nextflow_env", [])
-    return {**os.environ, **{key: value for key, value in
+    ambient = {key: value for key, value in os.environ.items()
+               if not key.startswith("NXF_") or key in redacted}
+    return {**ambient, **{key: value for key, value in
                             manifest.get("nextflow_env", {}).items() if key not in redacted}}
 
 
@@ -113,8 +144,11 @@ def start_replay_log(log: Path, original: str, pid: str) -> None:
     lines.append(f"    pid: {pid}")
     if stub_profiles or stub_configs:
         lines.append(f"    caveat: {stub_caveat(stub_profiles, stub_configs)}")
+    log_cursor_path(log).unlink(missing_ok=True)
     with log.open("a", encoding="utf-8") as handle:
+        start = handle.tell() + 1
         handle.write("\n" + "\n".join(lines) + "\n")
+    write_log_cursor(log, start)
 
 
 def host_identity() -> str | None:
@@ -917,6 +951,23 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
     if manifest.get("unreplayable_environment_names"):
         raise ValueError("recorded environment names are not valid shell identifiers; "
                          "restore a valid environment and start a fresh run")
+    identity_version = manifest.get("pipeline_identity_version")
+    if ("pipeline_identity_version" in manifest
+            and (type(identity_version) is not int or identity_version != 1)):
+        raise ValueError("pipeline identity version is invalid or unsupported")
+    if (identity_version == 1 or (bundle / "pipeline.sha256").exists()
+            or manifest.get("pipeline_archive") is not None):
+        pipeline_path = manifest.get("pipeline_path")
+        if (not isinstance(pipeline_path, str) or not Path(pipeline_path).is_absolute()
+                or not isinstance(manifest.get("pipeline"), str) or not manifest["pipeline"]
+                or "pipeline_git_head" not in manifest):
+            raise ValueError("pipeline source identity is missing or incomplete")
+        if not (bundle / "pipeline.sha256").is_file():
+            raise ValueError("pipeline source checksum record is missing")
+        head = manifest["pipeline_git_head"]
+        if head is not None and (not isinstance(head, str)
+                                 or not re.fullmatch(r"[0-9a-fA-F]{40,64}", head)):
+            raise ValueError("pipeline Git revision is invalid")
     for key, name in RECORDED_FILES.items():
         _recorded_file(bundle, manifest, key, name)
     if manifest.get("pipeline_archive") is not None:

@@ -424,7 +424,7 @@ def test_replay_refuses_effective_log_alias_before_any_writes(tmp_path, monkeypa
             os.link(source, log)
     env = {'NXF_LOG_FILE': str(log)}
     bundle = provenance.write(outdir=tmp_path / 'out', pipeline='fixture',
-        command_str='printf damaged > "$NXF_LOG_FILE"',
+        command_str='printf damaged > "${NXF_LOG_FILE:-.nextflow.log}"',
         submodule=SubmoduleStatus('fixture', tmp_path / 'up', True, True, '1', 'deadbeef', ()),
         input_paths=[source], env_extra=env if recorded else {})
     if not recorded:
@@ -432,23 +432,36 @@ def test_replay_refuses_effective_log_alias_before_any_writes(tmp_path, monkeypa
     target = tmp_path / 'replay'
     result = subprocess.run([str(bundle / 'commands.sh'), str(target)],
                             capture_output=True, text=True, timeout=15)
-    assert result.returncode != 0
     assert source.read_text() == 'irreplaceable scientific data\n'
-    assert not target.exists(), result.stderr
-    assert 'overlaps' in result.stderr
+    if recorded:
+        assert result.returncode != 0
+        assert not target.exists(), result.stderr
+        assert 'overlaps' in result.stderr
+    else:
+        # An absent recorded variable stays absent: newly inherited NXF_LOG_FILE is removed
+        # and the engine's ordinary target-local default is used instead.
+        assert result.returncode == 0, result.stderr
+        assert (target / '.nextflow.log').read_text() == 'damaged'
 
 
 @pytest.mark.parametrize('name', ['NXF_WORK', 'NXF_CACHE_DIR', 'NXF_HOME', 'NXF_TEMP'])
+@pytest.mark.parametrize('recorded', [False, True])
 def test_replay_refuses_engine_directory_inside_consumed_data_before_creation(
-        tmp_path, monkeypatch, name):
+        tmp_path, monkeypatch, name, recorded):
     source = tmp_path / 'data'
     source.mkdir()
     (source / 'sample.txt').write_text('reads\n')
+    if recorded:
+        monkeypatch.setenv(name, str(source / 'engine-files'))
     bundle = record(tmp_path, source)
     monkeypatch.setenv(name, str(source / 'engine-files'))
     target = tmp_path / 'replay'
     result = subprocess.run([str(bundle / 'commands.sh'), str(target)],
                             capture_output=True, text=True, timeout=15)
-    assert result.returncode != 0, result.stdout + result.stderr
-    assert not target.exists() and not (source / 'engine-files').exists()
-    assert 'overlaps' in result.stderr
+    assert not (source / 'engine-files').exists()
+    if recorded:
+        assert result.returncode != 0, result.stdout + result.stderr
+        assert not target.exists()
+        assert 'overlaps' in result.stderr
+    else:
+        assert result.returncode == 0, result.stdout + result.stderr
