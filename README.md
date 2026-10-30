@@ -53,6 +53,7 @@ The repository is structured into four functional zones, plus the catalogs, docu
 | **Architecture** | [`docs/architecture.md`](docs/architecture.md) | Architectural zones, schema preflight, sibling file locks, provenance structure, and scientific assessment. |
 | **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, Nextflow 25 vs 26 parser transition, and `--nxf-ver` controls. |
 | **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup/shutdown margins, background runs, and quick chain status. |
+| **Replay & Verification** | [`docs/replay.md`](docs/replay.md) | Bundle contents, the replay guard, dependency stability, resume of changed inputs, and what `nfclaw verify`/`assess` establish. |
 | **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
 | **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
 | **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
@@ -247,8 +248,8 @@ replay script with its dependency guard, the archived pipeline source, config co
 checksum and inventory records, and what could be recorded of the execution environment.
 [docs/architecture.md](docs/architecture.md#25-provenance-bundles--dependency-hashing) lists every
 file and what it establishes. The bundle does not embed scientific input data, container images or
-plugins, so those must stay available for a replay. [AGENTS.md](AGENTS.md) covers replaying,
-resuming, run locking and their limits.
+plugins, so those must stay available for a replay. [docs/replay.md](docs/replay.md) covers
+replaying, resuming and verifying, and their limits.
 
 ---
 

@@ -14,7 +14,7 @@ launch, and is not a byte-readability guarantee.
 
 ## Navigation
 
-[Schema Subset](#wrapper-schema-subset) • [Replay Integrity Limits](#replay-integrity-limits) • [Generation Boundaries](#generation-boundaries) • [Support Matrix](#support-matrix-for-the-95-audited-pins)
+[Schema Subset](#wrapper-schema-subset) • [Replay Integrity Limits](#replay-integrity-limits) • [Generation Boundaries](#generation-boundaries) • [Support Matrix](#support-matrix-for-the-95-audited-pins) • [Inputs Refused Before Launch](#inputs-refused-before-launch)
 
 ---
 
@@ -175,3 +175,31 @@ change; another release may have another contract.
 | [viralintegration](../pipelines/viralintegration/skill.md) | Direct | fastq_1 + fastq_2 |
 | [viralmetagenome](../pipelines/viralmetagenome/skill.md) | Direct | fastq_1 + fastq_2 |
 | [viralrecon](../pipelines/viralrecon/skill.md) | Direct | fastq_1 + fastq_2 |
+
+## Inputs refused before launch
+
+`nfclaw run` refuses these before it creates a lock or writes anything into `--outdir`; the agent
+guide gives the one-line rules.
+
+### Output directories and locking
+
+On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling lock (`.{outdir.name}.nfclaw.lock`) around the run. Overlapping or concurrent runs into the same `--outdir` fail fast with an environment error, preventing race conditions or output corruption. Before creating that lock or any run files, explicit local dependencies and samplesheet data paths are checked against output, work, engine-state and log destinations. Keep execution writes outside consumed directories, including nested aliases and directory glob matches; keep data, pipeline code and configuration outside the output tree. Chain preflight also checks its whole output tree before writing its record. Existing output aliases and hard-linked files are inspected too: a different pathname does not establish different data. Declared work/cache trees retain their staged-read policy; input slots within output trees remain protected even when their symlinks point outside. Boundary refusals preserve input files, directory entries and existing logs.
+
+### Input filenames
+
+Explicit local and remote input path fields and schema-declared path parameters are checked for filenames that pinned tasks could interpret as shell syntax. Unsafe staged basenames (including literal wildcards, whitespace, shell operators and leading `-` or `~`) are refused; choose a safely named copy rather than renaming a scientific sample. Local directories and directory glob matches are inspected recursively, including empty subdirectories; unreadable entries, broken links and cycles are refused. Symlink targets and local glob matches receive the same name check. Unicode letters, digits and combining marks and literal `._-+@%=,:~` characters remain supported (with `~` only internally). Nextflow preserves percent escapes in remote basenames; nfclaw preserves them too. HTTP/FTP query suffixes are excluded from the staged name; standalone fragments remain literal filename characters. Object-store keys such as S3 retain query and fragment characters and receive the literal-name check. Parent directory names are not staged as the input basename, but LF/CR in local input paths or resolved targets are refused because Nextflow can turn them into shell lines. Samplesheet paths crossing a directory symlink with `..` must use an explicit absolute parent: Nextflow's lexical normalization may select different data. Ordinary parent traversal is supported; wildcard parents followed by `..` are refused before resolution. URI schemes must start the value, so a local colon parent remains a checksummed local dependency. The separate run-directory space check still applies, and `--allow-spaces` cannot permit LF/CR in launch, output or work paths. Local `file:` URI inputs must be written as absolute filesystem paths so the same filename and replay-dependency checks apply. Values supplied indirectly through configs/profiles, remote glob inventories and remote file contents remain subject to upstream validation.
+
+Audited output-only directory parameters retain basename checks while excluding unrelated
+existing children from input snapshots. These roles are declared in `runner/path_roles.json`
+for exact clean source revisions, never inferred from names or descriptions. Whole-path
+arguments in audited task scripts also validate parent folders and resolved symlink paths.
+HTTP/HTTPS/FTP basenames remain literal even in schema-declared file patterns; object-store
+patterns retain their upstream expansion semantics.
+
+### Sample identities
+
+Metadata identifiers (`meta.id`, patient/sample IDs, genome/database names and legacy sample/patient columns) must start with a letter, digit or underscore and contain only letters, digits, combining marks, dots, underscores or hyphens. Upstream tasks use these values in shell commands and filenames. Choose explicit safe aliases for other identifiers; nfclaw never silently renames scientific samples. This preflight applies to CSV/TSV and flat JSON/YAML records; YAML requires `pip install -e ".[yaml]"`. Local path fields in these records must be absolute, including glob patterns, and their content is included in replay dependency checks. Explicitly supplied auxiliary tables such as `--genome-sheet` and `--databases` receive their own schema validation and local-data dependency checks too. Values supplied by profiles/configs and future chain handoffs are validated by Nextflow when available. Nested input structures remain subject to the pinned nf-schema validation.
+
+### Numeric parameter values
+
+Numeric values supplied through CLI flags, JSON/YAML parameter files and chain specs retain their decimal value when nfclaw writes the parameters Nextflow reads. Decimal notation and scientific notation do not round large integers or underflow small nonzero values to zero. Schema enum/boundary comparisons and numeric CSV/TSV column checks use the emitted decimal value. JSON/YAML nested numeric parameters and recorded chain specs retain it too. Integer values beyond Nextflow's signed 64-bit JSON parser range use decimal notation to prevent wraparound. NaN and infinity remain refused. Nextflow, nf-schema and each scientific tool still determine their own supported ranges and arithmetic precision.

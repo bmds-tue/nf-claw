@@ -250,6 +250,8 @@ Chaining records checksum evidence for the links between stages:
   the handed-over local files and samplesheet in `inputs.sha256`.
 - Upstream outputs are verified against `outputs.sha256` before ingestion by downstream handoffs.
 
+Before feeding stage outputs into a downstream stage, the handoff engine verifies upstream file bytes against `outputs.sha256` and the complete published namespace against `outputs.inventory.json`, including empty directories, entry types and link identities. Local reference handoffs also require the producer's input namespace and byte records. Directory handoffs record their complete boundary inventory, and chain status compares it with the downstream prelaunch inventory after the schema-defined root canonicalization. A whole-run-directory handoff preserves every entry, including execution records; published results remain anchored to their original manifest, while the complete directory is recorded separately at the handoff boundary. Metagenomic assembly handoffs (fetchngs → mag, detaxizer → mag) isolate individual samples (`group: {sample}`) to avoid accidental multi-sample co-assembly pooling.
+
 ### Chain Verification (`nfclaw chain status`)
 ```bash
 nfclaw chain status /abs/chain
