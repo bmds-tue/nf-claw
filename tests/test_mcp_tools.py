@@ -514,3 +514,26 @@ def test_artifact_preview_cannot_escape_when_an_ancestor_is_swapped(
     assert swapped
     assert 'PRIVATE_BYTES_MUST_NOT_ESCAPE' not in text(result)
     assert result.get('isError') or result['structuredContent']['text'] == 'safe counts'
+
+
+def test_run_status_carries_the_parsed_status_record(tools, tmp_path):
+    # Clients branch on how a run ended (`failed (exit status 1)`, `timed out …`, a stop) without
+    # parsing prose: the structured content carries `nfclaw status --json`'s record.
+    logs = tmp_path / "out" / "provenance" / "logs"
+    logs.mkdir(parents=True)
+    (logs / "run.log").write_text(
+        "==> nfclaw run started 2026-10-30T00:00:00+00:00\n"
+        "    console format: prefixed\n"
+        "    pid: 1\n"
+        "| N E X T F L O W  ~  version 26.04.3\n"
+        "==> nfclaw error:\n"
+        "| Nextflow execution failed (exit status 1).\n"
+        "==> nfclaw run finished 2026-10-30T00:01:00+00:00: failed (exit status 1)\n")
+    result = call(tools, "run_status", outdir=str(tmp_path / "out"))
+    view = result["structuredContent"]
+    assert view["state"] == "not successful" and view["exit_code"] == 1
+    assert view["run"]["state"] == "ended"
+    assert view["run"]["outcome"] == "failed (exit status 1)"
+    assert view["run"]["error"] == ["Nextflow execution failed (exit status 1)."]
+    assert view["report"] == text(result) == view["run"]["report"].rstrip("\n")
+    assert text(result).startswith("status: failed (exit status 1)")

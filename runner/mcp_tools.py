@@ -844,10 +844,21 @@ class NfclawTools:
             argv = ["chain", "status", outdir] + (["--quick"] if args.get("quick") else [])
         else:
             argv = ["status", outdir]
-        res = self._cli(argv)
+        res = self._cli([*argv, "--json"])
+        try:
+            record = json.loads(res.stdout)
+        except ValueError:
+            record = None
+        if not isinstance(record, dict) or not isinstance(record.get("report"), str):
+            record, report = None, res.text
+        else:
+            report = "\n".join(part.rstrip("\n") for part in (record["report"], res.stderr)
+                               if part.strip())
         state = {0: "success", 3: "running"}.get(res.code, "not successful")
-        return tool_result(res.text, {"outdir": outdir, "state": state, "exit_code": res.code,
-                                      "report": res.text})
+        # `run` is the parsed `--json` record: the outcome itself (`failed (exit status 1)`, `timed
+        # out after …`), pids, logs, caveats and the recorded error, without reading the report.
+        return tool_result(report, {"outdir": outdir, "state": state, "exit_code": res.code,
+                                    "report": report, "run": record})
 
     def _tool_verify_replay(self, args: dict, ctx: Context) -> dict:
         argv = ["verify", self._path(args["replay"]), f"--against={self._path(args['against'])}"]
