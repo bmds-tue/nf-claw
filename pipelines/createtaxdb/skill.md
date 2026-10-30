@@ -108,4 +108,6 @@ Full list with references: https://github.com/nf-core/createtaxdb/blob/3.1.0/CIT
 nfclaw run createtaxdb --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This pinned test profile reads its genome sheet and taxonomy files from a moving test-datasets branch. For a bare demo, nfclaw stages the same six-genome sheet with immutable FASTA URLs and supplies the taxonomy files from commit `9248a89ada220333b7bc3c7c07af5eb229c16d5b`, every file byte-identical to that branch. The sheet is bundled in provenance, so a replay reads the recorded sheet. Explicit input, taxonomy or MALT map selectors, the test-data base, extra profiles or `--config` disable the fixture. Other releases retain their own defaults.
+
 <!-- Generated from nf-core/createtaxdb@b01a0f8ed96a5990d15470828dfa92a22cf08bba. Do not edit by hand. -->

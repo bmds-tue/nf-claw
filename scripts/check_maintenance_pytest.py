@@ -26,6 +26,10 @@ def allowed_skip(module: str, name: str, reason: str, os_name: str, python: str)
         return True
     if module == 'tests.test_demo_hgtseq' and reason == 'requires the audited hgtseq 1.1.0 source':
         return True
+    if module == 'tests.test_demo_pinned_sheets' and re.fullmatch(
+            r'requires the audited '
+            r'(bamtofastq 2\.2\.1|funcscan 4\.0\.0|createtaxdb 3\.1\.0) source', reason):
+        return True
     if (module == 'tests.test_demo_fastqrepair'
             and reason == 'requires the audited fastqrepair 1.1.1 source'):
         return True

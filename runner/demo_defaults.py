@@ -11,10 +11,19 @@ _TUMOUREVO = ('tumourevo', '180ae5447d0eb0214f650b6fcf7dabed0c77b5a2')
 _HGTSEQ = ('hgtseq', '683daaf41bb396839445e603152b45daa141ced4')
 _FASTQREPAIR = ('fastqrepair', '70a38209407b9367a9ff7ab8b26d84cb1983ea18')
 _BACTMAP = ('bactmap', '834642d8ac150ca10d705833223e7bcf15efc210')
+_CREATETAXDB = ('createtaxdb', 'b01a0f8ed96a5990d15470828dfa92a22cf08bba')
+_FUNCSCAN = ('funcscan', 'aee3dc965eb0c77267435544dda30da858763913')
 _BACTMAP_DATA = '02195cfa96ca496173e9d63dd58e34bf02fcf55a'
 _BACTMAP_BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_BACTMAP_DATA}/'
 _BACTMAP_CHECKER = '2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54'
 _FASTQ_DAMAGE = 'f72c633f2547fdfaf475c7f05423437a7eac0bbf'
+# The moving test-data branches these demos name, pinned at the commits they held when pinned
+# (every file byte-identical to the branch then). Nextflow reads a demo sheet only to validate
+# it, so a remote sheet's consumed bytes are never recorded; a bundled one is.
+_TEST_DATA = 'https://raw.githubusercontent.com/nf-core/test-datasets/'
+_BAMTOFASTQ_DATA = 'e228f0e5412ed0bed20e7a99e1588cbf95f65102'
+_CREATETAXDB_DATA = '9248a89ada220333b7bc3c7c07af5eb229c16d5b'
+_FUNCSCAN_DATA = '6612875ff5d8d54fd0a7532acbfb9dda25edb9b2'
 _HGT_DATA = '800330ec8f47c93caabe8157e20dd23e243de4e1'
 _HGT_BASE = f'https://raw.githubusercontent.com/nf-core/test-datasets/{_HGT_DATA}/testdata/'
 _MODULE_DATA = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
@@ -25,6 +34,14 @@ _REFERENCE = ('https://raw.githubusercontent.com/nf-core/test-datasets/'
 _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
                _BACTMAP: {'reference': _BACTMAP_BASE + 'genome/NCTC13799.fna', 'max_cpus': 1},
                _TUMOUREVO: {'sparsesignatures_k': '2:3'},
+               _CREATETAXDB: {key: f'{_TEST_DATA}{_CREATETAXDB_DATA}/data/taxonomy/{name}'
+                              for key, name in (('accession2taxid', 'nucl_gb.accession2taxid'),
+                                                ('nucl2taxid', 'nucl2tax.map'),
+                                                ('prot2taxid', 'prot.accession2taxid.gz'),
+                                                ('nodesdmp', 'nodes.dmp'),
+                                                ('namesdmp', 'names.dmp'))},
+               _FUNCSCAN: {'amp_hmmsearch_models':
+                           f'{_TEST_DATA}{_FUNCSCAN_DATA}/hmms/mybacteriocin.hmm'},
                _FASTQREPAIR: {'num_splits': 2},
                _HGTSEQ: {'gff': _HGT_BASE + 'reference/Homo_sapiens.hg38.chr21.gff3',
                         'fasta': _MODULE_DATA + 'homo_sapiens/genome/chr21/sequence/genome.fasta',
@@ -33,6 +50,11 @@ _PARAMETERS = {_BAMTOFASTQ: {'fasta': _REFERENCE},
 _DATA_SELECTORS = {_BAMTOFASTQ: {'input', 'genome', 'pipelines_testdata_base_path'},
                    _BACTMAP: {'input', 'reference'},
                    _TUMOUREVO: {'input', 'pipelines_testdata_base_path'},
+                   _CREATETAXDB: {'input', 'pipelines_testdata_base_path', 'accession2taxid',
+                                  'nucl2taxid', 'prot2taxid', 'nodesdmp', 'namesdmp',
+                                  'malt_mapdb'},
+                   _FUNCSCAN: {'input', 'pipelines_testdata_base_path',
+                               'amp_hmmsearch_models'},
                    _FASTQREPAIR: {'input', 'pipelines_testdata_base_path'},
                    _HGTSEQ: {'input', 'genome', 'pipelines_testdata_base_path',
                              'fasta', 'gff', 'krakendb', 'kronadb', 'bwaindex', 'bwamem2index',
@@ -57,7 +79,25 @@ _NOTES = {_BACTMAP:
     '`--fasta` or params-file values override it. Your own input, genome, test-data base, extra '
     'profiles or `--config` '
     'disable this demo default; choose a reference matched to your data. The correction applies '
-    'only to the bundled test plus engine profiles. Other releases retain their own defaults.',
+    'only to the bundled test plus engine profiles. Its two-sample demo sheet is staged from '
+    'immutable test-datasets commit `e228f0e5412ed0bed20e7a99e1588cbf95f65102` (the same bytes '
+    'as the moving branch it names) and bundled in provenance, so a replay reads the recorded '
+    'sheet. Other releases retain their own defaults.',
+    _CREATETAXDB:
+    'This pinned test profile reads its genome sheet and taxonomy files from a moving '
+    'test-datasets branch. For a bare demo, nfclaw stages the same six-genome sheet with '
+    'immutable FASTA URLs and supplies the taxonomy files from commit '
+    '`9248a89ada220333b7bc3c7c07af5eb229c16d5b`, every file byte-identical to that branch. The '
+    'sheet is bundled in provenance, so a replay reads the recorded sheet. Explicit input, '
+    'taxonomy or MALT map selectors, the test-data base, extra profiles or `--config` disable '
+    'the fixture. Other releases retain their own defaults.',
+    _FUNCSCAN:
+    'This pinned test profile reads its two-sample sheet and HMM model from a moving '
+    'test-datasets branch. For a bare demo, nfclaw stages the same sheet with immutable FASTA '
+    'URLs and supplies the HMM model from commit `6612875ff5d8d54fd0a7532acbfb9dda25edb9b2`, '
+    'every file byte-identical to that branch. The sheet is bundled in provenance, so a replay '
+    'reads the recorded sheet. Explicit input, HMM models, the test-data base, extra profiles '
+    'or `--config` disable the fixture. Other releases retain their own defaults.',
     _TUMOUREVO:
     'This pinned test profile misspells `sparsesignatures_K`; the declared parameter is '
     '`sparsesignatures_k`. For its bundled tiny input, nfclaw supplies the intended `2:3` grid '
@@ -139,6 +179,8 @@ def samplesheet(name: str, commit: str | None):
         return _fastqrepair_sheet(name, commit)
     if (name, commit) == _BACTMAP:
         return _bactmap_sheet(name, commit)
+    if (name, commit) in _PINNED_SHEETS:
+        return _pinned_sheet(name, commit)
     if (name, commit) != _HGTSEQ:
         return None
     from runner.sheetgen import Generated
@@ -217,3 +259,56 @@ def _fastqrepair_sheet(name: str, commit: str):
                                        'test_30reads_2': 'damaged_single_end',
                                        'paired_control': 'paired_conservation_control'},
                          'sources': ['bundled:runner.demo_defaults/fastqrepair']})
+
+
+def _bam(name: str) -> str:
+    return (f'{_TEST_DATA}{_BAMTOFASTQ_DATA}/test-datasets/data/genomics/homo_sapiens/illumina/'
+            f'bam/{name}')
+
+
+def _genome(name: str) -> str:
+    return f'{_TEST_DATA}{_CREATETAXDB_DATA}/data/fasta/{name}' if name else ''
+
+
+# The release's own demo sheets, row for row, with each moving data URL replaced by the same file
+# at an immutable commit: (data commit, header, rows, what the rows are).
+_PINNED_SHEETS = {
+    _BAMTOFASTQ: (_BAMTOFASTQ_DATA, ('sample_id', 'mapped', 'index', 'file_type'), tuple(
+        {'sample_id': sample, 'mapped': _bam(f'{sample}.paired_end.sorted.bam'),
+         'index': _bam(f'{sample}.paired_end.sorted.bam.bai'), 'file_type': 'bam'}
+        for sample in ('test', 'test2')), '2 indexed paired-end BAMs'),
+    _FUNCSCAN: (_FUNCSCAN_DATA, ('sample', 'fasta'), tuple(
+        {'sample': sample, 'fasta': f'{_TEST_DATA}{_FUNCSCAN_DATA}/{sample}.fasta.gz'}
+        for sample in ('sample_1', 'sample_2')), '2 contig FASTA samples'),
+    _CREATETAXDB: (_CREATETAXDB_DATA, ('id', 'taxid', 'fasta_dna', 'fasta_aa'), tuple(
+        {'id': genome, 'taxid': taxid, 'fasta_dna': _genome(dna), 'fasta_aa': _genome(aa)}
+        for genome, taxid, dna, aa in (
+            ('Human_Mitochondrial_genome', '9606', 'chrMT.fna', ''),
+            ('SARS-CoV-2_genome', '694009', 'GCA_011545545.1_ASM1154554v1_genomic.fna.gz',
+             'GCA_011545545.1_ASM1154554v1_genomic.faa.gz'),
+            ('Bacteroides_fragilis_genome', '817', 'GCF_016889925.1_ASM1688992v1_genomic.fna.gz',
+             'GCF_016889925.1_ASM1688992v1_genomic.faa.gz'),
+            ('Candidatus_portiera_aleyrodidarum_genome', '91844',
+             'GCF_000292685.1_ASM29268v1_genomic.fna', 'GCF_000292685.1_ASM29268v1_genomic.faa'),
+            ('Haemophilus_influenzae_genome', '727', 'GCF_900478275.1_34211_D02_genomic.fna',
+             'GCF_900478275.1_34211_D02_genomic.faa'),
+            ('Streptococcus_agalactiae_genome', '1311', '',
+             'GCF_002881355.1_ASM288135v1_genomic.faa'))), '6 reference genomes'),
+}
+
+
+def _pinned_sheet(name: str, commit: str):
+    from runner.sheetgen import Generated
+
+    data, header, rows, what = _PINNED_SHEETS[(name, commit)]
+    stream = io.StringIO()
+    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
+    writer.writeheader()
+    writer.writerows(rows)
+    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+                     id_column=header[0], summary=f'Prepared the immutable {name} demo '
+                     f'samplesheet: {what} from test-datasets commit {data[:12]}.',
+                     notes=(), record={'version': 1, 'kind': 'bundled_demo_fixture',
+                                       'pipeline': name, 'pipeline_commit': commit,
+                                       'data_commit': data, 'rows': len(rows), 'files': 0,
+                                       'sources': [f'bundled:runner.demo_defaults/{name}']})
