@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,6 +29,9 @@ class Comparison:
     # The two runs' recorded execution environments compared (runner.environment_record), or None
     # when either run predates the record.
     environment: dict | None = None
+    # Run metadata that launches before the recorded one left in a resumed original's --outdir: a
+    # replay makes one launch, so it never has these, and they are not results of the recorded run.
+    earlier_attempts: list[str] = field(default_factory=list)
 
     @property
     def structurally_equal(self) -> bool:
@@ -145,8 +149,9 @@ def _name_key(path: str) -> tuple | None:
 def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, str]]:
     """(original, replay) files named by the clock or a tool's random name, paired one to one.
 
-    Only an unambiguous pair is matched: when several files share a logical name on either side
-    (an earlier attempt's report beside a resumed one), none of them is paired by guess."""
+    Only an unambiguous pair is matched: when several files share a logical name on either side,
+    none of them is paired by guess. (A resumed original's earlier attempts are set apart before
+    pairing, from its record of the resume: `_earlier_attempts`.)"""
     def keys(paths):
         groups = defaultdict(list)
         for path in paths:
@@ -157,6 +162,26 @@ def _launch_time_pairs(missing: list[str], extra: list[str]) -> list[tuple[str, 
     before, after = keys(missing), keys(extra)
     return sorted((before[key][0], after[key][0]) for key in before.keys() & after.keys()
                   if len(before[key]) == 1 and len(after[key]) == 1)
+
+
+def _resumed(original: Path) -> bool:
+    """Whether the recorded launch continued earlier launches into the same --outdir."""
+    try:
+        manifest = json.loads((original / "provenance/run_manifest.json").read_text(
+            encoding="utf-8"))
+        return "-resume" in shlex.split(manifest["command"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def _earlier_attempts(paths: list[str]) -> set[str]:
+    """Launch-stamped run metadata older than the newest of its kind: each launch writes one, and
+    launches into one --outdir run one after another under its lock, so the newest is the last."""
+    groups = defaultdict(list)
+    for path in paths:
+        if m := _LAUNCH_STAMPED.match(path):
+            groups[(m.group(1), m.group(3))].append((m.group(2), path))
+    return {path for stamped in groups.values() for _, path in sorted(stamped)[:-1]}
 
 
 def compare(original: Path, replay: Path, *, require_environment: bool = False) -> Comparison:
@@ -180,11 +205,18 @@ def compare(original: Path, replay: Path, *, require_environment: bool = False) 
             a, b = original_inventory[name], replay_inventory[name]
             if any(a.get(key) != b.get(key) for key in ("link_target", "resolved_path")):
                 changed_links.append(name)
+    # A resumed original also holds the run metadata of the launches before it (a stopped or failed
+    # attempt's report, trace and params file): set them apart before pairing, or the recorded
+    # launch's own files are ambiguous and every replay of a resumed run reads as incomplete.
+    earlier = _earlier_attempts(sorted(before)) if _resumed(original) else set()
     identical, changed = [], []
     # File paths are part of the inventory. Metadata renames are reported for explicit
     # classification, never silently equated with an identical directory structure.
     for path in sorted(before.keys() & after.keys()):
         (identical if after.pop(path) == before.pop(path) else changed).append(path)
+    earlier &= before.keys()
+    for path in earlier:
+        before.pop(path)
     # A file named by the clock at launch, or by a tool's random name, is the same logical result
     # under a new name: pair it explicitly and compare its bytes, rather than reporting a faithful
     # replay as missing a file.
@@ -210,6 +242,7 @@ def compare(original: Path, replay: Path, *, require_environment: bool = False) 
         changed_links=sorted(changed_links),
         unverified_structure=original_inventory is None,
         environment=_environment(original, replay, require=require_environment),
+        earlier_attempts=sorted(earlier),
     )
 
 
@@ -220,6 +253,8 @@ def report(cmp: Comparison) -> str:
         f"missing   : {len(cmp.missing)}   (in the original, not in the replay)",
         f"extra     : {len(cmp.extra)}   (in the replay, not in the original)",
         f"renamed   : {len(cmp.renamed)}   (launch-time or tool-random names, paired by role)",
+        *([f"earlier attempts : {len(cmp.earlier_attempts)}   (run metadata of launches before "
+           "the resumed original's recorded one; not compared)"] if cmp.earlier_attempts else []),
         f"missing directories : {len(cmp.missing_directories)}",
         f"extra directories   : {len(cmp.extra_directories)}",
         f"changed links       : {len(cmp.changed_links)}   (target identities differ)",
@@ -260,7 +295,8 @@ def report(cmp: Comparison) -> str:
     for label, paths in (("environment mismatches", environment.get("mismatches") or []),
                          ("environment unverified", environment.get("unverified") or []),
                          ("environment notes", environment.get("notes") or []),
-                         ("renamed", cmp.renamed), ("missing", cmp.missing), ("extra", cmp.extra),
+                         ("renamed", cmp.renamed), ("earlier attempts", cmp.earlier_attempts),
+                         ("missing", cmp.missing), ("extra", cmp.extra),
                          ("changed", cmp.changed),
                          ("missing directories", cmp.missing_directories),
                          ("extra directories", cmp.extra_directories),

@@ -40,6 +40,9 @@ each change, are in [`docs/audit/`](docs/audit/).
   Docker/Podman task containers their processes started. Task wrappers killed while `docker stop`
   waited on a container's PID 1 had left every container behind, exited, and with a shorter shutdown
   grace still running.
+- `nfclaw verify` no longer fails every replay of a resumed run: the run metadata that a stopped or
+  failed earlier attempt left in the original's `pipeline_info/` is listed as `earlier attempts`
+  instead of as missing results.
 - Handoffs no longer drop samples silently (bamtofastq → rnaseq single-end files, detaxizer → mag
   single-end sheets), and resuming a chain stage keeps its unchanged handoff and Nextflow cache
   (#218, #219).
