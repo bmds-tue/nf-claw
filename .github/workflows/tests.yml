@@ -26,12 +26,12 @@ jobs:
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
       - uses: ./.github/actions/restore-maintenance-candidate
@@ -39,7 +39,7 @@ jobs:
           artifact: ${{ inputs.candidate_artifact }}
           base: ${{ inputs.base_sha }}
           sha: ${{ inputs.candidate_sha }}
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
       - run: npm --prefix website ci --ignore-scripts --no-audit --no-fund
@@ -75,14 +75,14 @@ jobs:
             --os "$LANE_OS" --python "$LANE_PYTHON" --candidate "$CANDIDATE_SHA" \
             --output "$evidence/record.json"
       - run: ruff check .
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: success() && inputs.candidate_sha != ''
         with:
           name: maintenance-pytest-${{ inputs.candidate_sha }}-${{ matrix.os }}-${{ matrix.python }}
           path: ${{ runner.temp }}/pytest-evidence
           if-no-files-found: error
           retention-days: 90
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always() && (inputs.candidate_sha == '' || failure() || cancelled())
         with:
           name: pytest-diagnostics-${{ inputs.candidate_sha || github.sha }}-${{ matrix.os }}-${{ matrix.python }}-${{ github.run_attempt }}
@@ -96,12 +96,12 @@ jobs:
       run:
         working-directory: website
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
       - uses: ./.github/actions/restore-maintenance-candidate
@@ -109,7 +109,7 @@ jobs:
           artifact: ${{ inputs.candidate_artifact }}
           base: ${{ inputs.base_sha }}
           sha: ${{ inputs.candidate_sha }}
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -138,12 +138,12 @@ jobs:
   nextflow-integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
       - uses: ./.github/actions/restore-maintenance-candidate
