@@ -52,9 +52,25 @@ FastQRepair, HGTseq, Bactmap, Createtaxdb or Funcscan controls to reproduce an o
 
 ## Validation
 
-Focused local regression checks, lint, the 95-pipeline drift gate, the website dependency audit
-and production build pass. The existing 155-check browser/accessibility suite passes locally;
-two focused-row navigation cases are added. Complete local and isolated `denbi_instance` test
-results are recorded after final validation. The server checkout and logs are under
-`/mnt/volume/nfclaw-review-hardening-20261030.65E7ia/`; earlier `repo/` logs concern the old
-review snapshot, while `current/` and `current-*` records concern the current-main candidate.
+The full corrective implementation at `8a12025` passed locally (3,575 passed, three expected
+skips) and on isolated `denbi_instance` storage (3,577 passed, one expected skip). The server
+skip is an obsolete rnasplice source-role audit whose recorded commit is no longer pinned;
+the two additional local skips are Linux-only execution tests. The final follow-up at
+`dbcded2`, covering duplicate secret assignments and null engine inheritance, passed all
+265 focused server regressions. Lint and the 95-pipeline drift gate passed on both hosts.
+
+The website dependency audit, typecheck and production build passed. All 157 server browser
+and accessibility cases passed: 156 on the first run, and the remaining Sarek case on an
+isolated rerun after a browser `ERR_NETWORK_CHANGED` while loading a local script. The
+original failed attempt is retained. All 33 GitHub checks passed on `dbcded2`, including the
+Python 3.11–3.15 Linux/macOS matrix, real Nextflow/container tasks, website and source drift.
+Subsequent main changes are integrated before the final PR checks.
+
+Server evidence is retained under `/mnt/volume/nfclaw-review-hardening-20261030.65E7ia/`:
+`final-pytest.xml`, `final-pytest.log`, `followup-final-pytest.xml`, `final-website.log` and
+`final-website-sarek-retry.log`. The corresponding checkouts are `final/` and `followup/`.
+Earlier `repo/` and `current/` records are exploratory runs, not the final proof. Final PR
+validation and merge status are recorded on [PR #229](https://github.com/bmds-tue/nf-claw/pull/229).
+These checks cover the wrapper, fixtures and selected real-task lanes; they do not establish
+biological correctness for every possible input or claim a fresh end-to-end run of all 95
+pipelines.
