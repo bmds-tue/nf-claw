@@ -90,7 +90,7 @@ script refuses to launch a preview when neither timeout utility is available.
 
 | Requirement | Supported Version | Notes & Invariants |
 |---|---|---|
-| **Operating System** | Linux or macOS | The test suite runs on Ubuntu and macOS (GitHub-hosted runners); pipeline executions are validated on native Linux x86_64 with Docker. On arm64 hosts a pipeline depends on arm64 containers or emulation of amd64 ones, which can fail (see [known-issues](known-issues.md#pipeline-specific-run-notes)). |
+| **Operating System** | Linux or macOS (Windows: inside WSL 2) | `nfclaw run`, `nfclaw chain run` and MCP jobs refuse a Python without POSIX file locks (native Windows) rather than run without their writer locks; Nextflow itself needs WSL 2 there. The test suite runs on Ubuntu and macOS (GitHub-hosted runners); pipeline executions are validated on native Linux x86_64 with Docker. On arm64 hosts a pipeline depends on arm64 containers or emulation of amd64 ones, which can fail (see [known-issues](known-issues.md#pipeline-specific-run-notes)). |
 | **Python** | 3.11+ | Required for `nfclaw` CLI runtime and `librarian`. |
 | **Java** | Java 17+ compatible with the selected engine | CI uses Temurin 17; newer Java releases are not necessarily supported by older pinned engines. See [Nextflow installation requirements](https://docs.seqera.io/nextflow/install#requirements). |
 | **Nextflow** | Latest or matching `--nxf-ver` | Installed on system PATH. |
