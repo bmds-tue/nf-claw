@@ -43,6 +43,14 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `nfclaw verify` no longer fails every replay of a resumed run: the run metadata that a stopped or
   failed earlier attempt left in the original's `pipeline_info/` is listed as `earlier attempts`
   instead of as missing results.
+- `nfclaw verify` pairs the random names `kraken2-build` gives library files when they contain `_`
+  (createtaxdb's Kraken2 and Bracken databases): such a replay had been reported as missing them
+  (#226).
+- The createtaxdb, bamtofastq and funcscan demos stage their sample sheets from immutable
+  test-datasets commits, recorded in provenance, instead of the moving branches their test profiles
+  validate, so `nfclaw verify --require-environment` accepts their replays (#226).
+- On the website, a tap on the menu or on Search right after a page loaded was undone or reached
+  no listener, and did nothing (#221).
 - Handoffs no longer drop samples silently (bamtofastq → rnaseq single-end files, detaxizer → mag
   single-end sheets), and resuming a chain stage keeps its unchanged handoff and Nextflow cache
   (#218, #219).
