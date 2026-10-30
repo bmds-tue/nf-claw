@@ -36,6 +36,13 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- MCP rejects malformed arguments, invalid request IDs and nonfinite JSON constants, and keeps
+  ping responsive while long-running tools wait. Replay verification reports damaged or
+  insufficient environment evidence as unverified, checks image coverage in both directions,
+  and no longer lets a missing legacy counterpart hide corrupt observations. Chain options
+  and resource limits reject invalid types before launch with actionable parameter errors.
+  The reproductions and validation limits are in the
+  [boundary-integrity audit](docs/audit/2026-10-30-boundary-integrity-audit.md).
 - A stopped run (Ctrl-C, `kill`, `--timeout`, MCP `cancel_job`) and a stopped replay remove the
   Docker/Podman task containers their processes started. Task wrappers killed while `docker stop`
   waited on a container's PID 1 had left every container behind, exited, and with a shorter shutdown

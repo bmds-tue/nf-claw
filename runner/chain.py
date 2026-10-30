@@ -143,18 +143,22 @@ def _parse_options(raw: dict, where: str) -> dict:
             raise _bad(f"{where}: 'limits.cpus' must be a whole number")
     if "config" in raw:
         configs = [] if raw["config"] is None else raw["config"]
-        if not isinstance(configs, list) or not all(isinstance(c, str) for c in configs):
+        if not isinstance(configs, list) or not all(
+                isinstance(c, str) and c.strip() for c in configs):
             raise _bad(f"{where}: 'config' must list Nextflow config file paths")
         out["configs"] = tuple(_abs(c) for c in configs)
     missing: list[str] = []
+    supplied_env = {} if raw.get("nxf_env") is None else raw["nxf_env"]
+    if not isinstance(supplied_env, dict):
+        raise _bad(f"{where}: 'nxf_env' must be an object of NXF_* variables")
     try:
         if "nxf_env" in raw:
-            env = resources.parse_nxf_env(raw["nxf_env"] or {})
+            env = resources.parse_nxf_env(supplied_env)
             missing = [key for key, value in env.items() if value == "<redacted>"
                        and (not os.environ.get(key) or os.environ[key] == "<redacted>")]
             out["nxf_env"] = {key: os.environ.get(key, value) if value == "<redacted>" else value
                               for key, value in env.items()}
-        if raw.get("nxf_ver"):
+        if "nxf_ver" in raw and raw["nxf_ver"] is not None:
             out["nxf_ver"] = resources.check_nxf_version(raw["nxf_ver"])
         if "limits" in raw:
             lim = raw["limits"] or {}

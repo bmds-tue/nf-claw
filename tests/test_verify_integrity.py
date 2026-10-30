@@ -257,3 +257,70 @@ def test_complete_environment_refuses_malformed_supplied_image_identity(tmp_path
         (outdir / 'provenance/environment.json').write_text(json.dumps(record))
     assert cli.main(['verify', str(replay), '--against', str(original),
                      '--require-environment']) == 1
+
+
+@pytest.mark.parametrize('damage', ['json', 'encoding', 'nonobject', 'empty', 'directory',
+                                    'unsupported_version'])
+@pytest.mark.parametrize('side', ['original', 'replay'])
+def test_strict_verification_refuses_existing_damaged_environment_evidence(
+        tmp_path, capsys, damage, side):
+    original = _run(tmp_path, 'original', {'result.txt': b'same'})
+    replay = _run(tmp_path, 'replay', {'result.txt': b'same'})
+    _complete_environment(original)
+    _complete_environment(replay)
+    path = (original if side == 'original' else replay) / 'provenance/environment.json'
+    if damage == 'json':
+        path.write_text('{broken')
+    elif damage == 'encoding':
+        path.write_bytes(b'\xff')
+    elif damage == 'directory':
+        path.unlink()
+        path.mkdir()
+    else:
+        path.write_text(json.dumps({'nonobject': [], 'empty': {},
+                                    'unsupported_version': {'version': 999}}[damage]))
+    comparison = verify.compare(original, replay)
+    assert comparison.environment['status'] == 'unverified'
+    assert not comparison.same_environment
+    args = ['verify', str(replay), '--against', str(original)]
+    assert cli.main(args + ['--strict']) == 1
+    assert 'environment unverified:' in capsys.readouterr().out
+    assert cli.main(args) == 0
+
+
+@pytest.mark.parametrize('record', [{}, {'version': 999}])
+def test_damaged_environment_is_not_hidden_by_an_absent_legacy_record(tmp_path, record):
+    original = _run(tmp_path, 'original', {'result.txt': b'same'})
+    replay = _run(tmp_path, 'replay', {'result.txt': b'same'})
+    (replay / 'provenance/environment.json').write_text(json.dumps(record))
+    assert cli.main(['verify', str(replay), '--against', str(original), '--strict']) == 1
+
+
+def test_missing_legacy_environment_still_allows_strict_output_verification(tmp_path):
+    original = _run(tmp_path, 'original', {'result.txt': b'same'})
+    replay = _run(tmp_path, 'replay', {'result.txt': b'same'})
+    _environment(replay, 'a')
+    assert cli.main(['verify', str(replay), '--against', str(original), '--strict']) == 0
+
+
+@pytest.mark.parametrize('side', ['original', 'replay'])
+@pytest.mark.parametrize('damage', ['digest', 'missing_image', 'unresolved_image', 'tasks'])
+def test_missing_legacy_side_cannot_hide_damaged_consumed_image_evidence(
+        tmp_path, side, damage):
+    original = _run(tmp_path, 'original', {'result.txt': b'same'})
+    replay = _run(tmp_path, 'replay', {'result.txt': b'same'})
+    recorded = original if side == 'original' else replay
+    record = _complete_environment(recorded)
+    if damage == 'digest':
+        record['images']['quay.io/a:1']['digest'] = 'invalid'
+    elif damage == 'missing_image':
+        record['images'] = {}
+    elif damage == 'unresolved_image':
+        record['images']['quay.io/a:1'] = {'kind': 'unresolved'}
+    else:
+        record['processes']['P:A']['tasks'] = False
+    (recorded / 'provenance/environment.json').write_text(json.dumps(record))
+    comparison = verify.compare(original, replay)
+    assert comparison.environment['status'] == 'unverified'
+    assert not comparison.same_environment
+    assert cli.main(['verify', str(replay), '--against', str(original), '--strict']) == 1

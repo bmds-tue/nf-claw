@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "audited_base": "9cec9c81c33b88d61e34e997a0e22d86ea6ded90",
+  "scope": "boundary validation and recorded environment integrity",
+  "finding_groups": [
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "D05",
+    "D06",
+    "D07",
+    "D08",
+    "D09",
+    "D10"
+  ],
+  "checks": {
+    "focused_combined": {
+      "passed": 243,
+      "command": "python -m pytest tests/test_environment_comparison_integrity.py tests/test_verify_integrity.py tests/test_container_watch.py tests/test_reproducibility.py tests/test_mcp_server.py tests/test_mcp_tools.py"
+    },
+    "chain_options": {
+      "passed": 50
+    },
+    "native_replay_review_case": {
+      "passed": 1,
+      "engine": "25.10.4"
+    },
+    "drift": {
+      "exit_code": 0,
+      "initialized_pins": 95
+    },
+    "lint": {
+      "exit_code": 0
+    },
+    "npm_audit": {
+      "vulnerabilities": 0
+    },
+    "website": {
+      "browser_passed": 155,
+      "typecheck_exit_code": 0,
+      "build_exit_code": 0,
+      "llms_matches": true
+    },
+    "full_suite": {
+      "passed": 3673,
+      "skipped": [
+        {
+          "module": "tests.test_execution",
+          "name": "test_teardown_kills_a_task_that_outlives_sigterm",
+          "reason": "reads process state from /proc"
+        },
+        {
+          "module": "tests.test_execution",
+          "name": "test_nextflow_does_not_outlive_an_nfclaw_killed_with_sigkill",
+          "reason": "PR_SET_PDEATHSIG is Linux-only"
+        },
+        {
+          "module": "tests.test_legacy_sheet_paths",
+          "name": "test_audited_schema_roles_match_the_pins_and_capture_each_data_cell[rnasplice:assets/schema_input.json]",
+          "reason": "rnasplice is no longer pinned at the audited commit 1d0494ae3402"
+        }
+      ],
+      "report_sha256": "bbb6f0a7640a70fc7b00ef0c48e5f10ebe4fb173106ec4722c6682f6530a0ac4",
+      "collected": 3676,
+      "failed": 0,
+      "errors": 0,
+      "seconds": 1137.11,
+      "command": "python -m pytest -o addopts= -q -ra --junitxml=pytest.xml"
+    },
+    "native": {
+      "tests.test_nextflow_integration": 55,
+      "tests.test_git_path_identity": 20,
+      "tests.test_timeout_integration": 2
+    }
+  },
+  "limits": [
+    "Docker daemon unavailable; no fresh 95-pipeline container execution",
+    "Linux and other Python-version CI lanes not executed locally",
+    "Scientific biological correctness outside wrapper-test scope"
+  ],
+  "runtime": {
+    "python": "3.13.5",
+    "node": "24.19.0",
+    "nextflow_native_engines": [
+      "25.10.4",
+      "26.04.0"
+    ],
+    "platform": "macOS arm64"
+  },
+  "source_sha256": {
+    "runner/chain.py": "3fb7a9c8cb81de06d1a1a0490203b6ae164f5e917447625b97df4f28015bc96c",
+    "runner/environment_record.py": "07c3599fe324743e6d2b6ad0355575255c82de2cd5daad15221bf64763894941",
+    "runner/mcp_server.py": "e0ddaec4771ed517b76485cfe5c994216cdf6e769ec37e4abc4d99d859bb817a",
+    "runner/resources.py": "9e644be7c37a1e5313602a97e8c03062b3566eb578a290ff94b722092522a0c6",
+    "runner/verify.py": "48bda2459b5a660e7d1362ad7d808e169f019247823a1c62e05640c3ec9041e9",
+    "tests/test_git_path_identity.py": "ddbc61d6c1d8d87c99d829a6b37438ceee28442887a4e6c4f1812790eb7718ed",
+    "tests/test_mcp_server.py": "a5a8658e0caaee17794ba8c831c38f701b6ee0151a796e77c3d696f759989502",
+    "tests/test_verify_integrity.py": "34c62bd1fe740e431f3bb4a23112af7038ccb902f86bbe9e7f87fcfd6c057933",
+    "tests/test_chain_option_validation.py": "74c70814ecdc01f4a346f8e9a2011f8a25472d0baacf923c5e871b77f1eaf01a",
+    "tests/test_environment_comparison_integrity.py": "bc0d986a41ceddec1bad20f9cb2640a39e1d2bf4f5274fd6d08732c10f4eae8e"
+  }
+}
