@@ -571,9 +571,18 @@ def pin_config(record: dict) -> str | None:
 
 
 def _identity(image: dict | None):
-    if not image or image.get("kind") in ("unresolved", "multiple"):
+    if not isinstance(image, dict):
         return None
-    return image
+    if image.get("kind") == "registry":
+        if (any(image.get(key) for key in ("digest", "id"))
+                and all(image.get(key) is None or isinstance(image[key], str)
+                        and _DIGEST.fullmatch(image[key]) for key in ("digest", "id"))):
+            return image
+    elif image.get("kind") == "file":
+        if isinstance(image.get("sha256"), str) and re.fullmatch(
+                r"[0-9a-f]{64}", image["sha256"]):
+            return image
+    return None
 
 
 def _same_image(original: dict, replay: dict) -> bool | None:
@@ -660,12 +669,63 @@ def completeness_issues(record) -> list[str]:
     return issues
 
 
+def comparison_issues(record) -> list[str]:
+    """Validate supplied comparison fields, without requiring newer optional evidence."""
+    if not isinstance(record, dict) or not record:
+        return ["no readable environment object was recorded"]
+    issues = []
+    if "version" in record and (type(record["version"]) is not int
+                                or record["version"] != VERSION):
+        issues.append("unsupported environment record version")
+    for field in ("processes", "images", "remote_inputs", "container_engine"):
+        if (field in record and not isinstance(record[field], dict)
+                and not (field == "container_engine" and record[field] is None)):
+            issues.append(f"{field} is not an object")
+    for field in ("nextflow_plugins", "issues"):
+        if field in record and (not isinstance(record[field], list)
+                                or any(not isinstance(value, str) for value in record[field])):
+            issues.append(f"{field} is not a list of strings")
+    processes = record.get("processes")
+    if isinstance(processes, dict):
+        for name, process in processes.items():
+            containers = process.get("containers") if isinstance(process, dict) else None
+            if (not isinstance(name, str) or not isinstance(containers, list)
+                    or any(not isinstance(value, str) or not value for value in containers)):
+                issues.append(f"{name}: malformed process container inventory")
+            if isinstance(process, dict):
+                for field, minimum in (("tasks", 1), ("without_container", 0)):
+                    if field in process and (type(process[field]) is not int
+                                              or process[field] < minimum):
+                        issues.append(f"{name}: malformed process {field} count")
+    remote = record.get("remote_inputs")
+    if isinstance(remote, dict):
+        for source, entry in remote.items():
+            if (not isinstance(source, str) or not isinstance(entry, dict)
+                    or "sha256" in entry and (not isinstance(entry["sha256"], str)
+                                              or not re.fullmatch(r"[0-9a-f]{64}",
+                                                                  entry["sha256"]))):
+                issues.append(f"remote input {source}: malformed consumed-byte evidence")
+    return issues
+
+
 def compare(original: dict, replay: dict) -> dict:
     """What differs between a recorded execution environment and a replay's."""
     mismatches, unverified, notes = [], [], []
-    recorded_plugins = original.get("nextflow_plugins") or []
-    replay_plugins = replay.get("nextflow_plugins") or []
-    if recorded_plugins != replay_plugins:
+    for side, record in (("original", original), ("replay", replay)):
+        unverified.extend(f"{side}: {issue}" for issue in comparison_issues(record))
+    if unverified:
+        return {"version": VERSION, "status": "unverified", "mismatches": [],
+                "unverified": unverified, "notes": []}
+    for side, record in (("original", original), ("replay", replay)):
+        if "nextflow_plugins" not in record:
+            unverified.append(f"{side}: the plugin inventory was not recorded")
+        engine = record.get("container_engine") or {}
+        if not isinstance(engine.get("name"), str) or not engine["name"].strip():
+            unverified.append(f"{side}: the container engine name was not recorded")
+    recorded_plugins = original.get("nextflow_plugins")
+    replay_plugins = replay.get("nextflow_plugins")
+    if (recorded_plugins is not None and replay_plugins is not None
+            and recorded_plugins != replay_plugins):
         mismatches.append("Nextflow plugins differ: recorded "
                           f"{', '.join(recorded_plugins) or 'none'}; replay "
                           f"{', '.join(replay_plugins) or 'none'}")
@@ -674,20 +734,24 @@ def compare(original: dict, replay: dict) -> dict:
                      f"replay {replay.get('nextflow_runtime')}")
     recorded_engine = (original.get("container_engine") or {}).get("name")
     replay_engine = (replay.get("container_engine") or {}).get("name")
-    if recorded_engine != replay_engine:
+    if (isinstance(recorded_engine, str) and recorded_engine.strip()
+            and isinstance(replay_engine, str) and replay_engine.strip()
+            and recorded_engine != replay_engine):
         mismatches.append(f"container engine differs: recorded "
                           f"{recorded_engine}; replay {replay_engine}")
     recorded, replayed = original.get("processes") or {}, replay.get("processes") or {}
-    if bool(recorded) != bool(replayed):
-        side = "recording" if not recorded else "replay"
-        unverified.append(f"the {side} holds no task records to compare containers with"
-                          + "".join(f"; {issue}" for issue in
-                                    ((original if not recorded else replay).get("issues") or [])))
+    for side, record in (("recording", original), ("replay", replay)):
+        if not record.get("processes"):
+            unverified.insert(0, f"the {side} holds no task records to compare containers with"
+                              + "".join(f"; {issue}" for issue in record.get("issues", [])))
     for process in sorted(recorded.keys() & replayed.keys()):
         before = [_identity(original.get("images", {}).get(name))
                   for name in recorded[process].get("containers", [])]
         after = [_identity(replay.get("images", {}).get(name))
                  for name in replayed[process].get("containers", [])]
+        if (not before or not after or recorded[process].get("without_container")
+                or replayed[process].get("without_container")):
+            unverified.append(f"{process}: incomplete or containerless process evidence")
         if not before and not after:
             continue
         if len(before) != len(after) or (bool(before) != bool(after)):
@@ -698,10 +762,13 @@ def compare(original: dict, replay: dict) -> dict:
             unverified.append(f"{process}: the image identity was not recorded in both runs")
             continue
         verdicts = []
-        for image in before:
-            results = [_same_image(image, other) for other in after]
-            verdicts.append(True if True in results else
-                            False if all(result is False for result in results) else None)
+        # Several references can name one immutable image. Check both directions so those
+        # aliases cannot hide a distinct image that appeared only in the replay.
+        for images, others in ((before, after), (after, before)):
+            for image in images:
+                results = [_same_image(image, other) for other in others]
+                verdicts.append(True if True in results else
+                                False if all(result is False for result in results) else None)
         if False in verdicts:
             mismatches.append(f"{process}: ran {', '.join(replayed[process]['containers'])}, "
                               f"another image than the recorded "
@@ -750,11 +817,16 @@ def verify_replay(bundle: Path, target: Path) -> int:
 
     Exit status 0: identical, or not decidable for some entries (reported); 3: it differs.
     """
+    original = None
+    record_path = bundle / RECORD_NAME
     try:
-        original = json.loads((bundle / RECORD_NAME).read_text(encoding="utf-8"))
+        original = json.loads(record_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        print("nfclaw replay: the bundle records no execution environment; nothing to compare")
-        return 0
+        if not record_path.is_symlink():
+            print("nfclaw replay: the bundle records no execution environment; nothing to compare")
+            return 0
+    except (OSError, ValueError):
+        pass  # Existing, unreadable evidence is unverified, not an absent legacy record.
     manifest = {}
     try:
         manifest = json.loads((bundle / "run_manifest.json").read_text(encoding="utf-8"))

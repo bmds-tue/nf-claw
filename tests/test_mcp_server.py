@@ -154,6 +154,41 @@ def test_protocol_errors_carry_the_jsonrpc_codes(session):
     assert session.request(5, "resources/read", {"uri": "x://b"})["error"]["code"] == -32002
 
 
+@pytest.mark.parametrize("method,name", [("tools/call", "echo"), ("prompts/get", "p")])
+@pytest.mark.parametrize("arguments", [None, [], "", False, 0, [1], "text", True, 1])
+def test_supplied_nonobject_arguments_are_rejected(session, method, name, arguments):
+    reply = session.request(1, method, {"name": name, "arguments": arguments})
+    assert reply.get("error", {}).get("code") == -32602, reply
+    assert session.request(2, "ping")["result"] == {}
+
+
+@pytest.mark.parametrize("method,name", [("tools/call", "echo"), ("prompts/get", "p")])
+@pytest.mark.parametrize("params", [{}, {"arguments": {}}])
+def test_arguments_may_be_omitted_or_an_empty_object(session, method, name, params):
+    reply = session.request(1, method, {"name": name, **params})
+    assert "result" in reply, reply
+    if method == "tools/call":
+        assert reply["result"]["structuredContent"] == {"arguments": {}}
+
+
+@pytest.mark.parametrize("rid", [True, False, [], {"invalid": "id"}])
+def test_invalid_request_ids_are_rejected_without_echoing_them(session, rid):
+    session.send({"jsonrpc": "2.0", "id": rid, "method": "ping"})
+    reply = session.recv()
+    assert reply["id"] is None and reply.get("error", {}).get("code") == -32600, reply
+    assert session.request(2, "ping")["result"] == {}
+
+
+@pytest.mark.parametrize("message", [{"method": "ping"},
+                                     {"jsonrpc": "2.0", "method": 7},
+                                     {"jsonrpc": "2.0"}])
+def test_malformed_messages_without_ids_receive_invalid_request_errors(session, message):
+    session.send(message)
+    reply = session.recv(timeout=1)
+    assert reply["id"] is None and reply["error"]["code"] == -32600
+    assert session.request(2, "ping")["result"] == {}
+
+
 def test_a_message_nested_too_deeply_to_parse_is_a_parse_error_not_a_dead_server(session):
     # The parser raises RecursionError, not ValueError, past its nesting limit: the read loop let it
     # escape and the server exited, leaving every later request unanswered.
@@ -415,6 +450,8 @@ def test_eight_long_polls_leave_ping_status_and_cancellation_responsive():
         with handler.ready:
             assert handler.ready.wait_for(lambda: handler.started == 8, timeout=5)
         assert client.request(20, 'ping', timeout=1)['result'] == {}
+        assert client.request(23, 'ping', {'name': 'get_job', 'arguments': {
+            'wait_seconds': 30}}, timeout=1)['result'] == {}
         for rid, name in [(21, 'get_job'), (22, 'cancel_job')]:
             reply = client.request(rid, 'tools/call',
                                    {'name': name, 'arguments': {'wait_seconds': 0}}, timeout=1)
@@ -459,3 +496,27 @@ def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
         assert reply['result']['content'][0]['text'] == 'stop requested'
     finally:
         client.close()
+
+
+@pytest.mark.parametrize('token', ['NaN', 'Infinity', '-Infinity'])
+def test_nonfinite_json_constants_are_parse_errors_and_do_not_end_the_session(session, token):
+    session.send(('{"jsonrpc":"2.0","id":' + token + ',"method":"ping"}').encode())
+    reply = session.recv()
+    assert reply['id'] is None
+    assert reply['error']['code'] == mcp_server.PARSE_ERROR
+    assert session.request('after', 'ping')['result'] == {}
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), float('-inf')])
+def test_direct_requests_cannot_echo_nonfinite_ids(session, value):
+    result = session.server.handle({'jsonrpc': '2.0', 'id': value, 'method': 'ping'})
+    assert result['id'] is None
+    assert result['error']['code'] == mcp_server.INVALID_REQUEST
+
+
+def test_finite_decimal_ids_remain_exact(session):
+    from decimal import Decimal
+
+    value = Decimal('1e10000')
+    result = session.server.handle({'jsonrpc': '2.0', 'id': value, 'method': 'ping'})
+    assert result['id'] == value and result['result'] == {}

@@ -18,11 +18,13 @@ and the server keeps its stdout to itself: see `serve_stdio`.
 from __future__ import annotations
 
 import os
+import math
 import sys
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -191,7 +193,7 @@ class Server:
                 if not line:
                     continue
                 try:
-                    message = json.loads(line)
+                    message = json.loads(line, parse_constant=_invalid_json_constant)
                 except (ValueError, RecursionError) as exc:  # nesting too deep for the parser
                     self._send(_error(None, PARSE_ERROR, f"parse error: {exc}"))
                     continue
@@ -233,7 +235,9 @@ class Server:
             if response is not None:
                 self._send(response)
         elif isinstance(message, dict) and "id" not in message:
-            self.handle(message)
+            response = self.handle(message)
+            if response is not None:
+                self._send(response)
         else:
             if isinstance(message, dict):
                 self._track(message)
@@ -243,13 +247,17 @@ class Server:
             arguments = arguments if isinstance(arguments, dict) else {}
             tool = params.get("name")
             wait = arguments.get("wait_seconds", 0)
-            waiting = (isinstance(tool, str) and tool not in self._control_tools
+            waiting = (isinstance(message, dict) and message.get("method") == "tools/call"
+                       and isinstance(tool, str) and tool not in self._control_tools
                        and ((tool in self._waiting_tools and arguments.get("wait_seconds") != 0)
                             or isinstance(wait, (int, float)) and wait > 0))
             pool = self._wait_pool if waiting else self._pool
             pool.submit(self._serve_one, message)
 
     def _track(self, message: dict) -> None:
+        if (message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str)
+                or message.get("id") is not None and _reply_id(message) is None):
+            return                                    # malformed messages have no request to cancel
         params = message.get("params") if isinstance(message.get("params"), dict) else {}
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
         ctx = Context(protocol_version=self.protocol_version, _notify=self._notify,
@@ -286,17 +294,18 @@ class Server:
             replies = [r for r in (self.handle(m) for m in message) if r is not None]
             return replies or None
         if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-            return _error(message.get("id") if isinstance(message, dict) else None,
+            return _error(_reply_id(message),
                           INVALID_REQUEST, "not a JSON-RPC 2.0 message")
         method = message.get("method")
-        if "id" not in message:
-            if isinstance(method, str):
-                self._notification(method, message.get("params") or {})
-            return None                               # a notification, or a response to us
-        rid = message["id"]
         if not isinstance(method, str):
-            return None if ("result" in message or "error" in message) else \
-                _error(rid, INVALID_REQUEST, "request without a method")
+            return None if ("id" in message and ("result" in message or "error" in message)) else \
+                _error(_reply_id(message), INVALID_REQUEST, "request without a method")
+        if "id" not in message:
+            self._notification(method, message.get("params") or {})
+            return None                               # a notification
+        rid = message["id"]
+        if rid is not None and _reply_id(message) is None:
+            return _error(None, INVALID_REQUEST, "invalid request id")
         params = message.get("params", {})
         if params is None:
             params = {}
@@ -395,7 +404,7 @@ class Server:
         if method == "tools/list":
             return {"tools": [_shape_tool(t, ctx.protocol_version) for t in h.list_tools(ctx)]}
         if method == "tools/call":
-            name, arguments = params.get("name"), params.get("arguments") or {}
+            name, arguments = params.get("name"), params.get("arguments", {})
             if not isinstance(name, str):
                 raise RpcError(INVALID_PARAMS, "tools/call needs a tool name")
             if not isinstance(arguments, dict):
@@ -436,7 +445,7 @@ class Server:
         if method == "prompts/list":
             return {"prompts": h.list_prompts(ctx)}
         if method == "prompts/get":
-            name, arguments = params.get("name"), params.get("arguments") or {}
+            name, arguments = params.get("name"), params.get("arguments", {})
             if not isinstance(name, str) or not isinstance(arguments, dict):
                 raise RpcError(INVALID_PARAMS, "prompts/get needs a name and an arguments object")
             return h.get_prompt(name, arguments, ctx)
@@ -479,7 +488,14 @@ def _reply_id(message: Any) -> Any:
     """The id to answer a message with: its own when JSON-RPC allows one (string, number, null),
     else null, as for a message whose id cannot be determined."""
     rid = message.get("id") if isinstance(message, dict) else None
+    if (isinstance(rid, float) and not math.isfinite(rid)
+            or isinstance(rid, Decimal) and not rid.is_finite()):
+        return None
     return rid if isinstance(rid, (str, *json.NUMBER_TYPES)) and not isinstance(rid, bool) else None
+
+
+def _invalid_json_constant(token: str):
+    raise ValueError(f"non-finite JSON number: {token}")
 
 
 def _error(rid: Any, code: int, message: str, data: Any = None) -> dict:

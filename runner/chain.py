@@ -143,17 +143,18 @@ def _parse_options(raw: dict, where: str) -> dict:
             raise _bad(f"{where}: 'limits.cpus' must be a whole number")
     if "config" in raw:
         configs = [] if raw["config"] is None else raw["config"]
-        if not isinstance(configs, list) or not all(isinstance(c, str) for c in configs):
+        if not isinstance(configs, list) or not all(
+                isinstance(c, str) and c.strip() for c in configs):
             raise _bad(f"{where}: 'config' must list Nextflow config file paths")
         out["configs"] = tuple(_abs(c) for c in configs)
     missing: list[str] = []
-    if "nxf_env" in raw and (not isinstance(raw["nxf_env"], dict)
-                            or not all(isinstance(k, str) and isinstance(v, str)
-                                       for k, v in raw["nxf_env"].items())):
+    supplied_env = {} if raw.get("nxf_env") is None else raw["nxf_env"]
+    if not isinstance(supplied_env, dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in supplied_env.items()):
         raise _bad(f"{where}: 'nxf_env' must be a string-to-string object")
     try:
         if "nxf_env" in raw:
-            env = resources.parse_nxf_env(raw["nxf_env"])
+            env = resources.parse_nxf_env(supplied_env)
             missing = [key for key, value in env.items() if value == "<redacted>"
                        and (not os.environ.get(key) or os.environ[key] == "<redacted>")]
             out["nxf_env"] = {key: os.environ.get(key, value) if value == "<redacted>" else value
