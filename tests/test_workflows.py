@@ -288,7 +288,7 @@ def test_every_pytest_lane_runs_the_whole_suite_on_every_core():
                   if step.get('name') == 'Execute the complete Python suite')
     [command] = [line.strip() for line in script.splitlines() if line.strip().startswith('pytest')]
     words = shlex.split(command)
-    assert words[:4] == ['pytest', '-q', '-n', 'auto']
+    assert words[:6] == ['pytest', '-q', '-n', 'auto', '--dist', 'worksteal']
     assert not {'-k', '-m', '-x', '--lf', '--ff'} & set(words)
     dev = re.search(r'^dev = \[(.*)\]$', (ROOT / 'pyproject.toml').read_text(encoding='utf-8'),
                     re.M).group(1)

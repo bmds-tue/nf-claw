@@ -36,9 +36,10 @@ each change, are in [`docs/audit/`](docs/audit/).
   instead of running without their writer locks; use WSL 2 there.
 - Generated parameter tables write patterns, defaults and allowed values as code spans, so they
   render as the values nf-schema enforces (#219).
-- Each CI test lane runs the complete suite on all of its runner's cores (`pytest -n auto`,
-  pytest-xdist in the `dev` extra) and still reports every case; the suite ran one test at a time
-  for 16–34 minutes a lane.
+- Each CI test lane runs the complete suite on all of its runner's cores (`pytest -n auto
+  --dist worksteal`, pytest-xdist in the `dev` extra) and still reports every case; the suite ran
+  one test at a time for 16–34 minutes a lane. On the validation server, four workers took 9
+  minutes instead of 29.
 
 ### Fixed
 

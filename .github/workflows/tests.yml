@@ -70,8 +70,10 @@ jobs:
           set -euo pipefail
           evidence="$RUNNER_TEMP/pytest-evidence/$LANE_OS-$LANE_PYTHON"
           mkdir -p "$evidence"
-          # One worker per runner core (pytest-xdist); the report still holds every case.
-          pytest -q -n auto --junitxml="$evidence/report.xml"
+          # One worker per runner core (pytest-xdist); idle workers take queued tests from busy
+          # ones (worksteal), so the slow Nextflow integration tests do not leave one worker
+          # running alone at the end. The report still holds every case.
+          pytest -q -n auto --dist worksteal --junitxml="$evidence/report.xml"
           python scripts/check_maintenance_pytest.py --report "$evidence/report.xml" \
             --os "$LANE_OS" --python "$LANE_PYTHON" --candidate "$CANDIDATE_SHA" \
             --output "$evidence/record.json"

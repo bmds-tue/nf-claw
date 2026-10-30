@@ -12,7 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 # `mcp` is the official MCP SDK, used only to test `nfclaw mcp` against a real client. Ruff is held
 # to one minor series: a new release adds stable rules to the selected families (`B`, `UP`).
-# pytest-xdist runs the suite on every core (`pytest -n auto`), as the CI lanes do.
+# pytest-xdist runs the suite on every core (`pytest -n auto --dist worksteal`), as CI does.
 dev = ["pytest>=8", "pytest-xdist>=3.6,<4", "mcp>=1.9,<3", "ruff>=0.17,<0.18"]
 yaml = ["pyyaml>=6"]
 scientific = ["pysam>=0.24.1,<0.25", "h5py>=3.16,<4"]
