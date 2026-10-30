@@ -70,7 +70,8 @@ jobs:
           set -euo pipefail
           evidence="$RUNNER_TEMP/pytest-evidence/$LANE_OS-$LANE_PYTHON"
           mkdir -p "$evidence"
-          pytest -q --junitxml="$evidence/report.xml"
+          # One worker per runner core (pytest-xdist); the report still holds every case.
+          pytest -q -n auto --junitxml="$evidence/report.xml"
           python scripts/check_maintenance_pytest.py --report "$evidence/report.xml" \
             --os "$LANE_OS" --python "$LANE_PYTHON" --candidate "$CANDIDATE_SHA" \
             --output "$evidence/record.json"

@@ -277,3 +277,19 @@ def test_code_scanning_covers_every_language_in_the_repository():
                                                                "javascript-typescript", "python"}
     assert "security-events: write" in _job(text, "analyze")
     assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false")
+
+
+def test_every_pytest_lane_runs_the_whole_suite_on_every_core():
+    # Each of the ten lanes ran the full suite one test at a time on a multi-core runner (16 to
+    # 34 minutes a lane). The lanes split it over the cores and still report every case, unfiltered.
+    yaml = pytest.importorskip('yaml')
+    steps = yaml.load(_text('tests.yml'), Loader=yaml.BaseLoader)['jobs']['pytest']['steps']
+    script = next(step['run'] for step in steps
+                  if step.get('name') == 'Execute the complete Python suite')
+    [command] = [line.strip() for line in script.splitlines() if line.strip().startswith('pytest')]
+    words = shlex.split(command)
+    assert words[:4] == ['pytest', '-q', '-n', 'auto']
+    assert not {'-k', '-m', '-x', '--lf', '--ff'} & set(words)
+    dev = re.search(r'^dev = \[(.*)\]$', (ROOT / 'pyproject.toml').read_text(encoding='utf-8'),
+                    re.M).group(1)
+    assert '"pytest-xdist' in dev
