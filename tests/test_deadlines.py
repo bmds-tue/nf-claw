@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from runner import budget, chain, orchestration, probes, provenance
+from runner import atomic, budget, chain, orchestration, probes, provenance
 from runner.errors import ErrorCode, NfclawError
 from test_chain import fake_runs  # noqa: F401
 
@@ -246,7 +246,7 @@ def test_version_metadata_uses_configured_operation_limit(monkeypatch):
 def test_deadline_crossing_manifest_publication_rewrites_only_failed_metadata(
         prepared, monkeypatch, clock, tmp_path):
     outdir = tmp_path / "out"
-    atomic_text = provenance._atomic_text
+    atomic_text = atomic.write_text
     publications = []
 
     def slow_publication(path, content, **kwargs):
@@ -255,7 +255,7 @@ def test_deadline_crossing_manifest_publication_rewrites_only_failed_metadata(
             publications.append(json.loads(content)["outcome"])
             clock[0] = 10
 
-    monkeypatch.setattr(provenance, "_atomic_text", slow_publication)
+    monkeypatch.setattr(atomic, "write_text", slow_publication)
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **kw: None)
     with pytest.raises(NfclawError) as error:
         _run(prepared, outdir)
@@ -310,7 +310,7 @@ def test_last_success_checkpoint_downgrades_completed_manifest_without_rehashing
 def test_failed_timeout_metadata_rewrite_cannot_leave_successful_manifest(
         prepared, monkeypatch, clock, tmp_path):
     outdir = tmp_path / "out"
-    atomic_text = provenance._atomic_text
+    atomic_text = atomic.write_text
 
     def disk_full_after_publication(path, content, **kwargs):
         if path.name == "run_manifest.json":
@@ -321,7 +321,7 @@ def test_failed_timeout_metadata_rewrite_cannot_leave_successful_manifest(
         else:
             atomic_text(path, content, **kwargs)
 
-    monkeypatch.setattr(provenance, "_atomic_text", disk_full_after_publication)
+    monkeypatch.setattr(atomic, "write_text", disk_full_after_publication)
     monkeypatch.setattr(orchestration.execution, "run", lambda *a, **kw: None)
     with pytest.raises(NfclawError) as error:
         _run(prepared, outdir)

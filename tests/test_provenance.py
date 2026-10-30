@@ -4,6 +4,7 @@ import shlex
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import time
 
@@ -12,6 +13,7 @@ import pytest
 from runner import provenance, runlog
 from runner.nextflow_command import shell_line
 from runner.submodule import SubmoduleStatus
+from result_checksums import output_checksums
 
 
 pytestmark = pytest.mark.usefixtures("no_engine_probe")
@@ -323,6 +325,28 @@ def test_commands_sh_is_executable(tmp_path):
     assert (prov / "commands.sh").stat().st_mode & 0o111        # user/group/other execute bit set
 
 
+def test_bundle_files_are_as_readable_as_any_new_file(tmp_path):
+    # commands.sh is executable for all, so a replay by another member of the results' group must
+    # read the manifest and the replay scripts too. Written through tempfile, every other bundle
+    # file was 0o600. The source archive is written by replay_guard, the rest by runner.atomic.
+    up = tmp_path / "up"
+    up.mkdir()
+    (up / "main.nf").write_text("workflow {}\n")
+    out = tmp_path / "out"
+    out.mkdir()
+    previous = os.umask(0o022)
+    try:
+        prov = provenance.write(outdir=out, pipeline="mini", command_str="nextflow run x",
+                                submodule=_st(up), input_paths=[])
+    finally:
+        os.umask(previous)
+    modes = {p.name: stat.S_IMODE(p.stat().st_mode) for p in prov.iterdir() if p.is_file()}
+    assert modes.pop("commands.sh") == 0o755
+    assert {"run_manifest.json", "replay_guard.py", provenance.PIPELINE_ARCHIVE} <= modes.keys()
+    assert set(modes.values()) == {0o644}, modes
+    assert not [p.name for p in prov.iterdir() if p.name.startswith(".")]
+
+
 def test_replay_logs_itself_into_the_target_bundle(tmp_path):
     # A replay is a run too: it logs to <target>/provenance/logs/run.log exactly like the original,
     # so it needs no `> replay.log 2>&1` of its own — and the log ends with the outcome.
@@ -361,7 +385,7 @@ def test_replay_log_is_not_counted_as_a_replayed_output(tmp_path):
                             submodule=_st(tmp_path / "up"), input_paths=[])
     target = tmp_path / "fresh"
     subprocess.run([str(prov / "commands.sh"), str(target)], capture_output=True, check=True)
-    assert provenance.output_checksums(target) == {}
+    assert output_checksums(target) == {}
 
 
 def test_manifest_records_the_chain_link_only_when_given(tmp_path):

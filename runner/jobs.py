@@ -29,6 +29,8 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from pathlib import Path
 
+from runner import atomic
+
 try:
     import fcntl
 except ImportError:                                       # Windows: no detached jobs
@@ -118,9 +120,7 @@ class Job:
 
 def _write_json(path: Path, data: dict) -> None:
     """Replace `path` atomically, so a reader never sees half a record."""
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
 def _read_json(path: Path) -> dict:

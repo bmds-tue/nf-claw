@@ -16,7 +16,7 @@ from test_output_namespace import record
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_READS = ("atacseq", "chipseq", "circdna", "cutandrun", "hic", "hicar",
-                "marsseq", "pixelator", "rnasplice", "viralintegration")
+                "marsseq", "pixelator", "viralintegration")
 
 
 def _pinned(name):
@@ -168,20 +168,42 @@ AUDITS = json.loads((ROOT / "runner/input_roles.json").read_text())
                          ids=[a["pipeline"] + ":" + a["schema"] for _, a in sorted(AUDITS.items())])
 def test_audited_schema_roles_match_the_pins_and_capture_each_data_cell(tmp_path, digest, audit):
     tree = ROOT / "pipelines" / audit["pipeline"] / "upstream"
-    source = tree / audit["schema"]
-    if not source.exists():
+    if not (tree / audit["schema"]).exists():
         pytest.skip("requires initialized pinned pipeline source")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tree, text=True).strip()
-    if head != audit["commit"]:
-        pytest.skip(f"{audit['pipeline']} is no longer pinned at the audited "
-                    f"commit {audit['commit'][:12]}")
-    assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
+    if head == audit["commit"]:
+        def read(reference):
+            return (tree / reference).read_bytes()
+
+        def exists(reference):
+            return (tree / reference).is_file()
+        contract_tree = tree
+    else:
+        # A bump keeps the audit for the earlier release, which `--pipeline-version` still runs:
+        # check it against that commit in the submodule's history.
+        commit = audit["commit"]
+        if subprocess.run(["git", "cat-file", "-e", f"{commit}^{{commit}}"], cwd=tree,
+                          capture_output=True).returncode != 0:
+            pytest.skip(f"{audit['pipeline']} is no longer pinned at the audited "
+                        f"commit {commit[:12]}")
+
+        def read(reference):
+            return subprocess.run(["git", "show", f"{commit}:{reference}"], cwd=tree,
+                                  capture_output=True, check=True).stdout
+
+        def exists(reference):
+            kind = subprocess.run(["git", "cat-file", "-t", f"{commit}:{reference}"], cwd=tree,
+                                  capture_output=True, text=True).stdout.strip()
+            return kind == "blob"
+        contract_tree = tmp_path / "audited"
+        (contract_tree / audit["schema"]).parent.mkdir(parents=True)
+        (contract_tree / audit["schema"]).write_bytes(read(audit["schema"]))
+    assert hashlib.sha256(read(audit["schema"])).hexdigest() == digest
     for reference in audit["source"]:
-        assert (tree / reference.partition(":")[0]).is_file(), reference
+        assert exists(reference.partition(":")[0]), reference
     for reference, expected_digest in audit.get("source_sha256", {}).items():
-        actual = hashlib.sha256((tree / reference).read_bytes()).hexdigest()
-        assert actual == expected_digest, reference
-    contract = schema.load_input_schema(tree, audit["schema"])
+        assert hashlib.sha256(read(reference)).hexdigest() == expected_digest, reference
+    contract = schema.load_input_schema(contract_tree, audit["schema"])
     row = {}
     expected = []
     for name, role in audit["columns"].items():

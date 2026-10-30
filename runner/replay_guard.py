@@ -721,13 +721,19 @@ def write_pipeline_archive(repo: Path, checksums: dict[str, str], destination: P
     import gzip
     import io
     import tarfile
-    import tempfile
 
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.",
-                                         delete=False) as raw:
-            temporary = Path(raw.name)
+        # Created as any new file is (0o666 less the umask), like the rest of the bundle: a
+        # `tempfile` file would be 0o600, unreadable to the group the results are shared with.
+        while temporary is None:
+            candidate = destination.with_name(f".{destination.name}.{os.urandom(4).hex()}.tmp")
+            try:
+                fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+            except FileExistsError:
+                continue
+            temporary = candidate
+        with os.fdopen(fd, "wb") as raw:
             with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0, compresslevel=6) as gz:
                 with tarfile.open(fileobj=gz, mode="w", format=tarfile.PAX_FORMAT) as tar:
                     for name in sorted(checksums):

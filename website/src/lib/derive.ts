@@ -10,7 +10,7 @@ import type { Pipeline } from "./types";
  * around as the constellation's wedges do — keeps adjacent pairs ≥ 13.9 ΔE apart under simulated
  * protan/deutan vision. Reordering the list re-pairs the neighbours; re-validate before changing it.
  */
-export const CATEGORIES: { name: string; color: string; test: RegExp }[] = [
+const CATEGORIES: { name: string; color: string; test: RegExp }[] = [
   {
     name: "Transcriptomics",
     color: "#3fac4a",
@@ -53,7 +53,7 @@ export const CATEGORIES: { name: string; color: string; test: RegExp }[] = [
   },
 ];
 
-export const OTHER_CATEGORY = { name: "Other", color: "#6b7280" };
+const OTHER_CATEGORY = { name: "Other", color: "#6b7280" };
 
 /** Every domain name in palette order, "Other" last. */
 export const DOMAIN_ORDER = [...CATEGORIES.map((c) => c.name), OTHER_CATEGORY.name];
@@ -92,7 +92,7 @@ export function colorForCategory(cat: string): string {
 }
 
 /** Position of a domain in the fixed palette order ("Other" last). */
-export function categoryRank(cat: string): number {
+function categoryRank(cat: string): number {
   const i = CATEGORIES.findIndex((c) => c.name === cat);
   return i === -1 ? CATEGORIES.length : i;
 }

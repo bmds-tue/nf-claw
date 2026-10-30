@@ -3,11 +3,9 @@ export {
   getPipelines,
   getPipeline,
   pipelineNames,
-  allParameters,
 } from "./pipelines";
 export {
   getCommits,
-  getTags,
   getRemote,
   githubRepoPath,
   getDefaultBranch,

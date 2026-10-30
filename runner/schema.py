@@ -136,14 +136,6 @@ class Column:
         return self.audited_path_format
 
     @property
-    def is_path(self) -> bool:
-        """Any filesystem path (a file, a directory, or nf-schema's `path` for either) — these
-        values must be absolute and get an existence check. A glob (`file-path-pattern`) cannot be
-        checked for literal existence; glob matching is left to nf-schema, but the runner still
-        requires an absolute local pattern."""
-        return self.path_format() in ("file-path", "directory-path", "path")
-
-    @property
     def is_identifier(self) -> bool:
         """Schema-declared identity metadata, plus legacy sample/patient column names.
 
