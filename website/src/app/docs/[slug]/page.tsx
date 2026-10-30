@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, ArrowRight, Clock, FileText, Github } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, FileText } from "lucide-react";
+import { Github } from "@/components/ui/github-icon";
 import { getDefaultBranch, getDoc, getDocs, getRemote } from "@/lib/data";
 import type { LinkContext } from "@/lib/links";
 import { docHeadings, docPreview, readingMinutes } from "@/lib/doc-meta";
