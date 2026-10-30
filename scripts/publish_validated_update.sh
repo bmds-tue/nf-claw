@@ -15,7 +15,13 @@ if ! [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_RUN_ID" =~ ^[0-9]+$ \
   exit 1
 fi
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-head=$(python3 "$script_dir/maintenance_candidate.py" authorize \
+# The authorizer imports nfclaw, which needs Python 3.11+; a host's python3 can be older.
+python="${PYTHON:-python3}"
+if ! "$python" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+  echo "::error::publication needs Python 3.11+, and '$python' is not; set PYTHON to one"
+  exit 1
+fi
+head=$("$python" "$script_dir/maintenance_candidate.py" authorize \
   --directory "$CANDIDATE_DIR" --base "$BASE_SHA" --sha "$CANDIDATE_SHA" --kind "$UPDATE_KIND" \
   --validation-result "$VALIDATION_RESULT" --drift-result "$DRIFT_RESULT" \
   --native-result "$NATIVE_RESULT" --native-evidence "$NATIVE_EVIDENCE_DIR" \

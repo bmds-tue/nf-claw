@@ -389,12 +389,13 @@ def merge(*, cli_overrides: dict[str, Any], params_file: Path | Mapping[str, Any
           input_path: Any, outdir: Path) -> dict[str, Any]:
     """Build the full parameter map (params-file < --input/--outdir < CLI) without touching
     disk, so the merged result can be validated before anything is written or executed.
-    `params_file` is a path to load, or values already loaded with `load_params_file`.
+    `params_file` is a path to load, or values already loaded with `load_params_file`; a path
+    that cannot be read is an error, never an empty set of parameters.
     `input_path=False` (`--input false`) leaves `input` unset — overriding a params-file value."""
     merged: dict[str, Any] = {}
     if isinstance(params_file, Mapping):
         merged.update(params_file)
-    elif params_file and params_file.exists():
+    elif params_file is not None:
         merged.update(load_params_file(params_file))
     if input_path is False:
         merged.pop("input", None)

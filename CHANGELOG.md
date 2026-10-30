@@ -59,6 +59,13 @@ each change, are in [`docs/audit/`](docs/audit/).
   2026-10-29 and held back every other release with it (variantbenchmarking 1.6.0). A release
   that cannot pass the gate can be set to the `hold` policy in `sources.tsv` so that the others
   publish ([maintenance.md](docs/maintenance.md)).
+- The acceptance gate and the maintenance publisher run their Python helpers on `$PYTHON` (default
+  `python3`, as in the Makefile) and refuse an interpreter older than 3.11 with a message naming
+  it. On macOS, whose `python3` is 3.9, every preview had failed with an `ImportError` reported as
+  a rejected pipeline. Without GNU `timeout` or `gtimeout`, the gate bounds each preview with the
+  bundled `scripts/run_with_timeout.py` instead of refusing to run.
+- A params file path given to `parameters.merge` that does not exist is an error, not an empty
+  set of parameters (`nfclaw run` already refused it).
 - `nfclaw mcp` answers a message nested too deeply to parse instead of stopping (#219).
 - Robustness of `nfclaw status` with unreadable logs and damaged records, the job supervisor and
   the container watcher (#218).

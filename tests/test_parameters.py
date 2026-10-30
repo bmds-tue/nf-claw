@@ -117,6 +117,14 @@ def test_malformed_params_file_raises_clean_error(tmp_path):
     assert exc.value.code == ErrorCode.PARAMS_INVALID and "not valid UTF-8" in str(exc.value)
 
 
+def test_missing_params_file_path_is_an_error_not_empty_params(tmp_path):
+    # A mistyped path must not run the pipeline on its defaults: merge used to skip it silently.
+    with pytest.raises(NfclawError) as exc:
+        parameters.merge(cli_overrides={}, params_file=tmp_path / "typo.json", input_path=None,
+                         outdir=tmp_path / "o")
+    assert exc.value.code == ErrorCode.PARAMS_INVALID and "cannot be read" in str(exc.value)
+
+
 def test_params_file_empty_object_is_ok(tmp_path):
     pf = tmp_path / "p.json"
     pf.write_text("{}")

@@ -76,10 +76,13 @@ Automated discovery and update workflows require **strict exit code 0** from Nex
 
 Upstream defects that make a pinned release's default preview fail — each investigated in [`known-issues.md`](known-issues.md#upstream-pipeline-bugs-documented-not-patched) — are recorded in [`scripts/nextflow_accept_exceptions.tsv`](../scripts/nextflow_accept_exceptions.tsv) by **exact commit**, expected outcome and an evidence pattern (searched in the console and the Nextflow log). Such a preview is reported `known-rejected`, `known-staging-unverified` or `known-timeout`: it is **not accepted**, but it does not turn the weekly gate red while it still fails exactly as documented, so a new regression elsewhere stays visible. A different failure, missing evidence, a preview that now passes (`stale-exception`), or any other commit — every release bump — is judged as above, so an exception never carries over to a new release. A documented `timeout` is bounded at 300 seconds, since its evidence (the task monitor's barrier after the DAG is built) is written within seconds.
 
-Running `scripts/nextflow_accept.sh` locally requires GNU `timeout` (`gtimeout`
-from Homebrew coreutils on macOS). Each preview gets 15 minutes, followed by a
-10-second shutdown grace period before surviving process-group members are killed. The
-script refuses to launch a preview when neither timeout utility is available.
+Running `scripts/nextflow_accept.sh` locally needs Python 3.11+: the script uses `$PYTHON`
+(default `python3`, which on macOS is often 3.9) and refuses an older interpreter before
+any preview. Each preview gets 15 minutes, followed by a 10-second shutdown grace period
+before surviving process-group members are killed. GNU `timeout` (or `gtimeout` from Homebrew
+coreutils) enforces that when present; without either, the bundled
+`scripts/run_with_timeout.py` enforces the same deadline, grace period and exit statuses, so a
+preview is never unbounded.
 
 > [!NOTE]
 > Successful preview and smoke verification confirms syntactic correctness and DAG construction within the tested environment; it does not constitute execution or biological verification on experimental datasets.

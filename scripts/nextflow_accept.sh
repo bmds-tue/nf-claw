@@ -35,11 +35,22 @@
 #   NFCLAW_ACCEPT_EXCEPTIONS  the exceptions file (default: beside this script)
 #   NFCLAW_ACCEPT_RETRY_DELAY seconds before the first retry of an unreachable remote file (30);
 #                           the second retry waits ten times as long
+#   PYTHON                  the Python 3.11+ interpreter for the gate's helpers (default python3)
 #
 # Exits non-zero unless every pipeline completed its preview successfully or matched its
 # documented exception exactly.
 set -uo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# The helpers import nfclaw, which needs Python 3.11+; a host's python3 can be older (macOS 3.9).
+python="${PYTHON:-python3}"
+if ! "$python" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+  echo "::error::the acceptance gate needs Python 3.11+, and '$python' is not; set PYTHON to one"
+  exit 1
+fi
+
+# Every preview is bounded: GNU timeout where the host has it, otherwise (macOS without coreutils)
+# run_with_timeout.py, with the same deadline, shutdown grace and exit statuses.
 _run_with_timeout() {
   seconds="$1"
   shift
@@ -48,8 +59,7 @@ _run_with_timeout() {
   elif command -v gtimeout >/dev/null 2>&1; then
     gtimeout --kill-after=10s "$seconds" "$@"
   else
-    echo "nfclaw acceptance: install GNU timeout (gtimeout on macOS); an unbounded preview is refused" >&2
-    return 127
+    "$python" "$script_dir/run_with_timeout.py" --kill-after 10 "$seconds" "$@"
   fi
 }
 
@@ -84,8 +94,8 @@ if [ "${#names[@]}" -eq 0 ]; then
   fi
 fi
 
-exceptions="${NFCLAW_ACCEPT_EXCEPTIONS:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_accept_exceptions.tsv}"
-preview_helper="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/nextflow_preview.py"
+exceptions="${NFCLAW_ACCEPT_EXCEPTIONS:-$script_dir/nextflow_accept_exceptions.tsv}"
+preview_helper="$script_dir/nextflow_preview.py"
 repo_root="$(pwd -P)"
 tmp=$(mktemp -d "${RUNNER_TEMP:-/tmp}/nfclaw-accept.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$tmp"' EXIT
@@ -166,7 +176,7 @@ for name in "${names[@]}"; do
   attempt=1
   while :; do
     rm -rf -- "$work" "$out" "$engine_log"
-    NXF_VER="$ver" _run_with_timeout "$budget" python3 "$preview_helper" \
+    NXF_VER="$ver" _run_with_timeout "$budget" "$python" "$preview_helper" \
       --name "$name" --commit "$commit" --version "$ver" --repo-root "$repo_root" \
       --upstream "$up" --config "$cfg" --outdir "$out" --work "$work" \
       --engine-log "$engine_log" --scratch "$tmp/prepared-$name-$attempt" \
