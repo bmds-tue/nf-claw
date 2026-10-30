@@ -42,7 +42,7 @@ each change, are in [`docs/audit/`](docs/audit/).
   and no longer lets a missing legacy counterpart hide corrupt observations. Chain options
   and resource limits reject invalid types before launch with actionable parameter errors.
   The reproductions and validation limits are in the
-  [boundary-integrity audit](docs/audit/2026-10-30-boundary-integrity-audit.md).
+  [boundary-integrity audit](docs/audit/2026-10-30-boundary-integrity-audit.md) (#237).
 - A stopped run (Ctrl-C, `kill`, `--timeout`, MCP `cancel_job`) and a stopped replay remove the
   Docker/Podman task containers their processes started. Task wrappers killed while `docker stop`
   waited on a container's PID 1 had left every container behind, exited, and with a shorter shutdown
