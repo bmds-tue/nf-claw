@@ -46,6 +46,11 @@ each change, are in [`docs/audit/`](docs/audit/).
 - Handoffs no longer drop samples silently (bamtofastq → rnaseq single-end files, detaxizer → mag
   single-end sheets), and resuming a chain stage keeps its unchanged handoff and Nextflow cache
   (#218, #219).
+- The daily pipeline update gives each changed pipeline's bundled analysis 90 minutes instead of
+  30. ampliseq 3.1.0's test, still running at 30 minutes, had failed the update since
+  2026-10-29 and held back every other release with it (variantbenchmarking 1.6.0). A release
+  that cannot pass the gate can be set to the `hold` policy in `sources.tsv` so that the others
+  publish ([maintenance.md](docs/maintenance.md)).
 - `nfclaw mcp` answers a message nested too deeply to parse instead of stopping (#219).
 - Robustness of `nfclaw status` with unreadable logs and damaged records, the job supervisor and
   the container watcher (#218).
