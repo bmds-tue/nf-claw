@@ -16,9 +16,9 @@ def test_run_uses_configured_shutdown_grace(tmp_path, monkeypatch):
     observed = []
     stop = execution._terminate
 
-    def record(proc, grace=10):
+    def record(proc, grace=10, **kwargs):
         observed.append(grace)
-        stop(proc, grace=grace)
+        stop(proc, grace=grace, **kwargs)
 
     monkeypatch.setattr(execution, "_terminate", record)
     with pytest.raises(NfclawError):
