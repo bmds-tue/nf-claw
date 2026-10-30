@@ -158,6 +158,16 @@ def test_kraken2_random_library_names_are_paired_within_their_directory(tmp_path
                for old, new in (pair.split(" -> ") for pair in cmp.renamed))
 
 
+def test_kraken2_random_names_may_contain_underscores(tmp_path):
+    # File::Temp's alphabet includes "_": a real createtaxdb 3.1.0 replay turned Fsc9G_tX0r.*
+    # into ycohXAqmqB.* (the prelim_map ids here carry one too).
+    orig = _bundle(tmp_path, "orig", _kraken2_library(("Fsc9G_tX0r", "4hDpDzZJEp")))
+    replay = _bundle(tmp_path, "replay", _kraken2_library(("ycohXAqmqB", "XMS62Vj_tO")))
+    cmp = verify.compare(orig, replay)
+    assert cmp.missing == [] and cmp.extra == [] and cmp.structurally_equal
+    assert len(cmp.renamed) == 6 and cmp.byte_identical
+
+
 def test_kraken2_pairs_still_compare_bytes_and_refuse_ambiguity(tmp_path):
     orig = _bundle(tmp_path, "orig", {"db/library/added/h2BIGuIQjw.fna": "A",
                                       "db/library/added/Ab3dE6gH9k.fna": "B"})

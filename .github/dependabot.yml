@@ -40,3 +40,8 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
+    ignore:
+      # @types/node follows the Node major the site is built with (`node-version` in the
+      # workflows): a newer major types APIs that runtime does not have.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]

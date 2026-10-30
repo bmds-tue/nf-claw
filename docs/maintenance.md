@@ -35,7 +35,7 @@ Publication requires all of these checks on that same candidate:
 - Website dependency audit, parser tests without skips, typecheck, build and Chromium browser
   checks; actual Nextflow integration checks; Ruff; and generated-source drift.
 - For every changed pipeline pin, a fresh bundled analysis on Linux amd64/Docker. Each run has a
-  30-minute execution budget and ceilings of 2 CPUs, 6 GB memory and 30 minutes per task. It must
+  90-minute execution budget and ceilings of 2 CPUs, 6 GB memory and 30 minutes per task. It must
   record a successful manifest at the expected pin, unchanged discovered dependencies, no stub
   profiles/configs or completion caveats, and exactly one trace with real completed tasks. Empty
   traces, cached tasks, nonzero exits, failures, duplicate IDs and incomplete rows are refused.
@@ -44,8 +44,13 @@ Preview remains an early compatibility filter. Discovery may remove additions th
 filter before freezing the candidate. A frozen candidate whose real analysis needs unavailable
 GPU hardware, credentials, references, images or greater resources does not publish. Its evidence
 remains available for manual investigation; a bounded-host failure is not proof that a release is
-scientifically invalid. Metadata-only candidates require the complete matrix/site/integration/drift
-checks and skip native execution only when the verified changed-gitlink inventory is empty.
+scientifically invalid. Every release bump of a run is one candidate, so such a release also holds
+back the others, every day, until it passes. To let them through, give its `sources.tsv` row a
+policy other than `latest-release` (for example `hold`): the updater then leaves that pipeline at
+its current pin, and the next run publishes the rest. Restore `latest-release` once the release can
+pass, or adopt it deliberately with its own evidence. Metadata-only candidates require the complete
+matrix/site/integration/drift checks and skip native execution only when the verified
+changed-gitlink inventory is empty.
 
 ## Fresh trusted-base publisher
 

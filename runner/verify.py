@@ -131,10 +131,11 @@ _LAUNCH_STAMPED = re.compile(
 
 # `kraken2-build --add-to-library` (createtaxdb's Kraken2 and Bracken databases) copies each input
 # into library/added/ under a random mktemp name: XXXXXXXXXX.fna, its .fna.masked copy and
-# prelim_map_XXXXXXXXXX.txt. Only these exact names are paired, within their own directory.
+# prelim_map_XXXXXXXXXX.txt. Perl's File::Temp fills the Xs from letters, digits and "_".
+# Only these exact names are paired, within their own directory.
 _KRAKEN2_ADDED = re.compile(
-    r"^(?P<dir>(?:.+/)?library/added)/(?:(?P<map>prelim_map_)[A-Za-z0-9]{10}\.txt"
-    r"|[A-Za-z0-9]{10}(?P<ext>\.fna(?:\.masked)?))$")
+    r"^(?P<dir>(?:.+/)?library/added)/(?:(?P<map>prelim_map_)[A-Za-z0-9_]{10}\.txt"
+    r"|[A-Za-z0-9_]{10}(?P<ext>\.fna(?:\.masked)?))$")
 
 
 def _name_key(path: str) -> tuple | None:

@@ -107,6 +107,22 @@ def test_module_collection_skip_is_judged_by_its_module_and_reason(tmp_path):
         check(path, 'macos-latest', '3.15')
 
 
+@pytest.mark.parametrize('reason,allowed', [
+    ('requires the audited createtaxdb 3.1.0 source', True),
+    ('requires the audited funcscan 4.0.0 source', True),
+    ('requires the audited sarek 3.11.0 source', False),
+])
+def test_pinned_demo_sheet_skips_are_declared_only_for_their_pins(tmp_path, reason, allowed):
+    # A release bump moves the pin; its demo then keeps the release's own sheet.
+    path = report(tmp_path, ('tests.test_demo_pinned_sheets',
+                             'test_bare_demo_stages_the_validated_immutable_sheet[x]', reason))
+    if allowed:
+        assert check(path)['passed'] == 3001
+    else:
+        with pytest.raises(ValueError, match='Undeclared skipped coverage'):
+            check(path)
+
+
 @pytest.mark.parametrize('module,reason', [
     ('tests.test_demo_fastqrepair', 'requires the audited fastqrepair 1.1.1 source'),
     ('tests.test_bactmap_corrections',

@@ -115,6 +115,15 @@ Main's first push-triggered runs after the merge (`9fd2a4c`) found:
   `nf-amazon` plugin from `registry.nextflow.io`. sarek 3.11.0 arrived in bot commit `18331a5`,
   whose push does not trigger that workflow; 3.10.0 needed the same plugin and passed. The same
   preview completes in 52 s on the server.
+- **Three demos refused by `verify --require-environment`** (bamtofastq, createtaxdb, funcscan
+  above: their test profiles validate sheets on moving test-datasets branches). A bare demo of
+  these pins now stages the release's sheet from immutable commits, recorded in provenance (#226).
+  Re-run on the server, run → replay → `verify` → `--require-environment`, all passing:
+  bamtofastq 0 missing/extra, environment identical; createtaxdb 0 missing/extra with 7 renamed
+  pairs, once `verify` accepted `_` in kraken2's random names (File::Temp's alphabet:
+  `Fsc9G_tX0r.fna` had been reported missing and extra); funcscan 54/54 tasks, 0 missing/extra,
+  environment identical. funcscan ran with `--arg-skip-deeparg true --cazyme-skip-dbcan true`: on
+  this host the in-task dbCAN download (5 GB at ~3 MiB/s) exceeds the test profile's 1 h task limit.
 
 ## Disposition of all 88 audit items
 
@@ -133,7 +142,7 @@ fresh server executions.
 | G03, G04 | fixed (opt-in) | `nfclaw assess` contracts check sample coverage, record counts and format-aware content with reasoned tolerances. Exit status alone still cannot establish completeness without a contract. |
 | G05 | fixed | `verify --require-environment`. Exercised here; correctly refuses refetched validation inputs. |
 | G06 | partial | Container identities, plugins, configs and staged remote inputs are recorded. Conda environments, task-managed downloads and `includeConfig` targets are not frozen (stated in AGENTS.md). |
-| G07 | partial | Refetched remote inputs are labelled (`read_by`) and refused by `--require-environment`. Bytes consumed during nf-schema validation are not captured; the 100 MiB refetch cap is unchanged. |
+| G07 | partial | Refetched remote inputs are labelled (`read_by`) and refused by `--require-environment`. Bytes consumed during nf-schema validation are not captured; the 100 MiB refetch cap is unchanged. The three demos it refused now stage immutable, recorded sheets (follow-up above). |
 | G08 | fixed | Extracted replay source is rehashed after execution. |
 | G09, G10 | documented | Tracked-byte source integrity scope and the before/after (not continuous) snapshot limit are stated; corrected working copies additionally bind file modes. Read-only staging is not implemented. |
 | G11, G12, G13 | fixed | Structured MCP params, `replay_run`, bounded `read_artifact`. Exercised here through the official SDK. |

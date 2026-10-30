@@ -137,4 +137,6 @@ Full list with references: https://github.com/nf-core/funcscan/blob/4.0.0/CITATI
 nfclaw run funcscan --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
+This pinned test profile reads its two-sample sheet and HMM model from a moving test-datasets branch. For a bare demo, nfclaw stages the same sheet with immutable FASTA URLs and supplies the HMM model from commit `6612875ff5d8d54fd0a7532acbfb9dda25edb9b2`, every file byte-identical to that branch. The sheet is bundled in provenance, so a replay reads the recorded sheet. Explicit input, HMM models, the test-data base, extra profiles or `--config` disable the fixture. Other releases retain their own defaults.
+
 <!-- Generated from nf-core/funcscan@aee3dc965eb0c77267435544dda30da858763913. Do not edit by hand. -->
