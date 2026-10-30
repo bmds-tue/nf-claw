@@ -186,3 +186,26 @@ def test_a_stopped_replay_removes_containers_and_logs_it(engine, tmp_path):
               "nxf-Replay1"
     assert message in stderr
     assert log.read_text().splitlines()[-1] == message
+
+
+def test_a_second_interrupt_during_the_grace_period_still_removes_them(engine, tmp_path,
+                                                                      monkeypatch):
+    # A second Ctrl-C asks to stop now: the group is killed at once, and its containers go too.
+    docker, state, log = engine
+    proc = _group(tmp_path, f"{docker} run -i --name nxf-Again1 img")
+    _wait_for(state, "nxf-Again1")
+    wait = proc.wait
+
+    def interrupted(timeout=None):
+        if timeout is not None:
+            raise KeyboardInterrupt
+        return wait()
+
+    monkeypatch.setattr(proc, "wait", interrupted)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            execution._terminate(proc, grace=30)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Again1" in log.read_text().splitlines()

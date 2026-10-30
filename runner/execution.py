@@ -375,14 +375,16 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
     finally:
         # Also on a second Ctrl-C during the grace period: that asks to stop now, not to leave the
         # group running — skip the rest of the wait, but still kill it.
-        for engine, names in replay_guard.task_containers(pgid).items():
-            containers.setdefault(engine, set()).update(names)
         try:
-            os.killpg(pgid, signal.SIGKILL)
-        except OSError:
-            pass                                      # the group is already gone
-        proc.wait()
-        if containers:
+            for engine, names in replay_guard.task_containers(pgid).items():
+                containers.setdefault(engine, set()).update(names)
+        finally:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass                                  # the group is already gone
+            proc.wait()
+        if containers:                                # a second Ctrl-C still stops them too
             _remove_task_containers(containers, run_log)
 
 
