@@ -20,13 +20,27 @@ import stat
 import subprocess
 import sys
 import threading
-import tempfile
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache, partial
 from pathlib import Path
+
+
+def _new_temporary(destination: Path) -> tuple[int, Path]:
+    """Open a new file beside `destination` to rename over it once written.
+
+    It is created as any new file is (0o666 less the umask), like the rest of a run's directory:
+    a `tempfile` file would be 0o600, unreadable to the group the results are shared with. This
+    module stays standard-library only; `runner.atomic` does the same for the rest of nfclaw.
+    """
+    while True:
+        candidate = destination.with_name(f".{destination.name}.{os.urandom(4).hex()}.tmp")
+        try:
+            return os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666), candidate
+        except FileExistsError:
+            continue
 
 
 def log_cursor_path(log: Path) -> Path:
@@ -38,9 +52,8 @@ def write_log_cursor(log: Path, start: int) -> None:
     cursor, temporary = log_cursor_path(log), None
     try:
         info = log.stat()
-        with tempfile.NamedTemporaryFile(dir=log.parent, prefix=".nfclaw-cursor-",
-                                         delete=False) as fh:
-            temporary = Path(fh.name)
+        fd, temporary = _new_temporary(cursor)
+        with os.fdopen(fd, "wb") as fh:
             fh.write(json.dumps({"device": info.st_dev, "inode": info.st_ino,
                                  "start": start, "size": info.st_size}).encode())
         os.replace(temporary, cursor)
@@ -721,13 +734,11 @@ def write_pipeline_archive(repo: Path, checksums: dict[str, str], destination: P
     import gzip
     import io
     import tarfile
-    import tempfile
 
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.",
-                                         delete=False) as raw:
-            temporary = Path(raw.name)
+        fd, temporary = _new_temporary(destination)
+        with os.fdopen(fd, "wb") as raw:
             with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0, compresslevel=6) as gz:
                 with tarfile.open(fileobj=gz, mode="w", format=tarfile.PAX_FORMAT) as tar:
                     for name in sorted(checksums):

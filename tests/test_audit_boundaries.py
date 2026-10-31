@@ -7,6 +7,7 @@ import pytest
 
 from runner import chain, handoff, parameters, provenance, verify
 from runner.errors import NfclawError
+from result_checksums import output_checksums
 from test_handoff import _rule, _trees
 
 
@@ -63,7 +64,7 @@ def test_verification_cannot_certify_two_unreadable_result_trees(tmp_path, monke
 def test_broken_output_symlink_cannot_look_like_an_empty_success(tmp_path):
     (tmp_path / "counts.tsv").symlink_to(tmp_path / "missing.tsv")
     with pytest.raises(OSError):
-        provenance.output_checksums(tmp_path)
+        output_checksums(tmp_path)
 
 
 @pytest.mark.parametrize("suffix,text", [
@@ -113,13 +114,13 @@ def test_directory_symlink_outputs_keep_their_published_paths(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
     (out / "published").symlink_to(data, target_is_directory=True)
-    assert set(provenance.output_checksums(out)) == {"published/counts.tsv"}
+    assert set(output_checksums(out)) == {"published/counts.tsv"}
 
 
 def test_cyclic_directory_symlink_outputs_fail_explicitly(tmp_path):
     (tmp_path / "cycle").symlink_to(tmp_path, target_is_directory=True)
     with pytest.raises(OSError, match="cyclic"):
-        provenance.output_checksums(tmp_path)
+        output_checksums(tmp_path)
 
 
 def test_added_directory_alias_is_a_changed_input_inventory(tmp_path):

@@ -36,6 +36,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   314 MB/s on the validation server, eight threads 7.7× faster on cached data.
 - `nfclaw run` and `nfclaw chain run` refuse a Python without POSIX file locks (native Windows)
   instead of running without their writer locks; use WSL 2 there.
+- Both maintenance bots hand their frozen candidate to one shared gate and publisher
+  (`maintenance-gate.yml`) instead of repeating its jobs.
 - Generated parameter tables write patterns, defaults and allowed values as code spans, so they
   render as the values nf-schema enforces (#219).
 - Each CI test lane runs the complete suite on all of its runner's cores (`pytest -n auto
@@ -48,6 +50,11 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- A `--resume` that preserves the previous run in a sibling archive no longer leaves the new run
+  directory private to the user who resumed it (`0700`): it keeps the permissions of the run it
+  replaces (#235).
+- Provenance bundle files are created like the rest of a run's files (`0666` less the umask)
+  instead of `0600`, so the group a run's results are shared with can verify and replay it (#235).
 - MCP refuses a tool or prompt call whose `arguments` is given but is not an object (`null`,
   `false`, a list) instead of running it without arguments, answers a request id that JSON-RPC
   does not allow (a boolean, an object, `NaN`) with an error, and no longer queues a `ping` behind

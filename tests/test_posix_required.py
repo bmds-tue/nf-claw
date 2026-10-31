@@ -22,7 +22,7 @@ def test_a_run_without_posix_locks_is_refused_not_left_unlocked(tmp_path, monkey
 
 
 def test_a_chain_without_posix_locks_is_refused_before_its_record(tmp_path, monkeypatch):
-    monkeypatch.setattr(chain, "fcntl", None)
+    monkeypatch.setattr(locking, "fcntl", None)
     with pytest.raises(NfclawError, match="nfclaw chain run needs a POSIX system"):
         with chain._lock(tmp_path / "c" / chain.RECORD_DIRNAME, tmp_path / "c"):
             pytest.fail("ran without a chain lock")

@@ -20,14 +20,15 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (budget, consumption, discovery, engine_version, execution, handoff, inputs,
-                    input_safety, locking, nextflow_command, orchestration, parameters, preflight,
-                    provenance, resources, runlog, sheetgen, source_corrections, versions)
+from runner import (atomic, budget, consumption, discovery, engine_version, execution, handoff,
+                    inputs, input_safety, locking, nextflow_command, orchestration, parameters,
+                    preflight, provenance, resources, runlog, sheetgen, source_corrections,
+                    versions)
 from runner import schema as schema_mod
 from runner import outputs as output_mod
 from runner import exact_json as json
@@ -35,11 +36,6 @@ from runner.errors import ErrorCode, NfclawError
 from runner.probes import capture
 from runner.settings import seconds
 from runner.submodule import SubmoduleStatus
-
-try:
-    import fcntl                                  # POSIX file locks (macOS/Linux)
-except ImportError:                              # pragma: no cover — Windows has no fcntl
-    fcntl = None
 
 RECORD_DIRNAME = "chain"
 LOG_NAME = "chain.log"
@@ -411,12 +407,7 @@ class ChainResult:
 def _write_json(path: Path, data: Any) -> Path:
     """Atomically: a reader polling state.json never sees half a file."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="utf-8", opener=lambda name, flags: os.open(
-            name, flags, 0o600)) as handle:
-        os.chmod(tmp, 0o600)
-        handle.write(json.dumps(data, indent=2, sort_keys=True) + "\n")
-    os.replace(tmp, path)
+    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n", mode=0o600)
     return path
 
 
@@ -450,38 +441,15 @@ def _record_attempted_release(entry: dict, stage_dir: Path, before: bytes | None
         entry.update(version=manifest.get("version"), commit=manifest.get("commit"))
 
 
-@contextlib.contextmanager
-def _lock(record: Path, outdir: Path) -> Iterator[None]:
+def _lock(record: Path, outdir: Path) -> contextlib.AbstractContextManager[None]:
     """One chain process per --outdir: two would race on the same stages and state."""
-    if fcntl is None:
-        raise locking.posix_required("nfclaw chain run")
-    fd = None
-    try:
-        record.mkdir(parents=True, exist_ok=True, mode=0o700)
-        record.chmod(0o700)
-        fd = os.open(record / ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o644)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            os.close(fd)
-            fd = None
-            raise NfclawError(
-                ErrorCode.ENVIRONMENT, f"another nfclaw chain is running in {outdir}",
-                fix=f"Wait for it (tail -n 1 {record / 'logs' / LOG_NAME}) or stop it with "
-                    "kill <its pid>.") from None
-    except OSError as exc:
-        if fd is not None:
-            os.close(fd)
-            fd = None
-        raise NfclawError(
-            ErrorCode.ENVIRONMENT,
-            f"chain directory could not be created or locked: {record}: {exc.strerror or exc}",
-            fix="Use an output directory whose parent you can write to.") from exc
-    try:
-        yield
-    finally:
-        if fd is not None:
-            os.close(fd)
+    return locking.exclusive(
+        record / ".lock", what="nfclaw chain run", mode=0o644, private_directory=True,
+        busy=NfclawError(
+            ErrorCode.ENVIRONMENT, f"another nfclaw chain is running in {outdir}",
+            fix=f"Wait for it (tail -n 1 {record / 'logs' / LOG_NAME}) or stop it with "
+                "kill <its pid>."),
+        unavailable=f"chain directory could not be created or locked: {record}")
 
 
 def _retryable(exc: NfclawError) -> bool:

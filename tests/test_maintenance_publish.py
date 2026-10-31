@@ -128,10 +128,12 @@ for line in sys.stdin:
         if workflow:
             import yaml
             definition = yaml.safe_load((ROOT / ".github/workflows" / workflow).read_text())
-            job = definition["jobs"]["publish"]
-            step = job["steps"][-1]
-            kind = step["env"]["UPDATE_KIND"]
-            assert step["env"]["BASE_SHA"] == "${{ needs.prepare.outputs.base }}"
+            gate = definition["jobs"]["gate"]
+            kind = gate["with"]["kind"]
+            shared = yaml.safe_load((ROOT / gate["uses"]).read_text())
+            step = shared["jobs"]["publish"]["steps"][-1]
+            assert step["env"]["UPDATE_KIND"] == "${{ inputs.kind }}"
+            assert step["env"]["BASE_SHA"] == "${{ inputs.base_sha }}"
             command = ["bash", str(ROOT / step["run"].split()[1])]
         if reuse_candidate:
             directory = run.last_directory

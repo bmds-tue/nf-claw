@@ -8,6 +8,7 @@ from runner import chain, cli, handoff, outputs, provenance, verify
 from runner.errors import NfclawError
 from runner.inputs import absolute_local_path
 from runner.submodule import SubmoduleStatus
+from result_checksums import output_checksums
 from test_handoff import _rule, _trees
 
 
@@ -286,7 +287,7 @@ def test_relative_link_spellings_and_internal_parent_traversal_remain_valid(tmp_
     record(out)
     assert verify.compare(out, out).byte_identical
     inventory = outputs.read_inventory(out / "provenance/outputs.inventory.json",
-                                       provenance.output_checksums(out))
+                                       output_checksums(out))
     assert inventory["relative.bin"]["link_target"]["path"] == "./data/../data/index.bin"
     assert inventory["absolute.bin"]["link_target"]["path"] == "data/../data/index.bin"
 

@@ -264,7 +264,7 @@ def test_type_with_fmt_marks_only_path_formats():
     assert write_skill._type_with_fmt("string", "email") == "string"   # non-path format → unchanged
 
 
-def test_column_fmt_is_symmetric_with_param_and_drives_is_path(tmp_path):
+def test_column_fmt_is_symmetric_with_param_and_drives_path_format(tmp_path):
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "schema_input.json").write_text(
         '{"items": {"properties": {'
@@ -272,10 +272,11 @@ def test_column_fmt_is_symmetric_with_param_and_drives_is_path(tmp_path):
         '"refdir": {"type": "string", "format": "directory-path"}, '
         '"name": {"type": "string"}}}}')
     cols = {c.name: c for c in schema.load_input_schema(tmp_path).columns}
-    assert cols["reads"].fmt == "file-path" and cols["reads"].is_path is True
+    assert cols["reads"].fmt == "file-path" and cols["reads"].path_format() == "file-path"
     # not flattened
-    assert cols["refdir"].fmt == "directory-path" and cols["refdir"].is_path is True
-    assert cols["name"].fmt is None and cols["name"].is_path is False
+    assert cols["refdir"].fmt == "directory-path"
+    assert cols["refdir"].path_format() == "directory-path"
+    assert cols["name"].fmt is None and cols["name"].path_format() is None
 
 
 def test_inputs_section_surfaces_constraints_and_directory_path():

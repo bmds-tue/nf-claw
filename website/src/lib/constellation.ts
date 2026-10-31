@@ -62,7 +62,7 @@ function unit(seed: string): number {
 }
 
 /** Node radius from the parameter count: area grows with the count, within a legible range. */
-export function nodeRadius(parameterCount: number): number {
+function nodeRadius(parameterCount: number): number {
   return round(Math.min(10, Math.max(4.5, 3 + Math.sqrt(Math.max(0, parameterCount)) * 0.5)));
 }
 

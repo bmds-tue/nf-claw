@@ -1,6 +1,7 @@
 """Fresh cache sessions preserve old evidence and cannot retain stale publications."""
 import os
 import select
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ import pytest
 from runner import outputs, provenance, resume_safety
 from runner.errors import NfclawError
 from runner.submodule import SubmoduleStatus
+from result_checksums import output_checksums
 
 
 @pytest.mark.parametrize("aliased_outdir", [False, True])
@@ -37,10 +39,10 @@ def test_archive_preserves_results_links_bundle_and_log_history(tmp_path, aliase
     provenance.write(outdir=out, pipeline="fixture", command_str="echo REPLAY_RAN",
         submodule=SubmoduleStatus("fixture", tmp_path / "up", True, True, "1.0.0", "deadbeef", ()),
         input_paths=[source])
-    before = provenance.output_checksums(out)
+    before = output_checksums(out)
     _, inventory = provenance.snapshot_inputs([source])
     archive = resume_safety.archive_previous_run(out, inventory, [])
-    assert provenance.output_checksums(archive) == before
+    assert output_checksums(archive) == before
     recorded = outputs.read_inventory(archive / "provenance/outputs.inventory.json", before)
     assert outputs.snapshot(archive)[1] == recorded
     assert not (out / "result").exists()
@@ -115,6 +117,18 @@ def test_archive_filename_respects_filesystem_byte_limits_for_unicode_names(tmp_
     assert out.is_dir() and not list(out.iterdir())
 
 
+def test_resumed_run_directory_keeps_the_permissions_of_the_run_it_replaces(tmp_path):
+    # The fresh directory came from mkdtemp (0o700): after any archiving resume, the results were
+    # private to the user who resumed, although the run they replaced was shared with its group.
+    out = tmp_path / "analysis"
+    out.mkdir()
+    (out / "scientific.txt").write_bytes(b"retained scientific output")
+    out.chmod(0o751)
+    archive = resume_safety.archive_previous_run(out, {}, [])
+    assert stat.S_IMODE(out.stat().st_mode) == 0o751
+    assert stat.S_IMODE(archive.stat().st_mode) == 0o751
+
+
 @pytest.mark.parametrize("target_kind", ["absolute_alias", "relative_alias", "relative_original"])
 def test_archive_keeps_publications_addressed_through_old_directory_names(tmp_path, target_kind):
     out = tmp_path / "analysis"
@@ -128,9 +142,9 @@ def test_archive_keeps_publications_addressed_through_old_directory_names(tmp_pa
               "relative_alias": "../alias/work/task/reads.txt",
               "relative_original": "../analysis/work/task/reads.txt"}[target_kind]
     (out / "published.txt").symlink_to(target)
-    before = provenance.output_checksums(out)
+    before = output_checksums(out)
     archive = resume_safety.archive_previous_run(alias, {}, [])
-    assert provenance.output_checksums(archive) == before
+    assert output_checksums(archive) == before
     replacement = out / "work/task/reads.txt"
     replacement.parent.mkdir(parents=True)
     replacement.write_bytes(b"NEW\n")
@@ -210,9 +224,9 @@ def test_archiving_preserves_links_through_internal_external_publications(
     else:
         (out / "published.txt").symlink_to(external / "reads.txt")
         (out / "indirect.txt").symlink_to(root / "published.txt")
-    before = provenance.output_checksums(out)
+    before = output_checksums(out)
     archive = resume_safety.archive_previous_run(out, {}, [])
-    assert provenance.output_checksums(archive) == before
+    assert output_checksums(archive) == before
     assert (archive / "indirect.txt").read_bytes() == b"external scientific reads"
 
 
@@ -245,12 +259,12 @@ def test_unwritable_publication_directory_leaves_original_results_readable(tmp_p
     published = out / "published"
     published.mkdir()
     (published / "reads.txt").symlink_to(data)
-    before = provenance.output_checksums(out)
+    before = output_checksums(out)
     published.chmod(0o555)
     try:
         with pytest.raises(NfclawError, match="Could not preserve the previous run"):
             resume_safety.archive_previous_run(out, {}, [])
-        assert provenance.output_checksums(out) == before
+        assert output_checksums(out) == before
         assert not list(tmp_path.glob("analysis.previous-*"))
     finally:
         published.chmod(0o755)

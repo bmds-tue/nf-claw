@@ -145,6 +145,9 @@ def _move_previous_run(original: Path, archive: Path) -> Path:
     staged_record = None
     replaced_record = False
     try:
+        # It becomes the run directory: keep the original's permissions, not mkdtemp's 0o700,
+        # which made every resumed run's results private to the user who resumed it.
+        fresh.chmod(stat.S_IMODE(original.stat().st_mode))
         logs = original / "provenance/logs"
         if logs.is_dir():
             shutil.copytree(logs, fresh / "provenance/logs")

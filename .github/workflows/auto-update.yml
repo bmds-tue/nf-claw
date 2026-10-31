@@ -91,100 +91,19 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  validate:
+  # The matrix, real-task and drift gates on this exact candidate, then the isolated publisher;
+  # every gate job runs read-only, and only the publisher uses these write permissions.
+  gate:
     needs: prepare
     if: needs.prepare.outputs.changed == 'true'
     permissions:
-      contents: read
-    uses: ./.github/workflows/tests.yml
-    with:
-      base_sha: ${{ needs.prepare.outputs.base }}
-      candidate_sha: ${{ needs.prepare.outputs.sha }}
-      candidate_artifact: ${{ needs.prepare.outputs.artifact }}
-
-  native:
-    needs: prepare
-    if: needs.prepare.outputs.changed == 'true' && needs.prepare.outputs.pipelines != '[]'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/maintenance-native.yml
+      contents: write
+      actions: write
+      checks: write
+    uses: ./.github/workflows/maintenance-gate.yml
     with:
       base_sha: ${{ needs.prepare.outputs.base }}
       candidate_sha: ${{ needs.prepare.outputs.sha }}
       candidate_artifact: ${{ needs.prepare.outputs.artifact }}
       pipelines: ${{ needs.prepare.outputs.pipelines }}
-
-  drift:
-    needs: prepare
-    if: needs.prepare.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.11"
-      - uses: ./.github/actions/restore-maintenance-candidate
-        with:
-          artifact: ${{ needs.prepare.outputs.artifact }}
-          base: ${{ needs.prepare.outputs.base }}
-          sha: ${{ needs.prepare.outputs.sha }}
-      - run: git submodule foreach 'git fetch -q --tags origin'
-      - run: pip install -e .
-      - run: python -m librarian.check_drift
-
-  publish:
-    needs: [prepare, validate, native, drift]
-    if: >-
-      always() && needs.prepare.result == 'success' && needs.prepare.outputs.changed == 'true' &&
-      needs.validate.result == 'success' && needs.drift.result == 'success' &&
-      (needs.native.result == 'success' ||
-       (needs.prepare.outputs.pipelines == '[]' && needs.native.result == 'skipped'))
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
-      checks: write
-    steps:
-      # Trusted base only: do not check out or execute candidate/upstream code in this job.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.11"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          artifact-ids: ${{ needs.prepare.outputs.artifact }}
-          path: ${{ runner.temp }}/maintenance-candidate
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: maintenance-pytest-${{ needs.prepare.outputs.sha }}-*
-          path: ${{ runner.temp }}/maintenance-matrix
-          merge-multiple: true
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        if: needs.prepare.outputs.pipelines != '[]'
-        with:
-          pattern: maintenance-native-${{ needs.prepare.outputs.sha }}-*
-          path: ${{ runner.temp }}/maintenance-native
-          merge-multiple: true
-      - name: Publish validated update
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE_SHA: ${{ needs.prepare.outputs.base }}
-          CANDIDATE_SHA: ${{ needs.prepare.outputs.sha }}
-          CANDIDATE_DIR: ${{ runner.temp }}/maintenance-candidate
-          MATRIX_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-matrix
-          NATIVE_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-native
-          VALIDATION_RESULT: ${{ needs.validate.result }}
-          DRIFT_RESULT: ${{ needs.drift.result }}
-          NATIVE_RESULT: ${{ needs.native.result }}
-          UPDATE_KIND: update
-        run: bash scripts/publish_validated_update.sh
+      kind: update
