@@ -46,7 +46,8 @@ def test_the_command_status_and_arguments_pass_through():
 def test_the_deadline_stops_the_whole_process_group(tmp_path):
     child = tmp_path / "child.pid"
     started = time.monotonic()
-    process = _run("--kill-after", "10", "1", "sh", "-c", f'sleep 30 & echo $! > {child}; wait')
+    # Three seconds for the shell to record its child: a busy host can take longer than one.
+    process = _run("--kill-after", "10", "3", "sh", "-c", f'sleep 30 & echo $! > {child}; wait')
     assert process.returncode == 124
     assert time.monotonic() - started < 8
     assert _gone(int(child.read_text())), "a process the command started outlived the deadline"
