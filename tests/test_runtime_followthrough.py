@@ -95,16 +95,25 @@ time.sleep(60)
 
 
 @pytest.mark.parametrize("failed_reader", [1, 2])
+@pytest.mark.parametrize("extra_probe", [False, True])
 def test_partial_reader_startup_failure_stops_child_and_started_readers(
-        tmp_path, monkeypatch, failed_reader):
+        tmp_path, monkeypatch, failed_reader, extra_probe):
     monkeypatch.setenv("NFCLAW_SHUTDOWN_GRACE", "0.1")
     created, readers = [], []
     original_popen, original_start = subprocess.Popen, threading.Thread.start
+    original_discovery = execution._die_with_parent
+    script = "import time; time.sleep(60) # partial-reader analysis"
 
     def popen(*args, **kwargs):
         child = original_popen(*args, **kwargs)
-        created.append(child)
+        if script in args[0]:
+            created.append(child)
         return child
+
+    def discovery():
+        # Model libc discovery's unrelated subprocess, including its absent stderr pipe.
+        subprocess.run([sys.executable, "-c", "pass"], stdout=subprocess.PIPE, check=True)
+        return original_discovery()
 
     def start(thread):
         readers.append(thread)
@@ -114,9 +123,11 @@ def test_partial_reader_startup_failure_stops_child_and_started_readers(
 
     monkeypatch.setattr(execution.subprocess, "Popen", popen)
     monkeypatch.setattr(execution.threading.Thread, "start", start)
+    if extra_probe:
+        monkeypatch.setattr(execution, "_die_with_parent", discovery)
     try:
         with pytest.raises(RuntimeError, match="reader allocation failed"):
-            execution.run([sys.executable, "-c", "import time; time.sleep(60)"], cwd=tmp_path,
+            execution.run([sys.executable, "-c", script], cwd=tmp_path,
                           logs_dir=tmp_path / "logs", timeout_seconds=5)
         assert created and all(child.poll() is not None for child in created)
         assert all(not thread.is_alive() for thread in readers)

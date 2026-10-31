@@ -1074,12 +1074,33 @@ def test_resume_refuses_failed_regeneration_with_new_unpaired_sample(
     assert len(fake_runs.calls) == before
 
 
-@pytest.mark.parametrize("malformed", ['{"broken":', '{"nested":' + '[' * 10000 + '0'
-                                      + ']' * 10000 + '}'], ids=['invalid-json', 'nested-json'])
+@pytest.mark.parametrize("malformed,force_recursion", [
+    ('{"broken":', False),
+    ('{"nested":' + '[' * 10000 + '0' + ']' * 10000 + '}', False),
+    ('{"decoder_recursion": []}', True),
+], ids=['invalid-json', 'nested-json', 'decoder-recursion'])
 @pytest.mark.parametrize("operation", ["status", "quick-status", "resume-state", "resume-spec"])
-def test_malformed_chain_records_preserve_cli_diagnostics_and_data(tmp_path, capsys,
-                                                                 malformed, operation):
+def test_malformed_chain_records_preserve_cli_diagnostics_and_data(
+        tmp_path, capsys, monkeypatch, malformed, force_recursion, operation):
     from runner import cli
+
+    # Native JSON nesting limits differ across interpreters (3.14 accepts this depth).
+    # Keep the real input control and independently guarantee the decoder-error path.
+    decode_failed = force_recursion
+    try:
+        json.loads(malformed)
+    except (ValueError, RecursionError):
+        decode_failed = True
+    if force_recursion:
+        loads = chain.json.loads
+
+        def rejecting_decoder(text, *args, **kwargs):
+            if text == malformed:
+                raise RecursionError("decoder nesting limit exceeded")
+            return loads(text, *args, **kwargs)
+
+        monkeypatch.setattr(chain.json, "loads", rejecting_decoder)
+
     out = tmp_path / "recorded-chain"
     record = out / chain.RECORD_DIRNAME
     record.mkdir(parents=True)
@@ -1097,9 +1118,14 @@ def test_malformed_chain_records_preserve_cli_diagnostics_and_data(tmp_path, cap
     assert cli.main(args) == 1
     captured = capsys.readouterr()
     assert "Traceback" not in captured.err
-    assert captured.err
     if operation.endswith("status"):
         envelope = json.loads(captured.out)
         assert envelope["version"] == 1 and envelope["exit_code"] == 1
-        assert envelope["chain"] is None and envelope["error"] and envelope["report"]
+        assert envelope["report"]
+        if decode_failed:
+            assert captured.err and envelope["chain"] is None and envelope["error"]
+        else:
+            assert isinstance(envelope["chain"], dict) and "nested" in envelope["chain"]
+    else:
+        assert captured.err
     assert {p.name: p.read_bytes() for p in record.iterdir()} == original

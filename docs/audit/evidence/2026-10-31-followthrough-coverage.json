@@ -11328,6 +11328,6 @@
       "samplesheet_classifications_checked": 95
     },
     "binary_integrity": "All 8 PNG signatures, chunk CRCs and dimensions validated; no pixel-level scientific/brand claim.",
-    "final_diff": "Independent review of all modified production/test/documentation lines and three new test files; sole important finding F20 fixed with RED/GREEN controls. Coordinator reviewed final narrow F20/F03/F21 changes; final candidate hashes and complete test results are recorded separately."
+    "final_diff": "Independent review of all modified production/test/documentation lines and three new test files; sole important finding F20 fixed with RED/GREEN controls. Coordinator reviewed final narrow F20/F03/F21 changes; final candidate hashes and complete test results are recorded separately. Coordinator also reviewed F22/F23 test portability corrections from cross-platform CI with real and controlled regressions; no production source changed after implementation commit f2471da."
   }
 }

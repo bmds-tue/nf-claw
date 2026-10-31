@@ -10,8 +10,8 @@ promised behavior, with reproducible controls rather than conjectural product ex
 
 ## Prioritized checklist
 
-Locations refer to the baseline above. All 21 findings below are resolved. Locations identify the original defects; focused regressions,
-combined review and the final complete test run verify their repairs. New findings were added before
+Locations refer to the baseline above unless a later candidate is named. All 23 findings below
+are resolved. Locations identify the original defects; focused regressions, combined review and the final complete test run verify their repairs. New findings were added before
 implementation, including those discovered during independent review and the first combined run.
 
 | ID | Severity | Location | Verified behavior and impact | Required change and regression | State |
@@ -37,10 +37,13 @@ implementation, including those discovered during independent review and the fir
 | F19 | Low | `CONTRIBUTING.md:151–152` | Contributor guidance says every nested docs artifact becomes a website page, but the data loader enumerates only top-level Markdown guides. | State the actual nonrecursive page/a11y scope so contributors do not mistake archived audit/evidence artifacts for built pages. | Resolved |
 | F20 | Medium | `runner/chain.py:427–431` | Independent review reproduced deeply nested chain state/spec JSON escaping the durable reader as `RecursionError`; `chain status --json` prints no envelope and a traceback, while ordinary malformed JSON correctly refuses. | Treat decoder nesting failures as malformed chain records. Cover normal/quick JSON status, resume and recorded-spec/private-identity readers, preserving existing data and versioned diagnostics. | Resolved |
 | F21 | Low | `tests/test_orchestration.py:1923` | The non-stub-demo test rejects any warning containing the substring `stub`, including a legitimate missing-log diagnostic whose temporary directory contains the test name `non_stub`. The first combined run reproduced this false failure. | Assert the semantic completion-caveat warning category and recorded manifest caveats instead of unrelated path substrings; retain the positive stub-demo controls. | Resolved |
+| F22 | Low | `tests/test_chain.py:1077–1104` (candidate `f2471da`) | The F20 regression assumes 10,000 nested JSON arrays always exceed the decoder limit. Python 3.14 and 3.15 accept them, so two status controls falsely reject the valid structured status response. | Test native nested input under each interpreter and deterministically exercise a decoder `RecursionError`; preserve the JSON/error contract and unchanged recorded bytes without assuming an interpreter-specific limit. | Resolved |
+| F23 | Low | `tests/test_runtime_followthrough.py:96–123` (candidate `f2471da`) | The partial-reader control captures every `Popen`, including Linux libc-discovery probes. Linux libc discovery invokes `ldconfig` with no stderr pipe, so two controls fail while checking a helper as though it were the analysis child. | Track the unique launched analysis command, preserve all child/thread/pipe cleanup assertions, and inject an unrelated real discovery probe to verify portability without masking an analysis leak. | Resolved |
 
 The initial 14-item audit was committed before implementation. Supplemental test/guide review
 added F15–F19, independent final review added F20, and the first combined run added F21 before
-its repair. The current checklist contains **21 items: 2 high, 11 medium, 8 low**.
+its repair. Cross-platform CI then exposed F22–F23, both recorded before repair. The current
+checklist contains **23 items: 2 high, 11 medium, 10 low**.
 
 ## Coverage and verification policy
 
@@ -87,13 +90,13 @@ reconcile it and verify the resulting candidate before merging.
 
 ## Completed verification
 
-All **21 findings are resolved**: 2 high, 11 medium and 8 low. The implementation preserves the
+All **23 findings are resolved**: 2 high, 11 medium and 10 low. The implementation preserves the
 current product and leaves proposed roadmap products outside this repair. There are no known
 unresolved critical or important findings within the audited repository-owned scope.
 
 | Gate | Verified result |
 |---|---|
-| Complete final Python suite | **3,995 passed, 2 skipped**, 315.38 seconds; Python 3.13.5, four workers |
+| Complete final Python suite | **4,001 passed, 2 skipped**, 330.87 seconds; Python 3.13.5, four workers |
 | Website typecheck and static build | Passed on Node 24.19.0 |
 | Complete browser/accessibility suite | **162 passed**, including URL history, mandatory guidance and no-JavaScript counters |
 | Additional base-path controls | Three audit browser controls passed both at `/` and `/nf-claw` |
@@ -106,6 +109,16 @@ The first combined candidate run exposed two failures (3,985 passed, 2 failed, 2
 F03's missing-session diagnostic order was restored, and F21 narrowed an overbroad warning
 assertion. Both failures reproduced before repair; 131 related tests passed afterward, followed
 by the complete green run above. No failing assertion or required check was disabled.
+
+Cross-platform CI of implementation commit `f2471da` exposed two test-portability assumptions,
+not further production defects. F22 assumed a native decoder nesting limit that changed in Python
+3.14/3.15; F23 confused Linux's libc-discovery helper with the launched analysis child. Both were
+reproduced locally before repair. All 165 related chain tests passed on Python 3.13 and 3.14;
+removing the production recursion fix made the four deterministic decoder controls fail. Runtime
+controls passed 73 tests with two Linux-only skips, including an injected unrelated discovery
+subprocess. Cleanup assertions still require the actual analysis child, its readers and pipes to
+be stopped/closed. Production cleanup/error guarantees remain asserted; no gate was disabled.
+A complete intermediate run passed 3,999 tests with two skips after F22, and the final complete run above includes both corrections.
 
 The two local skips are Linux process-state and parent-death-signal controls in
 `tests/test_execution.py`; Ubuntu CI runs those platform-specific controls. Website source did
@@ -139,12 +152,17 @@ Only audit metadata was finalized afterward.
   behavior, historical release evidence and nonrecursive website guide loader.
 - F21: the non-stub test checks the completion-caveat category and manifest evidence; existing
   positive stub controls remain in place.
+- F22: real nested JSON input remains covered, with assertions matching each interpreter's
+  native parsing capability; four controlled decoder failures guarantee F20's error path is
+  tested on every supported version.
+- F23: the partial-reader test tracks its unique analysis command and includes a real unrelated
+  discovery probe with no stderr pipe, preserving all process/thread/pipe cleanup requirements.
 
 An independent reviewer inspected the combined production/test/documentation diff, all three
 new test files and adjacent callers, and verified baseline inventory identities. Its sole important
 finding F20 was repaired with demonstrated regressions. The coordinator reviewed the small final
-F20, F03 and F21 changes and verified the complete candidate. No Docker or vendored pipeline source
-was modified. Historical evidence remains historical; neither passing tests nor advisory scans
+F20, F03 and F21 changes plus the F22/F23 test-portability corrections, and verified the complete
+candidate. No Docker or vendored pipeline source was modified. Historical evidence remains historical; neither passing tests nor advisory scans
 establish the scientific correctness of every external pipeline/tool or absence of unknown bugs.
 
 ## Integration record

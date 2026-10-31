@@ -4,10 +4,10 @@
   "pull_request": "https://github.com/bmds-tue/nf-claw/pull/247",
   "scope": "Current repository-owned product; Docker work and proposed future products excluded. Vendor pins and generated context verified, upstream tool/scientific internals not exhaustively audited.",
   "findings": {
-    "resolved": 21,
+    "resolved": 23,
     "high": 2,
     "medium": 11,
-    "low": 8,
+    "low": 10,
     "known_unresolved_critical_or_important": 0
   },
   "commands": {
@@ -48,15 +48,50 @@
       "errors": 0,
       "skipped": 0
     },
-    "final_python": {
+    "first_complete_green": {
       "junit_sha256": "ae7c04b1ab5119bb889654587cfbeb8a15db05ee48e6fd61105152b9cb45dc37",
       "tests": 3997,
       "failures": 0,
       "errors": 0,
       "skipped": 2
+    },
+    "portable_decoder_complete_green": {
+      "junit_sha256": "49ca00c9d7c68831a8e58e18ee920468b00fec057c89ae7c9f8842b9bed1db5c",
+      "tests": 4001,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "F22_python313_related": {
+      "junit_sha256": "0a20d5db9d5006f47803fb4d23992d3caab140962b503afb154ebd73c54e0952",
+      "tests": 165,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "F22_python314_related": {
+      "junit_sha256": "7061cc6537678f3b1ed40c2450d0e04eef1fc1279b367b2409499e9d204cd49e",
+      "tests": 165,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "F23_runtime_related": {
+      "junit_sha256": "76bf342692ad6133f1a1b8d67b6837596db5a56ee9e96a08db148939571d0c1f",
+      "tests": 75,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "final_python": {
+      "junit_sha256": "68273bd36ad405905a3a2e3b65cbe855a6b6d0f28abddbb286d129c1e92d0063",
+      "tests": 4003,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
     }
   },
-  "python_final_passed": 3995,
+  "python_final_passed": 4001,
   "local_skips": [
     {
       "test": "tests/test_execution.py::test_teardown_kills_a_task_that_outlives_sigterm",
@@ -93,7 +128,8 @@
     "method": "Independent final diff review, all three new test files and adjacent callers; baseline identities checked",
     "important_findings": 1,
     "resolution": "F20 added before repair; eight controls and 161 related tests passed; coordinator inspected final narrow fixes",
-    "first_combined_failures": "F03 diagnostic order and F21 path-substring test assertion; reproduced, repaired and retested before final complete suite"
+    "first_combined_failures": "F03 diagnostic order and F21 path-substring test assertion; reproduced, repaired and retested before final complete suite",
+    "final_portability_review": "Coordinator reviewed both narrow test-only corrections, actual CI traces and local positive/negative controls; complete final suite covers their recorded source bytes."
   },
   "tested_candidate_sha256": {
     "CHANGELOG.md": "fb3b297e106f35eb46f577ae5e8f96882c7bc370fcda56636ecf4674c1c21c2a",
@@ -113,14 +149,14 @@
     "runner/orchestration.py": "f2e5fb81a2830f7383e435ff5d8bdd27fc734825d3e0f663a40b91fb41841b3a",
     "runner/scientific_hts.py": "479d508afd3e5b594dc0ba65b3243d0ff06dc0fc8f6dd57ebcccf7c8594f65cc",
     "tests/test_audit_fixes.py": "c7e276b525b9e178decc4c8bd43b2d64f739529f73f8251d23ce61301136570e",
-    "tests/test_chain.py": "6386b9eba24515dcb7a53f9a9758a961ae1b34296a4de06d15a8131c60e7299f",
+    "tests/test_chain.py": "2d0cbac06c6ed40cca910774019df37b2aa29478bf59f7cf8d700e1584412899",
     "tests/test_chain_environment_identity.py": "916e7c3b8fe52bb3be209ca01903b3785386460852cbc09711896ddd5edf27e5",
     "tests/test_check_drift.py": "1e974849b64d560596ce28a6e3cbd0569ed595fd5996cfb8c5bd4964dd7fc4b1",
     "tests/test_handoff_consumption.py": "2aea4323d3c155003f6dea87a35c169a0b375011007490a22e58bf9ec5dd21d8",
     "tests/test_jobs_cli.py": "71ad878aecb7a6bc2f1674d7b9495a388039c03ff5bb565e85494f1f0d350865",
     "tests/test_mcp_server.py": "3dd8f737bf22753e0b118e0cb9b12f5d25636cb01f836b3e401f49e62c5c0dd4",
     "tests/test_orchestration.py": "e00c3f7159dc2f582e6ddb630dbd7c4122bf2881255101b71d815a17fa51f07b",
-    "tests/test_runtime_followthrough.py": "2799cc19b7f2fac27b75bab5912c27541d2517cc511ef8fcdc2499b073bbe450",
+    "tests/test_runtime_followthrough.py": "55613e75334eaba886024ee4002e26a1573d92fea2877672eacfdc79c98c518d",
     "tests/test_scientific_hts.py": "0f1ee32d639669ae793b6dd7f8f5a4f75556843afa8c1c2b828d92e9e110236e",
     "website/README.md": "d78e2d8455a255cd4e7d0bce0312de1c65ac875a8f10248f5fe7142662e5704e",
     "website/src/components/pipeline/pipeline-index.tsx": "7f6a0f57a3242ec8d8dfc3d61e5864616fedfd9c477df5f7fea3822b7b3c8c91",
@@ -128,5 +164,14 @@
     "website/src/lib/data/pipelines.ts": "65e45c3f3b776a9515ae60032fdf669b812f89ce4bc2765be5741becfa882034",
     "website/tests/audit-regressions.spec.ts": "19bcdfec08612f31a7e2c878de0891fe3230315ee3cd94f49acee2e8840ec8cd"
   },
-  "ci_and_merge_record": "The linked pull request records checks for the committed candidate and the authoritative merge status; initial checklist-only head results are not final implementation evidence."
+  "ci_and_merge_record": "The linked pull request records checks for the committed candidate and the authoritative merge status; initial checklist-only head results are not final implementation evidence.",
+  "ci_portability_repairs": {
+    "failed_head": "f2471da39924400a6e40d44f68e44e6d89a7afac",
+    "run": "https://github.com/bmds-tue/nf-claw/actions/runs/41245159281",
+    "F22": "Native nested JSON plus deterministic RecursionError controls; reproduced two failures on Python 3.14; 165 related controls pass on Python 3.13 and 3.14; removing the production catch makes all four injected cases fail.",
+    "F23": "Only track the unique analysis command, not Linux libc discovery probes. Real injected unrelated probe reproduced the two original failures; corrected runtime batch passes 73 tests with two Linux skips.",
+    "production_guarantees_preserved": true,
+    "gates_disabled": false,
+    "production_changes_after_f2471da": false
+  }
 }
