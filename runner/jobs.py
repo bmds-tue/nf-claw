@@ -29,6 +29,8 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from pathlib import Path
 
+from runner import process_identity
+
 from runner import atomic
 
 try:
@@ -38,6 +40,7 @@ except ImportError:                                       # Windows: no detached
 
 JOB_FILE = "job.json"
 SUPERVISOR_FILE = "supervisor.json"
+CHILD_FILE = "child.json"
 OUTPUT_LOG = "output.log"
 STATUS_FILE = "run-status.json"
 CANCEL_FILE = "cancel"
@@ -106,6 +109,7 @@ class Job:
     supervisor_pid: int | None = None
     # Written by the supervisor (supervisor.json), read back on every load:
     child_pid: int | None = None
+    child_identity: dict | None = None
     started_at: str | None = None
     exit_code: int | None = None
     finished_at: str | None = None
@@ -116,14 +120,15 @@ class Job:
 
     def spec(self) -> dict:
         """What job.json holds: the fields the server writes."""
-        own = {"child_pid", "started_at", "exit_code", "finished_at", "error", "status_error",
+        own = {"child_pid", "child_identity", "started_at", "exit_code", "finished_at", "error",
+               "status_error",
                "cancel_requested", "dir"}
         return {k: v for k, v in asdict(self).items() if k not in own}
 
 
 def _write_json(path: Path, data: dict) -> None:
     """Replace `path` atomically, so a reader never sees half a record."""
-    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
+    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n", mode=0o600)
 
 
 def _read_json(path: Path) -> dict:
@@ -173,6 +178,7 @@ def launch(job_dir: Path, *, kind: str, argv: list[str], cwd: str, outdir: str,
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with (job_dir / OUTPUT_LOG).open("ab") as out:
+            os.fchmod(out.fileno(), 0o600)
             proc = subprocess.Popen(
                 [sys.executable, "-m", "runner.jobs", str(job_dir)],
                 cwd=cwd, env=child_env(), stdin=subprocess.DEVNULL, stdout=out,
@@ -231,12 +237,21 @@ def load(job_id: str) -> Job:
     job = Job(**{k: v for k, v in spec.items() if k in known}, dir=job_dir)
     sup = _read_json(job_dir / SUPERVISOR_FILE)
     for key, kind in (("supervisor_pid", int), ("child_pid", int), ("exit_code", int),
+                      ("child_identity", dict),
                       ("started_at", str), ("finished_at", str), ("error", str),
                       ("status_error", str)):
         if key in sup:
             if not (pid(sup[key]) if key.endswith("_pid") else optional(sup[key], kind)):
                 raise JobError(f"malformed supervisor record: {job_id}")
             setattr(job, key, sup[key])
+    # The child writes this before exec, so killing the supervisor between Popen and its
+    # metadata write cannot leave a launched analysis without recoverable identity.
+    child = _read_json(job_dir / CHILD_FILE)
+    if (child and pid(child.get("pid")) and child.get("pid") is not None
+            and isinstance(child.get("boot"), str) and isinstance(child.get("start"), str)
+            and type(child.get("uid")) is int):
+        if job.child_pid is None or job.child_pid == child["pid"]:
+            job.child_pid, job.child_identity = child["pid"], child
     job.cancel_requested = (job_dir / CANCEL_FILE).exists()
     return job
 
@@ -281,6 +296,8 @@ def state(job: Job) -> str:
     supervisor stopped without recording an outcome — killed outright, or the host restarted)."""
     if alive(job):
         return "running"
+    if orphan_alive(job):
+        return "running"
     if job.exit_code == 0:
         return "succeeded"
     if job.cancel_requested:
@@ -288,11 +305,24 @@ def state(job: Job) -> str:
     return "failed" if job.exit_code is not None else "lost"
 
 
+def orphan_alive(job: Job) -> bool:
+    """A surviving command with a verified birth identity, despite a lost supervisor."""
+    return (job.exit_code is None and job.child_pid is not None
+            and isinstance(job.child_identity, dict)
+            and job.child_identity.get("pid") == job.child_pid
+            and process_identity.matches(job.child_identity))
+
+
 def cancel(job: Job) -> bool:
     """Ask a running job to stop the way `kill <nfclaw pid>` does: nfclaw shuts Nextflow and its
     tasks down, closes its run log with the outcome and writes provenance. False if it had ended."""
     if not alive(job):
-        return False
+        if not orphan_alive(job):
+            return False
+        # The birth identity, not the old PID or command name, authorizes recovery. pidfd on
+        # Linux binds the signal atomically to the verified process even if the PID is reused.
+        (job.dir / CANCEL_FILE).write_text(_now() + "\n", encoding="utf-8")
+        return process_identity.send(job.child_identity)
     (job.dir / CANCEL_FILE).write_text(_now() + "\n", encoding="utf-8")
     if job.supervisor_pid and alive(job):             # the lock proves the pid is still ours
         try:
@@ -306,15 +336,21 @@ def output_tail(job: Job, lines: int) -> list[str]:
     """The last `lines` lines the job's command printed."""
     if lines <= 0:
         return []
+    from runner import redaction
+    env = redaction.assignments([*job.command, *job.argv])
+    # Read an overlap so a credential crossing the tail boundary can be removed as a whole.
+    margin = max((6 * len(value.encode("utf-8")) for _, value in env), default=0)
     try:
         with (job.dir / OUTPUT_LOG).open("rb") as fh:
             fh.seek(0, os.SEEK_END)
             size = fh.tell()
-            fh.seek(max(0, size - _TAIL_BYTES))
+            fh.seek(max(0, size - _TAIL_BYTES - margin))
             data = fh.read()
     except OSError:
         return []
-    text = data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+    text = redaction.text(data.decode("utf-8", errors="replace"), env)
+    text = text.encode("utf-8")[-_TAIL_BYTES:].decode("utf-8", errors="replace")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     out = text.split("\n")
     if size > _TAIL_BYTES and out:
         out = out[1:]                                 # the first line may be cut mid-way
@@ -380,7 +416,7 @@ def _freeze_run_status(job_dir: Path, spec: dict) -> None:
         # The retained tail may start in the middle of a physical line.
         tail = tail[tail.find(b"\n") + 1:]
     snapshot = job_dir / "run.log"
-    snapshot.write_bytes(head + tail)
+    atomic.write_bytes(snapshot, head + tail, mode=0o600)
     state = runlog.read_state(
         snapshot, replay_engine_log=log.parent.parent.parent / ".nextflow.log")
     state.log = log
@@ -423,7 +459,9 @@ def supervise(job_dir: Path) -> int:
         return 0
     try:
         spec = _read_json(job_dir / JOB_FILE)
-        proc = subprocess.Popen(spec["command"], cwd=spec["cwd"], stdin=subprocess.DEVNULL)
+        proc = subprocess.Popen([sys.executable, "-m", "runner.jobs", "--child", str(job_dir),
+                                 str(os.getpid())], cwd=spec["cwd"], env=child_env(),
+                                stdin=subprocess.DEVNULL)
     except (OSError, KeyError, TypeError, ValueError) as exc:
         record.update(exit_code=127, finished_at=_now(), error=f"could not start: {exc}")
         print(f"nfclaw job: could not start the command: {exc}", file=sys.stderr, flush=True)
@@ -433,8 +471,11 @@ def supervise(job_dir: Path) -> int:
     if stopping or (job_dir / CANCEL_FILE).exists():
         relay(stopping[0] if stopping else signal.SIGTERM, None)
     record["child_pid"] = proc.pid
+    record["child_identity"] = process_identity.read(proc.pid)
     _write_json(record_path, record)
     code = proc.wait()
+    if error := _read_json(job_dir / "child-error.json").get("error"):
+        record["error"] = error
     try:
         _freeze_run_status(job_dir, {**spec, "child_pid": proc.pid})
     except Exception as exc:          # the exit code below must be recorded whatever happens here
@@ -445,5 +486,29 @@ def supervise(job_dir: Path) -> int:
     return 0
 
 
+def _exec_child(job_dir: Path, parent: int) -> int:
+    """Publish identity durably before any analysis can execute (same PID across exec)."""
+    spec = _read_json(job_dir / JOB_FILE)
+    identity = process_identity.read(os.getpid())
+    if os.getppid() != parent or (job_dir / CANCEL_FILE).exists():
+        return 143
+    if identity is None:
+        error = "cannot authenticate command identity; refusing to launch"
+        _write_json(job_dir / "child-error.json", {"error": error})
+        print(f"nfclaw job: {error}", file=sys.stderr, flush=True)
+        return 125
+    _write_json(job_dir / CHILD_FILE, identity)
+    if os.getppid() != parent or (job_dir / CANCEL_FILE).exists():
+        return 143
+    try:
+        os.execvpe(spec["command"][0], spec["command"], os.environ)
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        error = f"could not start the command: {exc}"
+        _write_json(job_dir / "child-error.json", {"error": error})
+        print(f"nfclaw job: {error}", file=sys.stderr, flush=True)
+        return 127
+
+
 if __name__ == "__main__":
-    raise SystemExit(supervise(Path(sys.argv[1])))
+    raise SystemExit(_exec_child(Path(sys.argv[2]), int(sys.argv[3]))
+                     if sys.argv[1] == "--child" else supervise(Path(sys.argv[1])))

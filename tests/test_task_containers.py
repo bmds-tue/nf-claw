@@ -78,6 +78,29 @@ def _kill(proc: subprocess.Popen) -> None:
     proc.wait()
 
 
+def test_denied_inventory_is_reported_without_claiming_no_containers(monkeypatch, capsys):
+    monkeypatch.setattr(replay_guard.os.path, "isdir", lambda _path: False)
+    monkeypatch.setattr(replay_guard.subprocess, "run", lambda *a, **k:
+                        subprocess.CompletedProcess(a[0], 1, "", "inspection denied"))
+    inventory = execution._observe_task_containers(123, None)
+    assert inventory == {}
+    assert inventory.issues and "cannot be confirmed" in inventory.issues[0]
+    assert "cleanup cannot be confirmed" in capsys.readouterr().err
+
+
+def test_replay_reports_unconfirmed_container_cleanup_when_inventory_is_unreadable(
+        tmp_path, monkeypatch):
+    inventory = replay_guard._ContainerInventory()
+    inventory.issues = ["process inventory unavailable; task-container cleanup cannot be confirmed"]
+    monkeypatch.setattr(replay_guard, "task_containers", lambda _pid: inventory)
+    proc = _group(tmp_path)
+    try:
+        messages = replay_guard._stop_replay_group(proc, grace=0.1)
+        assert any("cleanup cannot be confirmed" in message for message in messages)
+    finally:
+        _kill(proc)
+
+
 def test_the_group_s_task_containers_are_found_by_name(engine, tmp_path):
     docker, state, _ = engine
     other = subprocess.Popen([str(docker), "run", "--name", "nxf-elsewhere", "img"],

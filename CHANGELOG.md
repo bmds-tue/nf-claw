@@ -50,6 +50,14 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- Redact sensitive environment values from shell/MCP job reports and keep execution records
+  private. Stop foreground MCP descendants on timeout or cancellation; recover and safely cancel
+  commands that survive a killed job supervisor. Reserve MCP control workers and bound slow-work
+  admission. Offline release listings retain and label the committed pipeline pin.
+- Apply supported scalar, required-field, relationship and uniqueness checks to flat JSON/YAML
+  samplesheets as well as CSV/TSV. Report unreadable process identities as unknown, and unreadable
+  task-container inventories as unconfirmed cleanup.
+
 - Resolve verified current-product audit findings in process cancellation, completion caveats,
   environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage
   identity, website navigation/guidance/static counts, manifest parsing and MCP/job error handling

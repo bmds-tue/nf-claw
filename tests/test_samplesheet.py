@@ -178,13 +178,67 @@ def test_tsv_missing_column_still_detected(tmp_path):
     assert any("fastq_1" in i for i in issues)
 
 
-def test_non_tabular_named_input_is_deferred_to_nf_schema(tmp_path):
+def test_flat_serialized_rows_receive_required_field_validation(tmp_path):
     # nf-core/sarek accepts YAML/JSON inputs even though it ships schema_input.json for tabular
     # samplesheets. The local pre-check must not parse those files as CSV and reject them before
     # Nextflow/nf-schema gets the format-specific validation.
     ss = tmp_path / "samples.json"
     ss.write_text('[{"patient": "P1", "sample": "S1"}]\n')
-    assert samplesheet.validate(ss, SCH) == []
+    assert samplesheet.validate(ss, SCH) == ["row 1: empty required 'fastq_1'"]
+
+
+@pytest.mark.parametrize("extension", ["csv", "tsv", "json", "yaml"])
+def test_flat_formats_share_scalar_relationship_and_uniqueness_checks(tmp_path, extension):
+    schema = InputSchema(columns=(Column("sample", "string", True, None),
+                                  Column("count", "integer", False, None, minimum=1),
+                                  Column("group", "string", False, None, enum=("case", "control"))),
+                         dependent_required=(("count", ("group",)),),
+                         any_of_required=(("count",), ("group",)),
+                         unique_entries=(("sample",),))
+    sheet = tmp_path / f"samples.{extension}"
+    rows = [{"sample": "A", "count": "0", "group": ""},
+            {"sample": "A", "count": "", "group": "invalid"},
+            {"sample": "B", "count": "", "group": ""}]
+    if extension in ("csv", "tsv"):
+        with sheet.open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]),
+                                    delimiter="\t" if extension == "tsv" else ",")
+            writer.writeheader()
+            writer.writerows(rows)
+    else:
+        _serialized(sheet, rows)
+    issues = samplesheet.validate(sheet, schema)
+    assert any("must be >= 1" in issue for issue in issues)
+    assert any("'count' requires 'group'" in issue for issue in issues)
+    assert any("must be one of" in issue for issue in issues)
+    assert any("needs one of these column sets" in issue for issue in issues)
+    assert any("entries must be unique" in issue for issue in issues)
+
+
+@pytest.mark.parametrize("extension", ["json", "yaml"])
+def test_empty_serialized_samplesheet_is_refused(tmp_path, extension):
+    sheet = tmp_path / f"samples.{extension}"
+    _serialized(sheet, [])
+    assert samplesheet.validate(sheet, SCH) == ["samplesheet has no data rows"]
+
+
+@pytest.mark.parametrize("composition", ["oneOf", "anyOf"])
+@pytest.mark.parametrize("extension", ["csv", "json"])
+def test_partial_branch_extraction_does_not_reject_other_valid_alternatives(
+        tmp_path, composition, extension):
+    (tmp_path / "assets").mkdir()
+    definition = {"items": {"properties": {"sample": {"type": "string"},
+                                           "reads": {"type": "string"}},
+                            composition: [{"required": ["reads"]},
+                                          {"properties": {"sample": {"const": "A"}}}]}}
+    (tmp_path / "assets/schema_input.json").write_text(json.dumps(definition))
+    schema = load_input_schema(tmp_path)
+    sheet = tmp_path / f"samples.{extension}"
+    if extension == "csv":
+        sheet.write_text("sample\nA\n")
+    else:
+        sheet.write_text('[{"sample":"A"}]')
+    assert samplesheet.validate(sheet, schema) == []
 
 
 SAREK_LIKE = InputSchema(
@@ -502,7 +556,8 @@ def test_yaml_merge_overrides_and_quoted_identity_preserve_valid_records(tmp_pat
     sheet = tmp_path / "samples.yaml"
     sheet.write_text('- &base\n  sample: A\n  description: free text $x\n'
                      '- <<: *base\n  sample: "2026-10-09"\n')
-    assert samplesheet.validate(sheet, SCH) == []
+    schema = InputSchema(columns=(Column("sample", "string", True, None),))
+    assert samplesheet.validate(sheet, schema) == []
     assert [row["sample"] for row in samplesheet.serialized_rows(sheet)] == ["A", "2026-10-09"]
 
 

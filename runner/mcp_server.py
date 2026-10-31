@@ -21,6 +21,7 @@ import sys
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
@@ -46,6 +47,7 @@ INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 RESOURCE_NOT_FOUND = -32002              # legacy code; modern servers report -32602
 UNSUPPORTED_PROTOCOL_VERSION = -32022
+SERVER_BUSY = -32000
 
 # Modern results that clients may cache: how long they stay fresh, and whether they hold anything
 # private. The tool, prompt and template lists are fixed for the life of the process; resources are
@@ -98,7 +100,10 @@ class Context:
 
     def complete_after(self, wait: Callable[[], dict]) -> dict | DeferredToolResult:
         """Keep a transport worker free after an immediate action such as sending a stop."""
-        return DeferredToolResult(wait) if self._defer_waits else wait()
+        if self._defer_waits:
+            context = copy_context()
+            return DeferredToolResult(lambda: context.run(wait))
+        return wait()
 
     def progress(self, progress: float, total: float | None = None,
                  message: str | None = None) -> None:
@@ -164,7 +169,9 @@ def _requested_version(params: Any) -> str | None:
 class Server:
     def __init__(self, handler: Handler, *, name: str, version: str, instructions: str = "",
                  title: str | None = None, max_workers: int = 8,
-                 waiting_tools: tuple[str, ...] = (), control_tools: tuple[str, ...] = ()):
+                 waiting_tools: tuple[str, ...] = (),
+                 control_tools: tuple[str, ...] = ("get_job", "list_jobs", "run_status",
+                                                   "cancel_job")):
         self.handler = handler
         self.info = {"name": name, "version": version}
         self.title = title
@@ -177,6 +184,12 @@ class Server:
         self._closing = threading.Event()
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mcp")
         self._wait_pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mcp-wait")
+        self._control_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mcp-control")
+        # ThreadPoolExecutor's own queue is unbounded. Admit at most one queued wave of slow
+        # work; overload gets a retryable response without consuming control capacity or memory.
+        self._slots = {"work": threading.BoundedSemaphore(max_workers * 2),
+                       "wait": threading.BoundedSemaphore(max_workers * 2),
+                       "control": threading.BoundedSemaphore(16)}
         self._waiting_tools = frozenset(waiting_tools)
         self._control_tools = frozenset(control_tools)
 
@@ -209,6 +222,7 @@ class Server:
                 for ctx in self._inflight.values():
                     ctx.cancelled.set()
             self._pool.shutdown(wait=True)
+            self._control_pool.shutdown(wait=True)
             self._wait_pool.shutdown(wait=True)
         return 0
 
@@ -230,7 +244,9 @@ class Server:
         # The legacy handshake is answered in order, before anything that depends on the version it
         # negotiates; notifications are cheap; every other request runs on the pool so none blocks
         # another.
-        if isinstance(message, dict) and message.get("method") == "initialize":
+        if isinstance(message, dict) and message.get("method") in ("initialize", "ping"):
+            if message.get("method") == "ping" and "id" in message:
+                self._track(message)
             response = self.handle(message)
             if response is not None:
                 self._send(response)
@@ -248,11 +264,28 @@ class Server:
             tool = params.get("name")
             wait = arguments.get("wait_seconds", 0)
             waiting = (isinstance(message, dict) and message.get("method") == "tools/call"
-                       and isinstance(tool, str) and tool not in self._control_tools
+                       and isinstance(tool, str) and tool != "cancel_job"
                        and ((tool in self._waiting_tools and arguments.get("wait_seconds") != 0)
                             or isinstance(wait, (int, float)) and wait > 0))
-            pool = self._wait_pool if waiting else self._pool
-            pool.submit(self._serve_one, message)
+            control = (isinstance(message, dict) and message.get("method") == "tools/call"
+                       and isinstance(tool, str) and tool in self._control_tools and not waiting
+                       and not (tool == "run_status" and arguments.get("chain")
+                                and not arguments.get("quick")))
+            lane = "wait" if waiting else "control" if control else "work"
+            pool = self._wait_pool if waiting else self._control_pool if control else self._pool
+            if not self._slots[lane].acquire(blocking=False):
+                with self._inflight_lock:
+                    self._inflight.pop(_key(_reply_id(message)), None)
+                self._send(_error(_reply_id(message), SERVER_BUSY,
+                                  "server busy: too many pending requests; retry later"))
+                return
+            pool.submit(self._serve_admitted, message, lane)
+
+    def _serve_admitted(self, message: Any, lane: str) -> None:
+        try:
+            self._serve_one(message)
+        finally:
+            self._slots[lane].release()
 
     def _track(self, message: dict) -> None:
         if (message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str)
@@ -275,14 +308,28 @@ class Server:
                               INTERNAL_ERROR, f"internal error: {exc}")
         if response is not None:
             if isinstance(response, DeferredToolResult):
-                self._wait_pool.submit(self._serve_deferred, response)
+                if self._slots["wait"].acquire(blocking=False):
+                    self._wait_pool.submit(self._serve_deferred, response)
+                else:
+                    # The immediate control action already ran. End only its optional wait;
+                    # never report a cancellation as rejected after sending its stop signal.
+                    with self._inflight_lock:
+                        ctx = self._inflight.get(_key(_reply_id(message)))
+                    if ctx is not None:
+                        ctx.cancelled.set()
+                    reply = response.complete()
+                    if reply is not None:
+                        self._send(reply)
             else:
                 self._send(response)
 
     def _serve_deferred(self, pending: DeferredToolResult) -> None:
-        response = pending.complete()
-        if response is not None:
-            self._send(response)
+        try:
+            response = pending.complete()
+            if response is not None:
+                self._send(response)
+        finally:
+            self._slots["wait"].release()
 
     # --- dispatch -------------------------------------------------------------------------------
 
@@ -536,4 +583,4 @@ def serve(repo_root: Path) -> int:
     return serve_stdio(tools, name="nfclaw", title="nf-claw", version=mcp_tools.server_version(),
                        instructions=mcp_tools.INSTRUCTIONS,
                        waiting_tools=("run_pipeline", "run_chain", "replay_run"),
-                       control_tools=("cancel_job",))
+                       control_tools=("cancel_job", "get_job", "run_status", "list_jobs"))

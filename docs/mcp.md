@@ -121,16 +121,21 @@ can take days; nothing needs to stay connected:
   CLI unmodified. The MCP client closing, or the server restarting, does not stop it.
 - Its record is on disk, in `$NFCLAW_STATE_DIR/jobs/<id>/` (default `~/.local/state/nfclaw/jobs/`):
   `job.json` (the command line and directory), `output.log` (everything nfclaw and Nextflow
-  printed), `supervisor.json` (pids and exit code). Any later server — another session, another
+  printed), `supervisor.json` (pids and exit code), `child.json` (process birth identity, written
+  before the command executes). Records are private (0600 inside a 0700 directory). Any later
+  server — another session, another
   client — reads it back.
 - The supervisor holds a lock on the job for as long as it lives, so "running" never rests on a pid
-  that could have been reused.
+  that could have been reused. If its supervisor dies, a surviving command can be authenticated
+  by its boot/namespace, owner and precise birth time. Linux cancellation also uses a pidfd.
 
 `get_job` reports `running` (with `phase`: `preparing` while nfclaw validates, stages inputs or
 probes configs; `launched` once it has started Nextflow, until its run log records the outcome —
 provenance included; `finishing` for the moment between that record and the job's exit), then
-`succeeded`, `failed`, `cancelled`, or `lost` (the supervisor was killed outright or the host
-restarted; the status report then says whether nfclaw itself still runs). Once a run has reached its
+`succeeded`, `failed`, `cancelled`, or `lost`. A verified command whose supervisor died remains
+`running` with `phase: orphaned` and can be cancelled. Without authenticated surviving identity,
+the outcome is `lost`; unreadable identity does not prove exit. Historical records without birth
+identity require manual executor reconciliation. Once a run has reached its
 run log, the result includes `nfclaw status`'s report — the outcome, the error with Nextflow's own
 message, completion caveats, and the log paths. A job refused before it opened a run log (invalid
 parameters into a fresh `--outdir`) has no such report: its `output_tail` holds the refusal. A
@@ -280,8 +285,27 @@ from nfclaw's error:
 Completed jobs retain a private snapshot of their own run status. Reusing the output directory
 for a later retry does not replace an older job ID's outcome or caveats. Historical jobs without
 that snapshot retain their supervisor outcome, but do not borrow a later run's status report.
-Long polls use separate worker capacity so ordinary status, ping and cancellation requests remain
-available. Malformed job records are rejected individually and omitted from global listing.
+Long polls and ordinary work have separate, bounded admission; excess requests receive a retryable
+`server busy` JSON-RPC error (-32000). Immediate job/status/cancel controls have reserved workers,
+and ping is handled directly. Slow version lookup, source materialization and verification cannot
+fill the control workers. A chain status that hashes lineage uses ordinary work capacity.
+Malformed job records are rejected individually and omitted from global listing.
+
+Foreground CLI calls run under a separate process supervisor. Timeout, request cancellation,
+disconnect and MCP process death stop their helpers, including metadata probes in other process
+groups. Linux uses a subreaper to adopt helpers whose intermediate parent exits; macOS follows
+process ancestry while the command runs. If process inspection is unavailable, foreground work
+is refused before launch; unreadable inventories during run/replay cleanup are reported as
+unconfirmed cleanup. Deliberately detached analysis jobs remain independent of foreground calls.
+
+Shared shell/MCP job views redact sensitive `NXF_*` values from commands, frozen/live diagnostics
+and output tails under the provenance policy. This includes overwritten environment options,
+quoted/JSON-escaped values, multiline values and credentials crossing the bounded tail boundary.
+Raw execution records and raw logs remain private; redact them before sharing them directly.
+
+Version listings retain the committed pin even in an uninitialized, tagless offline clone. Notes
+distinguish remote observations, locally cached tags and a pin whose tag availability is unverified;
+the committed fallback is not added to the inventory authorizing other remote releases.
 
 `run_pipeline.params` accepts arrays and objects as well as scalar values. Structured values are
 merged with `params_file` into an exact-number JSON file inside the private job directory (0600);

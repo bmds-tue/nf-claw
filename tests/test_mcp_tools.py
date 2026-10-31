@@ -84,6 +84,30 @@ def text(result) -> str:
     return result["content"][0]["text"]
 
 
+@pytest.mark.parametrize("check", [False, True])
+@pytest.mark.parametrize("secret", ["synthetic-private-job-value", "synthetic-'quote-\"value",
+                                    "synthetic-first-line\nsynthetic-second-line"])
+def test_job_submission_and_polling_redact_commands_and_echoed_secrets(
+        tools, fake_cli, tmp_path, check, secret):
+    result = call(tools, "run_pipeline", pipeline="rnaseq", outdir=str(tmp_path / "out"),
+                  check=check, nxf_env={"NXF_API_TOKEN": secret, "NXF_OFFLINE": "true"},
+                  wait_seconds=30)
+    assert secret not in json.dumps(result)
+    assert all(part not in text(result) for part in secret.splitlines())
+    job_id = result["structuredContent"]["job_id"]
+    result = call(tools, "get_job", job_id=job_id, wait_seconds=30)
+    assert secret not in json.dumps(result)
+    assert all(part not in text(result) for part in secret.splitlines())
+    assert "<redacted>" in json.dumps(result)
+    assert "NXF_OFFLINE=true" in json.dumps(result)
+    # Redaction is presentation-only: execution still gets the requested value, privately.
+    job = jobs.load(job_id)
+    assert secret in " ".join(job.command)
+    assert job.dir.stat().st_mode & 0o077 == 0
+    assert (job.dir / jobs.JOB_FILE).stat().st_mode & 0o077 == 0
+    assert (job.dir / jobs.OUTPUT_LOG).stat().st_mode & 0o077 == 0
+
+
 # --- arguments -> the nfclaw command line ---------------------------------------------------------
 
 def test_run_arguments_become_one_token_per_cli_option(tools):

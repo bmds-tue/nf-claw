@@ -1099,14 +1099,28 @@ _TASK_CONTAINER = re.compile(r"nxf-[A-Za-z0-9]+")
 _CONTAINER_ENGINES = ("docker", "podman")
 
 
+class _ProcessCommands(list):
+    def __init__(self):
+        super().__init__()
+        self.issues = []
+
+
+class _ContainerInventory(dict):
+    def __init__(self):
+        super().__init__()
+        self.issues = []
+
+
 def _group_commands(pgid: int) -> list[list[str]]:
     """The command lines of the processes in process group `pgid`, best effort."""
-    commands = []
+    commands = _ProcessCommands()
     if os.path.isdir("/proc/self"):
         try:
             entries = os.listdir("/proc")
         except OSError:
             entries = []
+            commands.issues.append("process inventory is unreadable; task-container discovery "
+                                   "and cleanup cannot be confirmed")
         for entry in entries:
             if not entry.isdigit():
                 continue
@@ -1118,6 +1132,12 @@ def _group_commands(pgid: int) -> list[list[str]]:
                     continue
                 with open(f"/proc/{entry}/cmdline", "rb") as handle:
                     raw = handle.read()
+            except PermissionError:
+                issue = ("some process identities are unreadable; task-container discovery "
+                         "and cleanup may be incomplete")
+                if issue not in commands.issues:
+                    commands.issues.append(issue)
+                continue
             except (OSError, ValueError, IndexError):
                 continue                              # gone meanwhile, or not ours to read
             commands.append([arg for arg in raw.decode("utf-8", "replace").split("\0") if arg])
@@ -1127,6 +1147,12 @@ def _group_commands(pgid: int) -> list[list[str]]:
                                  stdin=subprocess.DEVNULL, capture_output=True, text=True,
                                  errors="replace", timeout=10, check=False)
     except (OSError, subprocess.SubprocessError):
+        commands.issues.append("process inventory is unavailable; task-container discovery "
+                               "and cleanup cannot be confirmed")
+        return commands
+    if listing.returncode != 0:
+        commands.issues.append("process inventory failed; task-container discovery "
+                               "and cleanup cannot be confirmed")
         return commands
     for line in listing.stdout.splitlines():
         group, _, args = line.strip().partition(" ")
@@ -1138,8 +1164,10 @@ def _group_commands(pgid: int) -> list[list[str]]:
 def task_containers(pgid: int) -> dict[tuple[str, ...], set[str]]:
     """The Nextflow task containers that members of process group `pgid` are running, keyed by
     the engine command that started them (`("docker",)`, `("sudo", "docker")`)."""
-    found: dict[tuple[str, ...], set[str]] = {}
-    for argv in _group_commands(pgid):
+    found = _ContainerInventory()
+    commands = _group_commands(pgid)
+    found.issues = list(getattr(commands, "issues", []))
+    for argv in commands:
         at = next((i for i, word in enumerate(argv)
                    if os.path.basename(word) in _CONTAINER_ENGINES), None)
         if at is None or argv[at + 1:at + 2] != ["run"]:
@@ -1205,11 +1233,12 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
         proc.wait()
         return []
     containers = task_containers(proc.pid)
+    inspection = list(getattr(containers, "issues", []))
     try:
         os.killpg(proc.pid, signal.SIGTERM)
     except ProcessLookupError:
         proc.wait()
-        return []
+        return inspection
     deadline = time.monotonic() + grace
     gone = False
     try:
@@ -1225,7 +1254,9 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
         # A reaped leader with no member left frees the group's number for another group: it is
         # neither searched nor signalled then.
         if not (gone and proc.returncode is not None):
-            for engine, names in task_containers(proc.pid).items():
+            latest = task_containers(proc.pid)
+            inspection.extend(getattr(latest, "issues", []))
+            for engine, names in latest.items():
                 containers.setdefault(engine, set()).update(names)
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
@@ -1233,9 +1264,10 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
                 pass
         proc.wait(timeout=2)
     if not containers:
-        return []
+        return sorted(set(inspection))
     removed, problems = remove_task_containers(containers)
-    return ([f"nfclaw replay: removed {len(removed)} task container(s) the stopped replay left "
+    return sorted(set(inspection)) + ([
+             f"nfclaw replay: removed {len(removed)} task container(s) the stopped replay left "
              f"behind: {', '.join(removed)}"] if removed else []) + \
         [f"nfclaw replay: a task container could not be removed: {problem}"
          for problem in problems]

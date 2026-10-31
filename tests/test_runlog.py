@@ -391,6 +391,22 @@ def test_a_run_whose_nfclaw_is_alive_is_running(tmp_path, named_process):
     assert st.last_output[-1] == "[ab/cdef12] NFCORE_DEMO:DEMO:FASTQC (S1) | 1 of 2"
 
 
+def test_unreadable_process_identity_is_unknown_without_signal_advice(tmp_path, monkeypatch):
+    monkeypatch.setattr(runlog, "_argv", lambda _pid: None)
+    pid = os.getpid()
+    st = runlog.read_state(_log(tmp_path, _block(pid=pid, nextflow_pid=pid)))
+    assert st.state == "unknown" and st.nextflow_alive is None
+    assert len(st.inspection_issues) == 2
+    report = cli._status_report(st)
+    assert report.startswith("status: unknown")
+    assert "process identity is unreadable" in report
+    assert f"kill {pid}" not in report
+    assert "--resume" not in report
+    record = cli._status_record(st, report, 1)
+    assert record["nextflow_alive"] is None
+    assert record["inspection_issues"] == st.inspection_issues
+
+
 def test_a_run_whose_nfclaw_is_gone_stopped_without_an_outcome(tmp_path, named_process):
     # kill -9, out of memory, a restart: nfclaw never wrote the last line and is not running.
     proc = named_process("nfclaw")
