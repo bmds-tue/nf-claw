@@ -28,6 +28,11 @@ from runner.errors import ErrorCode, NfclawError
 from runner.inputs import local_name_issues
 from test_input_output_separation import run, tree
 
+# How long a real Nextflow run, replay or config resolution may take before the test calls it
+# hung. It bounds a hang, not speed: under a loaded host and parallel test workers, one launch
+# of a 25.10 engine took over 90 seconds.
+NEXTFLOW_TIMEOUT = 300
+
 pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
                                 reason="requires a real Nextflow engine")
 
@@ -230,7 +235,8 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
         raw.mkdir()
         result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(params_path),
             "--outdir", str(raw), "-ansi-log", "false"], cwd=raw,
-            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True,
+            timeout=NEXTFLOW_TIMEOUT)
         assert result.returncode == 0, result.stdout + result.stderr
         observe(raw)
         # Plain integer literals beyond signed-long range wrap in these engines. The decimal
@@ -242,7 +248,8 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
         raw_wrapped.mkdir()
         result = subprocess.run(["nextflow", "run", str(tree), "-params-file", str(overflowing),
             "--outdir", str(raw_wrapped), "-ansi-log", "false"], cwd=raw_wrapped,
-            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True, timeout=90)
+            env={**os.environ, "NXF_VER": engine}, capture_output=True, text=True,
+            timeout=NEXTFLOW_TIMEOUT)
         assert result.returncode == 0, result.stdout + result.stderr
         wrapped = json.loads((raw_wrapped / "observed.json").read_text())["count"]
         assert Decimal(wrapped) == ctypes.c_longlong(10 ** 23).value
@@ -270,7 +277,7 @@ workflow { OBSERVE(params.values + [choice: params.choice, count: params.count])
     assert recorded["values"] == {key: Decimal(value) for key, value in tokens.items()}
     replay = tmp_path / "replay"
     result = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(replay)],
-                            capture_output=True, text=True, timeout=90)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert result.returncode == 0, result.stdout + result.stderr
     observe(replay)
     assert verify.compare(out, replay).byte_identical
@@ -337,7 +344,7 @@ def test_native_staging_hazards_are_refused_before_wrapper_launch(tmp_path, engi
                           "-params-file", str(params), "-work-dir", str(raw_work),
                           "-ansi-log", "false"],
                          cwd=launch, env={**os.environ, "NXF_VER": engine},
-                         capture_output=True, text=True, timeout=90)
+                         capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     if mode == "line_break":
         assert raw.returncode != 0
         task = next(raw_work.glob("*/*/.command.run"))
@@ -389,7 +396,7 @@ def test_samplesheet_path_routes_and_escaped_parent_names_replay_without_renamin
     out.rename(moved)
     replay = subprocess.run(
         ["bash", str(moved / "provenance/commands.sh"), str(tmp_path / "replay")],
-        capture_output=True, text=True, timeout=90)
+        capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     assert (tmp_path / "replay/digest.txt").read_text() == expected
     assert verify.compare(moved, tmp_path / "replay").byte_identical
@@ -423,7 +430,7 @@ def test_execution_writes_are_separated_from_directory_inputs(tmp_path, engine):
     assert runlog.read_state(safe / "provenance/logs/run.log").state == "success"
     replay = subprocess.run(
         ["bash", str(safe / "provenance/commands.sh"), str(tmp_path / "replay")],
-        capture_output=True, text=True, timeout=90)
+        capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     assert verify.compare(safe, tmp_path / "replay").byte_identical
     assert (data / "index.bin").read_bytes() == b"fixed scientific input"
@@ -476,7 +483,7 @@ workflow { OBSERVE(Channel.fromPath(params.input)) }
     assert nodes[str(primary)]["link_target"] == "stored.data"
     assert nodes[str(reference)]["link_target"] == "stored.data"
     replay = subprocess.run(["bash", str(out / "provenance/commands.sh"), str(tmp_path / "replay")],
-                            capture_output=True, text=True, timeout=90)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     assert verify.compare(out, tmp_path / "replay").byte_identical
     spec = chain.parse_spec({"profile": "standard", "nxf_ver": engine, "stages": [
@@ -549,7 +556,7 @@ workflow {
     # Relative script path plus a relocated bundle exercise both path-resolution boundaries.
     script = "archive/provenance/commands.sh"
     replay = subprocess.run(["bash", script, "replay"], cwd=relocated.parent,
-                            capture_output=True, text=True, timeout=90)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     comparison = verify.compare(relocated, relocated.parent / "replay")
     assert comparison.byte_identical
@@ -619,7 +626,7 @@ workflow {
         ["nextflow", "run", "main.nf", "-c", "compat.config", "-ansi-log", "false",
          "--outdir", "results", "--publish_dir_mode", "symlink"],
         cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **fastqrepair_compat.nextflow_env({})},
-        capture_output=True, text=True, timeout=120)
+        capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert result.returncode == 0, result.stdout + result.stderr
     published = tmp_path / "results/repaired/reports/paired_probe"
     assert sorted(path.name for path in published.iterdir()) == ["left.report", "right.report"]
@@ -663,7 +670,7 @@ workflow {
         result = subprocess.run(["nextflow", "run", "main.nf", "-params-file", "params.json",
                                  "-ansi-log", "false"], cwd=tmp_path,
                                 env={**os.environ, "NXF_VER": engine},
-                                capture_output=True, text=True, timeout=120)
+                                capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     finally:
         server.shutdown()
         server.server_close()
@@ -704,7 +711,7 @@ workflow { INVENTORY(channel.fromPath(params.input + '/*.txt')) }
     result = subprocess.run(["nextflow", "run", "main.nf", "-params-file", "params.json",
                              "-ansi-log", "false"], cwd=tmp_path,
                             env={**os.environ, "NXF_VER": engine},
-                            capture_output=True, text=True, timeout=120)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert result.returncode == 0, result.stdout + result.stderr
     outputs = list((tmp_path / "work").rglob("observed.tsv"))
     assert sorted(path.read_text().strip() for path in outputs) == sorted(names)
@@ -769,7 +776,7 @@ workflow { NAMESPACE(file(params.input)) }
     assert counter.read_text().splitlines() == ["executed"]
     script = out / "provenance/commands.sh"
     result = subprocess.run([str(script), str(tmp_path / "replay")],
-                            capture_output=True, text=True, timeout=90)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert result.returncode == 0, result.stdout + result.stderr
     assert (tmp_path / "replay/result/namespace.txt").read_text() == "sample_A\n"
     assert counter.read_text().splitlines() == ["executed"] * 2
@@ -1116,7 +1123,8 @@ workflow {
     out.rename(relocated)
     write("C.fastq.gz", "c1")                 # a later file: not part of the recorded decision
     replay = subprocess.run(["bash", "archive/provenance/commands.sh", "replay"],
-                            cwd=relocated.parent, capture_output=True, text=True, timeout=120)
+                            cwd=relocated.parent, capture_output=True, text=True,
+                            timeout=NEXTFLOW_TIMEOUT)
     assert replay.returncode == 0, replay.stdout + replay.stderr
     comparison = verify.compare(relocated, relocated.parent / "replay")
     assert comparison.byte_identical and sorted(comparison.identical) == ["A.txt", "B.txt"]
@@ -1199,7 +1207,7 @@ def test_fastqrepair_large_cohort_role_config_compiles_without_jvm_string_overfl
     # cohort data inside such a closure overflows one JVM string constant.
     result = subprocess.run(["nextflow", "-c", str(config), "config", str(pipeline), "-flat"],
                             cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **compat_env},
-                            capture_output=True, text=True, timeout=120)
+                            capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert result.returncode == 0, result.stdout + result.stderr
 
     # Exercise first/last keys through real task closures, using an argument
@@ -1238,7 +1246,7 @@ workflow {
                                "--left", str(left), "--right", str(right),
                                "--outdir", str(out), "-work-dir", str(work)],
                               cwd=tmp_path, env={**os.environ, "NXF_VER": engine, **compat_env},
-                              capture_output=True, text=True, timeout=120)
+                              capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert executed.returncode == 0, executed.stdout + executed.stderr
     selections = []
     for wrapper in work.rglob(".command.run"):
