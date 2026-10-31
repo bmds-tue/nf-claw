@@ -147,3 +147,13 @@ def test_an_events_stream_that_ignores_sigterm_is_killed_and_reaped(tmp_path, mo
     time.sleep(0.5)                                   # let the shell install its trap
     assert watch.stop(timeout=5) == {}
     assert watch._process.returncode is not None
+
+
+def test_the_events_stream_is_closed_when_the_observation_ends(tmp_path, monkeypatch):
+    # The pipe from `<engine> events` is the watch's own: left open, every run leaked a file
+    # (ResourceWarning: unclosed file).
+    _fake_docker(tmp_path, monkeypatch, [])
+    watch = container_watch.ContainerWatch("docker", tmp_path / "work", dict(os.environ)).start()
+    stream = watch._process.stdout
+    watch.stop()
+    assert stream.closed
