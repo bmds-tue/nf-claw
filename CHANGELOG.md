@@ -54,22 +54,22 @@ each change, are in [`docs/audit/`](docs/audit/).
   viralrecon 3.0.0 among the pins) fails with the fix that works — the legacy parser,
   `--nxf-env NXF_SYNTAX_PARSER=v1`, or `--nxf-ver 25.10.4` — instead of "re-run the same command with
   --resume", which cannot get past a configuration that does not compile; `nfclaw chain run` names
-  the legacy parser too.
+  the legacy parser too (#246).
 - `--limit-memory` and `--limit-time` (and a chain's `limits`) accept only spellings Nextflow parses.
   `1.5.TB`, `100.B`, `15.gb`, `5.secs`, `5.mins` or `1.H` passed the check and the run then died at
-  its first task (`Caused by: multiple points`), in a chain after every earlier stage had run.
+  its first task (`Caused by: multiple points`), in a chain after every earlier stage had run (#246).
 - A job refused before launch into a fresh `--outdir` (an invalid parameter, a missing samplesheet)
   no longer reports "could not freeze this job's run status: FileNotFoundError" beside the real
   refusal in `get_job` and `nfclaw jobs status`; `nfclaw jobs status` names shell commands
-  (`nfclaw status <outdir>`, `--resume`) instead of MCP tools and fields.
+  (`nfclaw status <outdir>`, `--resume`) instead of MCP tools and fields (#246).
 - `show_pipeline(grep=…)` reads a `#` comment inside a code block as code: every `skill.md`'s
-  `# raw equivalent …` line can be found, and no longer relabels the lines after it.
+  `# raw equivalent …` line can be found, and no longer relabels the lines after it (#246).
 - Release tags are read whole from `git ls-remote` by `nfclaw versions`, `--pipeline-version` and
-  the update bot: a tag such as `release/9.9.9` is no longer mistaken for the release `9.9.9`.
+  the update bot: a tag such as `release/9.9.9` is no longer mistaken for the release `9.9.9` (#246).
 - Job records live in one absolute place: a relative `XDG_STATE_HOME` is ignored, as the XDG
-  specification requires, and a relative `NFCLAW_STATE_DIR` is resolved where it is read.
+  specification requires, and a relative `NFCLAW_STATE_DIR` is resolved where it is read (#246).
 - [`docs/replay.md`](docs/replay.md) states the replay host's real requirement, Python 3.9 or newer
-  as `python3`; a test keeps the bundled scripts within it.
+  as `python3`; a test keeps the bundled scripts within it (#246).
 - A `--resume` that preserves the previous run in a sibling archive no longer leaves the new run
   directory private to the user who resumed it (`0700`): it keeps the permissions of the run it
   replaces (#235).
