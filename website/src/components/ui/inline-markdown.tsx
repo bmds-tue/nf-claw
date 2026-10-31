@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn, safeHref } from "@/lib/utils";
 
 /**
  * Render the inline Markdown that generated text carries — `code`, **bold**, [links](url) and bare
@@ -39,8 +39,16 @@ export function InlineMarkdown({ text }: { text: string }) {
         </strong>,
       );
     } else if (m[3]) {
+      // Parameter descriptions are upstream schema text the update bot regenerates: a link to any
+      // other scheme is shown as its label.
       const [, label, href] = tok.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/) ?? [];
-      out.push(<ExternalLink key={key++} href={href} label={label} />);
+      out.push(
+        safeHref(href) ? (
+          <ExternalLink key={key++} href={href} label={label} />
+        ) : (
+          <Fragment key={key++}>{label}</Fragment>
+        ),
+      );
     } else {
       out.push(<ExternalLink key={key++} href={tok} label={tok.replace(/^https?:\/\//, "")} />);
     }
