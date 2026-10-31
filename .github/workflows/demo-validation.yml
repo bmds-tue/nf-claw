@@ -8,6 +8,11 @@ on:
       - "scripts/check_nftest_snapshot.py"
       - ".github/workflows/demo-validation.yml"
 
+# A new push to a pull request supersedes the run of its previous commit, which would otherwise keep
+# its queued runners (macOS ones especially) busy. Every other run is in a group of its own.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 

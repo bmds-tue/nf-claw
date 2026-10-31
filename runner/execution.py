@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import errno
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -146,18 +148,24 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
     # after Ctrl-C.
     popen_kwargs: dict[str, Any] = {} if sys.platform == "win32" else {"start_new_session": True}
     die_with_nfclaw = _die_with_parent()
-    if die_with_nfclaw is not None:
-        popen_kwargs["preexec_fn"] = die_with_nfclaw
     # Inherit the full environment, then overlay the caller's NXF_* overrides (engine version,
     # JVM args, …). Inheriting keeps shell-set vars (proxies, JAVA_HOME) working as before.
     env = {**os.environ, **env_extra} if env_extra else None
     with out_p.open("ab") as out_fh, err_p.open("ab") as err_fh:
         budget.check()
         try:
+            launch = command
+            if die_with_nfclaw is not None:
+                # The launcher execs the program itself, so a missing one is refused here, as
+                # Popen would have refused it, rather than ending a launched run with exit 127.
+                program = _program(command[0], cwd, env)
+                if program is None:
+                    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), command[0])
+                launch = [*die_with_nfclaw, program, *command]
             # Pipe the child's streams so nfclaw can tee them; without a pipe the output would go
             # straight to files (the terminal stays mute) or straight to the terminal (nothing is
             # captured). Teeing gives both.
-            proc = subprocess.Popen(command, cwd=str(cwd), stdout=subprocess.PIPE,
+            proc = subprocess.Popen(launch, cwd=str(cwd), stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, env=env, **popen_kwargs)
         except OSError as exc:
             err = NfclawError(ErrorCode.EXECUTION_FAILED, f"Could not launch process: {exc}",
@@ -217,29 +225,52 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
     return ExecResult(code, out_p, err_p)
 
 
-def _die_with_parent():
-    """On Linux, a pre-exec hook asking the kernel to send the child SIGTERM when nfclaw dies.
+# Run as `python -I -S -c _PDEATHSIG_LAUNCHER <nfclaw pid> <libc> <program> <argv…>`: ask the kernel
+# for SIGTERM when nfclaw dies, then become the program (same pid, same open pipes and environment).
+# The death signal survives `exec`, so it reaches Nextflow's launcher and the JVM it execs.
+_PDEATHSIG_LAUNCHER = """\
+import ctypes, os, signal, sys
+parent, libc, program, argv = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4:]
+ctypes.CDLL(libc, use_errno=True).prctl(1, signal.SIGTERM, 0, 0, 0)  # PR_SET_PDEATHSIG
+if os.getppid() != parent:  # nfclaw died before the request took effect
+    os._exit(1)
+try:
+    os.execv(program, argv)
+except OSError as exc:
+    sys.stderr.write(f"nfclaw: could not launch {program}: {exc}\\n")
+    os._exit(127)
+"""
+
+
+def _die_with_parent() -> list[str] | None:
+    """On Linux, the launcher that asks the kernel to send the child SIGTERM when nfclaw dies.
 
     nfclaw stops Nextflow itself on Ctrl-C, SIGTERM and SIGHUP; SIGKILL (`kill -9`, the out-of-
     memory killer) cannot be caught, and Nextflow — in its own session — would run on orphaned.
-    PR_SET_PDEATHSIG survives the launcher's `exec` of the JVM, so Nextflow gets its normal SIGTERM
-    shutdown and stops its tasks. None elsewhere, or if libc cannot be loaded."""
-    if not sys.platform.startswith("linux"):
+    The request is made by a fresh single-threaded interpreter that then execs the program, not by a
+    `preexec_fn`: Python code between fork and exec can deadlock in a parent that runs threads, and
+    nfclaw's container watch is running by then. None elsewhere, or if libc cannot be loaded."""
+    if not sys.platform.startswith("linux") or not sys.executable:
         return None
     try:
         import ctypes
         import ctypes.util
-        libc = ctypes.CDLL(ctypes.util.find_library("c") or "libc.so.6", use_errno=True)
-    except (OSError, AttributeError):
+        libc = ctypes.util.find_library("c") or "libc.so.6"
+        if not hasattr(ctypes.CDLL(libc, use_errno=True), "prctl"):
+            return None
+    except OSError:
         return None
-    parent = os.getpid()
+    return [sys.executable, "-I", "-S", "-c", _PDEATHSIG_LAUNCHER, str(os.getpid()), libc]
 
-    def preexec() -> None:
-        libc.prctl(1, signal.SIGTERM, 0, 0, 0)          # PR_SET_PDEATHSIG
-        if os.getppid() != parent:                      # nfclaw died before the hook took effect
-            os._exit(1)
 
-    return preexec
+def _program(name: str, cwd: Path, env: Mapping[str, str] | None) -> str | None:
+    """The executable `name` runs, found as Popen finds it: a path relative to the launch
+    directory, else a search of the child's PATH. None when there is none."""
+    if os.sep in name:
+        path = Path(cwd, name)
+        return str(path) if path.is_file() and os.access(path, os.X_OK) else None
+    return shutil.which(name, path=(env if env is not None else os.environ).get("PATH",
+                                                                                 os.defpath))
 
 
 def _log_details(run_log: runlog.RunLog) -> dict[str, str]:
@@ -359,6 +390,8 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
         proc.wait()
         return
     pgid = proc.pid                                   # start_new_session: the child leads its group
+    if proc.returncode is not None and not _group_alive(pgid):
+        return                                        # reaped, and nothing of the group is left
     containers = replay_guard.task_containers(pgid)
     deadline = time.monotonic() + grace
     try:
@@ -374,15 +407,20 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
             time.sleep(0.1)
     finally:
         # Also on a second Ctrl-C during the grace period: that asks to stop now, not to leave the
-        # group running — skip the rest of the wait, but still kill it.
+        # group running — skip the rest of the wait, but still kill it. An unreaped leader keeps
+        # its pid, and a live member the group's number; once both are gone the number is free for
+        # another group, so it is neither searched nor signalled.
+        held = proc.returncode is None or _group_alive(pgid)
         try:
-            for engine, names in replay_guard.task_containers(pgid).items():
-                containers.setdefault(engine, set()).update(names)
+            if held:
+                for engine, names in replay_guard.task_containers(pgid).items():
+                    containers.setdefault(engine, set()).update(names)
         finally:
-            try:
-                os.killpg(pgid, signal.SIGKILL)
-            except OSError:
-                pass                                  # the group is already gone
+            if held:
+                try:
+                    os.killpg(pgid, signal.SIGKILL)
+                except OSError:
+                    pass                              # the group is already gone
             proc.wait()
         if containers:                                # a second Ctrl-C still stops them too
             _remove_task_containers(containers, run_log)

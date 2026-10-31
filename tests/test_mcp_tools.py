@@ -189,7 +189,7 @@ def test_every_tool_is_loaded_up_front_by_antigravity(tools):
     # every session. Loaded up front, a tool is called with its own schema.
     tools_listed = tools.list_tools(Context())
     assert all((t.get("_meta") or {}).get("antigravity/alwaysLoad") is True for t in tools_listed)
-    assert len(tools_listed) == 13
+    assert len(tools_listed) == 14
 
 
 def test_list_pipelines_reports_no_match(tools):
@@ -215,6 +215,39 @@ def test_show_pipeline_grep_keeps_headings_and_table_headers(tools):
 
 def test_show_pipeline_grep_without_a_match_says_so(tools):
     assert "No line" in text(call(tools, "show_pipeline", pipeline="demo", grep="zzqqxx"))
+
+
+def test_read_doc_finds_the_sections_about_a_warning(tools):
+    # known-issues.md is about 120 KB: an agent checking one warning gets its section, not the file.
+    out = text(call(tools, "read_doc", guide="known-issues",
+                    search="Unrecognized config option manifest.diagram"))
+    whole = (ROOT / "docs" / "known-issues.md").read_text()
+    assert out.startswith("1 section(s) of docs/known-issues.md contain all of:")
+    assert "### `WARN: Unrecognized config option 'manifest.diagram'`" in out
+    assert len(out) < len(whole) / 50
+
+
+def test_read_doc_without_a_match_lists_the_headings_to_search_again(tools):
+    out = text(call(tools, "read_doc", guide="known-issues", search="zzqqxx"))
+    assert out.startswith("No section of docs/known-issues.md contains all of: zzqqxx")
+    assert "## Warnings a run prints that are not faults" in out
+
+
+def test_read_doc_returns_a_whole_guide_and_refuses_an_unknown_one(tools):
+    assert text(call(tools, "read_doc", guide="chaining")) == \
+        (ROOT / "docs" / "chaining.md").read_text()
+    assert text(call(tools, "read_doc", guide="chaining.md")) == \
+        (ROOT / "docs" / "chaining.md").read_text()
+    refused = call(tools, "read_doc", guide="../AGENTS")
+    assert refused["isError"] and "unknown guide" in text(refused)
+
+
+def test_section_search_ignores_headings_inside_code_blocks():
+    doc = ("# Guide\n\n## Install\n\n```bash\n# not a heading: pip install\n```\n"
+           "then run it\n\n## Other\n\nnothing\n")
+    out = mcp_tools._search_sections(doc, "pip run", "doc.md")
+    assert out.startswith("1 section(s) of doc.md")
+    assert "## Install" in out and "then run it" in out and "## Other" not in out
 
 
 def test_resources_serve_the_guide_catalog_docs_and_every_skill(tools):
@@ -537,3 +570,13 @@ def test_run_status_carries_the_parsed_status_record(tools, tmp_path):
     assert view["run"]["error"] == ["Nextflow execution failed (exit status 1)."]
     assert view["report"] == text(result) == view["run"]["report"].rstrip("\n")
     assert text(result).startswith("status: failed (exit status 1)")
+
+
+def test_run_status_of_a_missing_chain_says_why_once(tools, tmp_path):
+    # `chain status --json` refuses a directory that holds no chain with the same record shape as
+    # a found one; the refusal is both its report and its stderr, and the model reads it once.
+    result = call(tools, "run_status", outdir=str(tmp_path / "none"), chain=True)
+    view = result["structuredContent"]
+    assert view["exit_code"] == 1 and view["run"]["chain"] is None
+    assert len(view["run"]["error"]) == 1 and "no chain recorded" in view["run"]["error"][0]
+    assert text(result).count("no chain recorded") == 1

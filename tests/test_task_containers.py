@@ -209,3 +209,56 @@ def test_a_second_interrupt_during_the_grace_period_still_removes_them(engine, t
         _kill(proc)
     assert not list(state.iterdir())
     assert "rm -f nxf-Again1" in log.read_text().splitlines()
+
+
+def _signals_after_the_group_ended(monkeypatch, stop) -> tuple[list, list]:
+    """Run `stop` on a group whose leader is reaped and whose members are all gone, recording the
+    group signals it sends and the container searches it makes."""
+    proc = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
+    proc.wait()
+    sent, searched = [], []
+    killpg = os.killpg
+
+    def record(pgid, sig):
+        sent.append(sig)
+        return killpg(pgid, sig)
+
+    monkeypatch.setattr(os, "killpg", record)
+    monkeypatch.setattr(replay_guard, "task_containers",
+                        lambda pgid: searched.append(pgid) or {})
+    stop(proc)
+    return sent, searched
+
+
+def test_a_finished_group_s_number_is_neither_searched_nor_signalled(monkeypatch):
+    # Once the leader is reaped and no member is left, the group's number is free for another
+    # process group: only a liveness probe (signal 0) may reach it.
+    sent, searched = _signals_after_the_group_ended(
+        monkeypatch, lambda proc: execution._terminate(proc, grace=0.2))
+    assert set(sent) <= {0} and searched == []
+
+
+def test_a_finished_replay_group_s_number_is_neither_searched_nor_signalled(monkeypatch):
+    sent, searched = _signals_after_the_group_ended(
+        monkeypatch, lambda proc: replay_guard._stop_replay_group(proc, grace=0.2))
+    assert set(sent) <= {0} and searched == []
+
+
+def test_a_group_that_outlives_its_reaped_leader_is_still_stopped(engine, tmp_path):
+    # The leader exits first and is reaped; a task client it left in the group keeps the group's
+    # number, so its container is still found and removed and the client killed.
+    docker, state, log = engine
+    leader = tmp_path / "leader.sh"
+    leader.write_text(f"#!/bin/bash\n{docker} run -i --name nxf-Orphan1 img "
+                      f">/dev/null 2>&1 </dev/null &\nwhile [ ! -e {state}/nxf-Orphan1 ]; do "
+                      "sleep 0.05; done\n")
+    leader.chmod(0o755)
+    proc = subprocess.Popen([str(leader)], start_new_session=True)
+    try:
+        proc.wait(timeout=10)
+        execution._terminate(proc, grace=0.2)
+        assert not execution._group_alive(proc.pid)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Orphan1" in log.read_text().splitlines()

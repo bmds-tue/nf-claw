@@ -15,9 +15,9 @@ from mcp import ClientSession, StdioServerParameters  # noqa: E402
 from mcp.client.stdio import stdio_client  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-TOOLS = {"list_pipelines", "show_pipeline", "list_versions", "chain_edges", "run_pipeline",
-         "run_chain", "replay_run", "get_job", "list_jobs", "cancel_job", "run_status",
-         "verify_replay", "read_artifact"}
+TOOLS = {"list_pipelines", "show_pipeline", "list_versions", "chain_edges", "read_doc",
+         "run_pipeline", "run_chain", "replay_run", "get_job", "list_jobs", "cancel_job",
+         "run_status", "verify_replay", "read_artifact"}
 
 
 def _server(tmp_path) -> StdioServerParameters:

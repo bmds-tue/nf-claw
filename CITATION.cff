@@ -9,7 +9,6 @@ message: >-
 type: software
 title: "nf-claw: A self-maintaining, token-minimal library of nf-core pipelines for AI agents"
 version: 1.0.0
-date-released: "2026-06-15"
 license: MIT
 repository-code: "https://github.com/bmds-tue/nf-claw"
 url: "https://bmds-tue.github.io/nf-claw/"

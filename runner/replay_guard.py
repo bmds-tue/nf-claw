@@ -1188,6 +1188,11 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]],
 def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
     """Give the replay's tasks a shutdown grace period, then stop all survivors, including task
     containers they left behind. Returns what was done about those containers, for the log."""
+    try:
+        os.killpg(proc.pid, 0)
+    except ProcessLookupError:  # finished, and nothing of its group is left to stop
+        proc.wait()
+        return []
     containers = task_containers(proc.pid)
     try:
         os.killpg(proc.pid, signal.SIGTERM)
@@ -1195,21 +1200,26 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
         proc.wait()
         return []
     deadline = time.monotonic() + grace
+    gone = False
     try:
         while time.monotonic() < deadline:
             proc.poll()  # Reap the leader without assuming its tasks have also exited.
             try:
                 os.killpg(proc.pid, 0)
             except ProcessLookupError:
+                gone = True
                 break
             time.sleep(0.05)
     finally:
-        for engine, names in task_containers(proc.pid).items():
-            containers.setdefault(engine, set()).update(names)
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        # A reaped leader with no member left frees the group's number for another group: it is
+        # neither searched nor signalled then.
+        if not (gone and proc.returncode is not None):
+            for engine, names in task_containers(proc.pid).items():
+                containers.setdefault(engine, set()).update(names)
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         proc.wait(timeout=2)
     if not containers:
         return []

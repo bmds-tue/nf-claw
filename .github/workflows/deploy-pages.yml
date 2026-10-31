@@ -1,7 +1,7 @@
 name: deploy-pages
 # Build the data-driven website as a static site and publish it to GitHub Pages.
 # Runs on every push to main, so the site reflects the latest repository state
-# (including merged auto-update PRs).
+# (including the pipeline updates the maintenance workflows publish to main).
 on:
   push:
     branches: [main]
