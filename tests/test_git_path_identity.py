@@ -9,6 +9,11 @@ import pytest
 
 from runner import fastqrepair_compat, orchestration, provenance, replay_guard, submodule
 
+# How long a real Nextflow run, replay or config resolution may take before the test calls it
+# hung. It bounds a hang, not speed: under a loaded host and parallel test workers, one launch
+# of a 25.10 engine took over 90 seconds.
+NEXTFLOW_TIMEOUT = 300
+
 
 @pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\u0085', '\v', '\f', '\x1c', '\x1d',
                                        '\x1e', 'Å', '\n', '\r'])
@@ -87,7 +92,7 @@ workflow { DIGEST(file(params.input)) }
     scratch.write_text('changed scratch, still not consumed or tracked\n')
     replay = tmp_path / 'replay'
     completed = subprocess.run(['bash', str(bundle / 'commands.sh'), str(replay)],
-        capture_output=True, text=True, timeout=90)
+        capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert (replay / 'digest.txt').read_text().split()[0] == digest
     environment = json.loads((replay / 'provenance' / 'environment_check.json').read_text())
@@ -100,7 +105,7 @@ workflow { DIGEST(file(params.input)) }
     script.write_text(original_source + '\n// changed tracked source\n')
     again = tmp_path / 'again'
     rerun = subprocess.run(['bash', str(bundle / 'commands.sh'), str(again)],
-        capture_output=True, text=True, timeout=90)
+        capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
     assert (again / 'digest.txt').read_text().split()[0] == digest
     assert (again / 'provenance' / 'pipeline' / 'main.nf').read_text() == original_source
