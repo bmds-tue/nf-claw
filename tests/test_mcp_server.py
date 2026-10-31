@@ -552,6 +552,47 @@ def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
         client.close()
 
 
+def test_full_wait_queue_omits_only_the_optional_cancel_wait(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from runner import jobs, mcp_tools
+
+    handler = mcp_tools.NfclawTools(ROOT, cwd=str(tmp_path))
+    ready = threading.Event()
+    stopped = []
+    job = SimpleNamespace(id='fixture', check=False, log_path=None)
+
+    def load(_id):
+        ready.set()
+        return job
+
+    def result(*_args, **_kwargs):
+        ctx = mcp_tools._request_context.get()
+        if ctx is not None and ctx._skip_waits:
+            # Overload must not impersonate withdrawal or cancel the foreground status report.
+            assert not ctx.cancelled.is_set()
+        return tool_result('stop accepted')
+
+    monkeypatch.setattr(jobs, 'load', load)
+    monkeypatch.setattr(jobs, 'state', lambda _job: 'running')
+    monkeypatch.setattr(jobs, 'cancel', lambda _job: stopped.append(True) or True)
+    monkeypatch.setattr(handler, '_job_result', result)
+    client = Session(handler, max_workers=1)
+    try:
+        client.initialize()
+        for rid in (10, 11):  # one active wait and one queued: admission is now full
+            client.send({'jsonrpc': '2.0', 'id': rid, 'method': 'tools/call',
+                         'params': {'name': 'get_job', 'arguments': {
+                             'job_id': 'fixture', 'wait_seconds': 30}}})
+        assert ready.wait(5)
+        reply = client.request(12, 'tools/call', {'name': 'cancel_job', 'arguments': {
+            'job_id': 'fixture', 'wait_seconds': 15}}, timeout=2)
+        assert reply['result']['content'][0]['text'] == 'stop accepted'
+        assert stopped == [True]
+        assert client.request(13, 'ping', timeout=1)['result'] == {}
+    finally:
+        client.close()
+
+
 @pytest.mark.parametrize('token', ['NaN', 'Infinity', '-Infinity'])
 def test_nonfinite_json_constants_are_parse_errors_and_do_not_end_the_session(session, token):
     session.send(('{"jsonrpc":"2.0","id":' + token + ',"method":"ping"}').encode())

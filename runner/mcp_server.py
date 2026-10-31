@@ -97,6 +97,7 @@ class Context:
     _progress_token: Any = None
     _last_progress: float = -1.0
     _defer_waits: bool = False
+    _skip_waits: bool = False
 
     def complete_after(self, wait: Callable[[], dict]) -> dict | DeferredToolResult:
         """Keep a transport worker free after an immediate action such as sending a stop."""
@@ -316,7 +317,7 @@ class Server:
                     with self._inflight_lock:
                         ctx = self._inflight.get(_key(_reply_id(message)))
                     if ctx is not None:
-                        ctx.cancelled.set()
+                        ctx._skip_waits = True
                     reply = response.complete()
                     if reply is not None:
                         self._send(reply)

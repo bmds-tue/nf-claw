@@ -759,7 +759,8 @@ class NfclawTools:
         delay = 0.25
         while True:
             job = jobs.load(job_id)
-            if jobs.state(job) != "running" or (until_launched and self._launched(job)):
+            if (ctx._skip_waits or jobs.state(job) != "running"
+                    or (until_launched and self._launched(job))):
                 return job
             elapsed = time.monotonic() - start
             remaining = seconds - elapsed

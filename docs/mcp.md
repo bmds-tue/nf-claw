@@ -289,6 +289,8 @@ Long polls and ordinary work have separate, bounded admission; excess requests r
 `server busy` JSON-RPC error (-32000). Immediate job/status/cancel controls have reserved workers,
 and ping is handled directly. Slow version lookup, source materialization and verification cannot
 fill the control workers. A chain status that hashes lineage uses ordinary work capacity.
+If a cancellation's optional completion wait cannot be admitted, the stop remains acknowledged
+and only that wait is omitted.
 Malformed job records are rejected individually and omitted from global listing.
 
 Foreground CLI calls run under a separate process supervisor. Timeout, request cancellation,
