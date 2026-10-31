@@ -24,7 +24,9 @@ each change, are in [`docs/audit/`](docs/audit/).
 - An accessibility check of every website page in the browser tests (#219).
 - MCP `read_doc(guide, search)`: an nf-claw guide, or only its sections that hold every word
   searched. Agents checking a warning against `known-issues` (about 120 KB) get its section
-  (under 1 KB); the server's instructions now say so.
+  (under 1 KB); the server's instructions now say so (#234).
+- `nfclaw jobs list`, `nfclaw jobs status` and `nfclaw jobs cancel` manage MCP's persisted jobs
+  from a shell, with shared reports, bounded output tails and versioned `--json` responses (#238).
 
 ### Changed
 
@@ -41,18 +43,29 @@ each change, are in [`docs/audit/`](docs/audit/).
 - Each CI test lane runs the complete suite on all of its runner's cores (`pytest -n auto
   --dist worksteal`, pytest-xdist in the `dev` extra) and still reports every case; the suite ran
   one test at a time for 16–34 minutes a lane. On the validation server, four workers took 9
-  minutes instead of 29.
+  minutes instead of 29 (#234).
 - A new push to a pull request cancels that pull request's previous, now superseded CI run; it
   had stayed queued for hours behind the macOS runners. Runs for main, schedules, dispatches and
-  the maintenance gate are never cancelled.
+  the maintenance gate are never cancelled (#234).
 
 ### Fixed
 
 - A `--resume` that preserves the previous run in a sibling archive no longer leaves the new run
   directory private to the user who resumed it (`0700`): it keeps the permissions of the run it
-  replaces.
+  replaces (#235).
 - Provenance bundle files are created like the rest of a run's files (`0666` less the umask)
-  instead of `0600`, so the group a run's results are shared with can verify and replay it.
+  instead of `0600`, so the group a run's results are shared with can verify and replay it (#235).
+- MCP refuses a tool or prompt call whose `arguments` is given but is not an object (`null`,
+  `false`, a list) instead of running it without arguments, answers a request id that JSON-RPC
+  does not allow (a boolean, an object, `NaN`) with an error, and no longer queues a `ping` behind
+  long-running tool calls (#237).
+- `nfclaw verify` and a replay's own environment check report an empty, damaged or incomplete
+  environment record as `unverified` instead of `identical`, and compare image identities in both
+  directions, so two names for one recorded image cannot hide a different image in the replay. A
+  bundle from before environment records is still compared by its files. Reproductions and limits:
+  the [boundary-integrity audit](docs/audit/2026-10-30-boundary-integrity-audit.md) (#237).
+- A chain spec's `config` entries must be non-empty paths, and a `null` `nxf_env` keeps the
+  default, as a `null` `nxf_ver`, `limits` or `config` already did (#237).
 - A stopped run (Ctrl-C, `kill`, `--timeout`, MCP `cancel_job`) and a stopped replay remove the
   Docker/Podman task containers their processes started. Task wrappers killed while `docker stop`
   waited on a container's PID 1 had left every container behind, exited, and with a shorter shutdown
@@ -80,20 +93,20 @@ each change, are in [`docs/audit/`](docs/audit/).
   `python3`, as in the Makefile) and refuse an interpreter older than 3.11 with a message naming
   it. On macOS, whose `python3` is 3.9, every preview had failed with an `ImportError` reported as
   a rejected pipeline. Without GNU `timeout` or `gtimeout`, the gate bounds each preview with the
-  bundled `scripts/run_with_timeout.py` instead of refusing to run.
+  bundled `scripts/run_with_timeout.py` instead of refusing to run (#233).
 - A params file path given to `parameters.merge` that does not exist is an error, not an empty
-  set of parameters (`nfclaw run` already refused it).
+  set of parameters (`nfclaw run` already refused it) (#233).
 - `nfclaw mcp` answers a message nested too deeply to parse instead of stopping (#219).
 - `nfclaw chain edges <name>` refuses a pipeline the library lacks (exit 1) instead of printing
-  nothing, which read as "no handoff exists"; for a pipeline without rules it says so.
+  nothing, which read as "no handoff exists"; for a pipeline without rules it says so (#234).
 - `nfclaw chain status --json` gives a missing chain the same keys as a found one, with `error` a
-  list as in `nfclaw status --json`.
+  list as in `nfclaw status --json` (#234).
 - On Linux, Nextflow is launched without Python code between fork and exec (`preexec_fn`), which
   can deadlock a parent running threads, as nfclaw's container watch does: a single-threaded
-  launcher requests the parent-death signal and execs Nextflow in place.
+  launcher requests the parent-death signal and execs Nextflow in place (#234).
 - Stopping a run or replay whose process group has already ended no longer searches or signals
-  that group's number, which another process group may hold by then.
-- `CITATION.cff` no longer gives 1.0.0 a release date (2026-06-15) that no release had.
+  that group's number, which another process group may hold by then (#234).
+- `CITATION.cff` no longer gives 1.0.0 a release date (2026-06-15) that no release had (#234).
 - Robustness of `nfclaw status` with unreadable logs and damaged records, the job supervisor and
   the container watcher (#218).
 - A replay runs with the Nextflow settings its run recorded: `NXF_*` variables that the replaying

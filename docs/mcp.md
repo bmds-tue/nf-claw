@@ -148,6 +148,49 @@ every task has stopped. A second job into an
 `outdir` that a running job holds is refused with that job's id (nfclaw's own `--outdir` lock is the
 authority either way), so retrying a submission cannot start a run twice.
 
+### Manage jobs from the shell
+
+The CLI reads the same persisted jobs as MCP, including after a client disconnects. Run on the
+same host, as the same user, with the same `NFCLAW_STATE_DIR` (or state-directory defaults):
+
+```bash
+nfclaw jobs list                              # newest 20 jobs
+nfclaw jobs list --state running --limit 50
+nfclaw jobs status <job-id> --log-lines 40
+nfclaw jobs status <job-id> --log-lines 0 --json
+nfclaw jobs cancel <job-id> --json
+```
+
+These commands manage jobs created by MCP; foreground runs and runs started with `nohup` have no
+job ID. Use `nfclaw status <outdir>` for those. Job commands do not require pipeline files, Nextflow
+or a connected MCP client. `list` skips malformed records, filters before applying its positive
+`--limit`, and returns an empty list when there are no jobs. `status` defaults to 20 output lines;
+`--log-lines 0` hides them. Output tails remain bounded to the supervisor's last 64 KiB of output.
+
+The state, command, output paths, times, recorded exit code, output tail and optional run report
+match MCP's job view. Completed jobs read their own frozen report, including completion caveats;
+a later retry into the same output directory cannot replace it. The `next` hint uses CLI commands.
+
+`cancel` requests the existing supervisor's shutdown and returns immediately. A successful request
+can still report `state: "running"`; inspect status until it ends. `cancel_requested: true` means
+this command issued a request, not that every task has stopped. An already-ended job is a successful
+no-op (`cancel_requested: false`); an unknown or invalid ID is an error. The same executor cleanup
+limits described above apply.
+
+Every `--json` response is one object with `version: 1` and the command's `exit_code`:
+
+| Command | Fields | Exit codes |
+|---|---|---|
+| `jobs list` | `jobs`: array of summaries (`job_id`, `kind`, `pipeline`, `state`, `check`, `outdir`, `created_at`, `finished_at`) | 0 on success, including an empty list; 1 on an operational error |
+| `jobs status` | `job`: full MCP job view, with CLI `next` hints | 0 succeeded; 3 running; 1 failed, cancelled, lost or unknown |
+| `jobs cancel` | `job`: current full view; `cancel_requested`: whether this call issued a request | 0 for an accepted request or an already-ended job; 1 on error |
+
+Operational errors add an `error` string, set `job` to `null` (or `jobs` to `[]`), and write a
+human-readable diagnostic to stderr. On cancellation errors the acknowledgment field may be absent;
+when present it describes whether a request was issued before the error. Invalid command syntax
+uses argparse's normal exit code 2 and stderr usage text, including when `--json` was supplied.
+Future incompatible JSON changes will increment `version`.
+
 **Chains.** `run_chain` takes the chain spec ([format](chaining.md)) as a JSON object, writes it into
 the job's directory, and runs `nfclaw chain run`: each stage starts only after the previous one
 succeeded, from inputs prepared out of that stage's checksummed outputs. Validate first with

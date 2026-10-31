@@ -96,7 +96,9 @@ workflow { DIGEST(file(params.input)) }
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert (replay / 'digest.txt').read_text().split()[0] == digest
     environment = json.loads((replay / 'provenance' / 'environment_check.json').read_text())
-    assert environment['status'] == 'identical'
+    assert environment['status'] == 'unverified'
+    assert any('containerless process evidence' in issue
+               for issue in environment['unverified'])
     used = json.loads((replay / 'provenance' / 'pipeline-source.json').read_text())
     assert used == {'from': 'checkout', 'path': str(repo)}          # intact: the same directory
     # A working-tree source mutation cannot reach a replay: it runs the bundle's source archive.

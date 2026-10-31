@@ -46,21 +46,33 @@ class Comparison:
 
     @property
     def same_environment(self) -> bool:
-        """Images, plugins, engine and staged remote inputs agree (or neither run recorded them)."""
+        """Evidence agrees, or a legacy side lacks a record and the other has no known gaps."""
         return self.environment is None or self.environment["status"] == "identical"
 
 
 def _environment(original: Path, replay: Path, *, require: bool = False) -> dict | None:
     records = []
-    for outdir in (original, replay):
+    unreadable = []
+    for side, outdir in (("original", original), ("replay", replay)):
+        path = outdir / "provenance" / environment_record.RECORD_NAME
         try:
-            records.append(json.loads(
-                (outdir / "provenance"
-                 / environment_record.RECORD_NAME).read_text(encoding="utf-8")))
-        except (OSError, ValueError):
-            if not require:
-                return None
+            record = json.loads(path.read_text(encoding="utf-8"))
+            records.append(record)
+            if not isinstance(record, dict):
+                unreadable.append(f"{side}: the environment record is not a JSON object")
+            else:
+                unreadable.extend(f"{side}: {issue}" for issue in
+                                  environment_record.comparison_issues(record))
+        except FileNotFoundError:
             records.append(None)
+            if path.is_symlink():
+                unreadable.append(f"{side}: the environment record is a broken link")
+        except (OSError, ValueError) as exc:
+            records.append(None)
+            unreadable.append(f"{side}: cannot read the environment record: {exc}")
+    if unreadable:
+        return {"version": environment_record.VERSION, "status": "unverified",
+                "mismatches": [], "unverified": unreadable, "notes": []}
     if require:
         sides = zip(("original", "replay"), records, strict=True)
         gaps = [f"{side}: {issue}" for side, record in sides
@@ -69,6 +81,13 @@ def _environment(original: Path, replay: Path, *, require: bool = False) -> dict
             return {"version": environment_record.VERSION, "status": "unverified",
                     "mismatches": [], "unverified": gaps, "notes": []}
     if not all(isinstance(record, dict) for record in records):
+        for side, record in zip(("original", "replay"), records, strict=True):
+            if isinstance(record, dict):
+                existing = environment_record.compare(record, record)
+                if existing["status"] == "unverified":
+                    existing["unverified"] = [f"{side}: {issue}"
+                                               for issue in existing["unverified"]]
+                    return existing
         return None
     result = environment_record.compare(*records)
     if require:

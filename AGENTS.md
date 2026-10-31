@@ -110,6 +110,12 @@ Prints `status: success`, `running (…)`, the outcome it ended with (`failed (e
 - **`<outdir>/.nextflow.log`** — Nextflow's own detailed log. Nextflow runs from `--outdir`, so its console hint "Check '.nextflow.log'" means this file, not one in your working directory.
 - **`stdout.txt` / `stderr.txt` beside `run.log`** — Nextflow's two raw streams. Engines through 26.04 print error reports on stdout; from 26.10, console logs go to stderr ([migration notes](https://docs.seqera.io/nextflow/migrations/26-10#breaking-changes)). Inspect both when diagnosing a failure.
 
+**Jobs started through MCP** can also be managed from the shell, using the same host, user and
+`NFCLAW_STATE_DIR`: `nfclaw jobs list`, `nfclaw jobs status <job-id>` and
+`nfclaw jobs cancel <job-id>`. Add `--json` for a versioned object. Job status exits 0 for success,
+3 while running, and 1 for failed, cancelled, lost or unknown jobs. Cancellation acknowledges the
+request without waiting; inspect status to confirm shutdown. [Commands and JSON fields](docs/mcp.md#manage-jobs-from-the-shell).
+
 Start a long run in the background with `nohup nfclaw run ... &` and stop it with `kill <nfclaw pid>` (the `pid:` line of the run log): nfclaw then shuts Nextflow and its tasks down, removes the task containers they left behind, writes the bundle and closes the log, as on Ctrl-C. On Linux, a Nextflow whose nfclaw is killed outright (SIGKILL) is sent SIGTERM; scheduler jobs and other detached work still rely on the executor's own cleanup.
 
 When a run fails, nfclaw's error quotes what Nextflow reported — plus the `Caused by:` chain from `.nextflow.log` when the console hides the reason — and names the run log, `.nextflow.log` and the failing task's `.command.err` by absolute path. Fix the cause, then re-run the same command with `--resume`. The symptom→fix map is in [`docs/known-issues.md`](docs/known-issues.md).

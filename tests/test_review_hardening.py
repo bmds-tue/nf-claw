@@ -137,7 +137,6 @@ def test_refused_run_cannot_persist_or_print_a_secret(
         {"nxf_env": [1]},
         {"nxf_env": []},
         {"nxf_env": False},
-        {"nxf_env": None},
         {"nxf_env": {"NXF_X": 3}},
         {"nxf_ver": False},
     ],
