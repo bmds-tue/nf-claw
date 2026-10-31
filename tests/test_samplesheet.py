@@ -654,3 +654,17 @@ def test_object_store_keys_retain_query_and_fragment_characters(url):
 @pytest.mark.parametrize("fragment", ["fragment", "$(id)", "`id`"])
 def test_standalone_remote_fragments_remain_staged_filename_characters(scheme, fragment):
     assert local_name_issues(f"{scheme}://example.org/reads#{fragment}.txt", "file-path")
+
+
+@pytest.mark.parametrize("kind, value, accepted", [
+    ("integer", "12", True), ("integer", "+5", True), ("integer", "١٢", True),
+    ("integer", "1_000", False), ("integer", "1.0", False),
+    ("number", "1.5", True), ("number", "1e3", True), ("number", ".5", True),
+    ("number", "1_000.5", False), ("number", "1_000", False),
+])
+def test_numeric_cells_follow_the_groovy_casts_nf_schema_types_them_with(kind, value, accepted):
+    # nf-schema types CSV cells with Groovy's String.isInteger()/isDouble() (Java's parsers),
+    # measured on Nextflow 26.04.3: `1_000` stays a string there and fails the column's type at
+    # launch, while Python's int()/float() read it as a thousand, so the pre-check passed it.
+    column = Column("n", kind, True, None)
+    assert (not samplesheet.value_problems(column, value)) is accepted
