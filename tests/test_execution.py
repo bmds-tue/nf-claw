@@ -109,6 +109,43 @@ def test_failure_names_the_engine_a_release_requires_when_nextflow_refuses_an_ol
     assert "--nxf-ver 25.10.4" in exc.value.fix and "nxf_ver" in exc.value.fix
 
 
+def _strict_parser_failure(version: str, location: str) -> str:
+    # Console text as Nextflow 26.04.3 printed it for methylseq 4.2.0's pinned configuration.
+    return ("import sys; "
+            f"print(' N E X T F L O W   ~  version {version}'); print(); "
+            f"print(\"Error {location}: Invalid include source: "
+            "'conf/aws/batch/nextflow.config'\"); "
+            "print(); print('ERROR ~ Config parsing failed'); print(); "
+            "print(\" -- Check '.nextflow.log' file for details\"); sys.exit(1)")
+
+
+@pytest.mark.parametrize("version, env_extra, configs, location, hinted", [
+    ("26.04.3", None, (), "nextflow.config:251:23", True),
+    ("26.10.0", None, (), "main.nf:4:1", True),
+    ("26.04.3", {"NXF_SYNTAX_PARSER": "v1"}, (), "nextflow.config:251:23", False),
+    ("25.10.4", None, (), "nextflow.config:251:23", False),
+    ("26.04.3", None, ("/data/site.config",), "site.config:2:8", False),
+    ("26.04.3", None, ("/data/site.config",), "nextflow.config:251:23", True),
+])
+def test_a_release_the_strict_parser_rejects_gets_the_parser_fix(tmp_path, version, env_extra,
+                                                                  configs, location, hinted):
+    # Nextflow 26.04 made its strict syntax parser the default, and many pinned releases were
+    # written for the legacy one (methylseq 4.2.0, atacseq 2.1.2, scrnaseq 4.1.0, ...). The run
+    # fails before any task, where "re-run the same command with --resume" cannot help: the fix is
+    # the legacy parser or an engine whose default it is. A file of the caller's own (`-c`) that
+    # fails to parse is the caller's to fix, and with the legacy parser selected there is no hint.
+    command = [PY, "-c", _strict_parser_failure(version, location)]
+    for config in configs:
+        command += ["-c", config]
+    with pytest.raises(NfclawError) as exc:
+        execution.run(command, cwd=tmp_path, logs_dir=tmp_path / "logs", timeout_seconds=30,
+                      env_extra=env_extra)
+    fix = exc.value.fix
+    assert ("--nxf-env NXF_SYNTAX_PARSER=v1" in fix and "--nxf-ver 25.10.4" in fix) is hinted
+    assert ("re-run the same command with --resume" in fix) is not hinted
+    assert "known-issues.md" in fix
+
+
 def test_failure_quotes_the_underlying_cause_from_the_nextflow_log(tmp_path):
     # The console said only "Unable to parse config file"; the cause is in Nextflow's log alone.
     nf_log = tmp_path / ".nextflow.log"

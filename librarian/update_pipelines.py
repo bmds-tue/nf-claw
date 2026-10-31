@@ -26,7 +26,9 @@ def remote_tags(url: str) -> list[str]:
     r = capture(["git", "ls-remote", "--tags", "--refs", "--", url],
                 timeout=seconds("NFCLAW_GIT_TIMEOUT", 60), env=submod._git_env())
     r.check_returncode()
-    return [line.split("\t")[-1].rsplit("/", 1)[-1] for line in r.stdout.splitlines()]
+    # `<object>\trefs/tags/<name>`: the whole name, which may itself contain a slash.
+    refs = (line.partition("\t")[2] for line in r.stdout.splitlines())
+    return [ref.removeprefix("refs/tags/") for ref in refs if ref.startswith("refs/tags/")]
 
 
 def _run(args: list[str], *, check: bool = False, timeout: float = 120):

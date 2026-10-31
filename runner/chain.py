@@ -573,6 +573,10 @@ def _probe_config(spec: ChainSpec, p: Planned, *,
         engine_version.required_spec(p.tree.path / "nextflow.config"))
     hint = (f" — the release declares Nextflow {declared}: try \"nxf_ver\": \"{declared}\""
             if declared and declared != opts.nxf_ver else "")
+    # From 26.04 strict syntax is the default; the legacy parser stays selectable in place.
+    if overlay.get("NXF_SYNTAX_PARSER", "").strip() != "v1":
+        hint += (f"{';' if hint else ' —'} on Nextflow 26.04+ the legacy parser may parse it: "
+                 '"nxf_env": {"NXF_SYNTAX_PARSER": "v1"}')
     return [f"{p.stage.dirname} ({p.stage.pipeline}): {engine} cannot parse its "
             f"configuration{hint}:\n" + "\n".join(f"      {line}" for line in report)]
 

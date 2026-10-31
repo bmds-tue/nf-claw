@@ -309,6 +309,20 @@ def test_the_probe_suggests_the_engine_the_release_declares(library, monkeypatch
         cmd, 1, stdout="ERROR ~ Config parsing failed\n", stderr=""))
     [issue] = chain._probe_config(_spec(), planned[1])
     assert 'the release declares Nextflow 23.04.0: try "nxf_ver": "23.04.0"' in issue
+    # Nextflow 26.04+ also keeps its legacy parser, selected without fetching another engine.
+    assert '"nxf_env": {"NXF_SYNTAX_PARSER": "v1"}' in issue
+
+
+def test_the_probe_offers_no_legacy_parser_to_a_stage_that_already_uses_it(library, monkeypatch):
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})
+    spec = chain.parse_spec({"stages": [{"pipeline": "mini_up"}, {
+        "pipeline": "mini", "nxf_env": {"NXF_SYNTAX_PARSER": "v1"}}]})
+    planned = chain.plan(spec, repo_root=root)
+    monkeypatch.setattr(chain.shutil, "which", lambda name: "/usr/bin/nextflow")
+    monkeypatch.setattr(chain, "capture", lambda cmd, **kw: subprocess.CompletedProcess(
+        cmd, 1, stdout="ERROR ~ Config parsing failed\n", stderr=""))
+    [issue] = chain._probe_config(spec, planned[1])
+    assert "cannot parse its configuration" in issue and "NXF_SYNTAX_PARSER" not in issue
 
 
 def test_the_probe_tells_an_engine_that_cannot_start_from_a_config_it_rejects(library,

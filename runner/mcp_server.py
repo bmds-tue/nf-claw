@@ -6,12 +6,10 @@ come from a handler object (`runner.mcp_tools.NfclawTools`), so the protocol is 
 and the nfclaw side never deals with JSON-RPC.
 
 The server is *dual-era*, as the 2026-07-28 revision of MCP describes:
-- **modern** clients (2026-07-28) send their protocol version in every request's `_meta`;
-there is no
-  handshake, `server/discover` describes the server, and each request is served on its own;
-- **legacy** clients (2024-11-05 … 2025-11-25) open with `initialize` and are served
-under the version
-  that handshake negotiated — which is what most clients in use speak.
+- **modern** clients (2026-07-28) send their protocol version in every request's `_meta`; there is
+  no handshake, `server/discover` describes the server, and each request is served on its own;
+- **legacy** clients (2024-11-05 … 2025-11-25) open with `initialize` and are served under the
+  version that handshake negotiated — which is what most clients in use speak.
 Requests are answered concurrently, so a tool waiting on a long job never blocks another request,
 and the server keeps its stdout to itself: see `serve_stdio`.
 """

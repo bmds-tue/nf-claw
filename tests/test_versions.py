@@ -618,3 +618,11 @@ def test_explicit_verified_local_pin_does_not_need_remote_tag_inventory(tmp_path
     monkeypatch.setattr(versions, 'release_tags',
                         lambda *a, **k: pytest.fail('verified local pin requested tags'))
     assert versions.ensure('p', 'v2.0.0', pipelines_dir=tmp_path, repo_root=tmp_path) is pin
+
+
+def test_remote_tags_keep_whole_tag_names(monkeypatch):
+    # A tag holding a slash (`release/9.9.9`) is not the release `9.9.9`.
+    listing = "a" * 40 + "\trefs/tags/3.14.0\n" + "b" * 40 + "\trefs/tags/release/9.9.9\n"
+    monkeypatch.setattr(versions, "capture", lambda command, **kwargs:
+                        subprocess.CompletedProcess(command, 0, listing, ""))
+    assert versions.remote_tags("https://example.invalid/x") == ["3.14.0", "release/9.9.9"]

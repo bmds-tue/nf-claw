@@ -71,7 +71,9 @@ def remote_tags(url: str) -> list[str]:
         return []
     if r.returncode != 0:
         return []
-    return [line.split("\t")[-1].rsplit("/", 1)[-1] for line in r.stdout.splitlines()]
+    # `<object>\trefs/tags/<name>`: the whole name, which may itself contain a slash.
+    refs = (line.partition("\t")[2] for line in r.stdout.splitlines())
+    return [ref.removeprefix("refs/tags/") for ref in refs if ref.startswith("refs/tags/")]
 
 
 def _local_tags(upstream: Path) -> list[str]:

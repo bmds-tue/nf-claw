@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -27,8 +28,10 @@ REPO = Path(__file__).resolve().parents[1]
 
 def test_nextflow_accept_rejects_invalid_pipeline_name(tmp_path):
     result = tmp_path / "accept.tsv"
+    # The gate's helpers run on $PYTHON (3.11+): this interpreter, whatever the host's python3 is.
     env = {
         **os.environ,
+        "PYTHON": sys.executable,
         "NFCLAW_RESULT_FILE": str(result),
         "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
         "RUNNER_TEMP": str(tmp_path),
@@ -47,7 +50,8 @@ def test_nextflow_accept_rejects_invalid_pipeline_name(tmp_path):
 
 @pytest.mark.parametrize("name", [".", ".."])
 def test_nextflow_accept_rejects_special_path_components(tmp_path, name):
-    env = {**os.environ, "NFCLAW_RESULT_FILE": str(tmp_path / "result.tsv")}
+    env = {**os.environ, "PYTHON": sys.executable,
+           "NFCLAW_RESULT_FILE": str(tmp_path / "result.tsv")}
     proc = subprocess.run(
         ["bash", "scripts/nextflow_accept.sh", name],
         cwd=Path(__file__).parent.parent, env=env, capture_output=True, text=True,

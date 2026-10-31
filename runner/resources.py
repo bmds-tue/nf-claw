@@ -7,20 +7,24 @@ from pathlib import Path
 from runner.errors import ErrorCode, NfclawError
 
 
-# Nextflow's own literal formats: memory is parsed by MemoryUnit, time by Duration. Accepting
-# exactly the units those two parsers document means a value nfclaw accepts is a value Nextflow
-# can parse — the check fails fast on a typo instead of letting the engine die mid-run. Both
-# tolerate the `15.GB` / `15 GB` / `15GB` spellings, so all three are allowed here.
-_MEMORY_RE = re.compile(r"(?i)^\d+(?:\.\d+)?\s*\.?\s*(?:B|KB|MB|GB|TB|PB|EB|ZB)$")
+# Nextflow's own literal formats: memory is parsed by MemoryUnit, time by Duration. Accepting only
+# what those two parsers accept means a value nfclaw accepts is a value Nextflow can parse — the
+# check fails fast on a typo instead of letting the engine die at the first task. As measured on
+# Nextflow 26.04: one decimal point at most (`15.GB`, `15 GB`, `15GB`, `1.5TB`; `1.5.TB` is
+# "multiple points"), a unit prefix in either case but an upper-case `B` (`15.gB`, never `15.gb`),
+# whole bytes (`100 B`, never `100.B`); and a lower-case time unit from Duration's own list (no
+# `secs`, `mins` or `1.H`), whose dot separator follows a whole number only (`1.h`, never `1.5.h`).
+# ASCII digits only: Python's `\d` also matches other scripts' digits, which Nextflow refuses.
+_MEMORY_RE = re.compile(r"^(?:[0-9]+(?:\.[0-9]*)?[ \t]*[KMGTPEZkmgtpez]B|[0-9]+[ \t]*B)$")
 _TIME_RE = re.compile(
-    r"(?i)^\d+(?:\.\d+)?\s*\.?\s*"
-    r"(?:ms|milli|millis|s|sec|secs|second|seconds|m|min|mins|minute|minutes"
+    r"^(?:[0-9]+\.?|[0-9]+[ \t]+|[0-9]+\.[0-9]+[ \t]*)"
+    r"(?:ms|milli|millis|s|sec|second|seconds|m|min|minute|minutes"
     r"|h|hour|hours|d|day|days)$"
 )
 
 
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_NXF_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-edge)?$")
+_NXF_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-edge)?$")
 
 
 def parse_nxf_env(items: list[str] | dict[str, str]) -> dict[str, str]:
@@ -138,7 +142,7 @@ def parse(cpus: int | None, memory: str | None, time: str | None) -> ResourceLim
             f"--limit-time is not a Nextflow duration value: {time!r}.",
             fix="Use a number and a unit, e.g. 1.h, 90.min or 2.d.")
     for flag, value in (("--limit-memory", memory), ("--limit-time", time)):
-        if value is not None and float(re.match(r"\d+(?:\.\d+)?", value.strip()).group()) <= 0:
+        if value is not None and float(re.match(r"[0-9]+(?:\.[0-9]+)?", value.strip())[0]) <= 0:
             raise NfclawError(ErrorCode.PARAMS_INVALID, f"{flag} must be greater than zero.")
     return ResourceLimits(
         cpus=cpus,

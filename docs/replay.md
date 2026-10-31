@@ -67,7 +67,7 @@ containerless tasks, changed process sets/platforms/engine builds, and hashes of
 inputs fetched again after execution. A successful ordinary replay may still fail this stronger
 check. It verifies the recorded evidence and cannot discover undeclared dependencies.
 
-Replay requires Python 3 and checks the recorded local data, configurations, parameters and archived pipeline source before launching. A changed dependency or incomplete bundle is refused. It pins the observed Nextflow version and, where recorded and eligible, container image digests and the nf-core/configs commit, then compares the recorded environment evidence. Retain the original bundle: standalone replay writes logs and source/environment records into the target, rather than generating another complete replay bundle. Files a task downloads by itself, Conda environments and a config's own `includeConfig` targets are not frozen.
+Replay requires Python 3.9 or newer as `python3` (its guard scripts use only the standard library; nfclaw itself is not needed) and checks the recorded local data, configurations, parameters and archived pipeline source before launching. A changed dependency or incomplete bundle is refused. It pins the observed Nextflow version and, where recorded and eligible, container image digests and the nf-core/configs commit, then compares the recorded environment evidence. Retain the original bundle: standalone replay writes logs and source/environment records into the target, rather than generating another complete replay bundle. Files a task downloads by itself, Conda environments and a config's own `includeConfig` targets are not frozen.
 
 ## Scientific output contracts (`nfclaw assess`)
 

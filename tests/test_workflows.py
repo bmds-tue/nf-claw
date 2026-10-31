@@ -3,6 +3,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -132,7 +133,7 @@ def test_acceptance_script_fails_when_it_finds_no_pipelines(tmp_path):
     (fake / "nfclaw").write_text("#!/bin/sh\nexit 0\n")
     (fake / "nfclaw").chmod(0o755)
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
-           "RUNNER_TEMP": str(tmp_path)}
+           "PYTHON": sys.executable, "RUNNER_TEMP": str(tmp_path)}
     r = subprocess.run(["bash", str(ROOT / "scripts" / "nextflow_accept.sh")], cwd=tmp_path,
                        env=env, capture_output=True, text=True)
     assert r.returncode != 0
@@ -145,7 +146,7 @@ def test_acceptance_script_rejects_a_failed_partial_pipeline_inventory(tmp_path)
     (fake / "nfclaw").write_text("#!/bin/sh\necho mini\nexit 1\n")
     (fake / "nfclaw").chmod(0o755)
     env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
-           "RUNNER_TEMP": str(tmp_path)}
+           "PYTHON": sys.executable, "RUNNER_TEMP": str(tmp_path)}
     result = subprocess.run(["bash", str(ROOT / "scripts/nextflow_accept.sh")], cwd=tmp_path,
                             env=env, capture_output=True, text=True)
     assert result.returncode != 0

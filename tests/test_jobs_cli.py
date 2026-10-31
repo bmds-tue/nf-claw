@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from runner import cli, jobs, mcp_tools
+from runner import cli, job_reports, jobs, mcp_tools
 from runner.mcp_server import Context
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -131,6 +131,32 @@ def test_text_output_includes_human_status_and_tail(tmp_path, capsys):
     assert "my scientific output" in out and job.outdir in out
     assert cli.main(["jobs", "list"]) == 0
     assert job.id in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("state", ["failed", "cancelled", "lost"])
+def test_text_output_names_shell_commands_not_mcp_tools(tmp_path, capsys, state):
+    # The shell report is read by someone at a shell: it names `nfclaw` commands, never the MCP
+    # tools (`run_status(outdir)`, `get_job`, `read_doc(...)`) or the JSON fields behind them.
+    job = record(tmp_path, state)
+    supervisor = job.dir / jobs.SUPERVISOR_FILE
+    if supervisor.exists():
+        data = json.loads(supervisor.read_text())
+        data["status_error"] = "could not freeze this job's run status: OSError: disk full"
+        supervisor.write_text(json.dumps(data))
+    cli.main(["jobs", "status", job.id])
+    out = capsys.readouterr().out
+    for mcp_only in ("run_status(", "get_job(", "read_doc(", "resume=true", "status_report",
+                     "output_tail", "verify_replay"):
+        assert mcp_only not in out
+    if state == "failed":
+        assert f"nfclaw status {job.outdir}" in out
+
+
+def test_failed_job_without_a_run_report_points_at_its_output_only(tmp_path):
+    view = {"state": "failed", "job_id": "x", "kind": "run", "check": False}
+    assert "status_report" not in job_reports.next_step(view)
+    assert "output_tail" in job_reports.next_step(view)
+    assert "status_report" in job_reports.next_step({**view, "status_report": "status: failed"})
 
 
 @pytest.mark.parametrize("state", ["succeeded", "failed", "cancelled", "lost"])

@@ -218,7 +218,7 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
             raise
         _join(readers)
     if code != 0:
-        err = _failure(code, run_log, env if env is not None else os.environ)
+        err = _failure(code, run_log, env if env is not None else os.environ, command)
         run_log.fail(f"failed (exit status {code})", str(err))
         raise err
     run_log.outcome = "success"
@@ -281,11 +281,13 @@ def _log_details(run_log: runlog.RunLog) -> dict[str, str]:
     return details
 
 
-def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str]) -> NfclawError:
+def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str],
+             command: list[str] = ()) -> NfclawError:
     """The error for a launch that exited non-zero: what Nextflow itself reported, quoted from this
     launch's console, plus where the full logs are. Nextflow prints its error reports on stdout and
     some details on stderr (nf-schema's list of invalid values), and refers to its log relative to a
-    directory the reader is not in. `env` is the environment Nextflow ran with."""
+    directory the reader is not in. `env` is the environment Nextflow ran with, `command` what it
+    ran."""
     on_stderr = runlog.stderr_excerpt(run_log.console_tail("err"))
     # Without an `ERROR ~` report on stdout its tail is only worth quoting when stderr is silent too
     # (an `error "…"` in a workflow prints just its message there); otherwise it is the banner.
@@ -334,15 +336,52 @@ def _failure(code: int, run_log: runlog.RunLog, env: Mapping[str, str]) -> Nfcla
     engine_hint = (f"The release requires Nextflow {required} or later (its manifest's "
                    f"nextflowVersion); add --nxf-ver {required} (a chain stage's \"nxf_ver\"). "
                    if required else "")
+    parser_hint = _strict_parser_hint(on_stdout + on_stderr, run_log.nextflow_version, env,
+                                      command)
+    # A configuration or script the engine refused to compile stops the run before any task, so
+    # resuming the same command cannot get further: the parser hint says what to change instead.
+    retry = ("Fix the cause Nextflow reports, then run again with that change." if parser_hint else
+             "Fix the cause Nextflow reports, then re-run the same command with --resume.")
     return NfclawError(
         ErrorCode.EXECUTION_FAILED, message,
-        fix=(f"{time_limit_hint}{ipv6_hint}{engine_hint}Fix the cause Nextflow reports, then "
-             f"re-run the same command with --resume.{task_hint} The whole launch is in "
-             f"`run_log`. Common causes and fixes: {runlog.known_issues_path()}."),
+        fix=(f"{time_limit_hint}{ipv6_hint}{engine_hint}{parser_hint}{retry}{task_hint} The whole "
+             f"launch is in `run_log`. Common causes and fixes: {runlog.known_issues_path()}."),
         details=details)
 
 
+def _strict_parser_hint(reported: list[str], banner: str | None, env: Mapping[str, str],
+                        command: list[str]) -> str:
+    """The fix for a release the strict syntax parser rejects, or "".
+
+    Nextflow 26.04 made its strict parser the default; releases written for the legacy one fail
+    to compile before any task (methylseq 4.2.0's `Invalid include source`, `def check_max(...)` in
+    older configs). Only when the engine that ran parses strictly by default, the legacy parser was
+    not already selected, and no file it rejected is one of the run's own `-c` configs (Nextflow
+    names a failing file by its basename), which would be the caller's to fix."""
+    if not any(_COMPILE_FAILED.search(line) for line in reported):
+        return ""
+    version = _ENGINE_VERSION.search(banner or "")
+    if (version is None or (int(version[1]), int(version[2])) < _STRICT_PARSER_DEFAULT
+            or env.get("NXF_SYNTAX_PARSER", "").strip() == "v1"):
+        return ""
+    rejected = {m[1] for line in reported if (m := _REJECTED_FILE.match(line))}
+    own = {Path(value).name for flag, value in zip(command, command[1:], strict=False)
+           if flag == "-c"}
+    if not rejected or rejected & own:
+        return ""
+    return ("Nextflow 26.04 and later parse with strict syntax by default, which rejects syntax "
+            "this release was written with: run it with the legacy parser, --nxf-env "
+            "NXF_SYNTAX_PARSER=v1, or with an engine that defaults to it, --nxf-ver 25.10.4 "
+            "(if the release's nextflowVersion allows; a chain stage's \"nxf_env\"/\"nxf_ver\"). ")
+
+
 _TIME_LIMIT_ABORT = "process hasn't exited"
+# Nextflow's verdict on a configuration or script it could not compile, the location of what it
+# rejected (`Error nextflow.config:251:23: …`), and the engine its banner names.
+_COMPILE_FAILED = re.compile(r"^ERROR ~ (?:Config parsing|Script compilation) failed")
+_REJECTED_FILE = re.compile(r"^Error (\S+?):\d+:\d+: ")
+_ENGINE_VERSION = re.compile(r"(\d+)\.(\d+)\.\d+")
+_STRICT_PARSER_DEFAULT = (26, 4)
 # Nextflow's refusal of an engine older than `manifest.nextflowVersion`: "Nextflow version 25.10.2
 # does not match workflow required version: >=25.10.4".
 _REQUIRED_ENGINE = re.compile(r"does not match workflow required version: !?\s*>=\s*"
