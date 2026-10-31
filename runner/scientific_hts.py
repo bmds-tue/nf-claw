@@ -143,6 +143,8 @@ def _vcf(stream, item, db, side, pysam):
         declared_filters = set(source.header.filters)
         declared_contigs = set(source.header.contigs)
         for record in source:
+            if record.qual is not None and not math.isfinite(record.qual):
+                raise ValueError(f'VCF QUAL at {record.contig}:{record.pos} must be finite')
             # HTSlib renders decoded values. Keeping each rendered GT string also preserves
             # mixed polyploid phase separators that a tuple plus one phased boolean would lose.
             columns = str(record).rstrip('\r\n').split('\t')

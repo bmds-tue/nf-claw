@@ -181,6 +181,14 @@ Explicit stage `input` and `params` values override mapped handoff parameters wi
 advisory; unused sources are not materialized. The rule must still pass static checks.
 A `params_file` supplies lower-priority values and does not suppress a mapped source.
 
+An `upstream_param` reference uses the downstream parameter's declared path format (`file-path`,
+`directory-path`, `path` or `file-path-pattern`). Relative local references are anchored to the
+producer's launch directory, including references supplied by its profile. File patterns retain
+their selection and require historical byte and namespace evidence for every member. The
+consumer's prelaunch record must match that selection; a file added during consumption and
+removed later still breaks lineage. A pattern referring to external input data requires the
+producer's supported prelaunch input inventory, not only legacy file checksums.
+
 ### Samplesheet Transformations
 When `samplesheet` is used, transformations are applied in a strict, predictable order:
 1. `rename`: Rename columns (`{"fastq_1": "short_reads_1"}`).
@@ -313,5 +321,19 @@ were scientific products of the pipeline.
 Chain records apply the same environment redaction as run provenance. The private chain directory
 uses mode 0700 and its JSON records mode 0600. A recorded `<redacted>` value is never passed to
 Nextflow: resume requires its real value again, either exported in the environment or supplied
-in the original private spec. Succeeded-stage fingerprints still compare the effective values,
-so supplying different credentials does not silently redefine a frozen stage.
+in the original private spec. New sensitive-environment stages also record a versioned keyed
+identity of the complete effective `NXF_*` environment. Different private values, or changed
+ordinary JVM flags alongside a sensitive argument, refuse reuse of a succeeded stage.
+
+The identity key is created under the chain's writer lock in `chain/.environment-key`, with mode
+0600, beneath the mode-0700 chain directory. Keep this private binary file for resume; it is never
+copied into stage provenance, JSON records or logs. Do not include it when sharing chain records.
+A missing, replaced, symlinked or insufficiently protected key refuses resume. Restore the
+original private key or keep the results and start a fresh chain; replacing a lost key cannot
+recover the original identity.
+
+Older sensitive-environment chains recorded only `<redacted>` values and cannot establish their
+original effective identity. Resuming a succeeded legacy sensitive stage is refused even when
+the caller supplies the same value; nfclaw cannot prove that it is the same. Existing nonsensitive
+version-2 fingerprints remain compatible and need no key. Appending a new sensitive stage to a
+compatible nonsensitive chain creates its private key when execution takes the chain lock.

@@ -6,7 +6,7 @@ are read from the repository at build time.
 
 ## Stack
 
-- **Next.js 15** (App Router, React Server Components) · **TypeScript**
+- **Next.js 16** (App Router, React Server Components) · **TypeScript**
 - **Tailwind CSS 4** (custom design system derived from the brand logo)
 - **Framer Motion** (scroll storytelling, micro-interactions)
 - **react-markdown** (documentation hub)

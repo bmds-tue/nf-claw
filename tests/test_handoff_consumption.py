@@ -221,3 +221,125 @@ def test_mixed_pattern_and_declared_paths_bind_the_actual_consumer_bytes(library
         assert problems == []
         assert evidence.record["params"]["input"]["consumed_sources"] == sorted(
             map(str, (reads, reference)))
+
+
+@pytest.mark.parametrize('fmt,relative', [
+    ('file-path', 'refs/index.fa'), ('directory-path', 'refs'),
+    ('path', 'refs/index.fa'), ('path', 'refs'),
+    ('file-path-pattern', 'refs/index.fa'), ('file-path-pattern', 'refs/*.fa'),
+    ('file-path-pattern', 'refs/**/*.fa'), ('file-path-pattern', 'refs/{index,other}.fa')])
+def test_inherited_reference_formats_keep_producer_identity_in_another_cwd(
+        library, tmp_path, monkeypatch, fmt, relative):
+    _, tree = _trees(library('mini_up', 'mini'))
+    schema_path = tree / 'nextflow_schema.json'
+    schema = json.loads(schema_path.read_text())
+    schema['definitions']['reference_genome_options']['properties']['fasta']['format'] = fmt
+    schema_path.write_text(json.dumps(schema))
+    up, down, caller = tmp_path / 'up', tmp_path / 'down', tmp_path / 'caller'
+    for root, contents in ((up, b'producer bytes'), (caller, b'wrong caller bytes')):
+        (root / 'refs/nested').mkdir(parents=True)
+        (root / 'refs/index.fa').write_bytes(contents)
+        (root / 'refs/other.fa').write_bytes(contents)
+        (root / 'refs/nested/third.fa').write_bytes(contents)
+    record(up, params={'gtf': relative})
+    monkeypatch.chdir(caller)
+    evidence = handoff.materialize(_rule({'params': {'fasta': {'upstream_param': 'gtf'}}}),
+        upstream_outdir=up, downstream_tree=tree, dest=tmp_path / 'snapshot')
+    assert evidence.params['fasta'] == str(up / relative)
+    state = _linked_state(up, down, evidence, tmp_path / 'link', [up / relative])
+    assert chain._integrity_problems(state) == []
+
+
+@pytest.mark.parametrize('external', [False, True])
+@pytest.mark.parametrize('damage', ['changed', 'missing', 'extra'])
+def test_inherited_patterns_require_unchanged_historical_members(library, tmp_path,
+                                                                 external, damage):
+    _, tree = _trees(library('mini_up', 'mini'))
+    schema_path = tree / 'nextflow_schema.json'
+    schema = json.loads(schema_path.read_text())
+    schema['definitions']['reference_genome_options']['properties']['fasta']['format'] = (
+        'file-path-pattern')
+    schema_path.write_text(json.dumps(schema))
+    up = tmp_path / 'up'
+    reference = tmp_path / 'reference' if external else up / 'refs'
+    reference.mkdir(parents=True)
+    original = reference / 'index.fa'
+    original.write_bytes(b'original reference')
+    (reference / 'other.fa').write_bytes(b'another historical reference')
+    pattern = reference / '*.fa'
+    record(up, params={'gtf': str(pattern)}, inputs=[pattern] if external else [])
+    if damage == 'changed':
+        original.write_bytes(b'changed reference')
+    elif damage == 'missing':
+        original.unlink()
+    else:
+        (reference / 'extra.fa').write_bytes(b'extra reference')
+    with pytest.raises(NfclawError, match='changed|historical|missing|matches no files|namespace'):
+        handoff.materialize(_rule({'params': {'fasta': {'upstream_param': 'gtf'}}}),
+            upstream_outdir=up, downstream_tree=tree, dest=tmp_path / 'snapshot')
+
+
+@pytest.mark.parametrize('damage', ['extra', 'bytes', 'missing_record'])
+def test_inherited_pattern_lineage_preserves_the_actual_consumed_members(library, tmp_path, damage):
+    _, tree = _trees(library('mini_up', 'mini'))
+    schema_path = tree / 'nextflow_schema.json'
+    schema = json.loads(schema_path.read_text())
+    schema['definitions']['reference_genome_options']['properties']['fasta']['format'] = (
+        'file-path-pattern')
+    schema_path.write_text(json.dumps(schema))
+    up, down = tmp_path / 'up', tmp_path / 'down'
+    (up / 'refs').mkdir(parents=True)
+    (up / 'refs/index.fa').write_bytes(b'original reference')
+    pattern = up / 'refs/*.fa'
+    record(up, params={'gtf': str(pattern)})
+    evidence = handoff.materialize(_rule({'params': {'fasta': {'upstream_param': 'gtf'}}}),
+        upstream_outdir=up, downstream_tree=tree, dest=tmp_path / 'snapshot')
+    extra, original = up / 'refs/extra.fa', up / 'refs/index.fa'
+    if damage == 'extra':
+        extra.write_bytes(b'extra reference consumed downstream')
+    elif damage == 'bytes':
+        original.write_bytes(b'different reference bytes consumed downstream')
+    state = _linked_state(up, down, evidence, tmp_path / 'link', [pattern])
+    extra.unlink(missing_ok=True)
+    original.write_bytes(b'original reference')
+    if damage == 'missing_record':
+        (down / 'provenance/inputs.sha256').write_text('')
+    assert chain._integrity_problems(state)
+
+
+def test_inherited_external_pattern_uses_its_canonical_recorded_input_selection(
+        library, tmp_path):
+    _, tree = _trees(library('mini_up', 'mini'))
+    schema_path = tree / 'nextflow_schema.json'
+    schema = json.loads(schema_path.read_text())
+    schema['definitions']['reference_genome_options']['properties']['fasta']['format'] = (
+        'file-path-pattern')
+    schema_path.write_text(json.dumps(schema))
+    up, down, reference = tmp_path / 'up', tmp_path / 'down', tmp_path / 'reference'
+    reference.mkdir()
+    (reference / 'index.fa').write_bytes(b'original reference')
+    (reference / 'other.fa').write_bytes(b'another reference')
+    up.mkdir()
+    (up / 'alias').symlink_to(reference, target_is_directory=True)
+    record(up, params={'gtf': 'alias/*.fa'}, inputs=[reference / '*.fa'])
+    evidence = handoff.materialize(_rule({'params': {'fasta': {'upstream_param': 'gtf'}}}),
+        upstream_outdir=up, downstream_tree=tree, dest=tmp_path / 'snapshot')
+    assert evidence.params['fasta'] == str(reference / '*.fa')
+    state = _linked_state(up, down, evidence, tmp_path / 'link', [reference / '*.fa'])
+    assert chain._integrity_problems(state) == []
+
+
+def test_inherited_pattern_cannot_normalize_away_a_wildcard_parent(library, tmp_path):
+    _, tree = _trees(library('mini_up', 'mini'))
+    schema_path = tree / 'nextflow_schema.json'
+    schema = json.loads(schema_path.read_text())
+    schema['definitions']['reference_genome_options']['properties']['fasta']['format'] = (
+        'file-path-pattern')
+    schema_path.write_text(json.dumps(schema))
+    up = tmp_path / 'up'
+    (up / 'refs/nested').mkdir(parents=True)
+    (up / 'refs/index.fa').write_bytes(b'wrong selection after normalization')
+    record(up, params={'gtf': 'refs/*/../*.fa'})
+    with pytest.raises(NfclawError, match='wildcard'):
+        handoff.materialize(_rule({'params': {'fasta': {'upstream_param': 'gtf'}}}),
+            upstream_outdir=up, downstream_tree=tree, dest=tmp_path / 'snapshot')

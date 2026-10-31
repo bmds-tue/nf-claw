@@ -109,7 +109,43 @@ def _tee(src, term_stream, log_file, run_log: runlog.RunLog, stream: str) -> Non
 
 def _join(threads: list[threading.Thread]) -> None:
     for t in threads:
-        t.join(timeout=5)
+        if t.ident is not None:  # Setup can fail before either reader starts.
+            t.join(timeout=5)
+
+
+@contextmanager
+def _defer_stop_signals():
+    """Retain a stop until Popen has returned its child handle to the cleanup owner.
+
+    Raising from a signal handler during Popen can lose a successfully created child before
+    assignment. Reader startup has the same handover to an OS thread. Only defer these small
+    ownership transfers; ordinary waits and logging remain immediately interruptible.
+    """
+    previous, requested = {}, []
+
+    def remember(signum, frame):
+        if not requested:
+            requested.append((signum, frame))
+
+    if threading.current_thread() is threading.main_thread():
+        for sig in (*_STOP_SIGNALS, signal.SIGINT):
+            handler = signal.getsignal(sig)
+            if handler is not signal.SIG_IGN:
+                previous[sig] = signal.signal(sig, remember)
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+        if requested:
+            sig, frame = requested[0]
+            handler = previous[sig]
+            if callable(handler):
+                handler(sig, frame)
+            elif sig == signal.SIGINT:
+                raise KeyboardInterrupt
+            else:
+                raise Terminated(sig)
 
 
 def run(command: list[str], *, cwd: Path, logs_dir: Path,
@@ -153,44 +189,44 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
     env = {**os.environ, **env_extra} if env_extra else None
     with out_p.open("ab") as out_fh, err_p.open("ab") as err_fh:
         budget.check()
+        proc = None
+        readers = []
+        completed = False
         try:
-            launch = command
-            if die_with_nfclaw is not None:
-                # The launcher execs the program itself, so a missing one is refused here, as
-                # Popen would have refused it, rather than ending a launched run with exit 127.
-                program = _program(command[0], cwd, env)
-                if program is None:
-                    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), command[0])
-                launch = [*die_with_nfclaw, program, *command]
-            # Pipe the child's streams so nfclaw can tee them; without a pipe the output would go
-            # straight to files (the terminal stays mute) or straight to the terminal (nothing is
-            # captured). Teeing gives both.
-            proc = subprocess.Popen(launch, cwd=str(cwd), stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, env=env, **popen_kwargs)
-        except OSError as exc:
-            err = NfclawError(ErrorCode.EXECUTION_FAILED, f"Could not launch process: {exc}",
-                              fix="Ensure `nextflow` is installed and on PATH.",
-                              details={"run_log": str(run_log.path)})
-            run_log.fail("could not launch", str(err))
-            raise err from exc
-        run_log.launched(proc.pid)
-        # One drainer per stream: both pipes must be read concurrently, or a child that fills one
-        # while nfclaw is blocked reading the other would deadlock. Daemon threads so a wedged
-        # reader can never keep the process alive on its own.
-        readers = [
-            threading.Thread(target=_tee, args=(proc.stdout, sys.stdout, out_fh, run_log, "out"),
-                             daemon=True),
-            threading.Thread(target=_tee, args=(proc.stderr, sys.stderr, err_fh, run_log, "err"),
-                             daemon=True),
-        ]
-        for t in readers:
-            t.start()
-        try:
+            try:
+                launch = command
+                if die_with_nfclaw is not None:
+                    program = _program(command[0], cwd, env)
+                    if program is None:
+                        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), command[0])
+                    launch = [*die_with_nfclaw, program, *command]
+                with _defer_stop_signals():
+                    proc = subprocess.Popen(launch, cwd=str(cwd), stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE, env=env, **popen_kwargs)
+            except OSError as exc:
+                err = NfclawError(ErrorCode.EXECUTION_FAILED, f"Could not launch process: {exc}",
+                                  fix="Ensure `nextflow` is installed and on PATH.",
+                                  details={"run_log": str(run_log.path)})
+                run_log.fail("could not launch", str(err))
+                raise err from exc
+            run_log.launched(proc.pid)
+            # Keep both readers registered before startup; cleanup also owns a partially
+            # started pair when thread allocation or a signal interrupts setup.
+            readers = [
+                threading.Thread(target=_tee,
+                                 args=(proc.stdout, sys.stdout, out_fh, run_log, "out"),
+                                 daemon=True),
+                threading.Thread(target=_tee,
+                                 args=(proc.stderr, sys.stderr, err_fh, run_log, "err"),
+                                 daemon=True),
+            ]
+            for t in readers:
+                with _defer_stop_signals():
+                    t.start()
             code = proc.wait(timeout=budget.remaining(timeout_seconds))
             budget.check()
+            completed = True
         except subprocess.TimeoutExpired as exc:
-            _terminate(proc, grace=grace, run_log=run_log)
-            _join(readers)
             elapsed_budget = timeout_seconds
             try:
                 budget.check()
@@ -204,19 +240,27 @@ def _run(command: list[str], *, cwd: Path, logs_dir: Path, timeout_seconds: floa
             run_log.fail(f"timed out after {elapsed_budget:g} s", str(err))
             raise err from exc
         except BaseException as exc:
-            # Ctrl-C (KeyboardInterrupt), `kill` (Terminated) or any other interruption of the wait:
-            # tear down the child group so Nextflow — and every task process, container or JVM it
-            # launched — is stopped, never left running in the background. Then re-raise so the
-            # interrupt is not swallowed. The outcome is recorded first: a second signal during the
-            # teardown's grace period must not cost the log its last line.
-            outcome = (f"timed out after {exc.details['timeout_seconds']:g} s"
-                       if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details
-                       else stop_outcome(exc))
-            run_log.fail(outcome)
-            _terminate(proc, grace=grace, run_log=run_log)
-            _join(readers)
+            if proc is not None:
+                if isinstance(exc, NfclawError) and "timeout_seconds" in exc.details:
+                    outcome = f"timed out after {exc.details['timeout_seconds']:g} s"
+                elif isinstance(exc, (KeyboardInterrupt, Terminated)):
+                    outcome = stop_outcome(exc)
+                else:
+                    outcome = f"failed during process supervision ({type(exc).__name__})"
+                run_log.fail(outcome)
             raise
-        _join(readers)
+        finally:
+            # Even PID logging and reader setup are inside the child's ownership scope.
+            # On success the leader is already reaped; the ordinary completion path still
+            # drains its streams without terminating a completed run.
+            try:
+                if proc is not None and not completed:
+                    _terminate(proc, grace=grace, run_log=run_log)
+            finally:
+                _join(readers)
+                if proc is not None and not any(t.is_alive() for t in readers):
+                    for pipe in (proc.stdout, proc.stderr):
+                        pipe.close()
     if code != 0:
         err = _failure(code, run_log, env if env is not None else os.environ, command)
         run_log.fail(f"failed (exit status {code})", str(err))

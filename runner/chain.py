@@ -13,9 +13,11 @@ from __future__ import annotations
 import contextlib
 import csv
 import hashlib
+import hmac
 import os
 import re
 import shutil
+import stat
 import sys
 import uuid
 from collections.abc import Callable
@@ -36,6 +38,8 @@ from runner.submodule import SubmoduleStatus
 RECORD_DIRNAME = "chain"
 LOG_NAME = "chain.log"
 FINGERPRINT_VERSION = 2
+_ENV_IDENTITY_VERSION = 1
+_ENV_KEY_NAME = '.environment-key'
 _ID = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 _OPTION_KEYS = {"profile", "nxf_ver", "nxf_env", "config", "limits"}
 _CHAIN_KEYS = {"stages", "allow_spaces"} | _OPTION_KEYS
@@ -335,7 +339,7 @@ def _file_sha256(path: Path | None) -> str | None:
     return provenance.sha256_file(path) if path is not None and path.is_file() else None
 
 
-def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
+def fingerprint(p: Planned, spec: ChainSpec | None = None, *, env_key: bytes | None = None) -> str:
     """What a stage would do. A stage that succeeded is frozen: resuming with a spec that changes
     its fingerprint is refused (no silent re-run, no stale results under a new definition)."""
     s = p.stage
@@ -350,6 +354,15 @@ def fingerprint(p: Planned, spec: ChainSpec | None = None) -> str:
                                       "nxf_env": opts.nxf_env, "configs": opts.configs,
                                       "limits": opts.limits}),
             "config_sha256": {c: _file_sha256(Path(c)) for c in opts.configs}}
+    if provenance.safe_env(opts.nxf_env)[1]:
+        if env_key is None:
+            raise _bad('sensitive environment identity requires this chain\'s private key')
+        # Redaction is for shareable records; identity must include every effective value,
+        # including ordinary JVM flags alongside an argument that needs redaction.
+        canonical = json.dumps(opts.nxf_env, sort_keys=True, separators=(',', ':')).encode()
+        body['private_environment_identity'] = {
+            'version': _ENV_IDENTITY_VERSION,
+            'hmac_sha256': hmac.new(env_key, canonical, hashlib.sha256).hexdigest()}
     if s.sheet_set:                   # absent when unset: earlier chains keep their fingerprints
         body["sheet_set"] = dict(s.sheet_set)
     if correction := source_corrections.recipe_identity(s.pipeline, p.tree.commit):
@@ -406,8 +419,96 @@ def _write_json(path: Path, data: Any) -> Path:
 def _read_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):
         return None
+
+
+def _environment_key(record: Path, *, required: bool = False, create: bool = False) -> bytes | None:
+    """Read a private identity key; creation is called only while holding the chain lock.
+
+    Never recover a missing key by generating a replacement for existing keyed records: their
+    original effective values would no longer be verifiable. No key bytes enter JSON or logs.
+    """
+    path = record / _ENV_KEY_NAME
+    try:
+        if create:
+            try:
+                fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            except FileExistsError:
+                pass
+            else:
+                with os.fdopen(fd, 'wb') as stream:
+                    os.fchmod(stream.fileno(), 0o600)
+                    stream.write(os.urandom(32))
+                    stream.flush()
+                    os.fsync(stream.fileno())
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600:
+                raise ValueError('key must be a regular private file with mode 0600')
+            key = stream.read(33)
+            if len(key) != 32:
+                raise ValueError('key has an invalid length')
+            return key
+    except FileNotFoundError:
+        if not required and not create:
+            return None
+        reason = 'the recorded private environment identity key is missing'
+    except (OSError, ValueError) as exc:
+        reason = f'the private environment identity key cannot be used: {exc}'
+    raise NfclawError(
+        ErrorCode.ENVIRONMENT, reason,
+        fix='Restore this chain\'s original private key with mode 0600, or keep its results '
+            'and start a new chain in a fresh --outdir.') from None
+
+
+def _resume_environment(record: Path, state: dict) -> tuple[bytes | None, set[str]]:
+    """Private identity context, and legacy stages whose sensitive identity was never captured."""
+    entries = state.get('stages', [])
+    if not isinstance(entries, list):
+        return None, set()  # _check_frozen supplies the malformed-state diagnostic.
+    keyed = any(isinstance(entry, dict) and 'environment_identity_version' in entry
+                for entry in entries)
+    key = _environment_key(record, required=keyed or 'environment_key_sha256' in state)
+    if keyed or 'environment_key_sha256' in state:
+        # The key itself is uniformly random; its public verifier carries no private values.
+        # Check it even when all keyed stages failed and therefore have no frozen comparison.
+        expected = state.get('environment_key_sha256')
+        if (key is None or not isinstance(expected, str)
+                or re.fullmatch('[0-9a-f]{64}', expected) is None
+                or not hmac.compare_digest(expected, hashlib.sha256(key).hexdigest())):
+            raise NfclawError(
+                ErrorCode.ENVIRONMENT, 'the private environment identity key does not match '
+                'this chain\'s recorded key',
+                fix='Restore this chain\'s original private key, or keep its results and '
+                    'start a fresh chain.')
+    legacy = {entry['id'] for entry in entries if _valid_entry(entry)
+              and entry['status'] == 'success' and 'environment_identity_version' not in entry}
+    if not legacy:
+        return key, set()
+    recorded = _read_json(record / 'chain.json')
+    if not isinstance(recorded, dict) or not isinstance(recorded.get('stages'), list):
+        raise _bad('the recorded specification is missing or malformed; legacy stage '
+                   'environment identity cannot be checked')
+    shared = recorded.get('nxf_env', {})
+    if not isinstance(shared, dict) or not all(isinstance(k, str) and isinstance(v, str)
+                                            for k, v in shared.items()):
+        raise _bad('the recorded environment is malformed')
+    sensitive = set()
+    for stage in recorded['stages']:
+        if (not isinstance(stage, dict) or not isinstance(stage.get('id'), str)
+                or stage['id'] not in legacy):
+            continue
+        overlay = stage.get('nxf_env', {})
+        if not isinstance(overlay, dict) or not all(isinstance(k, str) and isinstance(v, str)
+                                                  for k, v in overlay.items()):
+            raise _bad('the recorded stage environment is malformed')
+        effective = {**shared, **overlay}
+        if (any(value == '<redacted>' for value in effective.values())
+                or provenance.safe_env(effective)[1]):
+            sensitive.add(stage['id'])
+    return key, sensitive
 
 
 def _manifest_bytes(stage_dir: Path) -> bytes | None:
@@ -581,7 +682,8 @@ def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> s
 
 
 def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
-                  repo_root: Path | None = None) -> None:
+                  repo_root: Path | None = None, *, env_key: bytes | None = None,
+                  legacy_sensitive: set[str] | frozenset[str] = frozenset()) -> None:
     problems = []
     if not isinstance(state.get("stages"), list) or any(
             not _valid_entry(s) for s in state["stages"]):
@@ -589,6 +691,19 @@ def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
     for i, old in enumerate(state.get("stages", [])):
         if old.get("status") != "success":
             continue
+        identity_version = old.get('environment_identity_version')
+        if old.get('id') in legacy_sensitive:
+            problems.append(f"stage '{old.get('id')}' has legacy sensitive environment records "
+                            'without private effective-value identity; the original values '
+                            'cannot be verified. Keep its results and start a fresh chain')
+            continue
+        if identity_version is not None and (type(identity_version) is not int
+                                              or identity_version != _ENV_IDENTITY_VERSION):
+            problems.append(f"stage '{old.get('id')}' has an unsupported private environment "
+                            'identity version')
+            continue
+        if identity_version is not None and env_key is None:
+            raise _bad('the private environment identity key is missing')
         if old.get("fingerprint_version") != FINGERPRINT_VERSION:
             problems.append(f"stage '{old.get('id')}' uses an older fingerprint format that did "
                             "not preserve its code and run options as immutable evidence; keep "
@@ -597,7 +712,9 @@ def _check_frozen(state: dict, planned: list[Planned], spec: ChainSpec,
         if i >= len(planned) or planned[i].stage.id != old.get("id"):
             problems.append(f"stage '{old.get('id')}' already succeeded as stage {i + 1}; a "
                             "resumed chain keeps its succeeded stages, in order")
-        elif fingerprint(planned[i], spec) != old.get("fingerprint"):
+        elif ((identity_version is None and provenance.safe_env(
+                options(spec, planned[i].stage).nxf_env)[1])
+              or fingerprint(planned[i], spec, env_key=env_key) != old.get("fingerprint")):
             problems.append(f"stage '{old.get('id')}' already succeeded with a different "
                             "definition (its code, run options, input, params or handoff changed "
                             "— including what the handoff to the next stage sets on it)")
@@ -640,7 +757,9 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
     planned = plan(spec, repo_root=repo_root)
     budget.check()
     if state is not None:
-        _check_frozen(state, planned, spec, repo_root)
+        key, legacy_sensitive = _resume_environment(record, state)
+        _check_frozen(state, planned, spec, repo_root, env_key=key,
+                      legacy_sensitive=legacy_sensitive)
     done = {s.get("id") for s in (state or {}).get("stages", []) if s.get("status") == "success"}
     # A real run says each stage's advisories when that stage launches; only --check says them here.
     todo = [p for p in planned if p.stage.id not in done]
@@ -665,10 +784,13 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
                     timeout_seconds=timeout_seconds, on_warning=on_warning)
 
 
-def _new_entry(p: Planned, outdir: Path, spec: ChainSpec) -> dict:
+def _new_entry(p: Planned, outdir: Path, spec: ChainSpec, *, env_key: bytes | None = None) -> dict:
     return {"id": p.stage.id, "pipeline": p.stage.pipeline, "index": p.stage.index,
             "outdir": str(outdir / p.stage.dirname), "status": "pending",
-            "fingerprint": fingerprint(p, spec), "version": None, "commit": None, "handoff": None,
+            "fingerprint": fingerprint(p, spec, env_key=env_key),
+            **({'environment_identity_version': _ENV_IDENTITY_VERSION}
+               if provenance.safe_env(options(spec, p.stage).nxf_env)[1] else {}),
+            "version": None, "commit": None, "handoff": None,
             "fingerprint_version": FINGERPRINT_VERSION,
             "attempts": []}
 
@@ -680,6 +802,7 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
     outdir.mkdir(parents=True, exist_ok=True)
     with _lock(record, outdir):
         current = _read_json(record / "state.json")
+        key = None
         if state is None:
             if (record / "state.json").exists() or any(p.name != RECORD_DIRNAME
                                                        for p in outdir.iterdir()):
@@ -692,12 +815,16 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
                                   f"the chain record in {outdir} changed before launch",
                                   fix="Restore the recorded chain before resuming it.")
             state = current
-            _check_frozen(state, planned, spec)
+            key, legacy_sensitive = _resume_environment(record, state)
+            _check_frozen(state, planned, spec, env_key=key, legacy_sensitive=legacy_sensitive)
             if issues := _integrity_problems(state, only_succeeded=True):
                 raise NfclawError(
                     ErrorCode.ENVIRONMENT, "The succeeded stages of this chain no longer verify.",
                     fix="Restore their recorded files and provenance, or use a fresh --outdir.",
                     details={"issues": issues})
+        if key is None and any(provenance.safe_env(options(spec, p.stage).nxf_env)[1]
+                               for p in planned):
+            key = _environment_key(record, create=True)
         previous = {s.get("id"): s for s in (state or {}).get("stages", [])}
         stages = []
         for p in planned:
@@ -705,10 +832,12 @@ def _execute(spec: ChainSpec, planned: list[Planned], state: dict | None, *, rep
             if old and old.get("status") == "success":
                 stages.append(old)                            # frozen (see _check_frozen)
             else:                                             # keep the attempt history
-                stages.append({**_new_entry(p, outdir, spec),
+                stages.append({**_new_entry(p, outdir, spec, env_key=key),
                                "attempts": (old or {}).get("attempts", [])})
         state = {"chain_id": (state or {}).get("chain_id") or uuid.uuid4().hex,
                  "created": (state or {}).get("created") or runlog.now(),
+                 **({'environment_key_sha256': hashlib.sha256(key).hexdigest()}
+                    if key is not None else {}),
                  "outcome": "running", "stages": stages}
         _write_json(record / "chain.json", normalized(spec, planned))
         _write_json(record / "state.json", state)

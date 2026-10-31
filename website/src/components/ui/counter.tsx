@@ -9,7 +9,8 @@ export function Counter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduce = useReducedMotion();
-  const [display, setDisplay] = useState(0);
+  // The export is useful before hydration and without JavaScript; counting is an enhancement.
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
     if (!inView) return;

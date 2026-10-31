@@ -53,6 +53,11 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- Resolve verified current-product audit findings in process cancellation, completion caveats,
+  environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage
+  identity, website navigation/guidance/static counts, manifest parsing and MCP/job error handling
+  (#247). Evidence and limitations: [follow-through audit](docs/audit/2026-10-31-followthrough-audit.md).
+
 - A run whose pinned release Nextflow 26.04+'s strict parser rejects (methylseq 4.2.0, atacseq 2.1.2,
   viralrecon 3.0.0 among the pins) fails with the fix that works — the legacy parser,
   `--nxf-env NXF_SYNTAX_PARSER=v1`, or `--nxf-ver 25.10.4` — instead of "re-run the same command with
