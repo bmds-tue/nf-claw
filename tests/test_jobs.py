@@ -207,6 +207,19 @@ def test_state_dir_follows_the_environment(monkeypatch, tmp_path):
     assert jobs.state_dir() == Path.home() / ".local" / "state" / "nfclaw"
 
 
+def test_state_dir_is_one_place_whatever_directory_a_process_starts_in(monkeypatch, tmp_path):
+    # The server, its job supervisors and `nfclaw jobs` in another shell must find one job store.
+    # A relative XDG_STATE_HOME is invalid by the XDG base-directory spec and is ignored; a
+    # relative NFCLAW_STATE_DIR is taken from where it is read, and kept absolute from then on.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("NFCLAW_STATE_DIR")
+    monkeypatch.setenv("XDG_STATE_HOME", "relative-xdg")
+    assert jobs.state_dir() == Path.home() / ".local" / "state" / "nfclaw"
+    monkeypatch.setenv("NFCLAW_STATE_DIR", "relative-state")
+    assert jobs.state_dir() == tmp_path / "relative-state"
+    assert jobs.state_dir().is_absolute()
+
+
 def test_load_recovers_supervisor_identity_after_submitter_crash(tmp_path):
     import json
     job = _launch(tmp_path, _py('import time; print("up", flush=True); time.sleep(60)'))
@@ -266,6 +279,29 @@ def test_frozen_replay_status_retains_ignored_task_caveats_from_its_engine_log(t
     frozen = json.loads((d / jobs.STATUS_FILE).read_text())
     assert frozen['caveats'] is True
     assert 'Nextflow ignored 2 failed task(s)' in frozen['status_report']
+
+
+def test_a_job_that_never_opened_its_run_log_freezes_nothing_and_reports_no_error(tmp_path):
+    # A run refused before launch into a fresh --outdir (an invalid parameter, a missing
+    # samplesheet) never creates its run log. That is no failure to retain a report: the
+    # supervisor used to record "could not freeze this job's run status: FileNotFoundError", and
+    # get_job / `nfclaw jobs status` showed it beside the real refusal as if nfclaw had broken.
+    import json
+    handlers = {sig: signal.getsignal(sig)
+                for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    d = jobs.create_dir('refused')
+    job = jobs.Job(id=d.name, kind='run', argv=['run', 'demo'], command=_py('raise SystemExit(1)'),
+                   cwd=str(tmp_path), outdir=str(tmp_path / 'out'), created_at=jobs._now(),
+                   log_path=str(tmp_path / 'out/provenance/logs/run.log'), dir=d)
+    (d / jobs.JOB_FILE).write_text(json.dumps(job.spec()))
+    try:
+        assert jobs.supervise(d) == 0
+    finally:
+        for sig, handler in handlers.items():
+            signal.signal(sig, handler)
+    loaded = jobs.load(d.name)
+    assert loaded.exit_code == 1 and loaded.status_error is None
+    assert not (d / jobs.STATUS_FILE).exists() and not (d / 'run.log').exists()
 
 
 def test_refused_concurrent_job_never_borrows_the_accepted_jobs_log(tmp_path):

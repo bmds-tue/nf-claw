@@ -322,7 +322,7 @@ def _jobs(args: argparse.Namespace) -> int:
             result[key] = view
             result["exit_code"] = (0 if cancelling else
                                    {"succeeded": 0, "running": 3}.get(view["state"], 1))
-            report = job_reports.render(view)
+            report = job_reports.render(view, cli=True)
             if cancelling:
                 acknowledgement = ("Cancellation requested; inspect status to confirm shutdown."
                                    if result["cancel_requested"] else

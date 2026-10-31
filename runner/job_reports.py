@@ -59,9 +59,6 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     view["output_tail"] = jobs.output_tail(job, log_lines)
     view["output_log"] = str(job.dir / jobs.OUTPUT_LOG)
     view["next"] = next_step(view, cli=cli)
-    if cli:
-        view["next"] = (view["next"].replace("resume=true", "--resume")
-                        .replace("verify_replay", "nfclaw verify"))
     return view
 
 
@@ -89,7 +86,10 @@ def render_list(rows: list[dict]) -> str:
 
 
 def next_step(view: dict, *, cli: bool = False) -> str:
+    """What to do about the job, in the words of whoever reads it: `nfclaw` commands at a shell,
+    the MCP tools and the fields of this view for a client."""
     state, jid = view["state"], view["job_id"]
+    resume = "--resume" if cli else "resume=true"
     if state == "running" and cli:
         return f"nfclaw jobs status {jid} to follow it; nfclaw jobs cancel {jid} to stop it."
     if state == "running":
@@ -98,27 +98,33 @@ def next_step(view: dict, *, cli: bool = False) -> str:
     if view["kind"] == "replay":
         if state == "succeeded":
             return (f"Replay results are in {view['outdir']}. Retain the original replay bundle "
-                    "and compare the outputs with verify_replay before using them.")
+                    f"and compare the outputs with {'nfclaw verify' if cli else 'verify_replay'} "
+                    "before using them.")
         return "Inspect this replay's status and logs; retry into a new empty destination."
     if state == "succeeded":
         if view["check"]:
-            return "Validation passed: run the same arguments without check to launch it."
+            check = "--check" if cli else "check"
+            return f"Validation passed: run the same arguments without {check} to launch it."
         return (f"Results are in {view['outdir']} (provenance/ holds the replay bundle)."
-                + (" Read the caveats in status_report before using them." if view.get("caveats")
-                   else ""))
+                + (f" Read the caveats in {'its nfclaw status report' if cli else 'status_report'} "
+                   "before using them." if view.get("caveats") else ""))
     if state == "cancelled":
-        return "Stopped. Resubmit with resume=true to continue from Nextflow's cache."
+        return f"Stopped. Resubmit with {resume} to continue from Nextflow's cache."
     if state == "lost":
-        return ("The job's supervisor was killed (or the host restarted). status_report says "
-                "whether nfclaw itself is still running; otherwise resubmit with resume=true.")
+        status = f"`nfclaw status {view['outdir']}`" if cli else "status_report"
+        return (f"The job's supervisor was killed (or the host restarted). {status} says "
+                f"whether nfclaw itself is still running; otherwise resubmit with {resume}.")
     known_issues = ("docs/known-issues.md" if cli else
                     'look it up with read_doc(guide="known-issues", search=...)')
-    return (f"Read status_report / output_tail for the cause ({known_issues}), "
-            "fix it, then resubmit" + (" with resume=true." if view.get("status_report") and
-                                   not view["check"] else "."))
+    # A job refused before launch has no run report of its own: its output says why.
+    report = view.get("status_report")
+    evidence = (("the nfclaw status report and output above" if report else "the output above")
+                if cli else ("status_report / output_tail" if report else "output_tail"))
+    return (f"Read {evidence} for the cause ({known_issues}), fix it, then resubmit"
+            + (f" with {resume}." if report and not view["check"] else "."))
 
 
-def render(view: dict) -> str:
+def render(view: dict, *, cli: bool = False) -> str:
     phase = f" ({view['phase']})" if view.get("phase") else ""
     kind = ("check " if view["check"] else "") + view["kind"]
     lines = [f"job {view['job_id']}: {view['state']}{phase}",
@@ -128,7 +134,8 @@ def render(view: dict) -> str:
     if view.get("error"):
         lines.append(f"error: {view['error']}")
     if view.get("status_error"):
-        lines.append(f"status: {view['status_error']}; run_status(outdir) reads the live log")
+        live = f"`nfclaw status {view['outdir']}`" if cli else "run_status(outdir)"
+        lines.append(f"status: {view['status_error']}; {live} reads the live log")
     if view.get("status_report"):
         lines += ["", "nfclaw status:", view["status_report"]]
     if view.get("output_tail"):

@@ -132,8 +132,10 @@ provenance included; `finishing` for the moment between that record and the job'
 `succeeded`, `failed`, `cancelled`, or `lost` (the supervisor was killed outright or the host
 restarted; the status report then says whether nfclaw itself still runs). Once a run has reached its
 run log, the result includes `nfclaw status`'s report — the outcome, the error with Nextflow's own
-message, completion caveats, and the log paths. A finished job whose own report could not be
-retained says why in `status_error`; `run_status(outdir)` then reads the live log.
+message, completion caveats, and the log paths. A job refused before it opened a run log (invalid
+parameters into a fresh `--outdir`) has no such report: its `output_tail` holds the refusal. A
+finished job whose own report could not be retained says why in `status_error`;
+`run_status(outdir)` then reads the live log.
 
 Long-poll with `get_job(job_id, wait_seconds=N)`, keeping `N` below your client's tool timeout; the
 job is not affected when a call returns or is cancelled. Clients that send a progress token receive
@@ -238,7 +240,7 @@ Codex: `env = { NXF_JVM_ARGS = "-Djava.net.preferIPv6Addresses=true" }` in its
 
 | Variable | Default | Effect |
 |---|---|---|
-| `NFCLAW_STATE_DIR` | `$XDG_STATE_HOME/nfclaw`, else `~/.local/state/nfclaw` | Where job records are kept. |
+| `NFCLAW_STATE_DIR` | `$XDG_STATE_HOME/nfclaw` (when absolute), else `~/.local/state/nfclaw` | Where job records are kept; a relative value is resolved from the working directory. |
 | `NFCLAW_MCP_COMMAND_TIMEOUT` | 300 | Seconds a foreground command (`show`, `versions`, `status`, `verify`, …) may take. |
 
 Jobs need a POSIX system (Linux or macOS), as Nextflow does.

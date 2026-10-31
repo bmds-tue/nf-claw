@@ -45,7 +45,7 @@ LOCK_FILE = "lock"
 # The directory `runner` is imported from: put on PYTHONPATH so `python -m runner` works for a job
 # whether nfclaw is pip-installed or run from a checkout with `python3 -m runner`.
 _IMPORT_ROOT = Path(__file__).resolve().parent.parent
-_ID = re.compile(r"^\d{8}T\d{6}-[a-z0-9][a-z0-9-]{0,39}-[0-9a-f]{6}$")
+_ID = re.compile(r"^[0-9]{8}T[0-9]{6}-[a-z0-9][a-z0-9-]{0,39}-[0-9a-f]{6}$")
 _TAIL_BYTES = 64 * 1024
 _PID_MAX = 2**31 - 1                       # what os.kill accepts as a pid on every platform
 
@@ -60,11 +60,14 @@ def _now() -> str:
 
 def state_dir() -> Path:
     """Where nfclaw keeps state that belongs to no single run: `$NFCLAW_STATE_DIR`, else
-    `$XDG_STATE_HOME/nfclaw`, else `~/.local/state/nfclaw`."""
+    `$XDG_STATE_HOME/nfclaw`, else `~/.local/state/nfclaw`. Always absolute, so a server, its
+    supervisors and `nfclaw jobs` in another shell find one store: a relative NFCLAW_STATE_DIR
+    is resolved where it is read, and a relative XDG_STATE_HOME is ignored, as the XDG base
+    directory specification requires."""
     if raw := os.environ.get("NFCLAW_STATE_DIR"):
-        return Path(raw).expanduser()
-    base = os.environ.get("XDG_STATE_HOME")
-    return (Path(base).expanduser() if base else Path.home() / ".local" / "state") / "nfclaw"
+        return Path(raw).expanduser().absolute()
+    base = Path(os.environ.get("XDG_STATE_HOME") or "").expanduser()
+    return (base if base.is_absolute() else Path.home() / ".local" / "state") / "nfclaw"
 
 
 def jobs_dir() -> Path:
@@ -343,7 +346,11 @@ def _freeze_run_status(job_dir: Path, spec: dict) -> None:
     log = Path(spec["log_path"])
     before = spec.get("log_size_before") or 0
     head, tail, started, matched = bytearray(), bytearray(), False, False
-    with log.open("rb") as stream:
+    try:
+        stream = log.open("rb")
+    except FileNotFoundError:
+        return  # never opened (refused before launch into a fresh outdir): no report to keep
+    with stream:
         size = os.fstat(stream.fileno()).st_size
         stream.seek(before if before < size else 0)
         for line in stream:
