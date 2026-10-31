@@ -84,6 +84,7 @@ non-interactive shell's environment.
 | `show_pipeline` | `nfclaw show` | The pipeline's `skill.md` (default) or `reference.md`; `grep` returns only matching lines; `version` reads another release's docs. |
 | `list_versions` | `nfclaw versions` | Published releases, the pinned one marked, plus `dev`. |
 | `chain_edges` | `nfclaw chain edges` | Which pipeline can follow which in a chain. |
+| `read_doc` | reads `docs/<name>.md` | A guide (`known-issues`, `chaining`, `replay`, …); `search` returns only the sections holding every word, e.g. a warning's, instead of the 120 KB symptom index. |
 | `run_pipeline` | `nfclaw run` | Start a run as a job. Every CLI flag is an argument; pipeline parameters go in `params`; `check: true` validates and prints the command. |
 | `run_chain` | `nfclaw chain run` | Start a chain as a job, from the chain spec as JSON ([format](chaining.md)). |
 | `replay_run` | recorded `provenance/commands.sh` | Start a guarded replay as a supervised job in a fresh destination. |

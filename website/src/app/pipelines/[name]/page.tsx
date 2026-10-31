@@ -9,7 +9,6 @@ import {
   Calendar,
   ChevronRight,
   GitCommitHorizontal,
-  Github,
   Link2,
   Layers,
   ListChecks,
@@ -20,6 +19,7 @@ import {
   Terminal,
   Wrench,
 } from "lucide-react";
+import { Github } from "@/components/ui/github-icon";
 import { getDefaultBranch, getDocs, getPipeline, getPipelines, getRemote, githubRepoPath,
   pipelineNames } from "@/lib/data";
 import type { LinkContext } from "@/lib/links";

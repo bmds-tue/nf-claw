@@ -50,7 +50,8 @@ each started only after the previous one succeeded (spec format: resource nfclaw
 run_status(outdir, chain=true) verifies a chain's lineage. cancel_job requests process-group \
 shutdown and outcome recording. Detached containers, scheduler jobs and host crashes can require \
 executor cleanup; verify they have stopped before resuming. Use absolute paths and one new outdir \
-per run. Before reporting a warning as a fault, check nfclaw://docs/known-issues.
+per run. Before reporting an error or warning as a fault, look it up: \
+read_doc(guide="known-issues", search="<its distinctive words>").
 """
 
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -162,6 +163,16 @@ TOOLS = [
           "handoff passes on. Without a rule there is no chain between two pipelines.",
           {"pipeline": _s("Only the handoffs from or to this pipeline.")},
           [], read_only=True, idempotent=True),
+    _tool("read_doc", "Read an nf-claw guide",
+          "Return one of nf-claw's guides (docs/<name>.md), e.g. 'known-issues' (symptom -> cause "
+          "and fix), 'chaining' (the chain spec), 'replay', 'timeouts' or 'mcp'. known-issues is "
+          "long (about 30 000 tokens): pass search with the distinctive words of an error or "
+          "warning to get only the sections about it.",
+          {"guide": _s("The guide, e.g. 'known-issues' or 'chaining'."),
+           "search": _s("Only the sections (a heading and its text, up to the next heading) "
+                        "that contain all of these words, case-insensitive. Without a match, "
+                        "the guide's headings, to search again.")},
+          ["guide"], read_only=True, idempotent=True),
     _tool("run_pipeline", "Run a pipeline",
           "Run a pinned nf-core pipeline with `nfclaw run`, as a detached job that survives this "
           "session. nfclaw validates the samplesheet and parameters against the pinned schema and "
@@ -563,6 +574,16 @@ class NfclawTools:
             or "No handoff rule matches."
         return tool_result(text, {"edges": edges})
 
+    def _tool_read_doc(self, args: dict, ctx: Context) -> dict:
+        name = args["guide"].removesuffix(".md")
+        if name not in self._docs():
+            raise ToolError(f"unknown guide {args['guide']!r}; the guides are: "
+                            f"{', '.join(self._docs())}")
+        text = (self.root / "docs" / f"{name}.md").read_text(encoding="utf-8")
+        if args.get("search"):
+            text = _search_sections(text, args["search"], f"docs/{name}.md")
+        return tool_result(text)
+
     # --- execution ------------------------------------------------------------------------------
 
     def run_argv(self, args: dict, *, allow_structured: bool = False) -> list[str]:
@@ -808,7 +829,9 @@ class NfclawTools:
         if not isinstance(record, dict) or not isinstance(record.get("report"), str):
             record, report = None, res.text
         else:
-            report = "\n".join(part.rstrip("\n") for part in (record["report"], res.stderr)
+            # A refusal (no chain recorded there) is both the report and what went to stderr.
+            extra = "" if res.stderr.strip() == record["report"].strip() else res.stderr
+            report = "\n".join(part.rstrip("\n") for part in (record["report"], extra)
                                if part.strip())
         state = {0: "success", 3: "running"}.get(res.code, "not successful")
         # `run` is the parsed `--json` record: the outcome itself (`failed (exit status 1)`, `timed
@@ -830,6 +853,39 @@ class NfclawTools:
 
 def _resource(uri: str, name: str, description: str) -> dict:
     return {"uri": uri, "name": name, "description": description, "mimeType": "text/markdown"}
+
+
+_MAX_SECTIONS = 12
+
+
+def _search_sections(text: str, query: str, label: str) -> str:
+    """The sections of a markdown document (each heading with its text, up to the next heading)
+    that contain every word of `query`, heading included; or, when none does, its headings."""
+    words = [w.lower() for w in query.split() if w]
+    sections: list[list[str]] = [[]]
+    fence = None
+    for line in text.splitlines():
+        marker = line.lstrip()[:3]
+        if fence is None and marker in ("```", "~~~"):
+            fence = marker
+        elif fence is not None and marker == fence:
+            fence = None
+        elif fence is None and line.startswith("#"):
+            sections.append([])
+        sections[-1].append(line)
+    sections = [s for s in sections if s and s[0].startswith("#")]
+    found = [s for s in sections if all(w in "\n".join(s).lower() for w in words)]
+    if not found:
+        return (f"No section of {label} contains all of: {' '.join(words)}. Its sections:\n"
+                + "\n".join(s[0] for s in sections))
+    shown = found[:_MAX_SECTIONS]
+    out = [f"{len(found)} section(s) of {label} contain all of: {' '.join(words)}"]
+    for section in shown:
+        out += ["", *section]
+    if len(found) > len(shown):
+        out += ["", f"{len(found) - len(shown)} more; narrow the search. Their headings:",
+                *(s[0] for s in found[_MAX_SECTIONS:])]
+    return "\n".join(out).rstrip("\n") + "\n"
 
 
 def _grep(text: str, pattern: str, label: str) -> str:

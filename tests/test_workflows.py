@@ -277,3 +277,37 @@ def test_code_scanning_covers_every_language_in_the_repository():
                                                                "javascript-typescript", "python"}
     assert "security-events: write" in _job(text, "analyze")
     assert text.count("uses: actions/checkout@") == text.count("persist-credentials: false")
+
+
+def test_every_pytest_lane_runs_the_whole_suite_on_every_core():
+    # Each of the ten lanes ran the full suite one test at a time on a multi-core runner (16 to
+    # 34 minutes a lane). The lanes split it over the cores and still report every case, unfiltered.
+    yaml = pytest.importorskip('yaml')
+    steps = yaml.load(_text('tests.yml'), Loader=yaml.BaseLoader)['jobs']['pytest']['steps']
+    script = next(step['run'] for step in steps
+                  if step.get('name') == 'Execute the complete Python suite')
+    [command] = [line.strip() for line in script.splitlines() if line.strip().startswith('pytest')]
+    words = shlex.split(command)
+    assert words[:6] == ['pytest', '-q', '-n', 'auto', '--dist', 'worksteal']
+    assert not {'-k', '-m', '-x', '--lf', '--ff'} & set(words)
+    dev = re.search(r'^dev = \[(.*)\]$', (ROOT / 'pyproject.toml').read_text(encoding='utf-8'),
+                    re.M).group(1)
+    assert '"pytest-xdist' in dev
+
+
+def test_a_new_pull_request_push_cancels_only_that_pull_request_s_previous_run():
+    # Superseded pull request runs stayed queued for hours behind the five-at-a-time macOS
+    # runners. A push to a pull request now cancels its own previous run; a push to main, a
+    # schedule, a dispatch and a maintenance gate (`workflow_call`) each keep a group of their own.
+    yaml = pytest.importorskip('yaml')
+    superseded = ("${{ github.workflow }}-${{ github.event_name == 'pull_request' && "
+                  "github.event.pull_request.number || github.run_id }}")
+    for path in sorted(WF.glob('*.yml')):
+        doc = yaml.load(path.read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
+        concurrency = doc.get('concurrency')
+        if 'pull_request' in doc['on']:
+            assert concurrency == {
+                'group': superseded,
+                'cancel-in-progress': "${{ github.event_name == 'pull_request' }}"}, path.name
+        else:
+            assert concurrency is None or concurrency['cancel-in-progress'] == 'false', path.name

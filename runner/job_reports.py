@@ -61,7 +61,6 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     view["next"] = next_step(view, cli=cli)
     if cli:
         view["next"] = (view["next"].replace("resume=true", "--resume")
-                        .replace("nfclaw://docs/known-issues", "docs/known-issues.md")
                         .replace("verify_replay", "nfclaw verify"))
     return view
 
@@ -112,7 +111,9 @@ def next_step(view: dict, *, cli: bool = False) -> str:
     if state == "lost":
         return ("The job's supervisor was killed (or the host restarted). status_report says "
                 "whether nfclaw itself is still running; otherwise resubmit with resume=true.")
-    return ("Read status_report / output_tail for the cause (docs: nfclaw://docs/known-issues), "
+    known_issues = ("docs/known-issues.md" if cli else
+                    'look it up with read_doc(guide="known-issues", search=...)')
+    return (f"Read status_report / output_tail for the cause ({known_issues}), "
             "fix it, then resubmit" + (" with resume=true." if view.get("status_report") and
                                    not view["check"] else "."))
 

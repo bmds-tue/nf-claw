@@ -15,6 +15,11 @@ on:
       candidate_artifact:
         type: string
         default: ""
+# A new push to a pull request supersedes the run of its previous commit, which would otherwise keep
+# its queued runners (macOS ones especially) busy. Every other run is in a group of its own.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
@@ -70,7 +75,10 @@ jobs:
           set -euo pipefail
           evidence="$RUNNER_TEMP/pytest-evidence/$LANE_OS-$LANE_PYTHON"
           mkdir -p "$evidence"
-          pytest -q --junitxml="$evidence/report.xml"
+          # One worker per runner core (pytest-xdist); idle workers take queued tests from busy
+          # ones (worksteal), so the slow Nextflow integration tests do not leave one worker
+          # running alone at the end. The report still holds every case.
+          pytest -q -n auto --dist worksteal --junitxml="$evidence/report.xml"
           python scripts/check_maintenance_pytest.py --report "$evidence/report.xml" \
             --os "$LANE_OS" --python "$LANE_PYTHON" --candidate "$CANDIDATE_SHA" \
             --output "$evidence/record.json"

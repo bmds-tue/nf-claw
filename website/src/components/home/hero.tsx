@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Sparkles, Boxes, Workflow, SlidersHorizontal, Puzzle, ChevronDown, Github } from "lucide-react";
+import { ArrowRight, Sparkles, Boxes, Workflow, SlidersHorizontal, Puzzle, ChevronDown } from "lucide-react";
+import { Github } from "@/components/ui/github-icon";
 import { Counter } from "@/components/ui/counter";
 import { logoSrc } from "@/components/ui/logo";
 import { InlineMarkdown } from "@/components/ui/inline-markdown";

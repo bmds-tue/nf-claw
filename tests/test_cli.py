@@ -550,14 +550,29 @@ def test_chain_stop_signal_exit_code(tmp_path, monkeypatch, capsys):
 
 
 def test_chain_edges_lists_the_registry(monkeypatch, capsys, library):
-    root = library("mini_up", "mini", rules={("mini_up", "mini"): {
+    root = library("mini_up", "mini", "mini_no_input", rules={("mini_up", "mini"): {
         "description": "mini_up writes a mini sheet",
         "params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"]}}}})
     monkeypatch.setattr(cli, "_repo_root", lambda: root)
     assert cli.main(["chain", "edges"]) == 0
     assert capsys.readouterr().out == "mini_up\tmini\tmini_up writes a mini sheet\n"
-    assert cli.main(["chain", "edges", "other"]) == 0
-    assert capsys.readouterr().out == ""
+    assert cli.main(["chain", "edges", "mini"]) == 0
+    assert capsys.readouterr().out == "mini_up\tmini\tmini_up writes a mini sheet\n"
+    # A pipeline of the library without a rule: nothing to list, and the way to chain it anyway.
+    assert cli.main(["chain", "edges", "mini_no_input"]) == 0
+    out, err = capsys.readouterr()
+    assert out == "" and "No handoff rule feeds or follows mini_no_input" in err
+
+
+def test_chain_edges_refuses_a_pipeline_the_library_lacks(monkeypatch, capsys, library):
+    """A misspelt name is an error, not an empty list an agent reads as "no handoff exists"."""
+    root = library("mini_up", "mini", rules={("mini_up", "mini"): {
+        "description": "mini_up writes a mini sheet",
+        "params": {"input": {"samplesheet": "s.csv", "provides": ["sample", "fastq_1"]}}}})
+    monkeypatch.setattr(cli, "_repo_root", lambda: root)
+    assert cli.main(["chain", "edges", "minii"]) == 1
+    out, err = capsys.readouterr()
+    assert out == "" and "[pipeline_not_found] Pipeline 'minii' not found" in err
 
 
 def test_chain_status_exit_code_reflects_the_lineage(tmp_path, monkeypatch, capsys):
@@ -672,11 +687,16 @@ def test_chain_status_json_carries_state_problems_and_report(tmp_path, monkeypat
     record = json.loads(capsys.readouterr().out)
     assert record["exit_code"] == 1 and record["problems"] == ["a broken link"]
     assert record["chain"]["chain_id"] == "c" and "lineage: BROKEN" in record["report"]
+    assert record["error"] == []
 
     monkeypatch.undo()
     assert cli.main(["chain", "status", str(tmp_path / "none"), "--json"]) == 1
     captured = capsys.readouterr()
-    assert json.loads(captured.out)["error"].startswith("no chain recorded")
+    refused = json.loads(captured.out)
+    # One shape whether or not a chain was found, and `error` a list as in `nfclaw status --json`.
+    assert refused.keys() == record.keys()
+    assert len(refused["error"]) == 1 and refused["error"][0].startswith("no chain recorded")
+    assert refused["chain"] is None and refused["report"] == captured.err
     assert "no chain recorded" in captured.err
 
 
