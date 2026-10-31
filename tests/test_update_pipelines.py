@@ -75,3 +75,16 @@ def test_bump_refuses_an_uninitialised_submodule(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError, match="not initialised"):
         up.bump("p", "https://x/p.git", tmp_path)
     assert not any("fetch" in a or "checkout" in a for a in ran)
+
+
+def test_remote_tags_keep_whole_tag_names(monkeypatch):
+    # `git ls-remote --tags --refs` lists `refs/tags/<name>`, and a name may hold a slash. Taking
+    # the part after the last slash made `release/9.9.9` read as the release `9.9.9`, which the
+    # updater then tried (and failed) to fetch as refs/tags/9.9.9.
+    listing = ("a" * 40 + "\trefs/tags/1.2.0\n" + "b" * 40 + "\trefs/tags/release/9.9.9\n"
+               + "c" * 40 + "\trefs/tags/v1.3.0\n")
+    monkeypatch.setattr(up, "capture", lambda command, **kwargs:
+                        subprocess.CompletedProcess(command, 0, listing, ""))
+    assert up.remote_tags("https://example.invalid/p.git") == ["1.2.0", "release/9.9.9",
+                                                                "v1.3.0"]
+    assert up.select_latest(up.remote_tags("https://example.invalid/p.git")) == "v1.3.0"
