@@ -108,6 +108,41 @@ def test_job_submission_and_polling_redact_commands_and_echoed_secrets(
     assert (job.dir / jobs.OUTPUT_LOG).stat().st_mode & 0o077 == 0
 
 
+def test_chain_job_diagnostics_redact_private_chain_and_stage_environment(
+        tools, fake_cli, tmp_path):
+    secret, stage_secret = 'synthetic-chain-secret', 'synthetic-stage-secret'
+    result = call(tools, 'run_chain', outdir=str(tmp_path / 'chain'), wait_seconds=30,
+                  spec={'nxf_env': {'NXF_API_TOKEN': secret}, 'stages': [
+                      {'pipeline': 'rnaseq', 'nxf_env': {'NXF_PASSWORD': stage_secret}}]})
+    job_id = result['structuredContent']['job_id']
+    job = jobs.load(job_id)
+    assert (job.dir / 'spec.json').stat().st_mode & 0o077 == 0
+    with (job.dir / jobs.OUTPUT_LOG).open('a') as stream:
+        stream.write(f'authentication failed: {secret}; {stage_secret}\n')
+    result = call(tools, 'get_job', job_id=job_id)
+    assert secret not in json.dumps(result)
+    assert stage_secret not in json.dumps(result)
+    assert '<redacted>' in text(result)
+
+
+def test_job_redaction_retains_inherited_environment_after_server_restart(
+        tools, fake_cli, tmp_path, monkeypatch):
+    secret = 'synthetic-original-server-secret'
+    monkeypatch.setenv('NXF_API_TOKEN', secret)
+    result = call(tools, 'run_pipeline', pipeline='rnaseq', outdir=str(tmp_path / 'out'),
+                  wait_seconds=30)
+    job_id = result['structuredContent']['job_id']
+    job = jobs.load(job_id)
+    with (job.dir / jobs.OUTPUT_LOG).open('a') as stream:
+        stream.write(f'authentication failed: {secret}\n')
+    monkeypatch.delenv('NXF_API_TOKEN')
+    # A later client/server no longer has the original ambient value in its own environment.
+    assert jobs.load(job_id).environment['NXF_API_TOKEN'] == secret
+    result = call(tools, 'get_job', job_id=job_id)
+    assert secret not in json.dumps(result)
+    assert '<redacted>' in text(result)
+
+
 # --- arguments -> the nfclaw command line ---------------------------------------------------------
 
 def test_run_arguments_become_one_token_per_cli_option(tools):

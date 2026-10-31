@@ -107,6 +107,7 @@ class Job:
     log_path: str | None = None                # the run/chain log nfclaw keeps for this outdir
     log_size_before: int | None = None         # its size before this job (None: did not exist)
     supervisor_pid: int | None = None
+    environment: dict[str, str] = field(default_factory=dict)  # private launch-time NXF_* values
     # Written by the supervisor (supervisor.json), read back on every load:
     child_pid: int | None = None
     child_identity: dict | None = None
@@ -172,6 +173,7 @@ def launch(job_dir: Path, *, kind: str, argv: list[str], cwd: str, outdir: str,
     job = Job(id=job_dir.name, kind=kind, argv=list(argv),
               command=list(command) if command else cli_command(argv), cwd=cwd, outdir=outdir,
               check=check, pipeline=pipeline, created_at=_now(), log_path=log_path,
+              environment={k: v for k, v in os.environ.items() if k.startswith("NXF_")},
               log_size_before=log_size, dir=job_dir)
     _write_json(job_dir / JOB_FILE, job.spec())
     lock_fd = os.open(job_dir / LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o600)
@@ -229,6 +231,11 @@ def load(job_id: str) -> Job:
             or spec.get("log_size_before") is not None and spec["log_size_before"] < 0
             or not pid(spec.get("supervisor_pid"))):
         raise JobError(f"malformed job record: {job_id}")
+    environment = spec.get("environment", {})
+    if (not isinstance(environment, dict)
+            or any(not isinstance(key, str) or not key.startswith("NXF_")
+                   or not isinstance(value, str) for key, value in environment.items())):
+        raise JobError(f"malformed job environment: {job_id}")
     try:
         datetime.fromisoformat(spec["created_at"])
     except ValueError as exc:
@@ -322,7 +329,11 @@ def cancel(job: Job) -> bool:
         # The birth identity, not the old PID or command name, authorizes recovery. pidfd on
         # Linux binds the signal atomically to the verified process even if the PID is reused.
         (job.dir / CANCEL_FILE).write_text(_now() + "\n", encoding="utf-8")
-        return process_identity.send(job.child_identity)
+        sent = process_identity.send(job.child_identity)
+        if not sent and orphan_alive(job):
+            raise JobError("could not signal the authenticated orphan; its command is still "
+                           "running and automatic cancellation is unconfirmed")
+        return sent
     (job.dir / CANCEL_FILE).write_text(_now() + "\n", encoding="utf-8")
     if job.supervisor_pid and alive(job):             # the lock proves the pid is still ours
         try:
@@ -332,14 +343,30 @@ def cancel(job: Job) -> bool:
     return True
 
 
+def redaction_env(job: Job) -> list[tuple[str, str]]:
+    """Execution-only environment assignments, including private chain/stage overlays."""
+    from runner import redaction
+    env = redaction.assignments([*job.command, *job.argv])
+    env.extend(job.environment.items())
+    if job.kind == "chain":
+        spec = _read_json(job.dir / "spec.json")
+        stages = spec.get("stages")
+        for scope in [spec, *(stages if isinstance(stages, list) else [])]:
+            if not isinstance(scope, dict) or not isinstance(scope.get("nxf_env"), dict):
+                continue
+            env.extend((key, value) for key, value in scope["nxf_env"].items()
+                       if isinstance(key, str) and isinstance(value, str))
+    return env
+
+
 def output_tail(job: Job, lines: int) -> list[str]:
     """The last `lines` lines the job's command printed."""
     if lines <= 0:
         return []
     from runner import redaction
-    env = redaction.assignments([*job.command, *job.argv])
+    env = redaction_env(job)
     # Read an overlap so a credential crossing the tail boundary can be removed as a whole.
-    margin = max((6 * len(value.encode("utf-8")) for _, value in env), default=0)
+    margin = max((6 * len(value.encode("utf-8", errors="replace")) for _, value in env), default=0)
     try:
         with (job.dir / OUTPUT_LOG).open("rb") as fh:
             fh.seek(0, os.SEEK_END)

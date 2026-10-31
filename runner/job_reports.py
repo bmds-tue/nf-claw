@@ -67,7 +67,7 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     view["output_tail"] = jobs.output_tail(job, log_lines)
     view["output_log"] = str(job.dir / jobs.OUTPUT_LOG)
     view["next"] = next_step(view, cli=cli)
-    return redaction.data(view, redaction.assignments([*job.command, *job.argv]))
+    return redaction.data(view, jobs.redaction_env(job))
 
 
 def list_views(*, state: str | None = None, limit: int = 20) -> list[dict]:

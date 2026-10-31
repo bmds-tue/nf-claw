@@ -167,7 +167,7 @@ def test_a_job_outlives_the_process_that_launched_it(tmp_path):
 
 @pytest.mark.parametrize("missing_supervisor_record", [False, True])
 def test_a_supervisor_killed_outright_leaves_a_recoverable_job(
-        tmp_path, missing_supervisor_record):
+        tmp_path, missing_supervisor_record, monkeypatch):
     job = _launch(tmp_path, _py("import time; print('up', flush=True); time.sleep(60)"))
     assert _until(lambda: "up" in jobs.output_tail(jobs.load(job.id), 5))
     job = jobs.load(job.id)
@@ -179,6 +179,11 @@ def test_a_supervisor_killed_outright_leaves_a_recoverable_job(
         job = jobs.load(job.id)
         assert job.exit_code is None and jobs.state(job) == "running"
         assert jobs.orphan_alive(job)
+        with monkeypatch.context() as patch:
+            patch.setattr(jobs.process_identity, 'send', lambda *_args: False)
+            with pytest.raises(jobs.JobError, match='still running'):
+                jobs.cancel(job)
+            assert jobs.state(job) == 'running'
         assert jobs.cancel(job)
         assert _until(lambda: not jobs.orphan_alive(jobs.load(job.id)))
         assert jobs.state(jobs.load(job.id)) == "cancelled"

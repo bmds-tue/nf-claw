@@ -84,7 +84,7 @@ def send(record: dict | None, signum: int = signal.SIGTERM) -> bool:
         else:
             os.kill(pid, signum)
         return True
-    except (ProcessLookupError, PermissionError):
+    except OSError:
         return False
     finally:
         if fd is not None:

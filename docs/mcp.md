@@ -120,7 +120,7 @@ can take days; nothing needs to stay connected:
 - A job runs in its own session under a small supervisor (`python -m runner.jobs`), which runs the
   CLI unmodified. The MCP client closing, or the server restarting, does not stop it.
 - Its record is on disk, in `$NFCLAW_STATE_DIR/jobs/<id>/` (default `~/.local/state/nfclaw/jobs/`):
-  `job.json` (the command line and directory), `output.log` (everything nfclaw and Nextflow
+  `job.json` (the command line, inherited `NXF_*` values and directory), `output.log` (everything nfclaw and Nextflow
   printed), `supervisor.json` (pids and exit code), `child.json` (process birth identity, written
   before the command executes). Records are private (0600 inside a 0700 directory). Any later
   server — another session, another
@@ -303,6 +303,9 @@ unconfirmed cleanup. Deliberately detached analysis jobs remain independent of f
 Shared shell/MCP job views redact sensitive `NXF_*` values from commands, frozen/live diagnostics
 and output tails under the provenance policy. This includes overwritten environment options,
 quoted/JSON-escaped values, multiline values and credentials crossing the bounded tail boundary.
+Private chain/stage environment overlays and the original inherited environment remain available
+for redaction after server restarts. Historical records cannot recover ambient values they never
+recorded; only their recoverable values can be redacted.
 Raw execution records and raw logs remain private; redact them before sharing them directly.
 
 Version listings retain the committed pin even in an uninitialized, tagless offline clone. Notes

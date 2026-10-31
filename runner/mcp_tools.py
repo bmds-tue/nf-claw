@@ -25,7 +25,7 @@ from contextvars import ContextVar
 from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, discovery, job_reports, jobs, parameters, redaction, settings
+from runner import atomic, chain, cli, discovery, job_reports, jobs, parameters, redaction, settings
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
@@ -722,7 +722,7 @@ class NfclawTools:
         spec_path = None
         if spec is not None:
             spec_path = job_dir / "spec.json"
-            spec_path.write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
+            atomic.write_text(spec_path, json.dumps(spec, indent=2) + "\n", mode=0o600)
         log_path = Path(outdir) / chain.RECORD_DIRNAME / "logs" / chain.LOG_NAME
         job = jobs.launch(job_dir, kind="chain", argv=self.chain_argv(args, spec_path),
                           cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path))
