@@ -1,7 +1,7 @@
 ---
 name: variantbenchmarking
-version: 1.5.0
-commit: 8b21c01749c4447b285d242a198127736f3ffe51
+version: 1.6.0
+commit: de4e43900039edd09106198d83c2559ea6a61b1a
 ---
 
 # variantbenchmarking — full parameter reference
@@ -15,9 +15,7 @@ nf-core/variantbenchmarking pipeline parameters. Every parameter from the pinned
 | `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
-| `--hook-url` | string |  | yes |  |  |  | Incoming hook URL for messaging service |
 | `--max-multiqc-email-size` | string |  | yes |  | matches `^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$` | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
-| `--monochromeLogs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
 | `--multiqc-config` | string (file path) |  | yes |  |  |  | Custom config file to supply to MultiQC. |
 | `--multiqc-logo` | string |  | yes |  |  |  | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file |
@@ -40,21 +38,23 @@ nf-core/variantbenchmarking pipeline parameters. Every parameter from the pinned
 | `--enable-missing-genotypes` | string |  |  |  | matches `^((test\|truth)?,?)*(?<!,)$` |  | The pipeline filter outs missing genotypes with ./. or 0/0 by default, enable using missing genotypes for test, truth. Should be a comma-separated list of one or more of the following options: test, truth |
 | `--ensemble-truth` | integer |  |  |  | ≥ 1 |  | Ensemble truth using input VCF files following the majority rule specified. This method should be used only if truth file is not available |
 | `--exclude-expression` | string |  |  |  | length ≥ 1 |  | Use bcftools expressions https://samtools.github.io/bcftools/bcftools.html#expressions to exclude variants |
-| `--falsepositive-bed` | string (file path) |  |  |  | matches `^\S+\.(bed)?(\.gz)?$` |  | Path to false positive BED. Only applicable to happy and sompy tool. |
+| `--happy-comparison-engine` | string |  |  | `default`, `xcmp`, `vcfeval` |  | `default` | Comparison engine used by hap.py to match test variants against the truth set. |
+| `--high-conf` | boolean |  |  |  |  | `true` | If set to true, treat regions_bed as a high confidence region rather than a restriction region. |
 | `--include-expression` | string |  |  |  | length ≥ 1 |  | Use bcftools expressions https://samtools.github.io/bcftools/bcftools.html#expressions to include variants |
 | `--input` | string (file path) | yes |  |  | matches `^\S+\.(csv\|tsv\|yaml\|yml\|json)$` |  | Path to comma-separated file containing information about the samples in the experiment. |
 | `--max-sv-size` | integer |  |  |  | ≥ -1 | `-1` | Maximum SV size of variants to benchmark, -1 to disable |
-| `--method` | string | yes |  |  | matches `^((truvari\|svanalyzer\|happy\|sompy\|rtgtools\|wittyer\|intersect\|bndeval\|concordance)?,?)*(?<!,)$` |  | The benchmarking methods to use. For germline small variants (SNV and INDEL) use happy and/or rtgtools, for somatic small variants (SNV and INDEL) use sompy and/or rtgtools, for structural variants use wittyer, truvari and/or svanalyzer, for copy number variations use wittyer and/or truvari. Use intersect to intersect BED files. Should be a comma-separate list of one or more of the following options: truvari, svanalyzer, happy, sompy, rtgtools, wittyer, intersect |
+| `--method` | string | yes |  |  | matches `^((truvari\|svanalyzer\|happy\|sompy\|rtgtools\|wittyer\|intersect\|bndeval\|concordance\|aardvark)?,?)*(?<!,)$` |  | The benchmarking methods to use. For germline small variants (SNV and INDEL) use happy and/or rtgtools, for somatic small variants (SNV and INDEL) use sompy and/or rtgtools, for structural variants use wittyer, truvari and/or svanalyzer, for copy number variations use wittyer and/or truvari. Use intersect to intersect BED files. Should be a comma-separate list of one or more of the following options: truvari, svanalyzer, happy, sompy, rtgtools, wittyer, intersect |
 | `--min-allele-freq` | number |  |  |  | ≥ -1 | `-1` | Minimum Alele Frequency of variants to benchmark, Use -1 to disable |
 | `--min-num-reads` | integer |  |  |  | ≥ -1 | `-1` | Minimum number of read supporting variants to benchmark, Use, -1 to disable |
 | `--min-sv-size` | integer |  |  |  | ≥ 0 | `0` | Minimum SV size of variants to benchmark, 0 to disable |
 | `--multiqc-title` | string |  |  |  |  |  | MultiQC report title. Printed as page header, used for filename if not otherwise specified. |
 | `--outdir` | string (directory path) | yes |  |  |  |  | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. |
-| `--preprocess` | string |  |  |  | matches `^((normalize\|split_multiallelic\|deduplicate\|prepy\|filter_contigs)?,?)*(?<!,)$` |  | The preprocessing steps to perform on the input files. Should be a comma-separated list of one or more of the following options: split_multiallelic, normalizate, deduplicate, prepy, filter_contigs |
-| `--regions-bed` | string (file path) |  |  |  | matches `^\S+\.(bed\|vcf)?(\.gz)?$` |  | Path to regions BED or VCF files. Works similar to Bcftools -R. |
+| `--preprocess` | string |  |  |  | matches `^((normalize\|split_multiallelic\|deduplicate\|filter_contigs)?,?)*(?<!,)$` |  | The preprocessing steps to perform on the input files. Should be a comma-separated list of one or more of the following options: split_multiallelic, normalizate, deduplicate, filter_contigs |
+| `--regions-bed` | string (file path) |  |  |  | matches `^\S+\.(bed\|vcf)?(\.gz)?$` |  | Path for regions of interest BED or VCF file. |
 | `--skip-plots` | string |  |  |  | matches `^((svlength\|upset\|metrics)?,?)*(?<!,)$` |  | Skip plots: metrics, upset, svlength |
+| `--skip-reports` | string |  |  |  | matches `^((datavzrd\|happy)?,?)*(?<!,)$` |  | Skip reports from these tools: datavzrd, happy |
 | `--sv-standardization` | string |  |  |  | matches `^((variantextractor\|svync\|svdecompose\|svtk)?,?)*(?<!,)$` |  | The standardization methods to perform on the input files. Should be a comma-separated list of one or more of the following options: variantextractor, svync, svdecompose, svtk |
-| `--targets-bed` | string (file path) |  |  |  | matches `^\S+\.(bed\|vcf)?(\.gz)?$` |  | Path to targets BED. Works similar to Bcftools -T. It will be only used with happy, sompy or rtgtools. |
+| `--targets-bed` | string (file path) |  |  |  | matches `^\S+\.(bed\|vcf)?(\.gz)?$` |  | Path to targets BED. Works similar to Bcftools -T. |
 | `--truth-id` | string |  |  |  |  |  | Truth id, sample name to define truth vcf |
 | `--truth-vcf` | string (file path) |  |  |  | matches `^\S+\.vcf(\.gz)?$` |  | Path to the golden set VCF files. |
 | `--variant-type` | string | yes |  | `small`, `snv`, `indel`, `structural`, `copynumber` |  |  | Variant types to benchmark |
@@ -80,7 +80,7 @@ nf-core/variantbenchmarking pipeline parameters. Every parameter from the pinned
 | `--fai` | string (file path) | yes |  |  | matches `^\S+\.fai$` |  | Path to FAI genome file. |
 | `--fasta` | string (file path) | yes |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` |  | Path to FASTA genome file. |
 | `--genome` | string |  |  |  |  |  | Name of iGenomes reference. |
-| `--igenomes-base` | string (directory path) |  | yes |  |  | `s3://ngi-igenomes/igenomes/` | The base path to the igenomes reference files |
+| `--igenomes-base` | string |  | yes |  |  | `s3://ngi-igenomes/igenomes/` | The base path to the igenomes reference files |
 | `--igenomes-ignore` | boolean |  | yes |  |  |  | Do not load the iGenomes reference config. |
 | `--liftover` | string |  | yes |  | matches `^((test\|truth)?,?)*(?<!,)$` |  | Run liftover workflow: test,truth |
 | `--rename-chr` | string (file path) |  |  |  | matches `^\S+\.txt$` |  | Path to the ranaming chromosomes for lifting over. |
@@ -88,4 +88,4 @@ nf-core/variantbenchmarking pipeline parameters. Every parameter from the pinned
 | `--stratification-bed` | string (directory path) |  |  |  |  |  | Path to stratification BED files provided in a directory. This directory has to be given together with stratification_tsv, list BED files in stratification_tsv. Only applicable to happy tool. |
 | `--stratification-tsv` | string (file path) |  |  |  | matches `^\S+\.tsv$` |  | List the stratification BED files in this file, to be used with stratification_bed |
 
-<!-- Generated from nf-core/variantbenchmarking@8b21c01749c4447b285d242a198127736f3ffe51. Do not edit by hand. -->
+<!-- Generated from nf-core/variantbenchmarking@de4e43900039edd09106198d83c2559ea6a61b1a. Do not edit by hand. -->

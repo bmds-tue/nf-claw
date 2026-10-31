@@ -1,14 +1,14 @@
 ---
 name: ampliseq
 pipeline: nf-core/ampliseq
-version: 3.0.0
-commit: 992e6df34065067185b5e34665b5861b6827981d
+version: 3.1.0
+commit: b9bd579c0480ee23ecf24655f51c0c67777cd6b3
 description: Amplicon sequencing analysis workflow using DADA2 and QIIME2
 summary: nfcore/ampliseq is a bioinformatics analysis pipeline used for amplicon sequencing, supporting denoising of any amplicon and supports a variety of taxonomic databases for taxonomic assignment including 16S, ITS, CO1 and 18S. Phylogenetic placement is also possible. Multiple region analysis such as 5R is implemented. Supported is paired-end Illumina or single-end Illumina, PacBio, IonTorrent, and Oxford Nanopore data. Default is the analysis of 16S rRNA gene amplicons sequenced paired-end with Illumina.
 has_samplesheet: true
 input: samplesheet (sample, fastq_1, fastq_2, run, control, quant_reading)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["Cutadapt", "FastQC", "DADA2", "Porechop_ABI", "Chopper", "Savont", "Barrnap", "Greengenes2", "PR2 - Protist Reference Ribosomal Database", "GTDB - Genome Taxonomy Database", "SBDI-GTDB", "RDP - Ribosomal Database Project", "UNITE - eukaryotic nuclear ribosomal ITS region", "GloSED - Global standardised soil eukaryome dataset", "MIDORI2 - a collection of reference databases", "COIDB - CO1 Taxonomy Database", "Zehr lab nifH database", "BOLD Plantae", "nf-core/phyloplace", "HMMER", "MAFFT", "EPA-NG", "Gappa", "q2-sidle", "SMURF", "RESCRIPt", "SEPP", "QIIME2", "ANCOM", "ANCOM-BC", "ANCOM-BC2", "Adonis", "Phyloseq", "TreeSummarizedExperiment", "ITSx", "ITSxRust", "PICRUSt2", "VSEARCH", "decontam", "Kraken2", "MultiQC", "DuckDB"]
+tools: ["Cutadapt", "FastQC", "DADA2", "Porechop_ABI", "Chopper", "Savont", "Barrnap", "Greengenes2", "PR2 - Protist Reference Ribosomal Database", "GTDB - Genome Taxonomy Database", "SBDI-GTDB", "RDP - Ribosomal Database Project", "UNITE - eukaryotic nuclear ribosomal ITS region", "GloSED - Global standardised soil eukaryome dataset", "MIDORI2 - a collection of reference databases", "COIDB - CO1 Taxonomy Database", "Zehr lab nifH database", "nf-core/phyloplace", "HMMER", "MAFFT", "EPA-NG", "Gappa", "q2-sidle", "SMURF", "RESCRIPt", "SEPP", "QIIME2", "ANCOM", "ANCOM-BC", "ANCOM-BC2", "Adonis", "Phyloseq", "TreeSummarizedExperiment", "ITSx", "ITSxRust", "PICRUSt2", "VSEARCH", "decontam", "Kraken2", "MultiQC", "DuckDB"]
 ---
 # ampliseq
 
@@ -70,7 +70,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Skipping specific steps** (`skipping_specific_steps`) — 20 parameters
 - **Taxonomic assignment** (`taxonomic_assignment`) — 40 parameters
 
-Upstream usage: https://github.com/nf-core/ampliseq/blob/3.0.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/ampliseq/blob/3.1.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -94,7 +94,7 @@ nfclaw run ampliseq ... --nxf-ver 26.04.0
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `--skip-multiqc true` disables that report. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/ampliseq/blob/3.0.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/ampliseq/blob/3.1.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
@@ -105,13 +105,13 @@ Fed by:
 - `fetchngs` — fetchngs writes an ampliseq samplesheet (sample, fastq_1, fastq_2, run) with --nf-core-pipeline ampliseq. Its run column is empty, so ampliseq treats every sample as one sequencing run and learns one DADA2 error model for all of them; data from several sequencing runs needs run filled per sequencing run: an inline handoff whose set templates it from a column that identifies the run, or your own samplesheet. ampliseq assumes Illumina reads unless told otherwise: for PacBio or Ion Torrent runs (the instrument_platform column) set --pacbio or --iontorrent in the stage's params.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: Cutadapt, FastQC, DADA2, Porechop_ABI, Chopper, Savont, Barrnap, Greengenes2, PR2 - Protist Reference Ribosomal Database, GTDB - Genome Taxonomy Database, SBDI-GTDB, RDP - Ribosomal Database Project, UNITE - eukaryotic nuclear ribosomal ITS region, GloSED - Global standardised soil eukaryome dataset, MIDORI2 - a collection of reference databases, COIDB - CO1 Taxonomy Database, Zehr lab nifH database, BOLD Plantae, nf-core/phyloplace, HMMER, MAFFT, EPA-NG, Gappa, q2-sidle, SMURF, RESCRIPt, SEPP, QIIME2, ANCOM, ANCOM-BC, ANCOM-BC2, Adonis, Phyloseq, TreeSummarizedExperiment, ITSx, ITSxRust, PICRUSt2, VSEARCH, decontam, Kraken2, MultiQC, DuckDB.
+The tools/methods this pipeline runs, per the authors' own list: Cutadapt, FastQC, DADA2, Porechop_ABI, Chopper, Savont, Barrnap, Greengenes2, PR2 - Protist Reference Ribosomal Database, GTDB - Genome Taxonomy Database, SBDI-GTDB, RDP - Ribosomal Database Project, UNITE - eukaryotic nuclear ribosomal ITS region, GloSED - Global standardised soil eukaryome dataset, MIDORI2 - a collection of reference databases, COIDB - CO1 Taxonomy Database, Zehr lab nifH database, nf-core/phyloplace, HMMER, MAFFT, EPA-NG, Gappa, q2-sidle, SMURF, RESCRIPt, SEPP, QIIME2, ANCOM, ANCOM-BC, ANCOM-BC2, Adonis, Phyloseq, TreeSummarizedExperiment, ITSx, ITSxRust, PICRUSt2, VSEARCH, decontam, Kraken2, MultiQC, DuckDB.
 
-Full list with references: https://github.com/nf-core/ampliseq/blob/3.0.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/ampliseq/blob/3.1.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run ampliseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/ampliseq@992e6df34065067185b5e34665b5861b6827981d. Do not edit by hand. -->
+<!-- Generated from nf-core/ampliseq@b9bd579c0480ee23ecf24655f51c0c67777cd6b3. Do not edit by hand. -->

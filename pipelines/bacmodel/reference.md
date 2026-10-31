@@ -1,7 +1,7 @@
 ---
 name: bacmodel
-version: 1.0.0
-commit: 1abf4e28d250edf801c0f671a19f233f18128875
+version: 1.0.1
+commit: 8a9ad093d0431b4f69fa829513248c7863f37d7f
 ---
 
 # bacmodel — full parameter reference
@@ -12,7 +12,7 @@ nf-core/bacmodel pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--carveme-mediadb` | string (file path) |  |  |  |  |  | Path to CarveMe media database TSV file (columns: `medium, description, compound, name`). If not provided, uses CarveMe's default media database. See [example file](https://github.com/nf-core/bacmodel/blob/1abf4e28d250edf801c0f671a19f233f18128875/assets/medium_carveme_mediadb_example.tsv). |
+| `--carveme-mediadb` | string (file path) |  |  |  |  |  | Path to CarveMe media database TSV file (columns: `medium, description, compound, name`). If not provided, uses CarveMe's default media database. See [example file](https://github.com/nf-core/bacmodel/blob/8a9ad093d0431b4f69fa829513248c7863f37d7f/assets/medium_carveme_mediadb_example.tsv). |
 | `--gapseq-db` | string |  |  |  |  |  | Directory containing a pre-downloaded gapseq reference sequence database (a `Bacteria` subdirectory, as produced by `gapseq update-sequences -D <dir>`). If present, the live Zenodo download is skipped - set this to a pre-downloaded copy if your compute nodes lack outbound internet access to Zenodo. If unset, defaults to `<outdir>/databases/gapseq`. |
 | `--gapseq-doall-args` | string |  |  |  |  | `-b 200 -A diamond` | Custom arguments for the simplified `gapseq doall` search step. Only used in the default doall workflow - ignored if any of the `gapseq_find_args`, `gapseq_findtransport_args`, `gapseq_draft_args`, `gapseq_medium_args`, or `gapseq_fill_args` below are set, since that switches to the custom/stepwise workflow instead. |
 | `--gapseq-draft-args` | string |  |  |  |  |  | Custom arguments for `gapseq draft` - draft model construction (default: none) |
@@ -48,11 +48,11 @@ nf-core/bacmodel pipeline parameters. Every parameter from the pinned `nextflow_
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--run-carveme` | boolean |  | yes |  | deprecated |  |  |
-| `--run-gapseq` | boolean |  | yes |  | deprecated |  |  |
-| `--run-macsyfinder` | boolean |  | yes |  | deprecated |  |  |
-| `--run-memote` | boolean |  | yes |  | deprecated |  |  |
-| `--run-traitar` | boolean |  | yes |  | deprecated |  |  |
+| `--run-carveme` | boolean |  | yes |  | deprecated |  | Deprecated. Use `--skip_carveme` instead (meaning inverted). |
+| `--run-gapseq` | boolean |  | yes |  | deprecated |  | Deprecated. Use `--skip_gapseq` instead (meaning inverted). |
+| `--run-macsyfinder` | boolean |  | yes |  | deprecated |  | Deprecated. Use `--skip_macsyfinder` instead (meaning inverted). |
+| `--run-memote` | boolean |  | yes |  | deprecated |  | Deprecated. Use `--skip_memote` instead (meaning inverted). |
+| `--run-traitar` | boolean |  | yes |  | deprecated |  | Deprecated. Use `--skip_traitar` instead (meaning inverted). |
 
 ## generic_options
 
@@ -89,4 +89,4 @@ nf-core/bacmodel pipeline parameters. Every parameter from the pinned `nextflow_
 | `--custom-config-base` | string |  | yes |  |  | `https://raw.githubusercontent.com/nf-core/configs/master` | Base directory for Institutional configs. |
 | `--custom-config-version` | string |  | yes |  |  | `master` | Git commit id for Institutional configs. |
 
-<!-- Generated from nf-core/bacmodel@1abf4e28d250edf801c0f671a19f233f18128875. Do not edit by hand. -->
+<!-- Generated from nf-core/bacmodel@8a9ad093d0431b4f69fa829513248c7863f37d7f. Do not edit by hand. -->

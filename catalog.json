@@ -46,7 +46,6 @@
       "MIDORI2 - a collection of reference databases",
       "COIDB - CO1 Taxonomy Database",
       "Zehr lab nifH database",
-      "BOLD Plantae",
       "nf-core/phyloplace",
       "HMMER",
       "MAFFT",
@@ -72,7 +71,7 @@
       "MultiQC",
       "DuckDB"
     ],
-    "version": "3.0.0"
+    "version": "3.1.0"
   },
   {
     "description": "ATACSeq peak-calling and differential analysis pipeline.",
@@ -160,7 +159,7 @@
       "gapseq",
       "MEMOTE"
     ],
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   {
     "description": "A mapping-based pipeline for creating a phylogeny from bacterial whole genome sequences",
@@ -2292,11 +2291,12 @@
   {
     "description": "Variant Benchmarking pipeline for germline and somatic variant callers",
     "feeds": [],
-    "input": "samplesheet (test_vcf, test_regions, id, caller, subsample, normshift, normdist, normsizediff, maxdist, pctsize, pctseq, pctovl, refdist, chunksize, dup_to_ins, typeignore, bpDistance, percentThreshold, absoluteThreshold, maxMatches, evaluationmode, liftover, fix_prefix)",
+    "input": "samplesheet (test_vcf, test_regions, id, caller, subsample, normshift, normdist, normsizediff, maxdist, pctsize, pctseq, pctovl, refdist, chunksize, dup_to_ins, typeignore, bpDistance, percentThreshold, absoluteThreshold, maxMatches, evaluationmode, liftover, fix_prefix, missing_genotypes, concordance_truth_id)",
     "name": "variantbenchmarking",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nf-core/variantbenchmarking is designed to evaluate and validate the accuracy of variant calling methods in genomic research. Initially, the pipeline is tuned well for available gold standard truth sets (for example, Genome in a Bottle and SEQC2 samples) but it can be used to compare any two variant calling results. The workflow provides benchmarking tools for small variants including SNVs and INDELs, Structural Variants (SVs) and Copy Number Variations (CNVs) for germline and somatic analysis.",
     "tools": [
+      "aardvark",
       "Bcftools",
       "BEDTools",
       "bedops",
@@ -2317,11 +2317,11 @@
       "UCSC",
       "variant-extractor",
       "witty.er",
-      "ggplot2",
-      "reshape2",
-      "pysam"
+      "pysam",
+      "plotly",
+      "upsetplot"
     ],
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   {
     "description": "pipeline for the functional annotation and translation of somatic SNVs/InDels and copy number abberations for precision cancer medicine",

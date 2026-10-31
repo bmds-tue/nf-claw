@@ -1,7 +1,7 @@
 ---
 name: ampliseq
-version: 3.0.0
-commit: 992e6df34065067185b5e34665b5861b6827981d
+version: 3.1.0
+commit: b9bd579c0480ee23ecf24655f51c0c67777cd6b3
 ---
 
 # ampliseq — full parameter reference
@@ -231,11 +231,11 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--addsh` | boolean |  |  |  |  |  | If ASVs should be assigned to UNITE species hypotheses (SHs). Only relevant for ITS data. |
-| `--consolidate-taxonomies` | string |  |  | `first`, `most-specific`, `score` |  | `first` | How to pick one DADA2 taxonomy per ASV when `--dada_ref_taxonomy` lists several databases |
+| `--consolidate-taxonomies` | string |  |  | `first`, `most-specific`, `score` |  | `first` | How to pick one taxonomy per ASV when several databases or classifiers are used |
 | `--cut-dada-ref-taxonomy` | boolean |  |  |  |  |  | If the expected amplified sequences are extracted from the DADA2 reference taxonomy database |
 | `--cut-its` | string |  |  | `none`, `full`, `its1`, `its2` |  | `none` | Part of ITS region to use for taxonomy assignment: "full", "its1", or "its2" |
 | `--dada-addspecies-allowmultiple` | boolean |  |  |  |  |  | If multiple exact matches against different species are returned |
-| `--dada-assign-chunksize` | integer |  |  |  |  | `10000` | ASV fasta will be subset into chunks of this size for classification |
+| `--dada-assign-chunksize` | integer |  |  |  |  |  | ASV fasta will be subset into chunks of this size for classification |
 | `--dada-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels used in DADA2's assignTaxonomy function |
 | `--dada-min-boot` | integer |  |  |  | ≥ 0; ≤ 100 | `50` | The minimum bootstrap confidence (out of 100 trials) for assigning a taxonomic level with DADA2. Matches `minBoot` in DADA2's assignTaxonomy method. |
 | `--dada-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom DADA2 reference taxonomy database |
@@ -261,7 +261,7 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--sintax-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels used in SINTAX with a custom reference database |
 | `--sintax-cutoff` | number |  |  |  | ≥ 0; ≤ 1 | `0.8` | Confidence cutoff for SINTAX taxonomic classification. |
 | `--sintax-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom SINTAX reference database (fasta) |
-| `--sintax-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2` |  |  | Name of supported database, and optionally also version number |
+| `--sintax-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2`, `midori2-co1`, `midori2-co1=gb273`, `midori2-co1=gb270`, `greengenes2`, `greengenes2=2024.09`, `gtdb`, `gtdb=R11-RS232`, `gtdb=R10-RS226`, `gtdb=R09-RS220`, `gtdb=R08-RS214`, `gtdb=R07-RS207`, `gtdb=R06-RS202`, `gtdb=R05-RS95`, `glosed`, `glosed=1.0.0`, `pr2`, `pr2=5.1.0`, `pr2=5.0.0`, `pr2=4.14.0`, `pr2=4.13.0`, `rdp`, `rdp=18`, `sbdi-gtdb`, `sbdi-gtdb=R11-RS232-1`, `sbdi-gtdb=R10-RS226-2`, `sbdi-gtdb=R09-RS220-2`, `sbdi-gtdb=R09-RS220-1`, `sbdi-gtdb=R08-RS214-1`, `sbdi-gtdb=R07-RS207-1`, `sbdi-gtdb=R06-RS202-3`, `sbdi-gtdb=R06-RS202-1`, `silva`, `silva=144`, `silva=138.2`, `silva=138`, `silva=132`, `zehr-nifh`, `zehr-nifh=2.5.0` |  |  | Name of supported database, and optionally also version number |
 | `--vsearch-lca-assign-taxlevels` | string |  |  |  |  |  | Comma separated list of taxonomic levels for VSEARCH LCA with a custom reference database |
 | `--vsearch-lca-id` | number |  |  |  | ≥ 0; ≤ 1 | `0.9` | VSEARCH usearch_global identity cutoff (`--id`) used for VSEARCH LCA. |
 | `--vsearch-lca-lca-cutoff` | number |  |  |  | ≥ 0.5; ≤ 1 | `0.9` | LCA support threshold for VSEARCH LCA (`--lca_cutoff`). |
@@ -269,6 +269,6 @@ nf-core/ampliseq pipeline parameters. Every parameter from the pinned `nextflow_
 | `--vsearch-lca-maxrejects` | integer |  |  |  | ≥ 0 | `0` | Maximum number of non-matching target sequences to reject per query for VSEARCH LCA (`--maxrejects`). |
 | `--vsearch-lca-query-cov` | number |  |  |  | ≥ 0; ≤ 1 | `1.0` | Minimum fraction of the query that must align to a target for VSEARCH LCA (`--query_cov`). |
 | `--vsearch-lca-ref-tax-custom` | string (file path) |  |  |  |  |  | Path to a custom VSEARCH LCA reference database (SINTAX-compatible FASTA) |
-| `--vsearch-lca-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `midori2-co1`, `midori2-co1=gb270`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2` |  |  | Name of built-in VSEARCH LCA reference database, and optionally also version number |
+| `--vsearch-lca-ref-taxonomy` | string |  |  | `coidb`, `coidb=221216`, `midori2-co1`, `midori2-co1=gb273`, `midori2-co1=gb270`, `unite-fungi`, `unite-fungi=10.0`, `unite-fungi=9.0`, `unite-fungi=8.3`, `unite-fungi=8.2`, `unite-alleuk`, `unite-alleuk=10.0`, `unite-alleuk=9.0`, `unite-alleuk=8.3`, `unite-alleuk=8.2` |  |  | Name of built-in VSEARCH LCA reference database, and optionally also version number |
 
-<!-- Generated from nf-core/ampliseq@992e6df34065067185b5e34665b5861b6827981d. Do not edit by hand. -->
+<!-- Generated from nf-core/ampliseq@b9bd579c0480ee23ecf24655f51c0c67777cd6b3. Do not edit by hand. -->
