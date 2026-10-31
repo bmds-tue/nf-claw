@@ -210,6 +210,48 @@ def test_smoke_rejects_failed_partial_inventories_before_checking_subset(tmp_pat
     assert not checked.exists(), "do not validate a subset from a failed inventory command"
 
 
+@pytest.mark.parametrize("advised_passes", [True, False])
+def test_smoke_gates_the_advised_engine_and_only_reports_the_default_one(tmp_path, advised_passes):
+    # Each pin is checked on the engine its skill.md advises (gated); what a user who pins none
+    # gets, the launcher's newest engine, is a column in the summary and a warning, never a failure.
+    step = "Build + preflight the demo command for every pipeline"
+    raw = _text("smoke.yml").split(f"- name: {step}", 1)[1].split("        run: |\n", 1)[1]
+    raw = raw.split("\n      - ", 1)[0]
+    script = "\n".join(line[10:] for line in raw.splitlines())
+    for name, advice in (("old", "nfclaw run old ... --nxf-ver 25.10.4\n"), ("plain", "")):
+        (tmp_path / "pipelines" / name).mkdir(parents=True)
+        (tmp_path / "pipelines" / name / "skill.md").write_text(f"# {name}\n{advice}")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "nextflow").write_text('#!/bin/sh\necho "      version 26.04.3 build 12345"\n')
+    (fake / "nfclaw").write_text(
+        '#!/bin/sh\nif [ "$1" = list ]; then printf "old\\tm\\nplain\\tm\\n"; exit 0; fi\n'
+        'echo "$*" >> "$CHECKED"\n'
+        'case "$*" in\n'
+        '  *"--nxf-ver 25.10.4"*) exit "$ADVISED_EXIT" ;;\n'
+        '  "run old "*) echo "cannot parse its configuration"; exit 1 ;;\n'
+        'esac\nexit 0\n')
+    for path in fake.iterdir():
+        path.chmod(0o755)
+    checked, summary = tmp_path / "checked", tmp_path / "summary"
+    env = {**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+           "CHECKED": str(checked), "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_STEP_SUMMARY": str(summary), "ADVISED_EXIT": "0" if advised_passes else "1"}
+    result = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env,
+                            capture_output=True, text=True)
+    assert (result.returncode == 0) == advised_passes, result.stdout + result.stderr
+    calls = checked.read_text().splitlines()
+    assert sum("run old " in c and c.endswith("--nxf-ver 25.10.4") for c in calls) == 1
+    assert sum(c.startswith("run old ") and "--nxf-ver" not in c for c in calls) == 1
+    assert [c for c in calls if c.startswith("run plain ")] == [
+        f"run plain --outdir {tmp_path}/smoke-plain --check --demo -profile docker"]
+    table = summary.read_text()
+    assert "Nextflow 26.04.3, no `--nxf-ver`" in table
+    assert f"| `old` | 25.10.4 | {'✅' if advised_passes else '❌'} | ⚠️ refused |" in table
+    assert "| `plain` | none declared | ✅ | ✅ (the same run) |" in table
+    assert "::warning::old: --check without --nxf-ver (Nextflow 26.04.3) refused" in result.stdout
+
+
 @pytest.mark.parametrize("listing_exit", [0, 1])
 def test_execution_evidence_packaging_fails_on_a_partial_task_listing(tmp_path, listing_exit):
     raw = _text("pipeline-execution.yml").split("- name: Package execution evidence", 1)[1]

@@ -2,10 +2,14 @@ name: smoke
 # Verify every pipeline is actually usable through nfclaw WITHOUT running the
 # (heavy) workflows themselves. For each pipeline this initializes the pinned
 # submodule, parses its nextflow_schema.json, validates parameters, composes the
-# test profile and builds + preflights the demo command — i.e. `nfclaw run
-# --check --demo` stops just before execution. Scientific correctness of a
-# release is nf-core's own CI's job; this guards what nf-claw owns (schema parse,
-# generated command, submodule integrity) and stays cheap as the library grows.
+# test profile, builds + preflights the demo command and has the engine parse its
+# configuration — i.e. `nfclaw run --check --demo` stops just before execution —
+# on the engine the pipeline's skill.md tells users to pin. What a user who pins
+# no engine gets (the launcher's default, the newest) is reported beside it, not
+# gated: a release written for an older engine may not parse on the newest one.
+# Scientific correctness of a release is nf-core's own CI's job; this guards what
+# nf-claw owns (schema parse, generated command, submodule integrity, the advised
+# engine) and stays cheap as the library grows.
 on:
   push:
     branches: [main]
@@ -38,11 +42,18 @@ jobs:
       - name: Build + preflight the demo command for every pipeline
         run: |
           fail=0
+          default=$(nextflow -version 2>/dev/null | grep -oE "version [0-9]+\.[0-9]+\.[0-9]+" | head -1 | cut -d' ' -f2)
           {
             echo "## Pipeline smoke test"
-            echo "| pipeline | result |"
-            echo "|---|---|"
+            echo "| pipeline | advised engine | result | Nextflow ${default:-default}, no \`--nxf-ver\` |"
+            echo "|---|---|---|---|"
           } >> "$GITHUB_STEP_SUMMARY"
+          # The engine the pipeline's skill.md says to pin: the one its release declares, or a later
+          # one where that predates Java 17 (librarian/write_skill.py); none when it declares none.
+          advised() {
+            grep -oE -- "--nxf-ver [0-9]+\.[0-9]+\.[0-9]+" "pipelines/$1/skill.md" 2>/dev/null \
+              | head -1 | cut -d' ' -f2
+          }
           if ! inventory=$(nfclaw list); then
             echo "::error::could not list pipelines — partial output is not a complete inventory"
             exit 1
@@ -54,15 +65,29 @@ jobs:
           fi
           for name in $names; do
             out="$RUNNER_TEMP/smoke-$name"
-            if nfclaw run "$name" --outdir "$out" --check --demo -profile docker > "$RUNNER_TEMP/$name.log" 2>&1; then
+            ver=$(advised "$name")
+            if nfclaw run "$name" --outdir "$out" --check --demo -profile docker ${ver:+--nxf-ver "$ver"} \
+                > "$RUNNER_TEMP/$name.log" 2>&1; then
               echo "::group::✓ $name"; cat "$RUNNER_TEMP/$name.log"; echo "::endgroup::"
-              echo "| \`$name\` | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+              result="✅"
             else
               echo "::error::$name failed the demo build/preflight"
               cat "$RUNNER_TEMP/$name.log"
-              echo "| \`$name\` | ❌ |" >> "$GITHUB_STEP_SUMMARY"
+              result="❌"
               fail=1
             fi
+            # Reported, never gated: nfclaw refuses such a run with its remedy (docs/known-issues.md).
+            if [ -z "$ver" ] || [ "$ver" = "$default" ]; then
+              newest="$result (the same run)"
+            elif nfclaw run "$name" --outdir "$out" --check --demo -profile docker \
+                > "$RUNNER_TEMP/$name.default.log" 2>&1; then
+              newest="✅"
+            else
+              echo "::warning::$name: --check without --nxf-ver (Nextflow $default) refused"
+              echo "::group::$name on Nextflow $default"; cat "$RUNNER_TEMP/$name.default.log"; echo "::endgroup::"
+              newest="⚠️ refused"
+            fi
+            echo "| \`$name\` | ${ver:-none declared} | $result | $newest |" >> "$GITHUB_STEP_SUMMARY"
           done
           exit $fail
       # Every chain the registry defines (handoffs/), with both stages on their test profile, is
