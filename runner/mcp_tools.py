@@ -110,7 +110,7 @@ def _a(description: str) -> dict:
 _WAIT = _i("Seconds to wait for the job before returning (0-600). Keep it below your client's tool "
            "timeout (Antigravity stops a call after 180 s, Codex after its tool_timeout_sec); the "
            "job is unaffected when the call returns.", minimum=0, maximum=_MAX_WAIT)
-_JOB_ID = _s("A job id returned by run_pipeline or run_chain (see list_jobs).")
+_JOB_ID = _s("A job id returned by run_pipeline, run_chain or replay_run (see list_jobs).")
 _PIPELINE = _s("Pipeline name exactly as list_pipelines returns it, e.g. rnaseq.")
 
 
@@ -242,10 +242,11 @@ TOOLS = [
            "wait_seconds": _WAIT},
           ["original", "outdir"], read_only=False),
     _tool("get_job", "Follow a job",
-          "State of a job started by run_pipeline or run_chain: running (phase 'preparing' = "
-          "validating or staging, 'launched' = Nextflow is running), succeeded, failed, cancelled, "
-          "or lost (its supervisor was killed). Includes nfclaw's status report and the job's "
-          "latest output. With wait_seconds it returns as soon as the job ends.",
+          "State of a job started by run_pipeline, run_chain or replay_run: running (phase "
+          "'preparing' = validating or staging, 'launched' = Nextflow is running), succeeded, "
+          "failed, cancelled, or lost (its supervisor was killed). Includes nfclaw's status "
+          "report and the job's latest output. With wait_seconds it returns as soon as the job "
+          "ends.",
           {"job_id": _JOB_ID, "wait_seconds": _WAIT,
            "log_lines": _i("How many of the job's last output lines to include "
                            "(0-500, default 20).",
@@ -896,8 +897,14 @@ def _grep(text: str, pattern: str, label: str) -> str:
     out: list[str] = []
     heading = shown_heading = None
     table_start = shown_table = None
+    fence = None
     for i, line in enumerate(lines):
-        if line.startswith("#"):
+        marker = line.lstrip()[:3]
+        if fence is None and marker in ("```", "~~~"):
+            fence = marker
+        elif fence is not None and marker == fence:
+            fence = None
+        elif fence is None and line.startswith("#"):   # a `#` line in a code block is code
             heading = line
             continue
         if line.startswith("|"):

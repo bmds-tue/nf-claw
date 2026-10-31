@@ -213,6 +213,22 @@ def test_show_pipeline_grep_keeps_headings_and_table_headers(tools):
     assert len(out) < len(reference) / 4
 
 
+def test_grep_reads_a_comment_in_a_code_block_as_code_not_a_heading():
+    # Every skill.md shows its command in a bash block with a `# raw equivalent …` comment. Read
+    # as a heading, that comment could never match a search and relabelled what followed it.
+    doc = textwrap.dedent("""\
+        ## Run it
+        ```bash
+        nfclaw run demo --outdir results
+        # raw equivalent (no -r needed):
+        nextflow run pipelines/demo/upstream -profile docker
+        ```
+        """)
+    out = mcp_tools._grep(doc, "raw nextflow", "demo skill.md").splitlines()
+    assert out[1:] == ["## Run it", "# raw equivalent (no -r needed):",
+                       "nextflow run pipelines/demo/upstream -profile docker"]
+
+
 def test_show_pipeline_grep_without_a_match_says_so(tools):
     assert "No line" in text(call(tools, "show_pipeline", pipeline="demo", grep="zzqqxx"))
 
