@@ -30,7 +30,7 @@
     "axe-core": "^4.14.0",
     "postcss": "^8.5.31",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.7.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "postcss": "$postcss"
