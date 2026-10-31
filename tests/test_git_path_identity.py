@@ -122,7 +122,10 @@ workflow { DIGEST(file(params.input)) }
     assert not (refused / '.nextflow').exists()
 
 
-def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_path):
+def test_separator_parent_preserves_pinned_fastqrepair_correction_selection(tmp_path, monkeypatch):
+    # This checks source/path identity and compatibility selection, not engine availability.
+    # Keep it runnable in the source-complete unit lane, where Nextflow is not installed.
+    monkeypatch.setattr(orchestration.preflight, 'check_environment', lambda **_kw: [])
     source = Path(__file__).resolve().parents[1] / 'pipelines/fastqrepair/upstream'
     if submodule._own_head(source) is None:
         pytest.skip('requires the pinned fastqrepair source clone')
