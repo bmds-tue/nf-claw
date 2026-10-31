@@ -257,6 +257,11 @@ def test_a_group_that_outlives_its_reaped_leader_is_still_stopped(engine, tmp_pa
     try:
         proc.wait(timeout=10)
         execution._terminate(proc, grace=0.2)
+        # SIGKILL has reached the client, but its new parent (init, launchd) reaps it when it gets
+        # to it, and until then the zombie still holds the group's number: wait for that.
+        deadline = time.monotonic() + 10
+        while execution._group_alive(proc.pid) and time.monotonic() < deadline:
+            time.sleep(0.05)
         assert not execution._group_alive(proc.pid)
     finally:
         _kill(proc)
