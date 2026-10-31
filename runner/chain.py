@@ -1337,6 +1337,10 @@ def format_status(state: dict, problems: list[str]) -> str:
         outcome = (f"stopped without an outcome — nfclaw{pid} is no longer "
                    "running and never recorded how the chain ended (SIGKILL, out of memory, a "
                    "full disk, a restart); resume it with --resume")
+    elif state.get("log_state") == "elsewhere":
+        # As `nfclaw status` says of a run: its nfclaw cannot be inspected from this host.
+        outcome = (f"unknown here — launched on {state.get('log_host')} and not finished; run "
+                   "`nfclaw chain status` there")
     elif state.get("log_state") == "unreadable":
         reason = "; ".join(state.get("log_error") or [])
         outcome = (f"unknown — its chain log cannot be read ({reason}); "

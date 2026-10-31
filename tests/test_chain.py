@@ -802,6 +802,18 @@ def test_status_exit_codes_follow_nfclaw_status(library, fake_runs, tmp_path):
     assert chain.status_exit_code({**state, "log_state": "running"}, []) == 3
 
 
+def test_a_chain_running_on_another_host_is_unknown_here_as_a_run_is():
+    # On a shared filesystem the chain's nfclaw can run on another node. `nfclaw status` says it
+    # cannot judge such a launch from here; `nfclaw chain status` printed the recorded "running"
+    # with no host and exit status 1, which read as a failed chain.
+    state = {"chain_id": "c1", "outcome": "running", "stages": [], "log_state": "elsewhere",
+             "log_host": "node-7", "log_pid": 4242, "lineage_verification": "not_checked"}
+    report = chain.format_status(state, [])
+    assert "unknown here — launched on node-7 and not finished" in report
+    assert "nfclaw chain status" in report and "there" in report
+    assert chain.status_exit_code(state, []) == 1
+
+
 def test_an_unreadable_chain_log_leaves_the_chain_unknown(library, fake_runs, tmp_path,
                                                           monkeypatch):
     # `nfclaw chain status` on a log it cannot read ended in a PermissionError traceback.
