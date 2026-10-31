@@ -260,9 +260,14 @@
       "lines": 262,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            262
+          ]
+        ],
+        "reviewed_sha256": "4b2c328783c1d72c52b4ddb68d12167e9ea7e0c9b53d7cc766bbdca5cf07bb79"
       }
     },
     {
@@ -286,7 +291,14 @@
       "lines": 113,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "reviewed_sha256": "57718b266fe9edd3526c5e5928be3881168611d943323aa7201223208e8c94eb"
       }
     },
     {
@@ -298,7 +310,14 @@
       "lines": 6,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            6
+          ]
+        ],
+        "reviewed_sha256": "073235639fafbab303a9f0f6b58e630a1a48cdfae4bd08e2c174808957f55cbe"
       }
     },
     {
@@ -310,9 +329,14 @@
       "lines": 284,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            284
+          ]
+        ],
+        "reviewed_sha256": "f867990fb71883bfc190f91242393c779cf0bc099125781112e673b85773b736"
       }
     },
     {
@@ -324,7 +348,14 @@
       "lines": 22,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            22
+          ]
+        ],
+        "reviewed_sha256": "47924af6e6470b42d2625d4554157831f275a77409cfeb505c69804ea8ec758a"
       }
     },
     {
@@ -362,7 +393,14 @@
       "lines": 335,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            335
+          ]
+        ],
+        "reviewed_sha256": "c31c70b6aa4c30fe1280ec2be0f5496debf16f70d09793ac35a9abcbf46281fe"
       }
     },
     {
@@ -374,9 +412,14 @@
       "lines": 34,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            34
+          ]
+        ],
+        "reviewed_sha256": "6411d51715f1259000fcc6a8a6dae500358bd3f81f72d074b7d7ac03fede081a"
       }
     },
     {
@@ -424,7 +467,14 @@
       "lines": 257,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            257
+          ]
+        ],
+        "reviewed_sha256": "9c0f2020bb965f4d83df63f040593b2a4fc70a577bd52bdff62babb5b15e25da"
       }
     },
     {
@@ -2612,9 +2662,14 @@
       "lines": 317,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            339
+          ]
+        ],
+        "reviewed_sha256": "9f7facc601c6a70904e487e03f0a8356d7a504f104d26a9d4662d389b2b9a4fd"
       }
     },
     {
@@ -2626,9 +2681,14 @@
       "lines": 102,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            102
+          ]
+        ],
+        "reviewed_sha256": "8c30c504e11eb18f2b0cbf46804ccf8acc7e96277199137e1b74d29b83200ba8"
       }
     },
     {
@@ -2640,7 +2700,14 @@
       "lines": 104,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            104
+          ]
+        ],
+        "reviewed_sha256": "e76221ac380e85ceee0e03d35ecae626a756a8820977165da1e3579ffe04eb8c"
       }
     },
     {
@@ -2674,7 +2741,14 @@
       "lines": 693,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            693
+          ]
+        ],
+        "reviewed_sha256": "3b75cd236c87e74914dcd76b3b257704ea887aa6b1ad58213ed66ff4ea154087"
       }
     },
     {
@@ -2686,7 +2760,14 @@
       "lines": 83,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            83
+          ]
+        ],
+        "reviewed_sha256": "ac925c9ee6a0a344eb4cf9d6a23851ee1ba510389057b51ab7aacd0b19bd2c3d"
       }
     },
     {
@@ -2698,7 +2779,14 @@
       "lines": 303,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            303
+          ]
+        ],
+        "reviewed_sha256": "72d23b7d49d964556a015ac2a35ba356249e637a3e3d4d9d74016b900d9f2a66"
       }
     },
     {
@@ -2710,9 +2798,14 @@
       "lines": 205,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            205
+          ]
+        ],
+        "reviewed_sha256": "a9aef400382ee3e579d4dd788331f99fa609ce9ca6ae22ee55d54ac69fd3061e"
       }
     },
     {
@@ -2724,7 +2817,14 @@
       "lines": 82,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            82
+          ]
+        ],
+        "reviewed_sha256": "6c8f125b83c6da5c31d542994be8beeed4262554b4be5b6d280a32875e33f2c5"
       }
     },
     {
@@ -2736,9 +2836,14 @@
       "lines": 127,
       "kind": "owned-text",
       "review": {
-        "method": "entire document read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            127
+          ]
+        ],
+        "reviewed_sha256": "57a7d407fd1d03cef7df378c77b01cffbf7032aa4f8b07f9816e4fc4f1f0d04c"
       }
     },
     {
@@ -2750,7 +2855,14 @@
       "lines": 113,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            113
+          ]
+        ],
+        "reviewed_sha256": "cec8ad924f28e5325c3f4b530bb28c054f8502c007ae352737bc02a3badd747a"
       }
     },
     {
@@ -2762,7 +2874,14 @@
       "lines": 92,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            92
+          ]
+        ],
+        "reviewed_sha256": "a9f27c1ed478059f0925f5fd1c11a92ef89fbc4deb4dacfd91660688d80462c6"
       }
     },
     {
@@ -2774,7 +2893,14 @@
       "lines": 117,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            117
+          ]
+        ],
+        "reviewed_sha256": "2391eca1be021b962f31a9131639c7ecc3ccce659748525911522f05de2d00ea"
       }
     },
     {
@@ -2786,7 +2912,14 @@
       "lines": 598,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            598
+          ]
+        ],
+        "reviewed_sha256": "2b65832722279ab2b3aad271a80395f09c2cae1ed7336990c5dcb0ddf6b38422"
       }
     },
     {
@@ -3164,7 +3297,14 @@
       "lines": 56,
       "kind": "owned-text",
       "review": {
-        "method": "Current documentation/configuration contract cross-check, prior/current delta and link/structure validation; further audit continues."
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            56
+          ]
+        ],
+        "reviewed_sha256": "fcd9b3a379dd1cb005998bd6dc744469f519f7c08391b254d4f519c8da7384fb"
       }
     },
     {
@@ -7398,7 +7538,14 @@
       "lines": 134,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            134
+          ]
+        ],
+        "reviewed_sha256": "84353f3c5d3761155f3e1876051c5bd44e294847b32fad439d8b0019b9223c68"
       }
     },
     {
@@ -7410,7 +7557,14 @@
       "lines": 88,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            88
+          ]
+        ],
+        "reviewed_sha256": "70beadc9f16732051108c793ca2b1c0286176a6d8d48885883cac46a1e54267e"
       }
     },
     {
@@ -7422,7 +7576,14 @@
       "lines": 170,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            170
+          ]
+        ],
+        "reviewed_sha256": "9ff71a7c5a12a3c2347d58f022f95faf9c3f72a0bbd810b6d82cf50f3a138ac3"
       }
     },
     {
@@ -7434,7 +7595,14 @@
       "lines": 10,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 structured fixture text read; JSON parsed with standard-library json.loads; schema role and constraints compared with consuming test expectations.",
+        "read_ranges": [
+          [
+            1,
+            10
+          ]
+        ],
+        "reviewed_sha256": "ce1eef283366195358fc9e7c2197dfe1945fefcf0540568a5dcd68e0c02ce55d"
       }
     },
     {
@@ -7446,7 +7614,14 @@
       "lines": 38,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 structured fixture text read; JSON parsed with standard-library json.loads; schema role and constraints compared with consuming test expectations.",
+        "read_ranges": [
+          [
+            1,
+            38
+          ]
+        ],
+        "reviewed_sha256": "2189dcab56b3cb88373789ce791f21d9491341baa1f79b4e82268f8491760c5e"
       }
     },
     {
@@ -7458,7 +7633,14 @@
       "lines": 21,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 structured fixture text read; JSON parsed with standard-library json.loads; schema role and constraints compared with consuming test expectations.",
+        "read_ranges": [
+          [
+            1,
+            21
+          ]
+        ],
+        "reviewed_sha256": "42eb2da7a71d01be9e92196936517d9364ed6e56587a4e67be1b15395fe83a57"
       }
     },
     {
@@ -7470,7 +7652,14 @@
       "lines": 16,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 structured fixture text read; JSON parsed with standard-library json.loads; schema role and constraints compared with consuming test expectations.",
+        "read_ranges": [
+          [
+            1,
+            16
+          ]
+        ],
+        "reviewed_sha256": "7030b186c26ee2caa0eb8bc912176922d062296de37fe874c50326c94e8ae42e"
       }
     },
     {
@@ -7482,7 +7671,14 @@
       "lines": 12,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            12
+          ]
+        ],
+        "reviewed_sha256": "f1025232368a5bf3e2cc132f8f621abc9e5a4b52989c8a956d9c32924706942b"
       }
     },
     {
@@ -7494,7 +7690,14 @@
       "lines": 95,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            95
+          ]
+        ],
+        "reviewed_sha256": "250ebdcaba8e9ef917d911573ccc7eb69a961933d95bfc59993b8295105e009f"
       }
     },
     {
@@ -7506,7 +7709,14 @@
       "lines": 230,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            230
+          ]
+        ],
+        "reviewed_sha256": "83dee7a41c0aea09fc06e7c435f4979a75d870d5d20d81142bbe03da4d220a84"
       }
     },
     {
@@ -7518,7 +7728,14 @@
       "lines": 6,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            6
+          ]
+        ],
+        "reviewed_sha256": "d25bf830ba66489619489677a2c041ff2a29c5ea6212b81a743b3c0b4992266e"
       }
     },
     {
@@ -7530,7 +7747,14 @@
       "lines": 48,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            48
+          ]
+        ],
+        "reviewed_sha256": "ac46d07ed86daa5855712a14ea9268fa53be17d115331ffc3cb1b1cdcf673b76"
       }
     },
     {
@@ -7542,7 +7766,14 @@
       "lines": 61,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "reviewed_sha256": "4e04faef06c580a3be722f365ebdf01fae3097b3bd182abef95c5f23d5615ef1"
       }
     },
     {
@@ -7554,7 +7785,14 @@
       "lines": 72,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            72
+          ]
+        ],
+        "reviewed_sha256": "dea3cf97fa9e49db62246e9b0350492013fb7fe2f929b71aff9b8c6d44575198"
       }
     },
     {
@@ -7566,7 +7804,14 @@
       "lines": 7,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            7
+          ]
+        ],
+        "reviewed_sha256": "3947571545ab0bb4930634e04727f6caa8a7dcbc6c27f587a511c538f78db83c"
       }
     },
     {
@@ -7578,7 +7823,14 @@
       "lines": 126,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 plain-text fixture read, including all log/stack-trace lines; diagnostic/allowlist role checked against consuming test expectations; no live engine/container execution.",
+        "read_ranges": [
+          [
+            1,
+            126
+          ]
+        ],
+        "reviewed_sha256": "c54c4ac0f381efa3ccc28ad1ed53dd3df38080af2435be3370aae182f65f3fb2"
       }
     },
     {
@@ -7590,7 +7842,14 @@
       "lines": 28,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            28
+          ]
+        ],
+        "reviewed_sha256": "aa31e2ac5d9b5bac1f39091bfa72f11edf8801c608d6bdc4c52724a1496db32b"
       }
     },
     {
@@ -7602,7 +7861,14 @@
       "lines": 21,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            21
+          ]
+        ],
+        "reviewed_sha256": "875fe056225497d4ef97899b1aaeb3900ea3b40536cd2a3ff9bb49b7a0c210f0"
       }
     },
     {
@@ -7614,7 +7880,14 @@
       "lines": 266,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            266
+          ]
+        ],
+        "reviewed_sha256": "dc8ee97c5830c319e02ee3f2efd0df36e23e2ee7c4db3d37fbadd5c0fa3a44a2"
       }
     },
     {
@@ -7626,7 +7899,14 @@
       "lines": 47,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            47
+          ]
+        ],
+        "reviewed_sha256": "691df6917c716891a027ce8bbe13136a158de62d056edd72af3736bf4db3628e"
       }
     },
     {
@@ -7638,7 +7918,14 @@
       "lines": 118,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            118
+          ]
+        ],
+        "reviewed_sha256": "2e6b4b3e32dd0935fd4d5b4f42c359ed306f71a6be9b5676f26fdde14f228b54"
       }
     },
     {
@@ -7650,7 +7937,14 @@
       "lines": 99,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            99
+          ]
+        ],
+        "reviewed_sha256": "c8e6bbab1e3a2215541458757805b85251bb252435d68507acfd9643439aa142"
       }
     },
     {
@@ -7662,7 +7956,14 @@
       "lines": 36,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            36
+          ]
+        ],
+        "reviewed_sha256": "665ad967b8dc704a59fd75d617cc449b2f0ed85748b379ac6c8ff982dde97604"
       }
     },
     {
@@ -7674,7 +7975,14 @@
       "lines": 21,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            21
+          ]
+        ],
+        "reviewed_sha256": "16d2c981e4aa2899503c580bec7eaebaa984196ce318c975ffc5a4e5e03b2071"
       }
     },
     {
@@ -7686,7 +7994,14 @@
       "lines": 44,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            44
+          ]
+        ],
+        "reviewed_sha256": "d4bba56bd872f0d99dbe96998f781338458cdca6b02cf2ed61fbef6e1c168cc5"
       }
     },
     {
@@ -7698,7 +8013,14 @@
       "lines": 21,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            21
+          ]
+        ],
+        "reviewed_sha256": "fcb747653979c3bc5b2506ec0506a895b99b0b910e3d2eb13ccd7129096d1dc6"
       }
     },
     {
@@ -7710,7 +8032,14 @@
       "lines": 170,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 fixture text read, including comments/license; exact raw bytes SHA-256 recorded; eight source/license hashes documented in README checked against current bytes; fixtures not executed or modified. Original CRLF preserved where present.",
+        "read_ranges": [
+          [
+            1,
+            170
+          ]
+        ],
+        "reviewed_sha256": "da0910b19617ffe05551968930acf181ede17e8af21b4b52d0548d66342738cf"
       }
     },
     {
@@ -7722,7 +8051,14 @@
       "lines": 14,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            14
+          ]
+        ],
+        "reviewed_sha256": "3ad731edf8aea6f3361b92362ac64cb04c993c3987e9ebc38cc8fc1c841bfc72"
       }
     },
     {
@@ -7734,7 +8070,14 @@
       "lines": 215,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            215
+          ]
+        ],
+        "reviewed_sha256": "6f379038e24028652376092971597a555adac8913b57ec3c704a6862ba12e21b"
       }
     },
     {
@@ -7746,7 +8089,14 @@
       "lines": 40,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            40
+          ]
+        ],
+        "reviewed_sha256": "6b1ba3935d94f57b70c42db3f50452c121d65c098a3b74c52541b54ec848f1ec"
       }
     },
     {
@@ -7758,7 +8108,14 @@
       "lines": 45,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            45
+          ]
+        ],
+        "reviewed_sha256": "99cb94b4212234faca94808b1d268a67ab9491d2fdc31d8af50c823746a99e58"
       }
     },
     {
@@ -7770,7 +8127,14 @@
       "lines": 57,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            57
+          ]
+        ],
+        "reviewed_sha256": "346dbfcf5354cb0fb22e0082351d40c2b0de75f0934b2ed9a73acf1b07b56d12"
       }
     },
     {
@@ -7782,7 +8146,14 @@
       "lines": 200,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            200
+          ]
+        ],
+        "reviewed_sha256": "83d01490389fb53f48f22d847f0e90939000c761ac905e40bbeecf7263b5a2d5"
       }
     },
     {
@@ -7794,7 +8165,14 @@
       "lines": 826,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            830
+          ]
+        ],
+        "reviewed_sha256": "c7e276b525b9e178decc4c8bd43b2d64f739529f73f8251d23ce61301136570e"
       }
     },
     {
@@ -7806,7 +8184,14 @@
       "lines": 208,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            208
+          ]
+        ],
+        "reviewed_sha256": "e14638ea156fb667329aeca7168dbffa42edaa1696f145681f3eb8f3cda92caf"
       }
     },
     {
@@ -7818,7 +8203,14 @@
       "lines": 743,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            743
+          ]
+        ],
+        "reviewed_sha256": "28dc7983468927f0a6d3d2b2c4fa7ce206ad278ccb241c8d94172ac0961f8e07"
       }
     },
     {
@@ -7830,9 +8222,14 @@
       "lines": 1073,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            1074
+          ]
+        ],
+        "reviewed_sha256": "21cb621b129f5b36dd497107e0b477667f68688c77eb1a8ba54f6a985026cd98"
       }
     },
     {
@@ -7844,9 +8241,14 @@
       "lines": 555,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            555
+          ]
+        ],
+        "reviewed_sha256": "4985166d4d9b7fafa057e22d955aeb818c46379aa9daa64d7bc6900bb613f59e"
       }
     },
     {
@@ -7858,9 +8260,14 @@
       "lines": 61,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            61
+          ]
+        ],
+        "reviewed_sha256": "74c70814ecdc01f4a346f8e9a2011f8a25472d0baacf923c5e871b77f1eaf01a"
       }
     },
     {
@@ -7872,7 +8279,14 @@
       "lines": 126,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            157
+          ]
+        ],
+        "reviewed_sha256": "1e974849b64d560596ce28a6e3cbd0569ed595fd5996cfb8c5bd4964dd7fc4b1"
       }
     },
     {
@@ -7884,7 +8298,14 @@
       "lines": 178,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            178
+          ]
+        ],
+        "reviewed_sha256": "75a0305b03d2c8f36d382f7f83cc4c85552b213fc97b95b5bb7e7a999ae0ff5e"
       }
     },
     {
@@ -7896,7 +8317,14 @@
       "lines": 971,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            971
+          ]
+        ],
+        "reviewed_sha256": "395b2be25685ecb41f2918ceb5abafbd40ff341b89781d280b4d4843abb72986"
       }
     },
     {
@@ -7908,7 +8336,14 @@
       "lines": 149,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            149
+          ]
+        ],
+        "reviewed_sha256": "2a50cf7188d3aa0c14a9166331c2ed31f46b7d5e6c35c5dffd64f7b33b2df9d3"
       }
     },
     {
@@ -7920,7 +8355,14 @@
       "lines": 386,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            386
+          ]
+        ],
+        "reviewed_sha256": "f532b7b85cbcfba7167c8a30b6e9334158001e846e74064b21544cdceed950bc"
       }
     },
     {
@@ -7932,9 +8374,14 @@
       "lines": 130,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            130
+          ]
+        ],
+        "reviewed_sha256": "bf74f4a0a3be6934e2268eebfe61045e2547b643574cfd7470b6a6751d211a8b"
       }
     },
     {
@@ -7946,7 +8393,14 @@
       "lines": 116,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            116
+          ]
+        ],
+        "reviewed_sha256": "df25039509db7e33f3fb779848139200f36180d07f9c8c1b9244f57828b9f392"
       }
     },
     {
@@ -7958,7 +8412,14 @@
       "lines": 116,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            116
+          ]
+        ],
+        "reviewed_sha256": "813de04e02cbfe784108e63af2391c5a65fd8eb46b7bebc56d31d6857aff4808"
       }
     },
     {
@@ -7970,7 +8431,14 @@
       "lines": 111,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            111
+          ]
+        ],
+        "reviewed_sha256": "f20827b9db886789a874392fa55f2aefbd163c772d7cccf53f4a083aef4576cc"
       }
     },
     {
@@ -7982,7 +8450,14 @@
       "lines": 94,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            94
+          ]
+        ],
+        "reviewed_sha256": "244848998a068eb02f1ae314e8b5b2ff59b09b20195f4ec384c27ca7b7143011"
       }
     },
     {
@@ -7994,7 +8469,14 @@
       "lines": 101,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            101
+          ]
+        ],
+        "reviewed_sha256": "0f3af8e50f0dec9e7b9624c99dfe79cc739ab53797ff8feca04726499cdaebc8"
       }
     },
     {
@@ -8006,7 +8488,14 @@
       "lines": 110,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            110
+          ]
+        ],
+        "reviewed_sha256": "b0e4a75244bd32455dc4c626413e05b159634fb17f26a451f000b3084f5b8aaf"
       }
     },
     {
@@ -8018,7 +8507,14 @@
       "lines": 386,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            386
+          ]
+        ],
+        "reviewed_sha256": "877208fe5fbada3ceb0202724e60bf27187fef3552957f710f66bd2421c3dd94"
       }
     },
     {
@@ -8030,7 +8526,14 @@
       "lines": 101,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            101
+          ]
+        ],
+        "reviewed_sha256": "e75b8342bbb269b61f663e9f2a89c7608c294dfc8da30bf55beeeb7589c6cc96"
       }
     },
     {
@@ -8042,9 +8545,14 @@
       "lines": 182,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            182
+          ]
+        ],
+        "reviewed_sha256": "b4ec004cba2313bfb3f44f74b099486396ec3dc0f979f9b1c78ee9f60c199e3d"
       }
     },
     {
@@ -8056,7 +8564,14 @@
       "lines": 97,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            97
+          ]
+        ],
+        "reviewed_sha256": "ff5db0b32bf10a3d790cf85305421ee167420cedd93f5b20d11b10560118a99a"
       }
     },
     {
@@ -8068,7 +8583,14 @@
       "lines": 103,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            103
+          ]
+        ],
+        "reviewed_sha256": "892a591e55f62fa3af84c02e844fbf5c40f8ba720f4b423140a9411b102c6d22"
       }
     },
     {
@@ -8080,7 +8602,14 @@
       "lines": 116,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            116
+          ]
+        ],
+        "reviewed_sha256": "bc0d986a41ceddec1bad20f9cb2640a39e1d2bf4f5274fd6d08732c10f4eae8e"
       }
     },
     {
@@ -8092,7 +8621,14 @@
       "lines": 23,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            23
+          ]
+        ],
+        "reviewed_sha256": "ab747bc31c36cd0d389d3dcce3baa4a0dbfe2ea4232e7d7ef4bfdc220e484f9a"
       }
     },
     {
@@ -8104,7 +8640,14 @@
       "lines": 213,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            213
+          ]
+        ],
+        "reviewed_sha256": "5e2ac436119ef450e91effb502983e6f468848713c16284815eb43c76669c486"
       }
     },
     {
@@ -8116,7 +8659,14 @@
       "lines": 616,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            616
+          ]
+        ],
+        "reviewed_sha256": "d3d962fa13168bae47bff4de14cd83e367a58c56d204b19c32272d5eefd3291f"
       }
     },
     {
@@ -8128,7 +8678,14 @@
       "lines": 415,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            415
+          ]
+        ],
+        "reviewed_sha256": "1d51eaeabfb42bdd88dc6d862280a3aaf9b4f71f9e5946c44e856aeff4e57ff9"
       }
     },
     {
@@ -8140,7 +8697,14 @@
       "lines": 195,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            195
+          ]
+        ],
+        "reviewed_sha256": "a31210e02479df781266562094a7015b1637ec7fba3ade1f5d4ae06ea04738fe"
       }
     },
     {
@@ -8152,7 +8716,14 @@
       "lines": 81,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            81
+          ]
+        ],
+        "reviewed_sha256": "d6e09bc905e67ea6413dcf837fda2831c214466a169173572c3a2633554fe44f"
       }
     },
     {
@@ -8164,7 +8735,14 @@
       "lines": 154,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            154
+          ]
+        ],
+        "reviewed_sha256": "466f2f924715ccaef2de48659b2884eae5214ac64b6eaa2debd7b145c9e2531c"
       }
     },
     {
@@ -8176,9 +8754,14 @@
       "lines": 672,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            672
+          ]
+        ],
+        "reviewed_sha256": "1b0930f10eda33242ac79498c77cc89ae60cea0f38126728c0312809a9269540"
       }
     },
     {
@@ -8190,9 +8773,14 @@
       "lines": 82,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            82
+          ]
+        ],
+        "reviewed_sha256": "9fe8527eb70df9d544d48275df0c4b6552f7a7a74e869f9b5baba497c9d94a04"
       }
     },
     {
@@ -8204,9 +8792,14 @@
       "lines": 223,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            345
+          ]
+        ],
+        "reviewed_sha256": "2aea4323d3c155003f6dea87a35c169a0b375011007490a22e58bf9ec5dd21d8"
       }
     },
     {
@@ -8218,9 +8811,14 @@
       "lines": 218,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            218
+          ]
+        ],
+        "reviewed_sha256": "0ab50518034c323604e8eae214c8015cbbcd13523df08e61f58409498cc0fe05"
       }
     },
     {
@@ -8232,7 +8830,14 @@
       "lines": 53,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            53
+          ]
+        ],
+        "reviewed_sha256": "00210e77b4673196355eaf6c166ee93b5a6d1eccb406023cfdb0fd63527b7387"
       }
     },
     {
@@ -8244,7 +8849,14 @@
       "lines": 60,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            60
+          ]
+        ],
+        "reviewed_sha256": "5a11874b275b21580c37480f664fbeb3145c066aad13cf3196804cddb89c7464"
       }
     },
     {
@@ -8256,7 +8868,14 @@
       "lines": 513,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            513
+          ]
+        ],
+        "reviewed_sha256": "e2fb32d038652c551e20c347a59f6a880610b33d17ed219d64e021cb16bb75a1"
       }
     },
     {
@@ -8268,9 +8887,14 @@
       "lines": 381,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            381
+          ]
+        ],
+        "reviewed_sha256": "0b02ad9904f0854b324bc1e45d12d13221a456978c3fa772dcbfa8bb1b0b4ae6"
       }
     },
     {
@@ -8282,7 +8906,14 @@
       "lines": 155,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            155
+          ]
+        ],
+        "reviewed_sha256": "66f9d07bf3e96324afdccc3d9cbab8122f03b65747fb5298b03b8d335a322f14"
       }
     },
     {
@@ -8294,7 +8925,14 @@
       "lines": 400,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete static line-by-line read in bounded output ranges; no output truncation.",
+        "read_ranges": [
+          [
+            1,
+            400
+          ]
+        ],
+        "reviewed_sha256": "6c9c0846f373979c22017332161e386f423a978d82ebb662b29ac76ba15614ac"
       }
     },
     {
@@ -8306,7 +8944,14 @@
       "lines": 301,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete static line-by-line read in bounded output ranges; no output truncation.",
+        "read_ranges": [
+          [
+            1,
+            328
+          ]
+        ],
+        "reviewed_sha256": "71ad878aecb7a6bc2f1674d7b9495a388039c03ff5bb565e85494f1f0d350865"
       }
     },
     {
@@ -8318,7 +8963,14 @@
       "lines": 569,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            569
+          ]
+        ],
+        "reviewed_sha256": "7a688c5c1b122e3d94ed68eaad8fc51e1276f5cfd4ee356c94058d852752c83c"
       }
     },
     {
@@ -8330,7 +8982,14 @@
       "lines": 244,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            244
+          ]
+        ],
+        "reviewed_sha256": "08ce47fd624e8cc1bc738710730de860c4425644502fae94066d45f6eb0337d4"
       }
     },
     {
@@ -8342,7 +9001,14 @@
       "lines": 459,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            459
+          ]
+        ],
+        "reviewed_sha256": "9bddf3d96fbd31e921408a7a9dc9b310557462fdce8d402079de4eb5af905585"
       }
     },
     {
@@ -8354,7 +9020,14 @@
       "lines": 180,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            180
+          ]
+        ],
+        "reviewed_sha256": "2f708545be3549c81a787aa5d69d100a2922f825a911d878a6f53dc509b51de0"
       }
     },
     {
@@ -8366,7 +9039,14 @@
       "lines": 66,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete static line-by-line read in bounded output ranges; no output truncation.",
+        "read_ranges": [
+          [
+            1,
+            66
+          ]
+        ],
+        "reviewed_sha256": "e5ffd2603568603c6b41b26b1bc459526ca1b28e55f2856d4d5ea3d831d5608f"
       }
     },
     {
@@ -8378,7 +9058,14 @@
       "lines": 522,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete static line-by-line read in bounded output ranges; no output truncation.",
+        "read_ranges": [
+          [
+            1,
+            551
+          ]
+        ],
+        "reviewed_sha256": "113c577722c7dc7cba875f80684452ef400f1e2b09ad47a763ed88be74e68d8c"
       }
     },
     {
@@ -8390,7 +9077,14 @@
       "lines": 598,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete static line-by-line read in bounded output ranges; no output truncation.",
+        "read_ranges": [
+          [
+            1,
+            598
+          ]
+        ],
+        "reviewed_sha256": "080e89256478d5eab29c24eeec80443ad44f0a35fd6d88754c1858bae1c333b4"
       }
     },
     {
@@ -8402,7 +9096,14 @@
       "lines": 454,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            454
+          ]
+        ],
+        "reviewed_sha256": "44fdd11049aedcd75059eb8a19677a5b8fcf01fd3b90e95285a01df412f39fcd"
       }
     },
     {
@@ -8414,7 +9115,14 @@
       "lines": 90,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            90
+          ]
+        ],
+        "reviewed_sha256": "9c4ae1eae2a9e037d3b05d65648339e0860c7ae7861545b9d2aed9f0ea1fddf3"
       }
     },
     {
@@ -8426,7 +9134,14 @@
       "lines": 1261,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            1261
+          ]
+        ],
+        "reviewed_sha256": "1cffb3fc40cbb2303cc63465dca717d237f6857ec5578175d9fb70078f6c2333"
       }
     },
     {
@@ -8438,7 +9153,14 @@
       "lines": 152,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            152
+          ]
+        ],
+        "reviewed_sha256": "cb333182aec17e4b8d9190902f1d452888ef6be9bf25106e50062df8cf3bf975"
       }
     },
     {
@@ -8450,7 +9172,14 @@
       "lines": 139,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            139
+          ]
+        ],
+        "reviewed_sha256": "8a1d53db72306d44373babd086b4399583f67261059ad23fdc0be87a90ad2cbf"
       }
     },
     {
@@ -8462,7 +9191,14 @@
       "lines": 1946,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            1946
+          ]
+        ],
+        "reviewed_sha256": "8c6d6dd6e7e712ead9ee9f6cbb011d8a03cad495c93ab5754cbb5ce85518f657"
       }
     },
     {
@@ -8474,7 +9210,14 @@
       "lines": 321,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Complete line-by-line static read in bounded output ranges; any truncated range recovered. Concurrent changed hunks in test_audit_fixes.py and test_chain.py reread in final state.",
+        "read_ranges": [
+          [
+            1,
+            321
+          ]
+        ],
+        "reviewed_sha256": "6c08f9f991a3569528b8990a1838d259865da4dd1426c9af6b9765e3296444a7"
       }
     },
     {
@@ -8486,7 +9229,14 @@
       "lines": 35,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            35
+          ]
+        ],
+        "reviewed_sha256": "8f4cebfc646aba6a98b265b8de6ac3a3fe1958fbfbcc6e6a7cdbf8666e2de1db"
       }
     },
     {
@@ -8498,7 +9248,14 @@
       "lines": 65,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            65
+          ]
+        ],
+        "reviewed_sha256": "0a1037e927ca89bc200f4fcfa1cca6f4836e8008be5fc14f6f53d1b32fad6f80"
       }
     },
     {
@@ -8510,9 +9267,14 @@
       "lines": 70,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            70
+          ]
+        ],
+        "reviewed_sha256": "a3b9735cb7cd7d73e8c83f5fcf4c62b842fe8f021d7b2ce77afa868adea9e4dd"
       }
     },
     {
@@ -8524,9 +9286,14 @@
       "lines": 421,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            421
+          ]
+        ],
+        "reviewed_sha256": "278414746c9aac8e668a5accf26d235920bddb431fb39f9ab206f19707639e3a"
       }
     },
     {
@@ -8538,9 +9305,14 @@
       "lines": 232,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            232
+          ]
+        ],
+        "reviewed_sha256": "f015c9f250b6832ecc1b203a37b316789ee6e7fa197476f461d5aa518cce3f43"
       }
     },
     {
@@ -8552,7 +9324,14 @@
       "lines": 150,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            150
+          ]
+        ],
+        "reviewed_sha256": "5b13985a3afd88886c48f443bb64dd6065c202a0f86edbeaddad53c959f4e5a4"
       }
     },
     {
@@ -8564,7 +9343,14 @@
       "lines": 29,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            29
+          ]
+        ],
+        "reviewed_sha256": "17c8c7c4ebb317a82eb777186a9e9595d592ff306506dea542f90a371d8f1ef2"
       }
     },
     {
@@ -8576,7 +9362,14 @@
       "lines": 269,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            269
+          ]
+        ],
+        "reviewed_sha256": "60de63daf03386783f1366a4c11538ea08703d73c48f279eff1fcea937d60047"
       }
     },
     {
@@ -8588,7 +9381,14 @@
       "lines": 506,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            506
+          ]
+        ],
+        "reviewed_sha256": "3dd314839a975070f9e54e5f3bf719ec57cc0ed20b3a487822d0f02d1be49063"
       }
     },
     {
@@ -8600,7 +9400,14 @@
       "lines": 580,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            580
+          ]
+        ],
+        "reviewed_sha256": "a27502956a36ff2bab28f3012d1e54f45a3b1cf3d682bd42fa383cbb890904fd"
       }
     },
     {
@@ -8612,7 +9419,14 @@
       "lines": 20,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            20
+          ]
+        ],
+        "reviewed_sha256": "383cbc25027975382ab69f66a4cb98fcdc09791e8ff494aeeb02c273645d1d65"
       }
     },
     {
@@ -8624,7 +9438,14 @@
       "lines": 467,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            467
+          ]
+        ],
+        "reviewed_sha256": "99e97a4ccde7615e5e4b511b64313afb4dcb7c38ead66addbd7cea296511c5c4"
       }
     },
     {
@@ -8636,7 +9457,14 @@
       "lines": 102,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            102
+          ]
+        ],
+        "reviewed_sha256": "a3a5796c2565dbaea23d73727539b6cbd8d9de76677c7663502eb6be32e401e3"
       }
     },
     {
@@ -8648,9 +9476,14 @@
       "lines": 97,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            97
+          ]
+        ],
+        "reviewed_sha256": "dd57f2862957f1f8c8192b147502c58a767100e383b96c53548b3ff4bd2f103c"
       }
     },
     {
@@ -8662,7 +9495,14 @@
       "lines": 307,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            307
+          ]
+        ],
+        "reviewed_sha256": "dfad115cf5244429e4f54f07f8730975782e84f82c3a987320dbf772c7a987f9"
       }
     },
     {
@@ -8674,7 +9514,14 @@
       "lines": 52,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            52
+          ]
+        ],
+        "reviewed_sha256": "ae2c84d2d6afe5800f01d51ea54d4b35673edcce7ac0a6f1c49f58d971136be3"
       }
     },
     {
@@ -8686,7 +9533,14 @@
       "lines": 381,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            381
+          ]
+        ],
+        "reviewed_sha256": "34115f6f05ae9cf019a8967506d06ababfa731918ce879463b554f81ac568d56"
       }
     },
     {
@@ -8698,7 +9552,14 @@
       "lines": 238,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            238
+          ]
+        ],
+        "reviewed_sha256": "d36d54cdc22343f83c1f0632f29100684833b891710d808a131d4b426c71ccb4"
       }
     },
     {
@@ -8710,7 +9571,14 @@
       "lines": 122,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            122
+          ]
+        ],
+        "reviewed_sha256": "0d67e47240b333eb5129ee09c5180e25cde4c2fe563e9a54e71592476fd1b648"
       }
     },
     {
@@ -8722,7 +9590,14 @@
       "lines": 675,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            675
+          ]
+        ],
+        "reviewed_sha256": "77bb0c6e7f5dcd3b72230297c2780069e3d2704255cb91eebdc1ee571b0c25db"
       }
     },
     {
@@ -8734,9 +9609,14 @@
       "lines": 656,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            656
+          ]
+        ],
+        "reviewed_sha256": "f0e98de5b4cf1b4f6f62d371b97cb170d4b51dbd40ba416a48767f07f0d39509"
       }
     },
     {
@@ -8748,9 +9628,14 @@
       "lines": 148,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            148
+          ]
+        ],
+        "reviewed_sha256": "d7689c42ed4233bdd08d9baab3df5c2aaba543382174405d679b6c2b1237fca6"
       }
     },
     {
@@ -8762,9 +9647,14 @@
       "lines": 60,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            60
+          ]
+        ],
+        "reviewed_sha256": "a27f9da954181e6a182e9df7827d15b11cf364b77607661f6934e3ad70726329"
       }
     },
     {
@@ -8776,9 +9666,14 @@
       "lines": 304,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            304
+          ]
+        ],
+        "reviewed_sha256": "0505932ba41343f00438dea1ce1610716b75048da36dbe4bf8f767d8013a4f56"
       }
     },
     {
@@ -8790,9 +9685,14 @@
       "lines": 157,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            157
+          ]
+        ],
+        "reviewed_sha256": "815646f984f1932dad859acfb5945ed226c2c27d63267a1bda930b615497e480"
       }
     },
     {
@@ -8804,9 +9704,14 @@
       "lines": 212,
       "kind": "owned-text",
       "review": {
-        "method": "entire file read",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            227
+          ]
+        ],
+        "reviewed_sha256": "0f1ee32d639669ae793b6dd7f8f5a4f75556843afa8c1c2b828d92e9e110236e"
       }
     },
     {
@@ -8818,7 +9723,14 @@
       "lines": 422,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            422
+          ]
+        ],
+        "reviewed_sha256": "e95e15a47e68ab205c0fe4254a10d1ab830102358e86a0be5effe677ec53a51a"
       }
     },
     {
@@ -8830,9 +9742,14 @@
       "lines": 884,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            884
+          ]
+        ],
+        "reviewed_sha256": "f4b08bb6ff01a827a4868b72893fc1be3ff01b7e3bbede4f99b1b137b3428b1c"
       }
     },
     {
@@ -8844,7 +9761,14 @@
       "lines": 142,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            142
+          ]
+        ],
+        "reviewed_sha256": "f634f4b48d4f493a3790bd6288f72b8197bfdc54355dcf6e50cd8acbc7211ccb"
       }
     },
     {
@@ -8856,9 +9780,14 @@
       "lines": 31,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            31
+          ]
+        ],
+        "reviewed_sha256": "458a80bc6851927e22d3684684c4bec7dcecf1c4a05d9d394ad17b32b89b88dc"
       }
     },
     {
@@ -8870,7 +9799,14 @@
       "lines": 132,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            132
+          ]
+        ],
+        "reviewed_sha256": "0179e09c39e5ebcdcb0e15877f595154077f302fade8d20a18c10ca46481f3d5"
       }
     },
     {
@@ -8882,7 +9818,14 @@
       "lines": 267,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            267
+          ]
+        ],
+        "reviewed_sha256": "c5d7f520972e0670b530c16453e59b25de265e6459b8baec261d196d393644d4"
       }
     },
     {
@@ -8894,7 +9837,14 @@
       "lines": 262,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            262
+          ]
+        ],
+        "reviewed_sha256": "bcd7534a0dbd913d7f0cdbf3b3a590d502f2a422c18d455d46c0f57529cef9c3"
       }
     },
     {
@@ -8906,9 +9856,14 @@
       "lines": 48,
       "kind": "owned-text",
       "review": {
-        "method": "test inventory and targeted relevant sections inspected; selected tests executed",
-        "reviewed_ranges": null,
-        "findings": []
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            48
+          ]
+        ],
+        "reviewed_sha256": "5df6130a62e2cc2ca45e9640543a424aa19199654f2d65011cb9b3d1fad17fe3"
       }
     },
     {
@@ -8920,7 +9875,14 @@
       "lines": 208,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            208
+          ]
+        ],
+        "reviewed_sha256": "b1874d06fc8b605c7709349b8ad7f86f61d947bde4bab75d9dcbcbd574045346"
       }
     },
     {
@@ -8932,7 +9894,14 @@
       "lines": 269,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            269
+          ]
+        ],
+        "reviewed_sha256": "1585446dd2bd4ea007cd666619f567b5f463873ca7090c1fee047bf20d715e46"
       }
     },
     {
@@ -8944,7 +9913,14 @@
       "lines": 129,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            129
+          ]
+        ],
+        "reviewed_sha256": "c2d9e42c548e8e190d119c2c1845da07ff5b772b7bd3d87786fa23f286d2a3e6"
       }
     },
     {
@@ -8956,7 +9932,14 @@
       "lines": 65,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            65
+          ]
+        ],
+        "reviewed_sha256": "df01060a906233337e80b005aacfdb7d9ccc6320ac8390c0668ee7f6ee102f5b"
       }
     },
     {
@@ -8968,7 +9951,14 @@
       "lines": 90,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            90
+          ]
+        ],
+        "reviewed_sha256": "1c97cecaa170f69aae67ca380cd71db0d4040510503a24750585a13e00a95b64"
       }
     },
     {
@@ -8980,7 +9970,14 @@
       "lines": 311,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            311
+          ]
+        ],
+        "reviewed_sha256": "e7d2bcc795a5e84d7c295a733f3c6426aede5fa27b1985e1de640d926793a291"
       }
     },
     {
@@ -8992,7 +9989,14 @@
       "lines": 326,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            326
+          ]
+        ],
+        "reviewed_sha256": "34c62bd1fe740e431f3bb4a23112af7038ccb902f86bbe9e7f87fcfd6c057933"
       }
     },
     {
@@ -9004,7 +10008,14 @@
       "lines": 31,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            31
+          ]
+        ],
+        "reviewed_sha256": "d242480b8385e7375aa961803b4d3d0767021cfac545e266ad2a167b90cf2b34"
       }
     },
     {
@@ -9016,7 +10027,14 @@
       "lines": 175,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            175
+          ]
+        ],
+        "reviewed_sha256": "1f51b4b3be60311d13db1eaea84e73e71c602445f87aaf10f8a9bc65afa68620"
       }
     },
     {
@@ -9028,7 +10046,14 @@
       "lines": 628,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            628
+          ]
+        ],
+        "reviewed_sha256": "2085b075b6a9164efbdc5c7362eb1fbbfd50abd2dceaa7830c010e91edcfd6ce"
       }
     },
     {
@@ -9040,7 +10065,14 @@
       "lines": 100,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            100
+          ]
+        ],
+        "reviewed_sha256": "91f26ee460aa88f433357f9cc02c71eacf6de9ec8cc7a64c3f38a639aff2fef3"
       }
     },
     {
@@ -9052,7 +10084,14 @@
       "lines": 321,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            321
+          ]
+        ],
+        "reviewed_sha256": "b543eec2b101dbb7457364e12b41e99f05b535e6ad7309b318c6dd2c9e6317b3"
       }
     },
     {
@@ -9064,7 +10103,14 @@
       "lines": 90,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            90
+          ]
+        ],
+        "reviewed_sha256": "2f155f7240575e71a888965571f26e8b150e233ff756f9f9d17603e22921d792"
       }
     },
     {
@@ -9076,7 +10122,14 @@
       "lines": 1054,
       "kind": "owned-text",
       "review": {
-        "method": "Full baseline suite execution and Python AST/collection validation; component reviewers inspected relevant assertions. Further review continues; no claim every test line was manually read."
+        "method": "Full UTF-8 source text read in bounded excerpts; manual assertion/failure-contract, negative-control, mock-boundary, fixture-assumption, portability and integration-safety review.",
+        "read_ranges": [
+          [
+            1,
+            1054
+          ]
+        ],
+        "reviewed_sha256": "87d568967f3c6756dbd4af38e4d013b0bdf54fb0347ae2cbb5fd6c60ba2961ad"
       }
     },
     {
@@ -9102,11 +10155,14 @@
       "lines": 134,
       "kind": "owned-text",
       "review": {
-        "method": "full owned-text static read; dependencies/callers/contracts reviewed; targeted current-baseline reproduction (documentation comparison for W05)",
-        "reviewed_ranges": null,
-        "findings": [
-          "W05"
-        ]
+        "method": "Complete manual line-by-line read in bounded terminal excerpts; source/CLI/schema cross-reference of actionable commands and guarantees.",
+        "read_ranges": [
+          [
+            1,
+            134
+          ]
+        ],
+        "reviewed_sha256": "d78e2d8455a255cd4e7d0bce0312de1c65ac875a8f10248f5fe7142662e5704e"
       }
     },
     {
@@ -10257,5 +11313,21 @@
         "findings": []
       }
     }
-  ]
+  ],
+  "supplemental_review": {
+    "tests_and_support": {
+      "source_modules": 108,
+      "tracked_support_and_fixtures": 31,
+      "method": "All baseline tracked test source and support/fixtures fully read across two partitions and MCP/jobs pass; modified/new lines additionally reviewed through implementation and final review."
+    },
+    "current_guides": {
+      "files": 23,
+      "lines": 4461,
+      "local_links_checked": 367,
+      "concrete_run_examples_checked": 14,
+      "samplesheet_classifications_checked": 95
+    },
+    "binary_integrity": "All 8 PNG signatures, chunk CRCs and dimensions validated; no pixel-level scientific/brand claim.",
+    "final_diff": "Independent review of all modified production/test/documentation lines and three new test files; sole important finding F20 fixed with RED/GREEN controls. Coordinator reviewed final narrow F20/F03/F21 changes; final candidate hashes and complete test results are recorded separately."
+  }
 }

@@ -75,7 +75,7 @@ Every pinned release checks itself at launch, before any task runs. Nextflow enf
 - **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo validation compares its runs with that snapshot instead of re-deriving the tools' output.
 
 nfclaw keeps its own schema checks where they act before Nextflow could:
-- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never start Nextflow.
+- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never launch pipeline tasks.
 - A chain validates every stage before the first one launches. Otherwise a later stage's own validation would run only after the stages before it have finished.
 - Unknown parameters are refused. nf-schema only warns about them by default, because institutional profiles may set extra parameters, so a mistyped flag would run with its default.
 - Declared local samplesheet paths must be absolute and identifiers shell-safe. A real run hashes its discovered local dependencies before launching Nextflow from `--outdir`; `--check` inspects paths without establishing every data file's byte readability. Implicit, transitive and remote dependencies retain the limits in [preflight scope](preflight.md).

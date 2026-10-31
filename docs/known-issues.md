@@ -609,7 +609,7 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 
 ### AmpliSeq 3.0.0: taxonomy and rarefaction reproducibility
 
-Scope: the pinned AmpliSeq commit `992e6df34065067185b5e34665b5861b6827981d`; source inspection and
+Scope: historical AmpliSeq 3.0.0 commit `992e6df34065067185b5e34665b5861b6827981d`; source inspection and
 a small C++ tie-breaking check, not a new end-to-end demo replay.
 
 - **DADA2 claim confirmed, with precise wording.** The

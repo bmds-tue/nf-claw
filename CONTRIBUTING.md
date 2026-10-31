@@ -148,8 +148,9 @@ Before opening a PR:
    npx --prefix website playwright install chromium   # once
    npm --prefix website run test:browser
    ```
-   The browser tests include an axe-core accessibility check of every built page: every document
-   under `docs/` becomes a page, so a skipped heading level or a table without headers fails it.
+   The browser tests include an axe-core accessibility check of every built page. Top-level
+   Markdown guides in `docs/` become pages; nested audit/evidence artifacts do not. A skipped
+   heading level or a table without headers in a built page fails this check.
 5. Note a user-visible change (a command, flag, output, documented behaviour or fix) in
    [`CHANGELOG.md`](CHANGELOG.md) under **Unreleased**, with the pull request's number.
 

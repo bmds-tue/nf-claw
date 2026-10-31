@@ -292,7 +292,7 @@ export function getPipelines(): Pipeline[] {
         runCommand: run,
         rawCommand: raw,
         demoCommand: demoCommand(skillBody),
-        operatingGuidance: ["Runtime corrections", "Inputs", "Reference genome", "Reference database", "Secrets",
+        operatingGuidance: ["Runtime corrections", "Inputs", "Mandatory arguments", "Reference genome", "Reference database", "Secrets",
           "Resources", "Nextflow engine", "Demo"]
           .map((title) => ({ title, content: sectionLines(skillBody, title).join("\n").trim() }))
           .filter((section) => section.content),

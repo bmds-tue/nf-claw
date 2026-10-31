@@ -1046,8 +1046,9 @@ def test_chain_records_redact_environment_secrets_and_require_them_for_resume(
     chain.run_chain(spec, repo_root=root, outdir=out)
     for path in (out / 'chain').rglob('*'):
         if path.is_file():
-            text = path.read_text()
-            assert 'private-token-value' not in text and 'private-password-value' not in text
+            content = path.read_bytes()
+            assert (b'private-token-value' not in content
+                    and b'private-password-value' not in content)
     record = out / 'chain/chain.json'
     assert stat.S_IMODE(record.stat().st_mode) == 0o600
     assert stat.S_IMODE(record.parent.stat().st_mode) == 0o700
@@ -1071,3 +1072,34 @@ def test_resume_refuses_failed_regeneration_with_new_unpaired_sample(
     with pytest.raises(NfclawError, match='cannot verify'):
         chain.run_chain(spec, repo_root=root, outdir=out, resume=True)
     assert len(fake_runs.calls) == before
+
+
+@pytest.mark.parametrize("malformed", ['{"broken":', '{"nested":' + '[' * 10000 + '0'
+                                      + ']' * 10000 + '}'], ids=['invalid-json', 'nested-json'])
+@pytest.mark.parametrize("operation", ["status", "quick-status", "resume-state", "resume-spec"])
+def test_malformed_chain_records_preserve_cli_diagnostics_and_data(tmp_path, capsys,
+                                                                 malformed, operation):
+    from runner import cli
+    out = tmp_path / "recorded-chain"
+    record = out / chain.RECORD_DIRNAME
+    record.mkdir(parents=True)
+    (record / "state.json").write_text('{"stages": []}')
+    (record / "chain.json").write_text('{"stages": []}')
+    target = record / ("chain.json" if operation == "resume-spec" else "state.json")
+    target.write_text(malformed)
+    original = {p.name: p.read_bytes() for p in record.iterdir()}
+    if operation.endswith("status"):
+        args = ["chain", "status", str(out), "--json"]
+        if operation == "quick-status":
+            args.append("--quick")
+    else:
+        args = ["chain", "run", "--outdir", str(out), "--resume"]
+    assert cli.main(args) == 1
+    captured = capsys.readouterr()
+    assert "Traceback" not in captured.err
+    assert captured.err
+    if operation.endswith("status"):
+        envelope = json.loads(captured.out)
+        assert envelope["version"] == 1 and envelope["exit_code"] == 1
+        assert envelope["chain"] is None and envelope["error"] and envelope["report"]
+    assert {p.name: p.read_bytes() for p in record.iterdir()} == original

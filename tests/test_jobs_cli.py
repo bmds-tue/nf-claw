@@ -299,3 +299,30 @@ def test_embedded_nul_path_is_isolated_and_reported_as_json(tmp_path, capsys, fi
         code, result, err = invoke(capsys, command, bad.id)
         assert code == 1 and result["job"] is None and result["error"]
         assert "Traceback" not in err
+
+
+@pytest.mark.parametrize("filename", [jobs.JOB_FILE, jobs.SUPERVISOR_FILE, jobs.STATUS_FILE])
+def test_deeply_nested_durable_json_does_not_break_job_commands(tmp_path, capsys, filename):
+    good = record(tmp_path, label="good")
+    damaged = record(tmp_path, label="damaged")
+    # Exceeds decoder nesting bounds on all supported interpreters without a huge file.
+    (damaged.dir / filename).write_text('{"nested":' + '[' * 10000 + '0' + ']' * 10000 + '}')
+    code, listing, err = invoke(capsys, "list")
+    assert code == 0 and err == ""
+    visible = {row["job_id"]: row["state"] for row in listing["jobs"]}
+    assert visible[good.id] == "succeeded"
+    if filename == jobs.JOB_FILE:
+        assert damaged.id not in visible
+        for command in ("status", "cancel"):
+            code, result, err = invoke(capsys, command, damaged.id)
+            assert code == result["exit_code"] == 1
+            assert result["version"] == 1 and result["job"] is None and result["error"]
+            assert "Traceback" not in err
+    else:
+        expected = "lost" if filename == jobs.SUPERVISOR_FILE else "succeeded"
+        assert visible[damaged.id] == expected
+        code, result, err = invoke(capsys, "status", damaged.id)
+        assert code == (1 if expected == "lost" else 0)
+        assert result["job"]["state"] == expected and err == ""
+        code, result, err = invoke(capsys, "cancel", damaged.id)
+        assert code == 0 and result["cancel_requested"] is False and err == ""

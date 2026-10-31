@@ -213,7 +213,9 @@ class Server:
         return 0
 
     def _send(self, message: dict | list) -> None:
-        data = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        # JSON may contain escaped unpaired surrogates. Keep them escaped on the wire so
+        # every accepted string (including a request id) has a UTF-8-encodable response.
+        data = json.dumps(message, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
         with self._write_lock:
             try:
                 self._out.write(data + b"\n")

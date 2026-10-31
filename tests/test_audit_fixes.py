@@ -72,7 +72,11 @@ def test_setup_nextflow_action_verifies_the_checksum_and_stays_out_of_the_repo()
 
 
 def test_the_launcher_is_not_tracked_in_the_repo():
-    assert not (REPO / "nextflow").exists()
+    # A developer may install the explicitly ignored launcher locally; only tracking it
+    # would let maintenance publication sweep a downloaded executable into the repository.
+    tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "--", "nextflow"],
+                             check=True, capture_output=True, text=True).stdout
+    assert tracked == ""
 
 
 def test_every_workflow_installs_nextflow_through_the_pinned_action():
