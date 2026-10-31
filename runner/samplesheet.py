@@ -268,7 +268,8 @@ def _relationship_issues(number: int, values: dict, schema: InputSchema) -> list
         issues.append(f"row {number}: {_any_of_message(branches)}")
     for groups, complete in ((schema.one_of, schema.one_of_complete),
                               (schema.any_of_required, schema.any_of_required_complete)):
-        if complete and groups and not any(all(values.get(key) for key in group) for group in groups):
+        if (complete and groups
+                and not any(all(values.get(key) for key in group) for group in groups)):
             issues.append(f"row {number}: needs one of these column sets: "
                           + "; ".join(", ".join(group) for group in groups))
     return issues
