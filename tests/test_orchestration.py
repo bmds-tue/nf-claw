@@ -1299,6 +1299,12 @@ def _library_with_dev(tmp_path, name="mini"):
     return root, remote, dev
 
 
+# `--pipeline-version dev` fetches and materializes a real git worktree inside the run's
+# budget. That budget is a hang bound, not a speed limit: on a loaded runner the git work alone
+# took most of 10 seconds and one run timed out.
+DEV_GIT_TIMEOUT = 300
+
+
 @pytest.fixture
 def dev_library(tmp_path):
     """`_library_with_dev`, plus teardown that makes git's read-only pack files removable so
@@ -1319,7 +1325,7 @@ def test_dev_check_targets_the_materialized_commit_and_warns(tmp_path, monkeypat
     res = orchestration.run_pipeline(
         "mini", repo_root=root, input_path=ids, outdir=tmp_path / "out",
         profile="binac2", params_file=None, cli_overrides={}, resume=False,
-        demo=False, check_only=True, write_provenance=False, timeout_seconds=10,
+        demo=False, check_only=True, write_provenance=False, timeout_seconds=DEV_GIT_TIMEOUT,
         pipeline_version="dev", nxf_ver="25.10.4")
     tree = root / "pipelines" / "mini" / ".versions" / f"dev-{dev[:12]}" / "upstream"
     assert res.command.startswith(f"nextflow run {tree.as_posix()} -profile binac2 ")
@@ -1339,7 +1345,7 @@ def test_dev_run_records_the_commit_and_replays_exactly_it(tmp_path, monkeypatch
     orchestration.run_pipeline(
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
         profile="docker", params_file=None, cli_overrides={}, resume=False,
-        demo=True, check_only=False, write_provenance=True, timeout_seconds=10,
+        demo=True, check_only=False, write_provenance=True, timeout_seconds=DEV_GIT_TIMEOUT,
         pipeline_version="dev")
     prov = tmp_path / "out" / "provenance"
     manifest = json.loads((prov / "run_manifest.json").read_text())
@@ -1360,7 +1366,7 @@ def test_resuming_a_dev_run_after_dev_moved_says_so(tmp_path, monkeypatch, dev_l
                         lambda env_extra=None: "stub")
     kw = dict(repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
               params_file=None, cli_overrides={}, demo=True, check_only=False,
-              write_provenance=True, timeout_seconds=10, pipeline_version="dev")
+              write_provenance=True, timeout_seconds=DEV_GIT_TIMEOUT, pipeline_version="dev")
     orchestration.run_pipeline("mini", resume=False, **kw)
     same = orchestration.run_pipeline("mini", resume=True, **kw)
     assert not any("--resume continues" in w for w in same.warnings)    # dev unchanged → silent
