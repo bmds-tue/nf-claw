@@ -477,7 +477,8 @@ def test_replay_verification_can_be_stopped_without_claiming_success(tmp_path, b
     text = guard.read_text()
     marker = 'def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None:\n'
     gate = (f'    if Path({str(completed)!r}).exists():\n'
-            f'        Path({str(pidfile)!r}).write_text(str(os.getpid()))\n'
+            f'        Path({str(pidfile) + ".tmp"!r}).write_text(str(os.getpid()))\n'
+            f'        Path({str(pidfile) + ".tmp"!r}).replace({str(pidfile)!r})\n'
             '        import time\n        time.sleep(30)\n')
     assert marker in text
     guard.write_text(text.replace(marker, marker + gate, 1))

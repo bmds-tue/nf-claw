@@ -293,7 +293,10 @@ def test_timed_out_discovery_git_command_stops_its_helper_children(tmp_path, mon
         pytest.skip("requires POSIX process groups")
     launcher = tmp_path / "git-helper"
     marker = tmp_path / "child.pid"
-    launcher.write_text('#!/bin/sh\nsleep 60 &\necho $! >"$CHILD_PID_FILE"\nwait\n')
+    # Renamed into place once written: the test reads the PID as soon as the file exists.
+    launcher.write_text('#!/bin/sh\nsleep 60 &\n'
+                        'echo $! >"$CHILD_PID_FILE.tmp"\n'
+                        'mv "$CHILD_PID_FILE.tmp" "$CHILD_PID_FILE"\nwait\n')
     launcher.chmod(0o755)
     monkeypatch.setenv("CHILD_PID_FILE", str(marker))
     communicate = subprocess.Popen.communicate
@@ -330,7 +333,10 @@ def test_sigterm_discovery_stops_helpers_and_restores_git_state(tmp_path, monkey
     before = (_git(repo, "status", "--porcelain"), _git(repo, "ls-files", "-s"))
     marker = tmp_path / "child.pid"
     launcher = tmp_path / "network-helper"
-    launcher.write_text('#!/bin/sh\nsleep 60 &\necho $! >"$CHILD_PID_FILE"\nwait\n')
+    # Renamed into place once written: the test reads the PID as soon as the file exists.
+    launcher.write_text('#!/bin/sh\nsleep 60 &\n'
+                        'echo $! >"$CHILD_PID_FILE.tmp"\n'
+                        'mv "$CHILD_PID_FILE.tmp" "$CHILD_PID_FILE"\nwait\n')
     launcher.chmod(0o755)
     script = '''import sys
 from pathlib import Path
