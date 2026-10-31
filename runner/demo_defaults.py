@@ -169,6 +169,14 @@ def fixture_schema(name: str, commit: str | None, source: Path):
                        audit_note='Source-bound paired bundled Bactmap fixture only.')
 
 
+def _csv(header: tuple[str, ...], rows) -> str:
+    stream = io.StringIO()
+    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
+    writer.writeheader()
+    writer.writerows(rows)
+    return stream.getvalue()
+
+
 def samplesheet(name: str, commit: str | None):
     """A named historical fixture, staged like generated input without a package-path dependency.
 
@@ -190,11 +198,7 @@ def samplesheet(name: str, commit: str | None):
                   'input1': _HGT_BASE + f'fastq/{sample}_1.fastq.gz',
                   'input2': _HGT_BASE + f'fastq/{sample}_2.fastq.gz'}
                  for sample in ('testsample01', 'testsample02', 'testsample03'))
-    stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
-    writer.writeheader()
-    writer.writerows(rows)
-    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+    return Generated(text=_csv(header, rows), suffix='.csv', header=header, rows=rows, files=(),
                      id_column='sample', summary='Prepared the immutable historical HGTseq demo '
                      'samplesheet: 3 named samples, 3 paired rows.', notes=(),
                      record={'version': 1, 'kind': 'bundled_demo_fixture', 'pipeline': name,
@@ -211,11 +215,7 @@ def _bactmap_sheet(name: str, commit: str):
                   'fastq_1': _BACTMAP_BASE + f'illumina/{sample}_1.fastq.gz',
                   'fastq_2': _BACTMAP_BASE + f'illumina/{sample}_2.fastq.gz'}
                  for sample in ('ERR2172265', 'ERR2172266', 'ERR2172267'))
-    stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
-    writer.writeheader()
-    writer.writerows(rows)
-    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+    return Generated(text=_csv(header, rows), suffix='.csv', header=header, rows=rows, files=(),
                      id_column='sample', summary='Prepared the immutable Bactmap demo '
                      'samplesheet: 3 named paired samples with the matched NCTC13799 reference.',
                      notes=(), record={
@@ -241,11 +241,7 @@ def _fastqrepair_sheet(name: str, commit: str):
         {'sample': 'test_30reads_2', 'fastq_1': base + 'test_30reads_R2.fastq.gz', 'fastq_2': ''},
         {'sample': 'paired_control', 'fastq_1': _HGT_BASE + 'fastq/testsample01_1.fastq.gz',
          'fastq_2': _HGT_BASE + 'fastq/testsample01_2.fastq.gz'})
-    stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
-    writer.writeheader()
-    writer.writerows(rows)
-    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+    return Generated(text=_csv(header, rows), suffix='.csv', header=header, rows=rows, files=(),
                      id_column='sample', summary='Prepared the immutable FastQRepair demo '
                      'samplesheet: 3 original damage cases plus a genuine paired control.',
                      notes=(), record={
@@ -301,11 +297,7 @@ def _pinned_sheet(name: str, commit: str):
     from runner.sheetgen import Generated
 
     data, header, rows, what = _PINNED_SHEETS[(name, commit)]
-    stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=header, lineterminator='\n')
-    writer.writeheader()
-    writer.writerows(rows)
-    return Generated(text=stream.getvalue(), suffix='.csv', header=header, rows=rows, files=(),
+    return Generated(text=_csv(header, rows), suffix='.csv', header=header, rows=rows, files=(),
                      id_column=header[0], summary=f'Prepared the immutable {name} demo '
                      f'samplesheet: {what} from test-datasets commit {data[:12]}.',
                      notes=(), record={'version': 1, 'kind': 'bundled_demo_fixture',
