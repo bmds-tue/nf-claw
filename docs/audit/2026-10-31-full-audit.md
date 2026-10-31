@@ -96,7 +96,10 @@ Real executions on the server with this change:
 
 ## Round 2 (after #246)
 
-Audited: `45df56a` (`main` after #246). The first round left three things open: `run --check` did
+Audited: `45df56a` (`main` after #246); #247 (the follow-through audit, F01–F23) landed meanwhile
+and was merged in. None of its findings overlaps these; its three textual conflicts with this
+round (an import list, the MCP test session, one sentence of the architecture guide) keep both
+changes. The first round left three things open: `run --check` did
 not parse configuration, nothing reported which pins the newest Nextflow refuses, and parts of the
 tree had been examined only through the static gates. This round read the rest line by line — the
 samplesheet generator, handoffs, the skill writer, the replay guard and environment record,
