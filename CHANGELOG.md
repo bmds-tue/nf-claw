@@ -49,7 +49,7 @@ each change, are in [`docs/audit/`](docs/audit/).
   the maintenance gate are never cancelled (#234).
 - The smoke workflow checks each pin's demo on the engine its `skill.md` advises, which now also
   has that engine parse the configuration, and reports beside it — without failing — which pins
-  the launcher's default (newest) Nextflow refuses when no `--nxf-ver` is given.
+  the launcher's default (newest) Nextflow refuses when no `--nxf-ver` is given (#248).
 
 ### Fixed
 
@@ -66,16 +66,16 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `nfclaw run --check` (and MCP `run_pipeline(check=true)`) asks the run's engine to parse the
   release's configuration, as `nfclaw chain run --check` already did for each stage: a pin the
   engine rejects is refused with its remedy before anything launches, instead of passing the check
-  and failing at launch; its `preflight` lines report `profile_config` as checked.
+  and failing at launch; its `preflight` lines report `profile_config` as checked (#248).
 - Samplesheet `integer` and `number` cells written with digit separators (`1_000`) are refused
   before launch: the check accepted them, and nf-schema's Groovy casts then rejected the sheet at
-  launch.
+  launch (#248).
 - `nfclaw chain status` reports a chain still running on another host as unknown here, naming that
-  host, as `nfclaw status` does for a run, instead of `running` with exit status 1.
+  host, as `nfclaw status` does for a run, instead of `running` with exit status 1 (#248).
 - A run closes the container-events pipe it follows, a replay its console pipe, and `nfclaw assess`
-  its record database; Python reported each as an unclosed resource.
+  its record database; Python reported each as an unclosed resource (#248).
 - The website renders a link in a parameter description (upstream schema text) only to a relative,
-  web or mail target; any other scheme is shown as its label.
+  web or mail target; any other scheme is shown as its label (#248).
 - `--limit-memory` and `--limit-time` (and a chain's `limits`) accept only spellings Nextflow parses.
   `1.5.TB`, `100.B`, `15.gb`, `5.secs`, `5.mins` or `1.H` passed the check and the run then died at
   its first task (`Caused by: multiple points`), in a chain after every earlier stage had run (#246).
