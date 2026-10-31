@@ -35,8 +35,9 @@ and a provenance bundle after. Workflow:
 2. show_pipeline(pipeline): its skill.md is authoritative for inputs, required parameters and the \
 reference genome. For any other parameter use show_pipeline(pipeline, document="reference", \
 grep=...). Never invent a parameter or value.
-3. run_pipeline(..., check=true) checks supported parameters, declared local input paths and the \
-environment, then prints the command without running the analysis.
+3. run_pipeline(..., check=true) checks supported parameters, declared local input paths, the \
+environment and that the run's Nextflow parses the pipeline's configuration, then prints the \
+command without running the analysis.
 4. run_pipeline(...) starts a detached job and returns its job_id. It keeps running after this \
 session ends; nothing needs to stay connected.
 5. get_job(job_id, wait_seconds=N) follows it: running (phase preparing or launched), then \

@@ -869,6 +869,72 @@ def test_an_explicit_config_still_overrides_the_generated_ceiling(tmp_path, monk
     assert res.command.index(generated) < res.command.index(str(mine))
 
 
+def test_check_asks_the_engine_to_resolve_the_configuration_it_prints(tmp_path, monkeypatch):
+    # `--check` probes what the printed command loads — its source, its profile and every `-c` it
+    # names, the generated ceiling first — under the engine environment the run would get, and only
+    # then reports the profile configuration as checked.
+    root = _make_pipeline(tmp_path, "mini")
+    mine = tmp_path / "mine.config"
+    mine.write_text("process { cpus = 1 }\n")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.engine_version, "effective", lambda *a: "25.10.4")
+    monkeypatch.setattr(orchestration.config_probe.shutil, "which", lambda name: "/bin/nextflow")
+    seen = []
+    monkeypatch.setattr(orchestration.config_probe, "capture", lambda cmd, **kw: seen.append(
+        (cmd, kw["env"])) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    res = orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+        profile="docker", params_file=None, cli_overrides={}, resume=False,
+        demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
+        configs=[str(mine)], limits=resources.parse(4, None, None),
+        nxf_env={"NXF_OFFLINE": "true"}, probe_config=True)
+    [(cmd, env)] = seen
+    generated = re.search(r"-c (\S*resource_limits\.config)", res.command).group(1)
+    assert cmd == ["nextflow", "-c", generated, "-c", str(mine), "config",
+                   str(root / "pipelines/mini/upstream"), "-profile", "test,docker"]
+    assert env["NXF_OFFLINE"] == "true"
+    checks = {row['id']: row['status'] for row in res.validation_scope['checks']}
+    assert checks['profile_config'] == 'checked'
+
+
+def test_check_refuses_a_configuration_the_engine_cannot_parse(tmp_path, monkeypatch):
+    # The release Nextflow 26.04's strict parser rejects is refused by `--check`, with the legacy
+    # parser named as the remedy — not first found at launch. Nothing staged for it is left behind.
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.config_probe.shutil, "which", lambda name: "/bin/nextflow")
+    monkeypatch.setattr(orchestration.config_probe, "capture",
+                        lambda cmd, **kw: subprocess.CompletedProcess(
+                            cmd, 1, "ERROR ~ Config parsing failed\n", ""))
+    staged = []
+    real_mkdtemp = orchestration.tempfile.mkdtemp
+    monkeypatch.setattr(orchestration.tempfile, "mkdtemp",
+                        lambda *a, **kw: staged.append(real_mkdtemp(*a, **kw)) or staged[-1])
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+            profile="docker", params_file=None, cli_overrides={}, resume=False,
+            demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
+            probe_config=True)
+    assert exc.value.code is ErrorCode.ENVIRONMENT
+    [issue] = exc.value.details["issues"]
+    assert "cannot parse its configuration" in issue
+    assert "--nxf-env NXF_SYNTAX_PARSER=v1" in issue and "Config parsing failed" in issue
+    [check_staging] = [d for d in staged if Path(d).name.startswith("nfclaw-check-")]
+    assert not Path(check_staging).exists()
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_real_run_takes_no_configuration_probe(tmp_path):
+    # A launch is its own probe: the flag exists for `--check` alone.
+    with pytest.raises(ValueError, match="probe_config"):
+        orchestration.run_pipeline(
+            "mini", repo_root=tmp_path, input_path=None, outdir=tmp_path / "out",
+            profile="docker", params_file=None, cli_overrides={}, resume=False,
+            demo=False, check_only=False, write_provenance=False, timeout_seconds=None,
+            probe_config=True)
+
+
 def test_report_suffix_is_pinned_so_the_replay_reproduces_the_run(tmp_path, monkeypatch):
     # Without this the pipeline re-evaluates `now()` on every launch and the replay writes a second,
     # differently-named set of reports rather than reproducing the original run's outputs.

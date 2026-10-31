@@ -218,6 +218,13 @@ def test_run_threads_nxf_ver_and_env(tmp_path, captured):
                                    "NXF_OFFLINE": "true"}
 
 
+def test_only_a_check_probes_the_configuration(tmp_path, captured):
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--check"]) == 0
+    assert captured["probe_config"] is True and captured["check_only"] is True
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 0
+    assert captured["probe_config"] is False
+
+
 def test_run_prints_the_command_with_the_nxf_env_it_runs_under(tmp_path, monkeypatch, capsys):
     # `--check` promises the exact command that would run; under `--nxf-ver 25.10.4` that command
     # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell
