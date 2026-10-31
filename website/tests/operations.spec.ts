@@ -205,7 +205,7 @@ test('parameter search recovers from an initial network failure', async ({ page 
 for (const width of [1280, 390]) {
   test(`skills arrows follow the focused row at width ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto('/#skills');
+    await gotoHydrated(page, '/#skills');
     const input = page.locator('#skills input').first();
     const index = page.waitForResponse(response => response.url().endsWith('/search/params.json'));
     await input.focus();

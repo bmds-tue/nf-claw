@@ -96,6 +96,25 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `CITATION.cff` no longer gives 1.0.0 a release date (2026-06-15) that no release had.
 - Robustness of `nfclaw status` with unreadable logs and damaged records, the job supervisor and
   the container watcher (#218).
+- A replay runs with the Nextflow settings its run recorded: `NXF_*` variables that the replaying
+  shell sets but the run did not see are removed, and a recorded secret, kept only as
+  `<redacted>`, must be exported again. A bundle with an incomplete pipeline identity or checksum
+  record is refused (#229).
+- `--pipeline-version` no longer deletes a partly materialized checkout under
+  `pipelines/<name>/.versions/` to start again: it may hold local work, so nfclaw refuses and names
+  the directory to move aside (#229).
+- A run refused before launch redacts secret `NXF_*` values from the command and error it prints
+  and logs (#229).
+- A chain spec whose `nxf_env`, `nxf_ver` or `limits` value has the wrong type (a number for a
+  memory value, a list for an object) is refused with an error that names the field (#229).
+- `nfclaw status` finds the latest attempt in a run log from an index the log's writer keeps (in
+  older logs, by searching backward from the end) instead of reading the whole log (#229).
+- The pipeline updater takes the lock runs take to fetch or initialize a pipeline and, when an
+  update fails or is interrupted, restores only the checkout, pin and generated files it
+  changed; the drift check refuses a pin whose source or checkout does not match its record
+  (#229).
+- On the website, arrow keys in the skills list move from the row that has focus, not from the
+  selected one (#229).
 
 ### Since the 1.0.0 draft notes
 
