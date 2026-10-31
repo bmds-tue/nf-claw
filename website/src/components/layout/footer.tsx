@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight, Github } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { Github } from "@/components/ui/github-icon";
 import { Logo } from "@/components/ui/logo";
 import { categorize, colorForCategory, domainCounts } from "@/lib/derive";
 import type { Pipeline } from "@/lib/types";
