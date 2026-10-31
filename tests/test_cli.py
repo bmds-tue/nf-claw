@@ -449,6 +449,7 @@ def test_output_into_a_closed_pipe_ends_quietly():
     assert proc.stdout.readline() == b"line 0\n"
     proc.stdout.close()                                    # the reader goes away, like `head -1`
     stderr = proc.stderr.read().decode()
+    proc.stderr.close()
     assert proc.wait(timeout=60) == cli._EXIT_BROKEN_PIPE
     assert "Traceback" not in stderr and "BrokenPipeError" not in stderr, stderr
 

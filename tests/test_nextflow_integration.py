@@ -674,6 +674,7 @@ workflow {
     finally:
         server.shutdown()
         server.server_close()
+        server.server_close()
         thread.join(timeout=5)
     assert result.returncode == 0, result.stdout + result.stderr
     outputs = list((tmp_path / "work").rglob("observed.tsv"))

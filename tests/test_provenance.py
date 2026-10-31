@@ -358,6 +358,7 @@ def test_the_run_logs_seek_index_is_as_readable_as_the_log(tmp_path):
     cursor = replay_guard.log_cursor_path(log.path)
     assert stat.S_IMODE(cursor.stat().st_mode) == stat.S_IMODE(log.path.stat().st_mode) == 0o644
     assert not [p.name for p in log.path.parent.iterdir() if p.name.startswith(".")]
+    log.finish()
 
 
 def test_replay_logs_itself_into_the_target_bundle(tmp_path):

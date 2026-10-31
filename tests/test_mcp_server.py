@@ -71,12 +71,16 @@ class Session:
         self._to_server = os.fdopen(w1, "wb")
         self.server = Server(self.handler, name="test", version="9.9", instructions="read me",
                              title="Test", **server_options)
-        self.thread = threading.Thread(target=self.server.run,
-                                       args=(os.fdopen(r1, "rb"), os.fdopen(w2, "wb")), daemon=True)
+        # The server's ends belong to the caller, as serve_stdio's do: close() closes them.
+        self._server_streams = (os.fdopen(r1, "rb"), os.fdopen(w2, "wb"))
+        self.thread = threading.Thread(target=self.server.run, args=self._server_streams,
+                                       daemon=True)
         self.thread.start()
         self.messages: queue.Queue = queue.Queue()
-        reader = os.fdopen(r2, "rb")
-        threading.Thread(target=self._read, args=(reader,), daemon=True).start()
+        self._reader = os.fdopen(r2, "rb")
+        self._reader_thread = threading.Thread(target=self._read, args=(self._reader,),
+                                               daemon=True)
+        self._reader_thread.start()
 
     def _read(self, reader):
         for line in iter(reader.readline, b""):
@@ -109,6 +113,13 @@ class Session:
     def close(self):
         self._to_server.close()
         self.thread.join(10)
+        if self.thread.is_alive():
+            return                       # a server still answering keeps its streams
+        for stream in self._server_streams:
+            stream.close()               # closing its output ends the reader below
+        self._reader_thread.join(10)
+        if not self._reader_thread.is_alive():
+            self._reader.close()
 
 
 @pytest.fixture
