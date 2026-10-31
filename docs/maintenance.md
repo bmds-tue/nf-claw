@@ -1,6 +1,7 @@
 # Automatic-publication evidence policy
 
-Daily release updates and weekly discovery prepare one candidate commit before final validation.
+Daily release updates and weekly discovery prepare one candidate commit before final validation,
+then hand it to the same gate and publisher (`maintenance-gate.yml`).
 Only generated regular context/catalog files, canonical source registrations and pinned gitlinks
 may change. Unsupported deletions, type changes, executable documents, symlinks and redirected
 repositories are refused. A private index preserves unrelated staging and build output.
@@ -19,7 +20,7 @@ The candidate Git bundle and metadata are uploaded as one immutable artifact. Co
 its producing artifact ID and exact base/candidate SHAs, including on failed-job reruns. Every
 consumer verifies the candidate's single parent, changed paths, modes and gitlink inventory before
 checking out source or initializing submodules. Artifact IDs refer to the current workflow run;
-see GitHub's [artifact-ID download contract](https://github.com/actions/download-artifact/tree/018cc2cf5baa6db3ef3c5f8a56943fffe632ef53#download-artifacts-by-id).
+see GitHub's [artifact-ID download contract](https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333#download-artifacts-by-id).
 
 ## Publication gating criteria
 

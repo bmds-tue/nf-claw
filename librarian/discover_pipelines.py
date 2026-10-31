@@ -22,7 +22,7 @@ from librarian import write_skill
 from librarian.add_pipeline import read_sources, valid_pipeline_name, validate_pipeline_name
 from runner import execution, submodule
 from runner.probes import capture
-from runner.provenance import _atomic_bytes
+from runner.atomic import write_bytes
 
 NFCORE_PIPELINES_JSON = "https://nf-co.re/pipelines.json"
 _SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
@@ -38,9 +38,9 @@ def latest_stable(releases: list[dict]) -> str | None:
     return max(parsed)[1] if parsed else None
 
 
-def fetch_catalog(url: str = NFCORE_PIPELINES_JSON) -> list[dict]:
+def fetch_catalog() -> list[dict]:
     """Fetch the public nf-core pipeline index (no token required)."""
-    req = urllib.request.Request(url, headers={"User-Agent": "nf-claw-discover"})
+    req = urllib.request.Request(NFCORE_PIPELINES_JSON, headers={"User-Agent": "nf-claw-discover"})
     with urllib.request.urlopen(req, timeout=60) as resp:  # a fixed https URL
         return json.load(resp).get("remote_workflows", [])
 
@@ -151,7 +151,7 @@ def _restore_gitmodules(repo_root: Path, snapshot: _GitmodulesSnapshot) -> None:
     if snapshot.content is None:
         path.unlink(missing_ok=True)
     else:
-        _atomic_bytes(path, snapshot.content, mode=snapshot.permissions)
+        write_bytes(path, snapshot.content, mode=snapshot.permissions)
     # Restore only this index entry, preserving other staged files and the distinction
     # between the original staged metadata and its possibly different working bytes.
     if snapshot.indexed is None:

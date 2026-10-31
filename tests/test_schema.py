@@ -23,8 +23,8 @@ def test_input_schema_columns():
     insch = schema.load_input_schema(FIX / "mini")
     cols = {c.name: c for c in insch.columns}
     assert {"sample", "fastq_1", "fastq_2"} <= set(cols)
-    assert cols["fastq_1"].fmt == "file-path" and cols["fastq_1"].is_path is True
-    assert cols["sample"].fmt is None and cols["sample"].is_path is False
+    assert cols["fastq_1"].fmt == "file-path" and cols["fastq_1"].path_format() == "file-path"
+    assert cols["sample"].fmt is None and cols["sample"].path_format() is None
     assert cols["sample"].required is True
 
 

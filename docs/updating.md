@@ -85,7 +85,8 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
      considered again by the next run. An incomplete result or unrecognized verdict fails the
      batch instead of merging it.
 5. **Batch publication:** Surviving additions are frozen as one candidate and pass the same
-   full matrix, site, integration, drift and actual-task gates as daily updates. A failure in
+   full matrix, site, integration, drift and actual-task gates as daily updates: both workflows
+   call `maintenance-gate.yml` for them and for publication. A failure in
    real execution blocks the frozen candidate rather than silently dropping that pipeline.
    The isolated publisher verifies raw evidence and updates main only from its validated parent.
 

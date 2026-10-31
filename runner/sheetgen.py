@@ -40,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import inputs, samplesheet
+from runner import atomic, inputs, samplesheet
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.replay_guard import _glob_patterns
@@ -1168,9 +1168,7 @@ def write(generated: Generated, directory: Path) -> Path:
     """Stage the sheet (beside the run's params file); the bytes are those that were validated."""
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / generated.filename
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(generated.text, encoding="utf-8")
-    os.replace(tmp, path)
+    atomic.write_text(path, generated.text)
     return path
 
 

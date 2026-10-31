@@ -91,7 +91,7 @@ export function docHeadings(md: string): DocHeading[] {
   return out;
 }
 
-export function uniqueId(base: string, seen: Map<string, number>): string {
+function uniqueId(base: string, seen: Map<string, number>): string {
   const n = seen.get(base) ?? 0;
   seen.set(base, n + 1);
   return n === 0 ? base : `${base}-${n}`;

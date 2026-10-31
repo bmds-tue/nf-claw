@@ -3,11 +3,9 @@ export {
   getPipelines,
   getPipeline,
   pipelineNames,
-  allParameters,
 } from "./pipelines";
 export {
   getCommits,
-  getTags,
   getRemote,
   githubRepoPath,
   getDefaultBranch,
@@ -18,4 +16,4 @@ export {
 } from "./repo";
 export { getWorkflows } from "./workflows";
 export { getLiveRuns } from "./github";
-export { getQuickstart, type Quickstart } from "./quickstart";
+export { getQuickstart } from "./quickstart";

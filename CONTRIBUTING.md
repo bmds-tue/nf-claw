@@ -156,7 +156,10 @@ Before opening a PR:
 When submitting the PR on GitHub:
 - Provide a clear description of the problem solved and the implementation approach.
 - Reference any relevant GitHub issues (`Fixes #...`).
-- Verify that automated CI checks (`tests/pytest`, `drift-check/drift`) pass.
+- Verify that every CI check on the pull request passes: `tests` (`pytest` on Linux and macOS,
+  `website`, `nextflow-integration`), `drift-check` and CodeQL on every pull request, and the
+  native validations a change to `runner/` or to their own files triggers (`demo-validation`,
+  `fastqrepair-validation`; `pipeline-execution` runs on a change to its workflow).
 
 ---
 

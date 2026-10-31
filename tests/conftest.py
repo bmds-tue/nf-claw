@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from runner import institutional, outputs, provenance, runlog
+from result_checksums import output_checksums
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +98,7 @@ def finished_run():
             f"{digest}  {path}\n" for path, digest in input_hashes.items()))
         (prov / "inputs.inventory.json").write_text(json.dumps(input_nodes))
         (prov / "outputs.sha256").write_text("".join(
-            f"{d}  {r}\n" for r, d in provenance.output_checksums(outdir).items()))
+            f"{d}  {r}\n" for r, d in output_checksums(outdir).items()))
         (prov / "outputs.inventory.json").write_text(json.dumps(
             {"version": 1, "entries": outputs.snapshot(outdir)[1]}))
         (prov / "run_manifest.json").write_text(json.dumps(

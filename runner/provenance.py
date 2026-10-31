@@ -8,17 +8,15 @@ import platform
 import re
 import shlex
 import subprocess
-import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from runner import budget, environment_record, outputs, sheetgen
+from runner import atomic, budget, environment_record, outputs, sheetgen
 from runner import exact_json as json
 from runner.engine_version import version_text
 from runner.errors import ErrorCode, NfclawError
 from runner.inputs import is_remote_url
-from runner.outputs import result_files
 from runner.probes import capture
 # Re-exported (`X as X`): callers read the bundle's checksum helpers from this module.
 from runner.replay_guard import (PIPELINE_ARCHIVE, check_corrected_source, write_pipeline_archive,
@@ -128,26 +126,6 @@ def samplesheet_dependencies(path: Path, schema: InputSchema) -> list[Path]:
                   | set(samplesheet_file_paths(path, schema)))
 
 
-def _atomic_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:
-    """Replace one bundle file without exposing a truncated write."""
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.",
-                                         delete=False) as fh:
-            temporary = Path(fh.name)
-            fh.write(content)
-        if mode is not None:
-            temporary.chmod(mode)
-        temporary.replace(path)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-
-
-def _atomic_text(path: Path, content: str, *, mode: int | None = None) -> None:
-    _atomic_bytes(path, content.encode("utf-8"), mode=mode)
-
-
 def mark_timed_out(outdir: Path, timeout_seconds: float) -> None:
     """Downgrade completed success metadata without repeating the scientific inventories."""
     path = outdir / "provenance" / "run_manifest.json"
@@ -157,7 +135,7 @@ def mark_timed_out(outdir: Path, timeout_seconds: float) -> None:
     if isinstance(manifest, dict) and manifest.get("outcome") == "success":
         manifest.update(outcome="failed", timeout_seconds=timeout_seconds)
         try:
-            _atomic_text(path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+            atomic.write_text(path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         except OSError:
             # If failed metadata cannot be published, absence refuses verification too; an old
             # success must not survive a full disk during this small final correction.
@@ -255,7 +233,7 @@ def _bundle_configs(prov: Path, command_str: str,
             continue
         directory.mkdir(exist_ok=True)
         name = f"configs/{len(bundled) + 1:02d}-{source.name}"
-        _atomic_bytes(prov / name, data)
+        atomic.write_bytes(prov / name, data)
         text = data.decode("utf-8", errors="replace")
         bundled[key] = {"file": name, "sha256": digest,
                         "replay": not re.search(r"\bincludeConfig\b", text)}
@@ -322,21 +300,6 @@ def environment_summary(environment: dict) -> dict:
         "nextflow_plugins": list(environment.get("nextflow_plugins") or []),
         "nextflow_runtime": environment.get("nextflow_runtime"),
         "issues": list(environment.get("issues") or []),
-    }
-
-
-def output_checksums(outdir: Path) -> dict[str, str]:
-    """The run's result files as {path relative to outdir: sha256}, in sorted order.
-
-    The file checksums of `outputs.snapshot`, which records a bundle's `outputs.sha256` and which
-    `nfclaw verify` measures a replay with. Nextflow's own state (`.nextflow*`) and nfclaw's
-    provenance bundle are excluded — they describe the run, they are not its results, and a replay
-    would never reproduce them byte-for-byte anyway.
-    """
-    return {
-        rel.as_posix(): sha256_file(p)
-        for p in sorted(result_files(outdir))
-        for rel in (p.relative_to(outdir),)
     }
 
 
@@ -564,8 +527,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         # Retain the launch identity even when the live source/minimum resume record changed.
         # A failed bundle must still describe the bytes launched, without overwriting that evidence.
         correction_file = prov / 'source-corrections.json'
-        _atomic_text(correction_file,
-                     json.dumps(source_corrections, sort_keys=True, indent=2) + '\n')
+        atomic.write_text(correction_file,
+                          json.dumps(source_corrections, sort_keys=True, indent=2) + '\n')
         manifest['source_corrections'] = {'file': correction_file.name,
                                          'sha256': sha256_file(correction_file)}
     if pipeline_checksums is not None or actual_source.is_dir():
@@ -576,7 +539,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
             if execution_git_head is _DEFAULT_EXECUTION_HEAD else execution_git_head)
         pipeline_hashes = (hash_pipeline(actual_source) if pipeline_checksums is None
                            else pipeline_checksums)
-        _atomic_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
+        atomic.write_text(prov / "pipeline.sha256", checksum_text(pipeline_hashes))
         # The source itself, not only its checksums: a replay runs this archive, so it reproduces
         # the run after the checkout has moved to another release, been edited or been deleted.
         archive = prov / PIPELINE_ARCHIVE
@@ -617,13 +580,13 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
                 inventory = {}
                 if paths:
                     manifest.setdefault("unverified_dependency_inventories", []).append(kind)
-        _atomic_text(prov / f"{kind}.sha256", checksum_text(hashes))
-        _atomic_text(prov / f"{kind}.sources.json", json.dumps(
+        atomic.write_text(prov / f"{kind}.sha256", checksum_text(hashes))
+        atomic.write_text(prov / f"{kind}.sources.json", json.dumps(
             sorted({str(p.expanduser().absolute()) for p in paths}), indent=2) + "\n")
-        _atomic_text(prov / f"{kind}.inventory.json",
-                     json.dumps(inventory, indent=2, sort_keys=True) + "\n")
+        atomic.write_text(prov / f"{kind}.inventory.json",
+                          json.dumps(inventory, indent=2, sort_keys=True) + "\n")
     for name, script in _BUNDLED_SCRIPTS.items():
-        _atomic_bytes(prov / name, script)
+        atomic.write_bytes(prov / name, script)
     bundled_configs = _bundle_configs(prov, command_str, config_checksums)
     if bundled_configs:
         manifest["bundled_configs"] = bundled_configs
@@ -633,22 +596,22 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     environment = record_environment(
         outdir, env_extra=env_extra, history_offset=history_offset, profile=_profile(command_str),
         nextflow_log=nextflow_log, observed=observed_images)
-    _atomic_text(prov / environment_record.RECORD_NAME,
-                 json.dumps(environment, indent=2, sort_keys=True) + "\n")
+    atomic.write_text(prov / environment_record.RECORD_NAME,
+                      json.dumps(environment, indent=2, sort_keys=True) + "\n")
     manifest["environment_record"] = {"file": environment_record.RECORD_NAME,
                                       "sha256": sha256_file(prov / environment_record.RECORD_NAME)}
     manifest["execution_environment"] = environment_summary(environment)
     pins = prov / environment_record.PINS_NAME
     if pin_text := environment_record.pin_config(environment):
-        _atomic_text(pins, pin_text)
+        atomic.write_text(pins, pin_text)
         manifest["container_pins"] = {"file": environment_record.PINS_NAME,
                                       "sha256": sha256_file(pins)}
     else:
         pins.unlink(missing_ok=True)
 
     output_hashes, output_inventory, _ = outputs.snapshot(outdir, sha256_file)
-    _atomic_text(prov / "outputs.sha256", checksum_text(output_hashes))
-    _atomic_text(prov / "outputs.inventory.json", json.dumps(
+    atomic.write_text(prov / "outputs.sha256", checksum_text(output_hashes))
+    atomic.write_text(prov / "outputs.inventory.json", json.dumps(
         {"version": 1, "entries": output_inventory}, indent=2, sort_keys=True) + "\n")
 
     # Copy the run's collated software-versions YAML into the bundle. nf-core publishes it under two
@@ -662,7 +625,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     if pinfo.is_dir():
         for sv in sorted(pinfo.glob("*software*version*.yml")):
             if sv.is_file():
-                _atomic_bytes(prov / sv.name, sv.read_bytes())
+                atomic.write_bytes(prov / sv.name, sv.read_bytes())
 
     # A faithful, self-contained replay:
     #  - reproduce into a FRESH output directory, never the original. An nf-core pipeline publishes
@@ -750,7 +713,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
             '"$_script_dir"/' + shlex.quote(arg[len(bundle_prefix):])
             if arg.startswith(bundle_prefix) else shlex.quote(arg)
             for arg in shlex.split(replay_command))
-    _atomic_text(commands,
+    atomic.write_text(commands,
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         '_script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
@@ -790,7 +753,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
     if deadline_failure is not None:
         manifest.update(outcome="failed",
                         timeout_seconds=deadline_failure.details["timeout_seconds"])
-    _atomic_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    atomic.write_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     if outcome == "success" and deadline_failure is None:
         try:
             budget.check()

@@ -1,0 +1,118 @@
+name: maintenance-gate
+# What both maintenance bots run on the candidate they froze: the full matrix, real tasks and drift
+# on that exact commit, then the isolated publisher. Called by auto-update.yml and
+# discover-pipelines.yml only after their read-only preparation produced a candidate.
+on:
+  workflow_call:
+    inputs:
+      base_sha:
+        required: true
+        type: string
+      candidate_sha:
+        required: true
+        type: string
+      candidate_artifact:
+        required: true
+        type: string
+      pipelines:
+        required: true
+        type: string
+      kind:
+        description: "`update` or `discover`: the candidate's recorded kind, checked before publication"
+        required: true
+        type: string
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/tests.yml
+    with:
+      base_sha: ${{ inputs.base_sha }}
+      candidate_sha: ${{ inputs.candidate_sha }}
+      candidate_artifact: ${{ inputs.candidate_artifact }}
+
+  native:
+    if: inputs.pipelines != '[]'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/maintenance-native.yml
+    with:
+      base_sha: ${{ inputs.base_sha }}
+      candidate_sha: ${{ inputs.candidate_sha }}
+      candidate_artifact: ${{ inputs.candidate_artifact }}
+      pipelines: ${{ inputs.pipelines }}
+
+  drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+      - uses: ./.github/actions/restore-maintenance-candidate
+        with:
+          artifact: ${{ inputs.candidate_artifact }}
+          base: ${{ inputs.base_sha }}
+          sha: ${{ inputs.candidate_sha }}
+      - run: git submodule foreach 'git fetch -q --tags origin'
+      - run: pip install -e .
+      - run: python -m librarian.check_drift
+
+  publish:
+    needs: [validate, native, drift]
+    if: >-
+      always() && needs.validate.result == 'success' && needs.drift.result == 'success' &&
+      (needs.native.result == 'success' ||
+       (inputs.pipelines == '[]' && needs.native.result == 'skipped'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      checks: write
+    steps:
+      # Trusted base only: do not check out or execute candidate/upstream code in this job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact }}
+          path: ${{ runner.temp }}/maintenance-candidate
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: maintenance-pytest-${{ inputs.candidate_sha }}-*
+          path: ${{ runner.temp }}/maintenance-matrix
+          merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: inputs.pipelines != '[]'
+        with:
+          pattern: maintenance-native-${{ inputs.candidate_sha }}-*
+          path: ${{ runner.temp }}/maintenance-native
+          merge-multiple: true
+      - name: Publish validated update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ inputs.base_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_DIR: ${{ runner.temp }}/maintenance-candidate
+          MATRIX_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-matrix
+          NATIVE_EVIDENCE_DIR: ${{ runner.temp }}/maintenance-native
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+          DRIFT_RESULT: ${{ needs.drift.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          UPDATE_KIND: ${{ inputs.kind }}
+        run: bash scripts/publish_validated_update.sh
