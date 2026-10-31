@@ -196,7 +196,9 @@ def test_unverifiable_destination_roles_restore_input_checks(
 
 @pytest.mark.parametrize("name,param,commit", [
     ("sarek", "bwa", "6e9b164daa2a54c98f7dda538645d340c561ac24"),
-    ("ampliseq", "ref_taxonomy_storage", "992e6df34065067185b5e34665b5861b6827981d"),
+    # ampliseq 3.1.0: `ref_taxonomy_storage` is still a `directory-path` used as `storeDir`, a
+    # reference cache read and written by the run (re-audited after the 3.0.0 -> 3.1.0 bump).
+    ("ampliseq", "ref_taxonomy_storage", "b9bd579c0480ee23ecf24655f51c0c67777cd6b3"),
 ])
 def test_scientific_cache_remains_inspected_and_snapshotted(
         pinned_source, tmp_path, monkeypatch, name, param, commit):
