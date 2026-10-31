@@ -114,6 +114,21 @@ def test_vcf_mixed_polyploid_phasing_is_preserved(tmp_path):
     assert not assess(b, vcf_spec(tmp_path), a)['passed']
 
 
+@pytest.mark.parametrize('quality,valid', [('30', True), ('.', True), ('nan', False),
+                                          ('inf', False), ('-inf', False)])
+@pytest.mark.parametrize('comparative', [False, True])
+def test_vcf_quality_requires_a_finite_value_or_missing_marker(tmp_path, quality, valid,
+                                                              comparative):
+    body = VCF_HEADER + VARIANT.replace('\t30\t', f'\t{quality}\t')
+    candidate = run_dir(tmp_path, 'candidate', {'variants.vcf': body})
+    original = run_dir(tmp_path, 'original', {'variants.vcf': body}) if comparative else None
+    result = assess(candidate, vcf_spec(tmp_path), original)
+    assert result['passed'] is valid
+    if not valid:
+        assert 'QUAL' in str(result['artifacts'][0]['issues'])
+        assert 'finite' in str(result['artifacts'][0]['issues'])
+
+
 def test_header_ignores_are_explicit_reasoned_and_cannot_hide_scientific_declarations(tmp_path):
     from runner.errors import NfclawError
     a = run_dir(tmp_path, 'a', {'variants.vcf': VCF_HEADER + VARIANT})

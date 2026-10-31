@@ -1920,7 +1920,9 @@ def test_a_non_stub_demo_reports_no_stub_caveat(tmp_path, monkeypatch):
         "mini", repo_root=root, input_path=None, outdir=tmp_path / "out", profile="docker",
         params_file=None, cli_overrides={}, resume=False, demo=True, check_only=False,
         write_provenance=True, timeout_seconds=10, on_warning=shown.append)
-    assert not any("stub" in w for w in shown)
+    # Other diagnostics can legitimately name this test's "non_stub" output path.
+    # Reject an actual stub completion caveat, not an unrelated substring in a filename.
+    assert not any(w.startswith("the pipeline completed but reported: stub run:") for w in shown)
     manifest = json.loads((tmp_path / "out/provenance/run_manifest.json").read_text())
     assert "stub_profiles" not in manifest and "stub_configs" not in manifest
     assert not manifest.get("completion_caveats")

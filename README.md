@@ -203,7 +203,7 @@ nfclaw run rnaseq --nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true --i
 # Discover supported downstream handoffs for a pipeline
 nfclaw chain edges fetchngs
 
-# Preflight validate a multi-stage specification without launching processes
+# Preflight validate a multi-stage specification without launching scientific tasks
 nfclaw chain run spec.json --outdir /abs/chain --check
 
 # Execute a multi-stage chain (stage 1 -> stage 2 -> stage 3)

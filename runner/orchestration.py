@@ -933,8 +933,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 raise
             # Exit status 0 is not proof that every sample and task made it into the results: say
             # what the pipeline itself reported missing (skipped samples, ignored task failures).
-            caveats = stub_caveats + runlog.completion_caveats(run_log.console_tail("out"),
-                                                                run_log.nextflow_log)
+            caveats = list(dict.fromkeys([
+                *stub_caveats,
+                *(caveat for stream in ("out", "err")
+                  for caveat in runlog.completion_caveats(run_log.console_tail(stream),
+                                                        run_log.nextflow_log)),
+            ]))
             for caveat in caveats:
                 message = f"the pipeline completed but reported: {caveat}"
                 warnings.append(message)

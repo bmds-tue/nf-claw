@@ -3,6 +3,7 @@ what the pinned pipeline trees generate."""
 from __future__ import annotations
 
 import argparse
+import configparser
 import re
 import subprocess
 import sys
@@ -22,22 +23,47 @@ def _duplicates(names: list[str]) -> list[str]:
 
 
 def _gitmodule_entries(path: Path) -> tuple[list[tuple[str, str]], list[str]]:
-    """Return pipeline name/url pairs plus malformed-block errors from .gitmodules."""
-    text = path.read_text(encoding="utf-8")
-    entries: list[tuple[str, str]] = []
-    errors: list[str] = []
-    for block in re.split(r"(?=^\[submodule )", text, flags=re.MULTILINE):
-        if not block.startswith("[submodule "):
-            continue
-        path_match = re.search(r"^\s*path\s*=\s*pipelines/([^/]+)/upstream\s*$",
-                               block, flags=re.MULTILINE)
-        url_match = re.search(r"^\s*url\s*=\s*(\S+)\s*$", block, flags=re.MULTILINE)
-        if path_match is None or url_match is None:
-            header = block.splitlines()[0]
-            errors.append(f".gitmodules has malformed pipeline block: {header}")
-            continue
-        entries.append((path_match.group(1), url_match.group(1)))
-    return entries, errors
+    """Reject ambiguous registrations, then let Git decode its own quoting and comments."""
+    config = configparser.ConfigParser(interpolation=None, strict=True)
+    try:
+        config.read_string(path.read_text(encoding="utf-8"))
+        if config.defaults():
+            raise ValueError("submodule defaults are unsupported")
+        names = []
+        for section in config.sections():
+            match = re.fullmatch(r'submodule "pipelines/([^/]+)/upstream"', section)
+            if match is None or set(config[section]) != {"path", "url"}:
+                raise ValueError(f"malformed pipeline block: [{section}]")
+            names.append(match[1])
+        # Strict parsing above rejects duplicate fields/sections, including case variants of
+        # field names. Git supplies the effective values, not a first-match text regex.
+        output = subprocess.run(
+            ["git", "config", "--null", "--no-includes", "--file", str(path), "--list"],
+            check=True, capture_output=True, text=True, timeout=60).stdout
+        values = {}
+        for record in output.split("\0"):
+            if not record:
+                continue
+            key, separator, value = record.partition("\n")
+            if not separator or key in values:
+                raise ValueError("duplicate or missing registration value")
+            values[key] = value
+        expected = {f"submodule.pipelines/{name}/upstream.{field}"
+                    for name in names for field in ("path", "url")}
+        if set(values) != expected:
+            raise ValueError("unexpected submodule configuration")
+        entries = []
+        for name in names:
+            prefix = f"submodule.pipelines/{name}/upstream."
+            if values[prefix + "path"] != f"pipelines/{name}/upstream":
+                raise ValueError(f"submodule {name!r} has another path")
+            url = values[prefix + "url"]
+            if not url or any(char.isspace() for char in url):
+                raise ValueError(f"submodule {name!r} has an invalid URL")
+            entries.append((name, url))
+        return entries, []
+    except (OSError, ValueError, configparser.Error, subprocess.SubprocessError) as exc:
+        return [], [f".gitmodules is invalid: {exc}"]
 
 
 def _structure_drift(repo: Path, pipeline_names: list[str]) -> list[str]:

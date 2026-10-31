@@ -27,6 +27,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -69,6 +70,7 @@ _FOREIGN = (
 _VALIDATED = re.compile(r"Validation of file '(?P<url>(?:https?|ftp)://[^']+)' passed")
 # Files read that way are tables; a larger one is left unhashed rather than downloaded again.
 FETCH_LIMIT = 100 * 1024 * 1024
+FETCH_TIMEOUT = 60.0
 _PLUGIN = (re.compile(r"Plugin started (?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)"),
            re.compile(r"Start plugin '(?P<id>[A-Za-z0-9_.-]+@[A-Za-z0-9_.+-]+)'"))
 _RUNTIME = re.compile(r"^\s*Runtime: (?P<runtime>.+?)\s*$")
@@ -85,34 +87,78 @@ _deadline: float | None = None
 
 
 def _run(command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None,
-         timeout: float = 120) -> subprocess.CompletedProcess | None:
+         timeout: float = 120, input_text: str | None = None
+         ) -> subprocess.CompletedProcess | None:
     """Run a bounded probe; stop its whole process group on timeout or interruption."""
     if _deadline is not None:
         left = _deadline - time.monotonic()
         if left <= 0:
             return None
         timeout = min(timeout, left)
+    expires = time.monotonic() + timeout
+    if _deadline is not None:
+        expires = min(expires, _deadline)
+    input_stream = subprocess.DEVNULL if input_text is None else subprocess.PIPE
+    proc = None
+    handlers, requested = {}, []
+
+    def deliver(signum, frame):
+        previous = handlers[signum]
+        if callable(previous):
+            previous(signum, frame)
+        elif signum == signal.SIGINT:
+            raise KeyboardInterrupt
+        else:
+            raise SystemExit(128 + signum)
+
+    def stop(signum, frame):
+        if proc is None:
+            if not requested:
+                requested.append((signum, frame))
+        else:
+            deliver(signum, frame)
+
+    # A signal inside Popen must wait until its child handle is assigned. Retain default
+    # stop handling throughout the probe too: standalone replay uses this module directly.
+    if threading.current_thread() is threading.main_thread():
+        for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            if signal.getsignal(sig) is not signal.SIG_IGN:
+                handlers[sig] = signal.signal(sig, stop)
     try:
-        proc = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                errors="replace", start_new_session=True)
-    except OSError:
-        return None
-    try:
-        stdout, stderr = proc.communicate(timeout=timeout)
+        try:
+            proc = subprocess.Popen(command, cwd=cwd, env=env, stdin=input_stream,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                    errors="replace", start_new_session=True)
+        except OSError:
+            if requested:
+                deliver(*requested[0])
+            return None
+        if requested:
+            deliver(*requested[0])
+        stdout, stderr = proc.communicate(input=input_text,
+                                          timeout=max(0, expires - time.monotonic()))
+        return subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
     except BaseException as exc:
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
-        try:
-            proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
+        if proc is not None:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+            try:
+                proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.stdout.close()
+                proc.stderr.close()
+                proc.wait(timeout=2)
         if isinstance(exc, subprocess.TimeoutExpired):
             return None
         raise
-    return subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
+    finally:
+        for sig, handler in handlers.items():
+            signal.signal(sig, handler)
+        if proc is not None:
+            proc.stdout.close()
+            proc.stderr.close()
 
 
 def _first_line(text: str, limit: int = 300) -> str:
@@ -302,7 +348,7 @@ def _log_files(log_path: Path) -> list[Path]:
     """The run's Nextflow log and the rotated logs of earlier attempts beside it."""
     files = [log_path]
     files += [log_path.with_name(f"{log_path.name}.{n}") for n in range(1, 10)]
-    return [path for path in files if path.is_file()]
+    return files
 
 
 def log_facts(log_path: Path, session_id: str | None) -> dict:
@@ -314,45 +360,50 @@ def log_facts(log_path: Path, session_id: str | None) -> dict:
     staging layout differs between engines (`stage-<session>/` since Nextflow 23, a shared `stage/`
     before), so the session is read from the log, not from the staged path.
     """
-    facts = {"runtime": None, "build": None, "plugins": [], "staged": {}, "validated": []}
-    plugins = set()
-    for index, path in enumerate(_log_files(log_path)):
-        current = index == 0
-        session = None
-        staged = []
+    facts = {"runtime": None, "build": None, "plugins": None, "staged": {}, "validated": [],
+             "issues": []}
+    for path in _log_files(log_path):
+        current = path == log_path
+        sessions = set()
+        staged, validated, plugins = [], [], set()
+        runtime = build = None
         try:
             with path.open(encoding="utf-8", errors="replace") as stream:
                 for line in stream:
-                    if session is None and (match := _SESSION.search(line)):
-                        session = match["session"]
+                    if match := _SESSION.search(line):
+                        sessions.add(match["session"])
                     if current:
-                        if facts["runtime"] is None and (match := _RUNTIME.match(line)):
-                            facts["runtime"] = match["runtime"]
-                        if facts["build"] is None and (match := _BUILD.match(line)):
-                            facts["build"] = f"{match['version']} build {match['build']}"
+                        if runtime is None and (match := _RUNTIME.match(line)):
+                            runtime = match["runtime"]
+                        if build is None and (match := _BUILD.match(line)):
+                            build = f"{match['version']} build {match['build']}"
                         for pattern in _PLUGIN:
                             for match in pattern.finditer(line):
                                 plugins.add(match["id"])
                         if ((match := _VALIDATED.search(line))
-                                and match["url"] not in facts["validated"]):
-                            facts["validated"].append(match["url"])
+                                and match["url"] not in validated):
+                            validated.append(match["url"])
                     if "foreign file" not in line:
                         continue
                     for pattern in _FOREIGN:
                         if match := pattern.search(line):
                             staged.append((match["source"], match["staged"]))
-        except OSError:
+        except OSError as exc:
+            if current:
+                facts["issues"].append(f"the current Nextflow log could not be read: {exc}")
             continue
-        # A rotated log counts only when it names this run's session; the run's own log counts
-        # unless it names another one.
-        if session_id and session is not None and session != session_id:
+        # Attribute the complete file before publishing any of its observations. Rotations
+        # can recover staged files of this session, never current runtime/plugin facts.
+        if len(sessions) > 1 or session_id and sessions - {session_id}:
+            if current:
+                facts["issues"].append("the current Nextflow log names another session")
             continue
-        if not current and (not session_id or session is None):
+        if not current and (not session_id or sessions != {session_id}):
             continue
+        if current:
+            facts.update(runtime=runtime, build=build, plugins=sorted(plugins), validated=validated)
         for source, copy in staged:
-            # The newest log wins: it describes the attempt that finished.
-            facts["staged"].setdefault(source, copy)
-    facts["plugins"] = sorted(plugins)
+            facts["staged"].setdefault(source, copy)  # The newest matching attempt wins.
     return facts
 
 
@@ -404,12 +455,28 @@ def remote_inputs(staged: dict[str, str]) -> dict[str, dict]:
 
 
 def fetch_digest(url: str) -> dict:
-    """The SHA-256 of a remote file the pipeline read without staging it, downloaded again now."""
-    timeout = 60.0
-    if _deadline is not None:
-        timeout = min(timeout, _deadline - time.monotonic())
-        if timeout <= 0:
-            return {"unresolved": "the run's deadline ended the recording first"}
+    """Refetch under a whole-operation deadline, including continuously progressing I/O.
+
+    urllib's timeout limits socket inactivity, not elapsed download time. A supervised
+    standard-library helper makes expiry close its connection and reap its I/O owner.
+    The same file is copied into standalone bundles, so no installed nfclaw is required.
+    """
+    result = _run([sys.executable, "-I", "-S", str(Path(__file__).resolve()),
+                   "--fetch-digest", str(FETCH_TIMEOUT), str(FETCH_LIMIT)],
+                  timeout=FETCH_TIMEOUT, input_text=url)
+    if result is None:
+        return {"unresolved": "refetch could not finish within its operation/run deadline"}
+    try:
+        record = json.loads(result.stdout)
+        if result.returncode == 0 and isinstance(record, dict):
+            return record
+    except ValueError:
+        pass
+    return {"unresolved": "the refetch helper could not record the remote bytes"}
+
+
+def _fetch_digest(url: str, timeout: float, limit: int) -> dict:
+    """Worker-side hashing; the parent owns its absolute deadline and cleanup."""
     digest = hashlib.sha256()
     size = 0
     try:
@@ -417,9 +484,8 @@ def fetch_digest(url: str) -> dict:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             for chunk in iter(lambda: response.read(1024 * 1024), b""):
                 size += len(chunk)
-                if size > FETCH_LIMIT:
-                    return {"unresolved": f"larger than {FETCH_LIMIT // (1024 * 1024)} "
-                                          "MiB; not hashed"}
+                if size > limit:
+                    return {"unresolved": f"larger than {limit // (1024 * 1024)} MiB; not hashed"}
                 digest.update(chunk)
     except (OSError, ValueError, urllib.error.URLError) as exc:
         return {"unresolved": f"could not be read again: {exc}"}
@@ -470,9 +536,13 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
     facts = log_facts(log_path, run["session_id"] if run else None)
     record["nextflow_build"] = facts["build"]
     record["nextflow_runtime"] = facts["runtime"]
-    record["nextflow_plugins"] = facts["plugins"]
+    if facts["plugins"] is not None:
+        record["nextflow_plugins"] = facts["plugins"]
+    else:
+        record.pop("nextflow_plugins")  # Unknown uses the comparator's existing absent-field form.
+    record["issues"].extend(facts["issues"])
     if run is None:
-        record["issues"].append("Nextflow recorded no session for this launch: no task ran")
+        record["issues"].insert(0, "Nextflow recorded no session for this launch: no task ran")
         return record
     record["run"] = {"name": run["name"], "session_id": run["session_id"]}
     record["remote_inputs"] = remote_inputs(facts["staged"])
@@ -857,6 +927,9 @@ def verify_replay(bundle: Path, target: Path) -> int:
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) == 4 and sys.argv[1] == "--fetch-digest":
+            print(json.dumps(_fetch_digest(sys.stdin.read(), float(sys.argv[2]), int(sys.argv[3]))))
+            sys.exit(0)
         if len(sys.argv) == 4 and sys.argv[1] == "verify":
             sys.exit(verify_replay(Path(sys.argv[2]), Path(sys.argv[3])))
         print("usage: environment_record.py verify <provenance bundle> <replay target>",

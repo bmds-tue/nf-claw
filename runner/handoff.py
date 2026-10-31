@@ -18,6 +18,7 @@ A rule maps downstream parameters to sources:
 from __future__ import annotations
 
 import csv
+import glob
 import hashlib
 import os
 import re
@@ -27,7 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from runner import inputs, parameters, provenance, samplesheet
+from runner import consumption, inputs, parameters, provenance, samplesheet
 from runner import outputs as output_mod
 from runner import schema as schema_mod
 from runner import exact_json as json
@@ -776,9 +777,9 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
                 fix=(f"Inspect {path}. Fix the rule, or the {rule.upstream} stage's options, then "
                      "resume the chain."),
                 details={"issues": issues, "snapshot": str(path)})
-        consumption = consumption_evidence(provenance.samplesheet_dependencies(path, sheet_schema),
-                                           upstream_outdir)
-        return str(path), derived, {"sha256": provenance.sha256_file(path), **extra, **consumption}
+        evidence = consumption_evidence(provenance.samplesheet_dependencies(path, sheet_schema),
+                                        upstream_outdir)
+        return str(path), derived, {"sha256": provenance.sha256_file(path), **extra, **evidence}
     if src.kind == "file":
         chosen = {} if chosen is None else chosen
         if (partner := src.spec.get("paired_with")) is not None:
@@ -800,10 +801,30 @@ def _resolve(rule: Rule, target: str, src: Source, *, upstream_outdir: Path,
     extra: dict[str, Any] = {}
     if isinstance(value, str) and not inputs.is_remote_url(value):
         target_param = schema_mod.load_param_schema(downstream_tree).params.get(target)
-        if target_param is not None and target_param.fmt in ("file-path", "directory-path"):
+        if target_param is not None and target_param.fmt in schema_mod.PATH_FORMATS:
+            route = Path(value) if Path(value).is_absolute() else upstream_outdir / value
+            if issues := inputs.local_route_issues(route, resolve_parent=True):
+                raise ValueError('; '.join(issues))
             value = _absolute(value, upstream_outdir)
         path = Path(value)
-        if path.is_absolute():
+        if (target_param is not None and target_param.fmt == 'file-path-pattern'
+                and (glob.has_magic(value) or '{' in value)):
+            # Match the scalar path the successor receives, before capturing member identities.
+            # A wildcard is not a literal ancestor of its members: no later scalar rewrite.
+            path = inputs.absolute_local_path(value)
+            value = str(path)
+            extra = consumption_evidence([path], upstream_outdir)
+            if _under(path, upstream_outdir) is None:
+                historical = provenance.read_checksums(
+                    upstream_outdir / 'provenance/inputs.sha256', relative=False)
+                nodes = recorded_input_inventory(upstream_outdir)
+                if not consumption.agrees(extra, historical, nodes):
+                    raise ValueError('reference pattern members changed since the historical '
+                                     'upstream input inventory')
+            extra['output_dependencies'] = {
+                relative: digest for name, digest in extra['consumed_dependencies'].items()
+                if (relative := _under(Path(name), upstream_outdir)) is not None}
+        elif path.is_absolute():
             remedy = (f"Supply {_flag(target)} directly in the downstream stage to choose this "
                       "reference explicitly, or rerun the upstream with current provenance.")
             if not path.exists():

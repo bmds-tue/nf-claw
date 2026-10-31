@@ -1,0 +1,177 @@
+{
+  "baseline": "45df56a48441bb459221c9e4fea3c6fe133bd33f",
+  "checklist_first_commit": "2db34dc966a99668b73fb2983247f517209c1fda",
+  "pull_request": "https://github.com/bmds-tue/nf-claw/pull/247",
+  "scope": "Current repository-owned product; Docker work and proposed future products excluded. Vendor pins and generated context verified, upstream tool/scientific internals not exhaustively audited.",
+  "findings": {
+    "resolved": 23,
+    "high": 2,
+    "medium": 11,
+    "low": 10,
+    "known_unresolved_critical_or_important": 0
+  },
+  "commands": {
+    "python": "python -m pytest -n 4 --dist worksteal --junitxml=<report>",
+    "typecheck": "npm run typecheck",
+    "build": "npm run build",
+    "browser": "npm run test:browser",
+    "lint": "ruff check .",
+    "drift": "python librarian/check_drift.py",
+    "whitespace": "git diff --check"
+  },
+  "python_reports": {
+    "baseline_python": {
+      "junit_sha256": "97910145de98a2071ddb15d69ee03acedea718f212a9a4e9e9c1200c1989b04a",
+      "tests": 3898,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "first_combined_python": {
+      "junit_sha256": "f69c9f1fd34789f558bbedb36307d95f530d24a00cf7d9e893a7950c999396f5",
+      "tests": 3989,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 2
+    },
+    "F20_related": {
+      "junit_sha256": "50df9a5e76fc7bfeb42ef2c5e5d8cd707596d59664cc55f3fe91a1ac35aad6e8",
+      "tests": 161,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "F03_F21_related": {
+      "junit_sha256": "6443dd45fa4c1d4e5793749d3a325fc99f4d02e74bac6d326cc4edc35c509067",
+      "tests": 131,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "first_complete_green": {
+      "junit_sha256": "ae7c04b1ab5119bb889654587cfbeb8a15db05ee48e6fd61105152b9cb45dc37",
+      "tests": 3997,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "portable_decoder_complete_green": {
+      "junit_sha256": "49ca00c9d7c68831a8e58e18ee920468b00fec057c89ae7c9f8842b9bed1db5c",
+      "tests": 4001,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "F22_python313_related": {
+      "junit_sha256": "0a20d5db9d5006f47803fb4d23992d3caab140962b503afb154ebd73c54e0952",
+      "tests": 165,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "F22_python314_related": {
+      "junit_sha256": "7061cc6537678f3b1ed40c2450d0e04eef1fc1279b367b2409499e9d204cd49e",
+      "tests": 165,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "F23_runtime_related": {
+      "junit_sha256": "76bf342692ad6133f1a1b8d67b6837596db5a56ee9e96a08db148939571d0c1f",
+      "tests": 75,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "final_python": {
+      "junit_sha256": "68273bd36ad405905a3a2e3b65cbe855a6b6d0f28abddbb286d129c1e92d0063",
+      "tests": 4003,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    }
+  },
+  "python_final_passed": 4001,
+  "local_skips": [
+    {
+      "test": "tests/test_execution.py::test_teardown_kills_a_task_that_outlives_sigterm",
+      "reason": "reads process state from /proc"
+    },
+    {
+      "test": "tests/test_execution.py::test_nextflow_does_not_outlive_an_nfclaw_killed_with_sigkill",
+      "reason": "PR_SET_PDEATHSIG is Linux-only"
+    }
+  ],
+  "website": {
+    "typecheck": "passed",
+    "static_build": "passed",
+    "browser_accessibility_passed": 162,
+    "additional_audit_controls": {
+      "root": 3,
+      "base_path_nf_claw": 3
+    },
+    "node": "24.19.0"
+  },
+  "advisories": {
+    "npm": 0,
+    "pip_audit_public_dependencies": 40,
+    "pip_audit_advisories": 0,
+    "local_nfclaw": "not on PyPI; reviewed as source"
+  },
+  "standalone_python39": {
+    "interpreter": "Python 3.9.6",
+    "mode": "Copied recorder and guard outside checkout with -I -S",
+    "http_fetch_and_hashing": "passed",
+    "full_application_matrix": false
+  },
+  "review": {
+    "method": "Independent final diff review, all three new test files and adjacent callers; baseline identities checked",
+    "important_findings": 1,
+    "resolution": "F20 added before repair; eight controls and 161 related tests passed; coordinator inspected final narrow fixes",
+    "first_combined_failures": "F03 diagnostic order and F21 path-substring test assertion; reproduced, repaired and retested before final complete suite",
+    "final_portability_review": "Coordinator reviewed both narrow test-only corrections, actual CI traces and local positive/negative controls; complete final suite covers their recorded source bytes."
+  },
+  "tested_candidate_sha256": {
+    "CHANGELOG.md": "fb3b297e106f35eb46f577ae5e8f96882c7bc370fcda56636ecf4674c1c21c2a",
+    "CONTRIBUTING.md": "547adf5f0c5160f1df3679bcf519fc7ec74c25c03f1f987a7416221de1c03610",
+    "README.md": "c31c70b6aa4c30fe1280ec2be0f5496debf16f70d09793ac35a9abcbf46281fe",
+    "docs/architecture.md": "9c0f2020bb965f4d83df63f040593b2a4fc70a577bd52bdff62babb5b15e25da",
+    "docs/chaining.md": "9f7facc601c6a70904e487e03f0a8356d7a504f104d26a9d4662d389b2b9a4fd",
+    "docs/compatibility.md": "bce51434df6cfc5ecb9b6552d6a7cba2854f2894b3594b51cc82c8eed73c05cd",
+    "docs/known-issues.md": "9818ba2fe78137ab5deb0570ea8ac6c75f5a0372c7b8c88d63decc99fcbf05d8",
+    "librarian/check_drift.py": "b7e569ad951916eb85a36b6308d37bb9a555d565d7bf2903e98b0363a6063ebe",
+    "runner/chain.py": "851c7f1db2ecb8bb47ab89a559a4dff48b73b5680eb14d5dee879cba922a97ff",
+    "runner/environment_record.py": "6f4665c3fb27f757e6e639f9c0db5566fc9fb1fc70fe721a0ad4e84b950b9af1",
+    "runner/execution.py": "7f9a94d6385d5727d95c2b03d9c9df360b2fa7d51709fdcdeffb9cf295e675b1",
+    "runner/handoff.py": "880c46fa857781577d368b69c4e6141c8b598b1a2b619ae3352cd6e9047acccf",
+    "runner/jobs.py": "c3c60916fca093041a31019b965707e7e5bdb701220c4461575f949f78c2f7c3",
+    "runner/mcp_server.py": "38c13058426915557d598a1ba64a04faeca8b4c0d295d2ed9e1ddbec86cccf84",
+    "runner/orchestration.py": "f2e5fb81a2830f7383e435ff5d8bdd27fc734825d3e0f663a40b91fb41841b3a",
+    "runner/scientific_hts.py": "479d508afd3e5b594dc0ba65b3243d0ff06dc0fc8f6dd57ebcccf7c8594f65cc",
+    "tests/test_audit_fixes.py": "c7e276b525b9e178decc4c8bd43b2d64f739529f73f8251d23ce61301136570e",
+    "tests/test_chain.py": "2d0cbac06c6ed40cca910774019df37b2aa29478bf59f7cf8d700e1584412899",
+    "tests/test_chain_environment_identity.py": "916e7c3b8fe52bb3be209ca01903b3785386460852cbc09711896ddd5edf27e5",
+    "tests/test_check_drift.py": "1e974849b64d560596ce28a6e3cbd0569ed595fd5996cfb8c5bd4964dd7fc4b1",
+    "tests/test_handoff_consumption.py": "2aea4323d3c155003f6dea87a35c169a0b375011007490a22e58bf9ec5dd21d8",
+    "tests/test_jobs_cli.py": "71ad878aecb7a6bc2f1674d7b9495a388039c03ff5bb565e85494f1f0d350865",
+    "tests/test_mcp_server.py": "3dd8f737bf22753e0b118e0cb9b12f5d25636cb01f836b3e401f49e62c5c0dd4",
+    "tests/test_orchestration.py": "e00c3f7159dc2f582e6ddb630dbd7c4122bf2881255101b71d815a17fa51f07b",
+    "tests/test_runtime_followthrough.py": "55613e75334eaba886024ee4002e26a1573d92fea2877672eacfdc79c98c518d",
+    "tests/test_scientific_hts.py": "0f1ee32d639669ae793b6dd7f8f5a4f75556843afa8c1c2b828d92e9e110236e",
+    "website/README.md": "d78e2d8455a255cd4e7d0bce0312de1c65ac875a8f10248f5fe7142662e5704e",
+    "website/src/components/pipeline/pipeline-index.tsx": "7f6a0f57a3242ec8d8dfc3d61e5864616fedfd9c477df5f7fea3822b7b3c8c91",
+    "website/src/components/ui/counter.tsx": "7b768dfcca52b9394ae00435048184937acf36b8506aea4bf0724f0fab46ec62",
+    "website/src/lib/data/pipelines.ts": "65e45c3f3b776a9515ae60032fdf669b812f89ce4bc2765be5741becfa882034",
+    "website/tests/audit-regressions.spec.ts": "19bcdfec08612f31a7e2c878de0891fe3230315ee3cd94f49acee2e8840ec8cd"
+  },
+  "ci_and_merge_record": "The linked pull request records checks for the committed candidate and the authoritative merge status; initial checklist-only head results are not final implementation evidence.",
+  "ci_portability_repairs": {
+    "failed_head": "f2471da39924400a6e40d44f68e44e6d89a7afac",
+    "run": "https://github.com/bmds-tue/nf-claw/actions/runs/41245159281",
+    "F22": "Native nested JSON plus deterministic RecursionError controls; reproduced two failures on Python 3.14; 165 related controls pass on Python 3.13 and 3.14; removing the production catch makes all four injected cases fail.",
+    "F23": "Only track the unique analysis command, not Linux libc discovery probes. Real injected unrelated probe reproduced the two original failures; corrected runtime batch passes 73 tests with two Linux skips.",
+    "production_guarantees_preserved": true,
+    "gates_disabled": false,
+    "production_changes_after_f2471da": false
+  }
+}

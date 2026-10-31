@@ -2,6 +2,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from librarian import check_drift, write_catalog, write_skill
 
 FIX = Path(__file__).parent / "fixtures"
@@ -71,6 +73,35 @@ def test_drift_reports_manifest_set_and_remote_mismatches(tmp_path):
     drift = check_drift.check(pdir)
     assert "sources.tsv has unknown pipelines: extra" in drift
     assert any(item.startswith("mini remote differs:") for item in drift)
+
+
+@pytest.mark.parametrize("extra", [
+    "url = https://example.invalid/other.git\n",
+    "URL = https://example.invalid/other.git\n",
+    "path = pipelines/other/upstream\n",
+    '[submodule "pipelines/mini/upstream"]\nurl = https://example.invalid/other.git\n',
+    '[submodule "other"]\npath = pipelines/other/upstream\nurl = https://example.invalid/x\n',
+    '[unrelated]\nsetting = ignored\n',
+    '[submodule "broken"\n',
+])
+def test_drift_refuses_ambiguous_or_malformed_gitmodule_registration(tmp_path, extra):
+    (tmp_path / 'sources.tsv').write_text(
+        'mini\thttps://github.com/nf-core/mini.git\tlatest-release\n')
+    (tmp_path / '.gitmodules').write_text(
+        '[submodule "pipelines/mini/upstream"]\n'
+        'path = pipelines/mini/upstream\nurl = https://github.com/nf-core/mini.git\n' + extra)
+    assert check_drift._structure_drift(tmp_path, ['mini'])
+
+
+def test_drift_reads_git_quoted_values_and_comments_as_git_does(tmp_path):
+    (tmp_path / 'sources.tsv').write_text(
+        'mini\thttps://github.com/nf-core/mini.git\tlatest-release\n')
+    (tmp_path / '.gitmodules').write_text(
+        '# canonical registration, using valid Git quoting\n'
+        '[submodule "pipelines/mini/upstream"]\n'
+        'path = "pipelines/mini/upstream" # location\n'
+        'url = "https://github.com/nf-core/mini.git" ; source\n')
+    assert check_drift._structure_drift(tmp_path, ['mini']) == []
 
 
 def test_drift_gate_reports_an_incompatible_handoff(library):

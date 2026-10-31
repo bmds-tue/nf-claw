@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Search, SlidersHorizontal } from "lucide-react";
 import type { PipelineSummary, SortKey } from "@/lib/derive";
@@ -12,26 +13,41 @@ import { formatDate } from "@/lib/utils";
 import { EASE } from "@/lib/motion";
 
 export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
-  const reduce = useReducedMotion();
-  const [query, setQuery] = useState("");
-  const [domain, setDomain] = useState("All");
-  const [sort, setSort] = useState<SortKey>("name");
+  // A static export renders the complete collection as its fallback. Once the router is
+  // available, the URL itself supplies filters for links and browser Back/Forward alike.
+  return (
+    <Suspense fallback={<PipelineIndexContent pipelines={pipelines} />}>
+      <PipelineIndexLocation pipelines={pipelines} />
+    </Suspense>
+  );
+}
 
-  // Shareable state: /pipelines/?domain=Epigenomics&q=chip
-  useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const d = sp.get("domain");
-    if (d && DOMAIN_ORDER.includes(d)) setDomain(d);
-    const q = sp.get("q");
-    if (q) setQuery(q);
-  }, []);
-  useEffect(() => {
-    const sp = new URLSearchParams();
-    if (domain !== "All") sp.set("domain", domain);
-    if (query.trim()) sp.set("q", query.trim());
-    const qs = sp.toString();
-    history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  }, [domain, query]);
+function PipelineIndexLocation({ pipelines }: { pipelines: PipelineSummary[] }) {
+  const search = useSearchParams();
+  const query = search.get("q") ?? "";
+  const requestedDomain = search.get("domain");
+  const domain = requestedDomain && DOMAIN_ORDER.includes(requestedDomain) ? requestedDomain : "All";
+  const change = (query: string, domain: string) => {
+    const url = new URL(window.location.href);
+    if (query.trim()) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    if (domain !== "All") url.searchParams.set("domain", domain);
+    else url.searchParams.delete("domain");
+    // Next's native-history integration updates useSearchParams. Preserve the physical
+    // pathname (including a hosting base path), other query values and the fragment.
+    history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  };
+  return <PipelineIndexContent pipelines={pipelines} query={query} domain={domain} onChange={change} />;
+}
+
+function PipelineIndexContent({ pipelines, query = "", domain = "All", onChange }: {
+  pipelines: PipelineSummary[];
+  query?: string;
+  domain?: string;
+  onChange?: (query: string, domain: string) => void;
+}) {
+  const reduce = useReducedMotion();
+  const [sort, setSort] = useState<SortKey>("name");
 
   const domains = useMemo(() => domainCounts(pipelines), [pipelines]);
 
@@ -52,7 +68,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
   return (
     <div className="mt-10">
       <div className="glass flex flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-center">
-        <SearchField value={query} onChange={setQuery} placeholder="Search by name, description or tool…" label="Search pipelines" className="flex-1" />
+        <SearchField value={query} onChange={(value) => onChange?.(value, domain)} placeholder="Search by name, description or tool…" label="Search pipelines" className="flex-1" />
         <div className="relative">
           <select
             value={sort}
@@ -75,7 +91,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
           domains={domains}
           total={pipelines.length}
           value={domain}
-          onChange={setDomain}
+          onChange={(value) => onChange?.(query, value)}
         />
       </div>
 
@@ -144,7 +160,7 @@ export function PipelineIndex({ pipelines }: { pipelines: PipelineSummary[] }) {
         <div className="glass mt-4 flex flex-col items-center gap-3 py-16 text-center">
           <Search className="h-6 w-6 text-fog-faint" />
           <p className="text-sm text-fog-muted">No pipeline matches “{query}”{domain !== "All" && ` in ${domain}`}.</p>
-          <button onClick={() => { setQuery(""); setDomain("All"); }} className="pill pill-off">
+          <button onClick={() => onChange?.("", "All")} className="pill pill-off">
             Reset filters
           </button>
         </div>

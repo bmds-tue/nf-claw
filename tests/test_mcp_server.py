@@ -13,6 +13,7 @@ import subprocess
 import sys
 import textwrap
 import threading
+from collections import deque
 from pathlib import Path
 
 import pytest
@@ -75,6 +76,7 @@ class Session:
                                        args=(os.fdopen(r1, "rb"), os.fdopen(w2, "wb")), daemon=True)
         self.thread.start()
         self.messages: queue.Queue = queue.Queue()
+        self._pending: deque = deque()
         reader = os.fdopen(r2, "rb")
         threading.Thread(target=self._read, args=(reader,), daemon=True).start()
 
@@ -88,17 +90,24 @@ class Session:
         self._to_server.flush()
 
     def recv(self, timeout=10.0):
-        return self.messages.get(timeout=timeout)
+        return self._pending.popleft() if self._pending else self.messages.get(timeout=timeout)
 
     def request(self, rid, method, params=None, timeout=10.0):
         message = {"jsonrpc": "2.0", "id": rid, "method": method}
         if params is not None:
             message["params"] = params
         self.send(message)
-        while True:
-            reply = self.recv(timeout)
-            if reply.get("id") == rid:
-                return reply
+        unmatched = []
+        try:
+            while True:
+                reply = self.recv(timeout)
+                if "id" in reply and reply["id"] == rid:
+                    return reply
+                unmatched.append(reply)
+        finally:
+            # Assertions after request() must still see notifications or other replies,
+            # especially a forbidden response from a call the client cancelled.
+            self._pending.extendleft(reversed(unmatched))
 
     def initialize(self, version="2025-06-18"):
         reply = self.request(0, "initialize", {"protocolVersion": version, "capabilities": {},
@@ -520,3 +529,50 @@ def test_finite_decimal_ids_remain_exact(session):
     value = Decimal('1e10000')
     result = session.server.handle({'jsonrpc': '2.0', 'id': value, 'method': 'ping'})
     assert result['id'] == value and result['result'] == {}
+
+
+@pytest.mark.parametrize("message", [
+    {"jsonrpc": "2.0", "id": "\ud800", "method": "ping"},
+    {"jsonrpc": "2.0", "id": "\udfff", "method": "ping"},
+    {"jsonrpc": "2.0", "id": "unicode-error", "method": "unknown-\ud800"},
+    {"jsonrpc": "2.0", "id": "unicode-content", "method": "tools/call",
+     "params": {"name": "echo", "arguments": {"text": "\ud800 / β / 日本語"}}},
+])
+def test_every_decodable_unicode_request_gets_an_encodable_response(message):
+    import io
+    # Close input to wait for all response workers: a missing answer is deterministic, not a
+    # timeout assertion. The following request proves malformed Unicode cannot poison the stream.
+    following = {"jsonrpc": "2.0", "id": "following", "method": "ping"}
+    wire = b"\n".join(json.dumps(m).encode("ascii") for m in (message, following)) + b"\n"
+    out = io.BytesIO()
+    server = Server(FakeHandler(), name="test", version="1")
+    assert server.run(io.BytesIO(wire), out) == 0
+    replies = {r["id"]: r for r in map(json.loads, out.getvalue().decode("utf-8").splitlines())}
+    assert set(replies) == {message["id"], "following"}
+    assert replies["following"]["result"] == {}
+    if message["method"].startswith("unknown"):
+        assert replies[message["id"]]["error"]["code"] == mcp_server.METHOD_NOT_FOUND
+        assert "\ud800" in replies[message["id"]]["error"]["message"]
+    elif message["method"] == "tools/call":
+        assert replies[message["id"]]["result"]["structuredContent"]["arguments"] == \
+            message["params"]["arguments"]
+    else:
+        assert replies[message["id"]]["result"] == {}
+
+
+def test_request_helper_preserves_messages_received_before_its_response():
+    class ProgressHandler(FakeHandler):
+        def call_tool(self, name, arguments, ctx):
+            ctx.progress(1, None, "before the result")
+            return super().call_tool(name, arguments, ctx)
+
+    session = Session(ProgressHandler())
+    try:
+        reply = session.request("echo", "tools/call", {
+            "name": "echo", "arguments": {}, "_meta": {"progressToken": "retained"}})
+        assert reply["result"]["structuredContent"]["arguments"] == {}
+        progress = session.recv(timeout=0.5)
+        assert progress["method"] == "notifications/progress"
+        assert progress["params"]["progressToken"] == "retained"
+    finally:
+        session.close()
