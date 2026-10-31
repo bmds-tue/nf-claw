@@ -494,7 +494,8 @@ def test_nextflow_does_not_outlive_an_nfclaw_killed_with_sigkill(tmp_path):
     launcher = (
         "import sys; from pathlib import Path; from runner import execution;"
         "execution.run([sys.executable, '-c', "
-        f"\"import os, time; open(r'{pidfile}', 'w').write(str(os.getpid())); time.sleep(60)\"], "
+        f"\"import os, time; open(r'{pidfile}.tmp', 'w').write(str(os.getpid())); "
+        f"os.replace(r'{pidfile}.tmp', r'{pidfile}'); time.sleep(60)\"], "
         f"cwd=Path(r'{tmp_path}'), logs_dir=Path(r'{tmp_path}') / 'logs', timeout_seconds=None)"
     )
     nfclaw = subprocess.Popen([PY, "-c", launcher], cwd=Path(__file__).parent.parent,

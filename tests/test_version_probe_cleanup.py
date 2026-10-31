@@ -49,7 +49,10 @@ def _alive(pid):
 def test_stopped_version_probe_cleans_up_download_children(tmp_path, monkeypatch, probe, stop):
     launcher = tmp_path / "nextflow"
     marker = tmp_path / "child.pid"
-    launcher.write_text('#!/bin/sh\nsleep 60 &\necho $! >"$CHILD_PID_FILE"\nwait\n')
+    # Renamed into place once written: the test reads the PID as soon as the file exists.
+    launcher.write_text('#!/bin/sh\nsleep 60 &\n'
+                        'echo $! >"$CHILD_PID_FILE.tmp"\n'
+                        'mv "$CHILD_PID_FILE.tmp" "$CHILD_PID_FILE"\nwait\n')
     launcher.chmod(0o755)
     monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
     monkeypatch.setenv("CHILD_PID_FILE", str(marker))
@@ -99,7 +102,10 @@ def test_timed_out_chain_config_probe_stops_children_before_scratch_cleanup(
     launcher = tmp_path / "nextflow"
     marker = tmp_path / "config-child.pid"
     # A slow launcher must still reach the child-cleanup behavior under test.
-    launcher.write_text('#!/bin/sh\nsleep 1.1\nsleep 60 &\necho $! >"$CHILD_PID_FILE"\nwait\n')
+    # Renamed into place once written: the test reads the PID as soon as the file exists.
+    launcher.write_text('#!/bin/sh\nsleep 1.1\nsleep 60 &\n'
+                        'echo $! >"$CHILD_PID_FILE.tmp"\n'
+                        'mv "$CHILD_PID_FILE.tmp" "$CHILD_PID_FILE"\nwait\n')
     launcher.chmod(0o755)
     monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
     monkeypatch.setenv("CHILD_PID_FILE", str(marker))

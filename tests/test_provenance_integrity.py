@@ -513,7 +513,8 @@ def test_stopped_replay_terminates_descendants_and_releases_writer_lock(tmp_path
     child_script.write_text(
         'import os, signal, sys, time\nfrom pathlib import Path\n'
         'signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
-        'Path(sys.argv[1]).write_text(str(os.getpid()))\ntime.sleep(60)\n')
+        'Path(sys.argv[1] + ".tmp").write_text(str(os.getpid()))\n'
+        'Path(sys.argv[1] + ".tmp").replace(sys.argv[1])\ntime.sleep(60)\n')
     launcher = tmp_path / "launcher"
     launcher.write_text('#!/bin/sh\ntrap "exit 0" TERM\n' +
                         shlex.join([sys.executable, str(child_script), str(marker)]) + ' &\nwait\n')
