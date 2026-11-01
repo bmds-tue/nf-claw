@@ -21,6 +21,8 @@ from runner.probes import capture
 from runner.settings import seconds
 
 PROBE_TIMEOUT = 300
+# From Nextflow 26.04 strict syntax is the default parser; older engines default to the legacy one.
+_STRICT_PARSER_DEFAULT = (26, 4)
 # What the Nextflow launcher prints when it cannot set an engine up at all (no jars, no Java).
 _ENGINE_DOWN = re.compile(r"Unable to initialize nextflow environment|CAPSULE EXCEPTION|"
                           r"Cannot download nextflow|Unable to download")
@@ -70,8 +72,12 @@ def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], lab
     if declared and declared != pinned:
         hint = (f" — the release declares Nextflow {declared}: try "
                 + (f'"nxf_ver": "{declared}"' if chain else f"--nxf-ver {declared}"))
-    # From 26.04 strict syntax is the default; the legacy parser stays selectable in place.
-    if overlay.get("NXF_SYNTAX_PARSER", "").strip() != "v1":
+    # From 26.04 the legacy parser stays selectable in place. An older engine already parses with
+    # it, so it is no remedy there; an engine whose version cannot be read is offered it.
+    version = engine_version.effective(pinned)
+    strict = version is None or tuple(
+        int(part) for part in version.split(".")[:2]) >= _STRICT_PARSER_DEFAULT
+    if strict and overlay.get("NXF_SYNTAX_PARSER", "").strip() != "v1":
         hint += (f"{';' if hint else ' —'} on Nextflow 26.04+ the legacy parser may parse it: "
                  + ('"nxf_env": {"NXF_SYNTAX_PARSER": "v1"}' if chain
                     else "--nxf-env NXF_SYNTAX_PARSER=v1"))

@@ -278,6 +278,8 @@ def test_the_probe_parses_each_stage_config_with_its_own_engine(library, monkeyp
     [issue] = chain._probe_config(spec, planned[1])
     assert "02-mini (mini): Nextflow 25.10.4 cannot parse its configuration" in issue
     assert "Unexpected input" in issue
+    # 25.10 parses with the legacy parser already: selecting it is no remedy there.
+    assert "NXF_SYNTAX_PARSER" not in issue
     cmd, env = seen[1]
     assert cmd[:2] == ["nextflow", "config"] and cmd[-2:] == ["-profile", "test,docker"]
     assert env["NXF_VER"] == "25.10.4" and env["NXF_JVM_ARGS"] == "-Dipv6"
@@ -305,6 +307,7 @@ def test_the_probe_suggests_the_engine_the_release_declares(library, monkeypatch
         "manifest {\n    nextflowVersion = '!>=23.04.0'\n}\n")
     planned = chain.plan(_spec(), repo_root=root)
     monkeypatch.setattr(config_probe.shutil, "which", lambda name: "/usr/bin/nextflow")
+    monkeypatch.setattr(config_probe.engine_version, "effective", lambda pinned=None: "26.04.3")
     monkeypatch.setattr(config_probe, "capture", lambda cmd, **kw: subprocess.CompletedProcess(
         cmd, 1, stdout="ERROR ~ Config parsing failed\n", stderr=""))
     [issue] = chain._probe_config(_spec(), planned[1])

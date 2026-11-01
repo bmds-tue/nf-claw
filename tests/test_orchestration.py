@@ -903,6 +903,8 @@ def test_check_refuses_a_configuration_the_engine_cannot_parse(tmp_path, monkeyp
     root = _make_pipeline(tmp_path, "mini")
     monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
     monkeypatch.setattr(orchestration.config_probe.shutil, "which", lambda name: "/bin/nextflow")
+    monkeypatch.setattr(orchestration.config_probe.engine_version, "effective",
+                        lambda pinned=None: pinned or "26.04.3")
     monkeypatch.setattr(orchestration.config_probe, "capture",
                         lambda cmd, **kw: subprocess.CompletedProcess(
                             cmd, 1, "ERROR ~ Config parsing failed\n", ""))
