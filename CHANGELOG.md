@@ -57,6 +57,8 @@ each change, are in [`docs/audit/`](docs/audit/).
 - Apply supported scalar, required-field, relationship and uniqueness checks to flat JSON/YAML
   samplesheets as well as CSV/TSV. Report unreadable process identities as unknown, and unreadable
   task-container inventories as unconfirmed cleanup.
+- Distinguish macOS zombie-only process groups from genuine signal permission failures during
+  replay and metadata cleanup; retain failure when live members or unreadable inventory remain.
 
 - Resolve verified current-product audit findings in process cancellation, completion caveats,
   environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage

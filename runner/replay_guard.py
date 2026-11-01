@@ -1224,19 +1224,50 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]],
     return sorted(removed), problems
 
 
+def _darwin_group_has_live_members(pgid: int) -> bool | None:
+    """Distinguish Darwin's zombie-only EPERM from a genuine denied live group.
+
+    XNU killpg1 excludes SZOMB before counting signalable members and returns EPERM when
+    none remain. An unreadable/incomplete inventory is not proof that cleanup succeeded.
+    https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c
+    """
+    try:
+        result = subprocess.run(["ps", "-A", "-o", "pid=", "-o", "pgid=", "-o", "stat="],
+                                stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                timeout=2, check=False)
+        if result.returncode != 0:
+            return None
+        rows = [(int(pid), int(group), state)
+                for pid, group, state in (line.split() for line in result.stdout.splitlines())]
+        if not any(pid == os.getpid() for pid, _, _ in rows):
+            return None
+        return any(group == pgid and not state.startswith("Z") for _, group, state in rows)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+
+
+def signal_process_group(pgid: int, signum: int) -> bool:
+    """False only for an absent or verified zombie-only group; real denial still raises."""
+    try:
+        os.killpg(pgid, signum)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        if sys.platform == "darwin" and _darwin_group_has_live_members(pgid) is False:
+            return False
+        raise
+
+
 def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
     """Give the replay's tasks a shutdown grace period, then stop all survivors, including task
     containers they left behind. Returns what was done about those containers, for the log."""
-    try:
-        os.killpg(proc.pid, 0)
-    except ProcessLookupError:  # finished, and nothing of its group is left to stop
+    if not signal_process_group(proc.pid, 0):
         proc.wait()
         return []
     containers = task_containers(proc.pid)
     inspection = list(getattr(containers, "issues", []))
-    try:
-        os.killpg(proc.pid, signal.SIGTERM)
-    except ProcessLookupError:
+    if not signal_process_group(proc.pid, signal.SIGTERM):
         proc.wait()
         return inspection
     deadline = time.monotonic() + grace
@@ -1244,9 +1275,7 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
     try:
         while time.monotonic() < deadline:
             proc.poll()  # Reap the leader without assuming its tasks have also exited.
-            try:
-                os.killpg(proc.pid, 0)
-            except ProcessLookupError:
+            if not signal_process_group(proc.pid, 0):
                 gone = True
                 break
             time.sleep(0.05)
@@ -1258,10 +1287,7 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
             inspection.extend(getattr(latest, "issues", []))
             for engine, names in latest.items():
                 containers.setdefault(engine, set()).update(names)
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            signal_process_group(proc.pid, signal.SIGKILL)
         proc.wait(timeout=2)
     if not containers:
         return sorted(set(inspection))

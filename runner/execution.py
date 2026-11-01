@@ -445,12 +445,11 @@ _GRACE_SECONDS = 10
 
 def _group_alive(pgid: int) -> bool:
     try:
-        os.killpg(pgid, 0)
+        return replay_guard.signal_process_group(pgid, 0)
     except ProcessLookupError:
         return False
     except OSError:                       # members exist that we may not signal: still not gone
         return True
-    return True
 
 
 def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,

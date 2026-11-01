@@ -25,7 +25,8 @@ from contextvars import ContextVar
 from decimal import Decimal
 from pathlib import Path
 
-from runner import atomic, chain, cli, discovery, job_reports, jobs, parameters, redaction, settings
+from runner import (atomic, chain, cli, discovery, job_reports, jobs, parameters, redaction,
+                    replay_guard, settings)
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
@@ -537,7 +538,7 @@ class NfclawTools:
                     proc.communicate(timeout=5)
                 except subprocess.TimeoutExpired:
                     try:
-                        os.killpg(proc.pid, signal.SIGKILL)
+                        replay_guard.signal_process_group(proc.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
                     proc.wait(timeout=2)
