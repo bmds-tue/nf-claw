@@ -59,6 +59,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   task-container inventories as unconfirmed cleanup.
 - Distinguish macOS zombie-only process groups from genuine signal permission failures during
   replay and metadata cleanup; retain failure when live members or unreadable inventory remain.
+- Foreground MCP work reports unconfirmed cleanup if process inspection becomes unreadable after
+  launch or an authenticated descendant survives; a successful command cannot hide that outcome.
 
 - Resolve verified current-product audit findings in process cancellation, completion caveats,
   environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage

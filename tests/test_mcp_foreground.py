@@ -130,3 +130,41 @@ def test_foreground_refuses_to_spawn_without_an_inventory(tmp_path, monkeypatch,
     assert foreground.run([sys.executable, "-c", f"open({str(marker)!r}, 'w').close()"]) == 125
     assert not marker.exists()
     assert "supervision unavailable" in capsys.readouterr().err
+
+
+def test_foreground_does_not_report_success_if_cleanup_inventory_becomes_unreadable(
+        monkeypatch, capsys):
+    from runner import foreground
+
+    real_popen = subprocess.Popen
+    command_finished = False
+
+    class ObservedProcess(real_popen):
+        def poll(self):
+            nonlocal command_finished
+            result = super().poll()
+            command_finished = result is not None
+            return result
+
+    descendants = process_identity.descendants
+
+    def inventory(pid):
+        if command_finished:
+            raise PermissionError('process inspection revoked after command exit')
+        return descendants(pid)
+
+    monkeypatch.setattr(foreground.subprocess, 'Popen', ObservedProcess)
+    monkeypatch.setattr(process_identity, 'descendants', inventory)
+    assert foreground.run([sys.executable, '-c', 'pass']) == 125
+    assert 'foreground cleanup is unconfirmed' in capsys.readouterr().err
+
+
+def test_foreground_restores_signal_handlers_when_cleanup_is_unconfirmed(monkeypatch):
+    from runner import foreground
+
+    original = {sig: signal.getsignal(sig)
+                for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    monkeypatch.setattr(process_identity, 'descendants', lambda _pid: {os.getpid()})
+    monkeypatch.setattr(process_identity, 'send', lambda *_args: False)
+    assert foreground.run([sys.executable, '-c', 'pass']) == 125
+    assert all(signal.getsignal(sig) is handler for sig, handler in original.items())
