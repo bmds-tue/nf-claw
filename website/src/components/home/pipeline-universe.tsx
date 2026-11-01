@@ -110,7 +110,8 @@ export function PipelineUniverse({ pipelines }: { pipelines: PipelineSummary[] }
       setSelected(pool[(i + 1) % pool.length]);
     } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
       e.preventDefault();
-      setSelected(pool[(i - 1 + pool.length) % pool.length]);
+      // From no visible selection, back steps to the last pipeline, as forward steps to the first.
+      setSelected(pool[i < 0 ? pool.length - 1 : (i - 1 + pool.length) % pool.length]);
     } else if (e.key === "Enter" && selected) {
       router.push(`/pipelines/${selected}/`);
     }
