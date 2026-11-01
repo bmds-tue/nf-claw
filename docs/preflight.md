@@ -39,12 +39,20 @@ includes, Conda environments and task-managed downloads are not comprehensively 
 
 ## Replay integrity limits
 
-Source replay integrity currently means the recorded revision and tracked file contents. The
-source archive retains executable/nonexecutable permissions when created, but `pipeline.sha256`
-does not independently authenticate those mode bits or symlink identities. Tracked symlinks are
-archived as their resolved contents; untracked/ignored source files are not archived or comprehensively
-judged for runtime significance. These are explicit limits, so a tracked-byte match is not a claim
-that every possible filesystem dependency or continuous source state was reproduced.
+New ordinary runs use source identity version 2: `pipeline-source-identity.json` binds the full
+source namespace, permissions, regular-file bytes, internal relative symlinks and internal hard-link
+topology. Untracked and ignored files are included; only the root `.git` administration entry is
+excluded. Source links that escape the tree, aliases into excluded Git metadata, outside hard-link
+aliases, privileged executable bits and special objects are refused. Archives retain this identity
+and extract under a private root. Source modes, links and new files are checked after execution too,
+including with `--no-provenance`. Put generated caches and other writes outside the source tree;
+their appearance inside it is a source change.
+
+Legacy source identity version 1 authenticates the recorded revision and file contents only;
+its source archive dereferences tracked symlinks and does not independently bind their identity,
+permissions or an ordinary Git checkout's untracked/ignored files. Reading an old bundle does not
+upgrade this evidence. Neither version establishes continuous immutability or captures transitive
+dependencies outside its recorded namespace, filesystem ownership/ACLs or Git administration data.
 
 The three exact-pin [recorded source corrections](source-corrections.md) (Createtaxdb, Funcscan, and Bactmap) use independent regular-file
 copies with a separately bound inventory, executable modes and complete directory namespace.

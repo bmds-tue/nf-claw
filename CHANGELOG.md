@@ -50,6 +50,10 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- New ordinary runs authenticate source permissions, links, empty directories and untracked/ignored
+  source files as well as bytes. Source archives preserve that identity. Resume preserves the old
+  run and recomputes when complete source identity changed or was never recorded; unchanged source
+  keeps normal cache reuse. Legacy bundles retain their original evidence scope.
 - Redact sensitive environment values from shell/MCP job reports and keep execution records
   private. Stop foreground MCP descendants on timeout or cancellation; recover and safely cancel
   commands that survive a killed job supervisor. Reserve MCP control workers and bound slow-work

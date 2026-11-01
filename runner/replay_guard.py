@@ -27,6 +27,19 @@ from datetime import datetime, timezone
 from functools import lru_cache, partial
 from pathlib import Path
 
+if __package__:
+    from . import source_identity
+else:  # The bundled guard imports only its frozen sibling, never an installed nfclaw.
+    import importlib.util
+    try:
+        _spec = importlib.util.spec_from_file_location(
+            '_nfclaw_bundled_source_identity', Path(__file__).with_name('source_identity.py'))
+        source_identity = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(source_identity)
+    except OSError as exc:
+        raise SystemExit(f'nfclaw replay: bundled source_identity.py is missing or unreadable: '
+                         f'{exc}') from exc
+
 
 def _new_temporary(destination: Path) -> tuple[int, Path]:
     """Open a new file beside `destination` to rename over it once written.
@@ -720,7 +733,25 @@ PIPELINE_ARCHIVE = "pipeline-source.tar.gz"
 # Bundle files written after the run whose bytes the manifest records: the execution environment
 # (container identities, plugins, remote inputs) and the container pins a replay passes with `-c`.
 RECORDED_FILES = {"environment_record": "environment.json", "container_pins": "containers.config",
-                  'source_corrections': 'source-corrections.json'}
+                  'source_corrections': 'source-corrections.json',
+                  'pipeline_source_identity': source_identity.RECORD}
+
+
+def pipeline_source_record(bundle: Path, manifest: dict) -> dict | None:
+    path = _recorded_file(bundle, manifest, 'pipeline_source_identity', source_identity.RECORD)
+    if path is None:
+        if manifest.get('pipeline_identity_version') == source_identity.VERSION:
+            raise ValueError('the complete pipeline source identity is missing')
+        return None
+    if (type(manifest.get('pipeline_identity_version')) is not int
+            or manifest['pipeline_identity_version'] != source_identity.VERSION):
+        raise ValueError('pipeline source identity record and manifest versions differ')
+    record = json.loads(path.read_text())
+    if source_identity.files(record) != read_checksums(bundle / 'pipeline.sha256'):
+        raise ValueError('pipeline source identity differs from the source checksums')
+    if manifest.get('source_corrections') is not None:
+        raise ValueError('pipeline source identities cannot mix ordinary and corrected policies')
+    return record
 
 
 def write_pipeline_archive(repo: Path, checksums: dict[str, str], destination: Path) -> str:
@@ -790,6 +821,9 @@ def check_pipeline_archive(bundle: Path, manifest: dict, destination: Path | Non
     archive = _recorded_file(bundle, manifest, "pipeline_archive", PIPELINE_ARCHIVE)
     if archive is None:
         raise ValueError("the bundle holds no pipeline source archive")
+    if record := pipeline_source_record(bundle, manifest):
+        source_identity.check_archive(archive, record, destination)
+        return
     expected = read_checksums(bundle / "pipeline.sha256")
     correction = corrected_source_record(bundle, manifest)
     if destination is not None:
@@ -869,6 +903,12 @@ def check_pipeline_checkout(bundle: Path, manifest: dict) -> None:
     if (expected_head := manifest.get("pipeline_git_head")) is not None \
             and pipeline_head(repo) != expected_head:
         raise ValueError(f"pipeline revision changed: {repo} (expected {expected_head})")
+    if record := pipeline_source_record(bundle, manifest):
+        try:
+            source_identity.check(repo, record)
+        except OSError as exc:
+            raise ValueError(f'pipeline source is unreadable: {repo}: {exc}') from exc
+        return
     expected = read_checksums(bundle / "pipeline.sha256")
     if correction := corrected_source_record(bundle, manifest):
         try:
@@ -964,9 +1004,9 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
                          "restore a valid environment and start a fresh run")
     identity_version = manifest.get("pipeline_identity_version")
     if ("pipeline_identity_version" in manifest
-            and (type(identity_version) is not int or identity_version != 1)):
+            and (type(identity_version) is not int or identity_version not in (1, 2))):
         raise ValueError("pipeline identity version is invalid or unsupported")
-    if (identity_version == 1 or (bundle / "pipeline.sha256").exists()
+    if (identity_version in (1, 2) or (bundle / "pipeline.sha256").exists()
             or manifest.get("pipeline_archive") is not None):
         pipeline_path = manifest.get("pipeline_path")
         if (not isinstance(pipeline_path, str) or not Path(pipeline_path).is_absolute()
@@ -981,6 +1021,7 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
             raise ValueError("pipeline Git revision is invalid")
     for key, name in RECORDED_FILES.items():
         _recorded_file(bundle, manifest, key, name)
+    pipeline_source_record(bundle, manifest)
     if manifest.get("pipeline_archive") is not None:
         # The replay runs the archived source, so the original checkout may have moved on.
         check_pipeline_archive(bundle, manifest)
@@ -989,22 +1030,26 @@ def verify_dependencies(bundle: Path, replay_target: Path | None = None) -> None
     # After a replay: the source it ran must still be the recorded source.
     if replay_target is not None:
         used = replay_pipeline_source(replay_target)
-        if used is None and manifest.get('source_corrections') is not None:
-            raise ValueError('the corrected replay source record is missing or invalid')
+        if used is None and (manifest.get('source_corrections') is not None
+                             or manifest.get('pipeline_source_selection') is True):
+            raise ValueError('the replay source record is missing or invalid')
         if used is not None:
             if used.get("from") == "checkout":
                 check_pipeline_checkout(bundle, manifest)
             elif used.get("from") == "archive":
                 source = replay_target / "provenance" / "pipeline"
-                if correction := corrected_source_record(bundle, manifest):
-                    check_corrected_source(source, correction)
-                expected = read_checksums(bundle / "pipeline.sha256")
-                current = hash_pipeline(source)
-                if current.keys() != expected.keys():
-                    raise ValueError(f"pipeline source inventory changed: {source}")
-                for name, digest in expected.items():
-                    if current[name] != digest:
-                        raise ValueError(f"pipeline source content changed: {source / name}")
+                if record := pipeline_source_record(bundle, manifest):
+                    source_identity.check(source, record, private_root=True)
+                else:
+                    if correction := corrected_source_record(bundle, manifest):
+                        check_corrected_source(source, correction)
+                    expected = read_checksums(bundle / "pipeline.sha256")
+                    current = hash_pipeline(source)
+                    if current.keys() != expected.keys():
+                        raise ValueError(f"pipeline source inventory changed: {source}")
+                    for name, digest in expected.items():
+                        if current[name] != digest:
+                            raise ValueError(f"pipeline source content changed: {source / name}")
             else:
                 raise ValueError("invalid replay pipeline source record")
     for kind in ("inputs", "configs"):

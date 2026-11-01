@@ -33,7 +33,7 @@ with report digests. It does not certify the open scientific work below.
 | G03 | Open: CRAM/reference binding, additional H5AD components and inferred-result adapters need reviewed contracts and independent reference results. Existing adapters remain bounded as documented. |
 | G04 | Open: comprehensive transitive dependency discovery/freezing is not implemented. Existing incomplete-environment refusal is retained; no stronger capture claim is added. |
 | G05 | Open: validation-only remote sheets are not all consumed from a single authenticated staged copy. Exact corrected demos do not establish general remote-byte identity. |
-| G06 | Open: ordinary source checks do not independently authenticate every mode, symlink and untracked/ignored runtime dependency. Corrected-copy guarantees do not strengthen historical ordinary bundles. |
+| G06 | Implemented ordinary source identity version 2: complete namespace excluding root `.git`, bytes, permissions, internal relative symlinks and hard-link topology. Archives preserve that identity; changed or previously unverified source forces a fresh resume session. Legacy bundles retain their recorded scope. Source/archive round trips passed for all 95 local pins; server validation of this upgrade is in progress. |
 | G07 | Open: before/after hashing does not prove continuous immutability. No such guarantee is claimed. |
 | G08 | Fixed diagnostic defect: unreadable process identity reports unknown; unreadable container inventories report unconfirmed cleanup, including replay. Wider Podman/arm64/scheduler/cloud/GPU/crash assurance still requires those environments. |
 | G09 | Refreshed all 95 generation classifications against the current source and pins, correcting five stale pin IDs while preserving the 71/3/12/9 support counts. Acceptance records identify each tested source and report digests. A uniform durable registry across all historical pins/platforms remains open. |
@@ -68,7 +68,7 @@ maintenance routes and scientific release gates; release/tag/publication decisio
 features already merged on main are retained. No release or scientific coverage is inferred from
 their presence.
 
-## Acceptance state
+## Verified software milestone and ongoing acceptance
 
 - Local focused process/MCP/schema checks and repository drift checks have passed. The final
   foreground cleanup controls ran with working process inspection; denied inspection is never

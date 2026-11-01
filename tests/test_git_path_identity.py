@@ -43,7 +43,7 @@ def test_git_identity_uses_lf_records_and_preserves_parent_names(tmp_path, separ
 @pytest.mark.skipif(shutil.which('nextflow') is None, reason='requires a real Nextflow engine')
 @pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
 @pytest.mark.parametrize('separator', ['\u2028', '\u0085', '\v', '\f'])
-def test_native_git_revision_and_tracked_source_replay(tmp_path, engine, separator):
+def test_native_git_revision_and_complete_source_replay(tmp_path, engine, separator):
     root = tmp_path / ('library' + separator + 'part')
     repo = root / 'pipelines/fixture/upstream'
     repo.mkdir(parents=True)
@@ -85,11 +85,12 @@ workflow { DIGEST(file(params.input)) }
     bundle = outdir / 'provenance'
     manifest = json.loads((bundle / 'run_manifest.json').read_text())
     assert manifest['commit'] == expected
+    assert manifest['pipeline_identity_version'] == 2
     assert set(provenance.read_checksums(bundle / 'pipeline.sha256')) == {
-        'main.nf', 'nextflow.config', 'nextflow_schema.json'}
+        'main.nf', 'nextflow.config', 'nextflow_schema.json', 'untracked-data.txt'}
     digest = hashlib.sha256(payload).hexdigest()
     assert (outdir / 'digest.txt').read_text().split()[0] == digest
-    scratch.write_text('changed scratch, still not consumed or tracked\n')
+    scratch.write_text('changed untracked source inventory\n')
     replay = tmp_path / 'replay'
     completed = subprocess.run(['bash', str(bundle / 'commands.sh'), str(replay)],
         capture_output=True, text=True, timeout=NEXTFLOW_TIMEOUT)
@@ -100,7 +101,9 @@ workflow { DIGEST(file(params.input)) }
     assert any('containerless process evidence' in issue
                for issue in environment['unverified'])
     used = json.loads((replay / 'provenance' / 'pipeline-source.json').read_text())
-    assert used == {'from': 'checkout', 'path': str(repo)}          # intact: the same directory
+    assert used['from'] == 'archive'
+    assert ((replay / 'provenance/pipeline/untracked-data.txt').read_text()
+            == 'untracked scratch data\n')
     # A working-tree source mutation cannot reach a replay: it runs the bundle's source archive.
     script = repo / 'main.nf'
     original_source = script.read_text()
