@@ -299,6 +299,10 @@ groups. Linux uses a subreaper to adopt helpers whose intermediate parent exits;
 process ancestry while the command runs. If process inspection is unavailable, foreground work
 is refused before launch; unreadable inventories during run/replay cleanup are reported as
 unconfirmed cleanup. Deliberately detached analysis jobs remain independent of foreground calls.
+On macOS, an arbitrary helper that forks twice and is reparented before observation cannot be
+certified by ancestry polling. Darwin rejects automatic descendant tracking with `NOTE_TRACK`
+([kernel implementation](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_event.c));
+Linux's subreaper provides the stronger ownership boundary for that case.
 
 Shared shell/MCP job views redact sensitive `NXF_*` values from commands, frozen/live diagnostics
 and output tails under the provenance policy. This includes overwritten environment options,

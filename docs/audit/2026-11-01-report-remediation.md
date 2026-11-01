@@ -1,7 +1,7 @@
 # Remediation of the 31 October repository review
 
 The supplied review identified five reproduced defects, eleven broader guarantee/coverage items,
-fourteen pipeline-specific groups, and eight optional product areas. Work began from current main
+pipeline-specific groups, and optional product areas. Work began from current main
 `b9619ac21ca385a307b3da3758b0e1e4c03e69d1`, preserving the original review and its evidence.
 The older checkout's missing merged work was brought in before making corrections.
 
@@ -20,6 +20,10 @@ validated or that the optional roadmap has been implemented.
 | F04 | Slow ordinary work, waits and immediate controls have separate capacity; work admission is bounded. Ping is handled directly. Deferred waits retain request cancellation context. | Saturate ordinary version/show/verify calls and long polls; verify ping/status/cancel response and overload refusal. |
 | F05 | Listing retains the committed pin offline without adding an invented tag to the release-resolution inventory. Notes/evidence distinguish remote observations, cached tags and unverified pin fallback. | Tagless/uninitialized offline listing, v-prefix deduplication and observation-source controls. |
 
+[Source-bound server evidence](evidence/2026-11-01-report-remediation.json) preserves software
+case coverage, all 95 pin identities, website results, and the original/replay control outcomes
+with report digests. It does not certify the open scientific work below.
+
 ## Guarantee and coverage items
 
 | ID | Disposition |
@@ -32,7 +36,7 @@ validated or that the optional roadmap has been implemented.
 | G06 | Open: ordinary source checks do not independently authenticate every mode, symlink and untracked/ignored runtime dependency. Corrected-copy guarantees do not strengthen historical ordinary bundles. |
 | G07 | Open: before/after hashing does not prove continuous immutability. No such guarantee is claimed. |
 | G08 | Fixed diagnostic defect: unreadable process identity reports unknown; unreadable container inventories report unconfirmed cleanup, including replay. Wider Podman/arm64/scheduler/cloud/GPU/crash assurance still requires those environments. |
-| G09 | Improved tracking here: current acceptance evidence will be bound to the tested source. A uniform durable registry across all historical pins/platforms remains open. |
+| G09 | Refreshed all 95 generation classifications against the current source and pins, correcting five stale pin IDs while preserving the 71/3/12/9 support counts. Acceptance records identify each tested source and report digests. A uniform durable registry across all historical pins/platforms remains open. |
 | G10 | Retained boundary: remote inventories, ambiguous/mixed layouts and Zstd first-read inspection need format-specific work. No inferred sample renaming or unsupported pairing is introduced. |
 | G11 | Open optional extension: relocatable/offline whole-bundle export and repeat-replay do not follow from current guarded replay. External dependencies remain necessary. |
 
@@ -43,7 +47,7 @@ validated or that the optional roadmap has been implemented.
 | taxprofiler | All-profiler zero-hit and downstream/MultiQC controls beyond restricted Kraken2/Kaiju routes. |
 | funcscan/DRAMP | Missing-sequence exclusion/downloader controls, independent MMseqs2 indexing/validation, broader positive-hit controls. |
 | createpanelrefs/proteinfamilies/stableexpression/multiplesequencealign | Task-dependent default-preview diagnosis; exact learnMSA image or independently validated replacement for the full MSA test. |
-| marsseq | Reference-key meaning, separate build guidance, measured STAR headroom and count-accuracy truth controls. |
+| marsseq | The current generated skill and known-issues guide already explain that `mm10` resolves to GRCm39/M27 and that reference building and analysis need separate runs. STAR headroom and independent count-accuracy controls remain open. |
 | rnafusion | Immutable working demo references, tutorial assumptions, and a complete GRCh38 build with sufficient storage. |
 | cutandrun/hicar/mag | Reproduce and resolve the recorded ignored Preseq/CIRCOS_PREPARE/MaxBin2 failures with compatible engines. |
 | sopa/macOS arm64 demo | Immutable real Sopa input plus replay; native/emulated image route and complete expected exports on arm64. |
@@ -51,8 +55,8 @@ validated or that the optional roadmap has been implemented.
 | rnasplice | LeafCutter/RegTools execution and statistical effects of MISO/Salmon variability. |
 | genomeassembler | Independent explanation/control of Flye contig/base changes and graph/annotation effects. |
 | ampliseq/rnaseq/bactmap | DADA2/QIIME2 variability, broader rnaseq truth fixtures, and Bactmap multicore/tree accuracy and support controls. |
-| fastqrepair | Independently reordered/orphaned mate controls beyond matched pairs; preserve documented N-base normalization. |
-| Tumourevo | CNAqc reference declaration and reviewed inferred-tree/signature/CNAqc expectations beyond existing count/VCF checks. |
+| fastqrepair | The report's missing-control claim was stale: committed independent reordered/orphan controls predate the reviewed checkout. Fresh server execution and replay passed all 14 plain/gzip controls: suffixed/unsuffixed, single-read, single-end, skip-pairing, Phred+64 and damaged reads. Each successful original and replay had no completion caveats; captured replay environments matched. This does not establish arbitrary damaged-data accuracy. |
+| Tumourevo | The generated reference already marks the undeclared CNAqc cross-reference, and known-issues explains why no equivalent flag can be supplied. Reviewed inferred-tree/signature/CNAqc expectations beyond existing count/VCF checks remain open. |
 | changing report names/exports | Per-format classifications for the seven named pipelines; no global filename/content ignore rule. |
 
 ## Optional areas, not closed by these corrections
@@ -66,13 +70,24 @@ their presence.
 
 ## Acceptance state
 
-- Local focused process/MCP/schema checks and repository drift checks have passed; denied local
-  process-inspection runs are environment-limited and are not counted as passes.
-- Initial server full software pass: 3,730 passed, 303 skipped (many source checkouts were absent).
-  Exact clean sources for all 95 pins are now available for a final source-complete rerun.
-- Real Nextflow tests and production website/browser checks are running separately. The initial
-  website dependency symlink was outside Turbopack's workspace; an independent local dependency
-  copy corrects that test setup.
+- Local focused process/MCP/schema checks and repository drift checks have passed. The final
+  foreground cleanup controls ran with working process inspection; denied inspection is never
+  counted as successful cleanup.
+- The server's source-complete software suite at `05b4ff9` passed **3,981 tests**, with **65**
+  real-engine cases deferred to a separate native lane and no failed/error cases. All 95 exact
+  pinned sources were available; no optional MCP, BAM or H5AD dependency was missing.
+- At the same final source, the native/process lane passed **90/90** and the path-identity lane
+  passed **20/20**. Every one of the software lane's 65 deferrals passed in these native lanes.
+  The preceding `533755a` and `d02d044` runs are retained as history; overlapping counts are not
+  combined as distinct coverage.
+- Production website typecheck, default Turbopack build and **162/162** browser tests passed;
+  dependency audit reported no vulnerabilities. The tested website source tree is unchanged.
+- Hosted macOS testing exposed zombie-only groups returning `EPERM`; the correction distinguishes
+  them from unreadable inventories or live groups, which still fail. A foreground command also
+  cannot report success when its final cleanup inventory becomes unreadable.
+- One server Phred+64 attempt reached its deadline with FastQC queued after BBMap completed.
+  Its logs and failed outcome were preserved. A fresh run and replay passed with a larger
+  executor budget; this retry does not erase or explain away the scheduler stall.
 - Server capacity at start: about 1.7 GB free on its data volume. Existing runs/evidence and shared
   engines were preserved. This cannot support the requested full reference/database/GPU sweep.
 - Additional storage/hardware and independently reviewed truth data have been requested while
