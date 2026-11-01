@@ -81,6 +81,8 @@ each change, are in [`docs/audit/`](docs/audit/).
 - The website words a workflow schedule only when it can word it correctly (a step, range or list
   is shown as written), groups the release timeline by UTC month as it labels it, and steps back
   to the last pipeline in the constellation from no selection (#248).
+- The package metadata declares its MIT licence and ships `LICENSE` and `NOTICE`; building it needs
+  setuptools 77 or newer (#248).
 - `--limit-memory` and `--limit-time` (and a chain's `limits`) accept only spellings Nextflow parses.
   `1.5.TB`, `100.B`, `15.gb`, `5.secs`, `5.mins` or `1.H` passed the check and the run then died at
   its first task (`Caused by: multiple points`), in a chain after every earlier stage had run (#246).

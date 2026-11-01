@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]  # PEP 639 license expression and license-files
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "nfclaw"
 version = "1.0.0"
 description = "A self-maintaining, token-minimal library of nf-core pipelines for AI agents."
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
 dependencies = []
 
 [project.optional-dependencies]
