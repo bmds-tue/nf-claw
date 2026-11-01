@@ -3,17 +3,18 @@ from __future__ import annotations
 import csv
 import json
 import os
+import shutil
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from runner import (budget, container_watch, demo_defaults, dependency_stability, discovery,
-                    engine_version,
-                    environment_record, execution, fastqrepair_compat, input_safety, inputs,
-                    institutional, nextflow_command, outputs, parameters, path_roles, plugin_compat,
-                    preflight, provenance, reproducibility, resources, resume_safety, runlog,
-                    samplesheet, sheetgen, source_corrections, submodule, versions)
+from runner import (budget, config_probe, container_watch, demo_defaults, dependency_stability,
+                    discovery, engine_version, environment_record, execution, fastqrepair_compat,
+                    input_safety, inputs, institutional, nextflow_command, outputs, parameters,
+                    path_roles, plugin_compat, preflight, provenance, reproducibility, resources,
+                    resume_safety, runlog, samplesheet, sheetgen, source_corrections, submodule,
+                    versions)
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
@@ -227,7 +228,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                  chain_link: dict | None = None,
                  deferred_params: frozenset[str] = frozenset(),
                  resolved_tree: SubmoduleStatus | None = None,
-                 sheet_set: dict[str, str] | None = None) -> RunResult:
+                 sheet_set: dict[str, str] | None = None,
+                 probe_config: bool = False) -> RunResult:
     """Validate, launch and record one pipeline run.
 
     Two arguments exist for a chain (runner.chain) and change nothing otherwise: `chain_link` is
@@ -236,10 +238,14 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     stage feeding this one has run, so they count as neither missing nor invalid yet.
 
     When the input names data files where the pipeline takes a samplesheet, the samplesheet is
-    generated first (runner.sheetgen); `sheet_set` holds the column values the caller assigned."""
+    generated first (runner.sheetgen); `sheet_set` holds the column values the caller assigned.
+    `probe_config` — for `check_only` alone — also asks the run's engine to resolve the
+    configuration the printed command would load (runner.config_probe)."""
     outdir = outdir.expanduser().resolve()
     if deferred_params and not check_only:
         raise ValueError("deferred_params is only meaningful with check_only")
+    if probe_config and not check_only:
+        raise ValueError("probe_config is only meaningful with check_only")
     pipelines_dir = repo_root / "pipelines"
     discovery.find(name, pipelines_dir)                       # 404 if unknown
     # Extra Nextflow config files passed straight through as `-c` (e.g. a docker host-network or
@@ -824,9 +830,27 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
 
         _check_pipeline_identity(st, pin_doc)
         _check_samplesheet_snapshots(sheet_snapshots)
+        if probe_config:
+            # The configuration the printed command loads — the source it runs (corrected, where a
+            # release needs it) and every `-c` it names, generated ones included — resolved by the
+            # engine it runs under, so `--check` finds a release that engine cannot parse.
+            unparsable = config_probe.probe(
+                pipeline=pipeline_path, profile=composed_profile, configs=extra_configs,
+                overlay=nxf_overlay, label=name, timeout_seconds=budget.remaining())
+            budget.check()
+            if unparsable:
+                shutil.rmtree(staging, ignore_errors=True)
+                raise NfclawError(
+                    ErrorCode.ENVIRONMENT,
+                    "The run could not start: its Nextflow engine cannot set it up.",
+                    fix=("Nothing was launched. Resolve the reported engine, configuration, "
+                         "network or probe timeout issue and run the check again (see 'Nextflow "
+                         f"too new for an older release' in {runlog.known_issues_path()})."),
+                    details={"issues": unparsable})
         validation_scope = preflight.scope_report(
             local_samplesheets=len(sheet_inputs) + int(sheet is not None),
-            deferred_params=deferred_params, local_bytes_hashed=input_snapshot is not None)
+            deferred_params=deferred_params, local_bytes_hashed=input_snapshot is not None,
+            config_probed=probe_config)
 
         if check_only:
             budget.check()

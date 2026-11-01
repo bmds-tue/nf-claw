@@ -658,6 +658,7 @@ def served(tmp_path):
     thread.start()
     yield root, f"http://127.0.0.1:{server.server_address[1]}"
     server.shutdown()
+    server.server_close()
 
 
 def test_a_samplesheet_the_pipeline_validated_itself_is_recorded(tmp_path, fake_tools, served):

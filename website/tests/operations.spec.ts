@@ -171,6 +171,17 @@ test('the search palette finds a documentation section and opens it at its headi
   await expect(page.locator('#dependency-stability-during-execution')).toBeInViewport();
 });
 
+test('the search palette finds a long heading by the words at its end', async ({ page }) => {
+  // A query copied from an error message matches the end of a long known-issues heading. Ranking
+  // a label match by its position took such a match below zero, so the section was not offered.
+  await gotoHydrated(page, '/pipelines/');
+  await page.getByRole('button', { name: /^Search (⌘K|Ctrl K)$/ }).click();
+  const input = page.locator('input[role="combobox"]');
+  await expect(input).toBeFocused();
+  await input.fill('major version 61');
+  await expect(page.getByRole('option', { name: /fails on Java 17/ })).toBeVisible();
+});
+
 test('a document has a table of contents at phone width too', async ({ page }) => {
   // The sticky "On this page" column exists only from the xl breakpoint; narrower screens had none.
   await page.setViewportSize({ width: 390, height: 844 });

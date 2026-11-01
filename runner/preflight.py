@@ -189,7 +189,7 @@ def _space_issues(*, repo_root: Path, output_dir: Path, work_dir: Path | None,
 
 
 def scope_report(*, local_samplesheets: int, deferred_params: frozenset[str],
-                 local_bytes_hashed: bool) -> dict:
+                 local_bytes_hashed: bool, config_probed: bool = False) -> dict:
     """Scope of a successfully completed wrapper preflight, before any workflow tasks run.
 
     This inventory describes only the validations the wrapper performs. Deferred/unsupported
@@ -212,8 +212,11 @@ def scope_report(*, local_samplesheets: int, deferred_params: frozenset[str],
          'Declared inputs separated from output/work/cache/log writes.'),
         ('host_requirements', 'checked', 'Required executable presence and writable launch paths; '
          'not a container daemon, scheduler or task execution test.'),
-        ('profile_config', 'deferred', 'Nextflow resolves profiles and config at launch, '
-         'including included configs and their parameter values.'),
+        ('profile_config', 'checked' if config_probed else 'deferred',
+         'The run\'s engine resolved the configuration and selected profiles (`nextflow config`), '
+         'without the run\'s parameter values.' if config_probed else
+         'Nextflow resolves profiles and config at launch, including included configs and their '
+         'parameter values.'),
         ('complete_schema', 'deferred', 'The pinned pipeline/plugin validates nested, conditional '
          'and complex constraints not covered by the wrapper subset.'),
         ('remote_inputs', 'deferred', 'Remote inventory, availability, bytes and validation occur '

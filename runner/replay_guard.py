@@ -1333,6 +1333,9 @@ def run_replay_command(command: list[str], *, log: Path, grace: float = 10) -> i
                     except OSError:
                         pass
                 console_log.close()
+            if proc is not None and proc.stdout is not None and (
+                    reader is None or not reader.is_alive()):
+                proc.stdout.close()                   # the reader is done with the console pipe
             for sig, handler in handlers.items():
                 signal.signal(sig, handler)
     if requested_stop is not None:

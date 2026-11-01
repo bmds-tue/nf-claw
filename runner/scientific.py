@@ -14,7 +14,7 @@ import re
 import sqlite3
 import stat
 import tempfile
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
@@ -500,7 +500,8 @@ def assess(outdir: Path, contract: Path, *, against: Path | None = None):
             result['issues'].append(f'cannot verify recorded original outputs: {exc}')
             baseline = {}
     with tempfile.TemporaryDirectory(prefix='nfclaw-assess-', dir=scratch) as temporary:
-        with sqlite3.connect(Path(temporary) / 'records.sqlite') as db:
+        # The connection's own context manager only commits; closing it releases the file.
+        with closing(sqlite3.connect(Path(temporary) / 'records.sqlite')) as db:
             for item in spec['artifacts']:
                 entry = {'path': item['path'], 'format': item['format'], 'issues': [],
                          'coordinates': item.get('coordinates', 'not declared'),

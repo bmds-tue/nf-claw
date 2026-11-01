@@ -1,6 +1,8 @@
 """Independent scientific expectations must detect omissions and changed analytical content."""
+import gc
 import hashlib
 import json
+import warnings
 
 import pytest
 
@@ -57,6 +59,17 @@ def test_exact_table_comparison_uses_keys_without_rounding_numbers(tmp_path):
     result = assess(b, spec, a)
     assert not result['passed']
     assert result['artifacts'][0]['comparison']['changed_records'] == 1
+
+
+def test_an_assessment_closes_its_record_database(tmp_path):
+    # Python 3.13 reports a sqlite3 connection that is never closed (ResourceWarning on collection).
+    a = run_dir(tmp_path, 'a', {'counts.tsv': 'gene\tsample_A\tsample_B\ng1\t1\t2\n'})
+    spec = contract(tmp_path, [table()])
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always', ResourceWarning)
+        assert assess(a, spec, a)['passed']
+        gc.collect()
+    assert not [w for w in caught if issubclass(w.category, ResourceWarning)]
 
 
 def test_each_required_matrix_checks_independent_sample_coverage(tmp_path):

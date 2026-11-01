@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, Rocket, Tag } from "lucide-react";
 import type { TimelineEntry } from "@/lib/types";
-import { cn, formatDate, formatMonth } from "@/lib/utils";
+import { groupByMonth } from "@/lib/format";
+import { cn, formatDate } from "@/lib/utils";
 import { EASE } from "@/lib/motion";
 
 /** A timeline entry with the colour of its research domain. */
@@ -13,20 +14,6 @@ export type TimelineItem = TimelineEntry & { accent: string };
 
 /** How many entries show before "full history" — whole months are kept together. */
 const INITIAL = 10;
-
-type Group = { key: string; label: string; items: TimelineItem[] };
-
-function groupByMonth(items: TimelineItem[]): Group[] {
-  const groups: Group[] = [];
-  for (const item of items) {
-    const key = item.date ? item.date.slice(0, 7) : "undated";
-    const label = item.date ? formatMonth(item.date) : "Undated";
-    const last = groups[groups.length - 1];
-    if (last && last.key === key) last.items.push(item);
-    else groups.push({ key, label, items: [item] });
-  }
-  return groups;
-}
 
 export function ReleaseTimeline({ items }: { items: TimelineItem[] }) {
   const reduce = useReducedMotion();
