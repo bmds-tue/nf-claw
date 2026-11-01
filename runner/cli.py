@@ -772,6 +772,7 @@ def _main(argv: list[str] | None = None) -> int:
                     params_file=Path(args.params_file) if args.params_file else None,
                     cli_overrides=_collect_overrides(extras),
                     resume=args.resume, demo=args.demo, check_only=args.check,
+                    probe_config=args.check,
                     write_provenance=not args.no_provenance, timeout_seconds=args.timeout,
                     pipeline_version=args.pipeline_version,
                     nxf_ver=args.nxf_ver, nxf_env=resources.parse_nxf_env(args.nxf_env),

@@ -404,13 +404,20 @@ def value_problems(col, value: str) -> list[str]:
     if col.enum and value not in col.enum:
         issues.append(f"value {value!r} must be one of: {', '.join(col.enum)}")
     numeric: int | float | Decimal | None = None
+    # nf-schema types a cell with Groovy's String.isInteger()/isDouble(), Java's parsers: `1_000`
+    # stays text there and fails the column's type, although Python's int() and float() take it.
+    separated = "_" in value
     if col.type == "integer":
         try:
+            if separated:
+                raise ValueError(value)
             numeric = int(value)
         except ValueError:
             issues.append(f"expects an integer, got {value!r}")
     elif col.type == "number":
         try:
+            if separated:
+                raise ValueError(f"invalid number {value!r}")
             numeric = json.number(value)
         except ValueError as exc:
             kind = "a finite number" if "non-finite" in str(exc) else "a number"

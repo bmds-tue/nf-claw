@@ -218,6 +218,13 @@ def test_run_threads_nxf_ver_and_env(tmp_path, captured):
                                    "NXF_OFFLINE": "true"}
 
 
+def test_only_a_check_probes_the_configuration(tmp_path, captured):
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out"), "--check"]) == 0
+    assert captured["probe_config"] is True and captured["check_only"] is True
+    assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 0
+    assert captured["probe_config"] is False
+
+
 def test_run_prints_the_command_with_the_nxf_env_it_runs_under(tmp_path, monkeypatch, capsys):
     # `--check` promises the exact command that would run; under `--nxf-ver 25.10.4` that command
     # runs with NXF_VER=25.10.4, and a copy without it would run whatever engine the shell
@@ -442,6 +449,7 @@ def test_output_into_a_closed_pipe_ends_quietly():
     assert proc.stdout.readline() == b"line 0\n"
     proc.stdout.close()                                    # the reader goes away, like `head -1`
     stderr = proc.stderr.read().decode()
+    proc.stderr.close()
     assert proc.wait(timeout=60) == cli._EXIT_BROKEN_PIPE
     assert "Traceback" not in stderr and "BrokenPipeError" not in stderr, stderr
 

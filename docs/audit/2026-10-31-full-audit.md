@@ -94,12 +94,75 @@ Real executions on the server with this change:
 - pyright's "possibly unbound" findings (control flow it cannot follow), ruff's extended rules
   (deliberate broad handlers on cleanup paths, continued prose), zizmor's `self-repository` notes.
 
+## Round 2 (after #246)
+
+Audited: `45df56a` (`main` after #246); #247 (the follow-through audit, F01–F23) landed meanwhile
+and was merged in. None of its findings overlaps these; its three textual conflicts with this
+round (an import list, the MCP test session, one sentence of the architecture guide) keep both
+changes. The first round left three things open: `run --check` did
+not parse configuration, nothing reported which pins an unpinned engine refuses, and parts of the
+tree had been examined only through the static gates. This round read the rest line by line — the
+samplesheet generator, handoffs, the skill writer, the replay guard and environment record,
+provenance, source corrections, the fastqrepair correction, demo defaults, the scientific
+assessors, versions, run logs, every script and workflow, and the website: its data layer,
+renderers, links, search, explorers, constellation, timeline, navigation and pages — and ran the complete suite with Python's resource warnings as errors
+(`-X dev -W error::ResourceWarning -W error::pytest.PytestUnraisableExceptionWarning`), which the
+ordinary run does not.
+
+| ID | Severity | Location | Finding | Disposition |
+|---|---|---|---|---|
+| E17 | Medium | `runner/orchestration.py`, new `runner/config_probe.py`, `runner/cli.py` | `nfclaw run --check` (and MCP `run_pipeline(check=true)`) passed a pin that the engine it would run cannot parse — 25 of the 95 pins on Nextflow 26.04.3 — which then failed at launch (E02's remaining gap). Only a chain probed configuration. | `--check` asks the run's engine to resolve exactly what the printed command loads: the source it runs (corrected, where a release needs it), its profile and every `-c`, generated ones included, under its `NXF_*` overlay. A refusal names the declared engine and the legacy parser; nothing staged for it is left behind; `profile_config` is reported `checked`. The probe is one module shared with the chain's. |
+| E18 | Medium | `.github/workflows/smoke.yml` | The smoke check ran every pin's `--check --demo` on the launcher's default engine and judged no configuration; with E17 it would have failed on the 25 pins that need their declared engine, while the default engine's refusals were reported nowhere (the gate judges declared engines only, by design). | Each pin is checked, and gated, on the engine its `skill.md` advises; beside it the summary reports, without failing, whether the default engine accepts it without `--nxf-ver`. |
+| E19 | Low | `runner/container_watch.py` (`_read`), `runner/replay_guard.py` (`run_replay_command`) | The `docker events` pipe of every run, and a replay supervisor's console pipe, were never closed (`ResourceWarning: unclosed file`, about 70 test cases under the strict run). | Each reader closes its pipe when the stream ends. A test fails without the fix. |
+| E20 | Low | `runner/scientific.py` (`assess`) | `with sqlite3.connect(...)` only commits; the connection stayed open (`unclosed database`, Python 3.13). | `contextlib.closing`. A test fails without the fix. |
+| E21 | Low | `website/src/components/ui/inline-markdown.tsx` | Inline Markdown linked any URL scheme. It renders parameter descriptions, upstream schema text that the update bot regenerates; React 19 neutralises `javascript:` but not, for example, `data:`. | Only relative, web and mail targets become links (the protocols react-markdown's default URL transform keeps); a spec covers the helper. |
+| E24 | Low | `website/src/components/layout/command-palette.tsx` (`score`) | A label match scored `60 − its position`, so a query matching past the 60th character scored below zero and was dropped: `major version 61`, copied from the error it names, did not find its known-issues section (25 guide headings exceed 60 characters). | Any label match scores above hint and description matches, earlier ones higher; a browser test fails without the fix. |
+| E25 | Low | `runner/config_probe.py` | Found by the smoke run on GitHub, whose launcher defaults to 25.10.4: the probe offered `NXF_SYNTAX_PARSER=v1` for airrflow 4.x (which needs ≥ 26.04.1) although an engine older than 26.04 parses with the legacy parser already. | The legacy parser is offered only to an engine of 26.04 or later, or of unknown version, as the launch-failure hint already did; a test fails without the fix. |
+| E26 | Low | `website/src/lib/format.ts` (`humanizeCron`) | The activity section's schedule wording was wrong outside fixed times: `*/30 * * * *` and `0 * * * *` read "Every minute", `0 6 * * 1-5` "Weekly · 1-5", day 7 "Weekly · 7". The repository's own schedules are all fixed times, so nothing is mislabelled today. | Only single values and wildcards are worded (hourly and Sunday-as-7 included); anything else is shown as written. A spec fails without the fix. |
+| E27 | Low | `website/src/components/home/release-timeline.tsx` (`groupByMonth`) | Entries were grouped by the month their date was written in (git keeps the committer's offset) but labelled with the UTC month, so a release at 23:30 −05:00 on 31 March joined March under an April label. | Grouped in UTC, as labelled (now `lib/format.ts`); a spec covers it. |
+| E28 | Low | `website/src/components/home/pipeline-universe.tsx` (`onChartKey`) | With no visible pipeline selected, ArrowLeft in the constellation selected the second-to-last pipeline (`(−1 − 1 + n) mod n`). | It selects the last, as ArrowRight selects the first. |
+| E29 | Low | `pyproject.toml` | The package declared no licence, so an installed `nfclaw` reported none although the repository is MIT-licensed (`LICENSE`, `NOTICE`). | `license = "MIT"` and `license-files` (PEP 639, setuptools ≥ 77). Verified: a built wheel carries `License-Expression: MIT` and both files; an editable install reports `MIT`. |
+| E15 | Low | `runner/samplesheet.py` (`value_problems`) | `integer` and `number` cells written with digit separators (`1_000`) passed the check: Python's `int()` takes them, nf-schema's Groovy casts do not, so the sheet failed at launch. | Refused before launch. |
+| E16 | Low | `runner/chain.py` (`format_status`) | A chain still running on another host printed its recorded `running` with exit status 1; `nfclaw status` says "unknown here — launched on <host>". | The same wording. |
+| E22 | Low | `tests/test_mcp_server.py`, `tests/test_bundle_self_contained.py`, `tests/test_nextflow_integration.py`, `tests/test_cli.py`, `tests/test_provenance.py` | Test harnesses left pipe ends, HTTP server sockets, a child's stderr and an unfinished run log open (68 of the first strict run's failures). | Closed. |
+| E23 | Low | `runner/demo_defaults.py`, `scripts/maintenance_candidate.py` (`inventory`) | Four copies of one CSV writer; a gitlink condition tested twice. | One helper; one test. |
+
+Evidence for round 2:
+
+| Gate | Result |
+|---|---|
+| `pytest`, complete suite, server, this change (scientific extras installed; files byte-identical to the branch) | 3917 run, 0 failed, 0 errors, 5 skipped (the two audited-commit fixtures a depth-1 clone lacks; three website-parsing tests without the website's dependencies, which run locally) |
+| `pytest`, complete suite, macOS, Python 3.13, `-X dev -W error::ResourceWarning -W error::pytest.PytestUnraisableExceptionWarning` | before the leak fixes: about 140 failures and errors (E19, E20, E22); with them: 3626 passed, 237 skipped (no submodules locally), 0 failed |
+| `ruff check .`, `check_drift` (server, every submodule at its pin), actionlint and shellcheck (`smoke.yml`), internal link and anchor check | clean (the link check's two known false positives: an underscore slug and a regular expression in an earlier record) |
+| Website: `npm audit`, typecheck, static export, served `llms.txt`, Playwright | 0 vulnerabilities; pass; identical; 160 passed (the new link spec included) |
+| After merging #247 (`9a705ba`): `pytest`, complete suite, server, clean checkout | 4022 run, 0 failed, 0 errors, 5 skipped (as above) |
+| After merging #247: `pytest`, macOS, strict resource warnings | 3719 passed, 239 skipped, 0 failed |
+| After merging #247, with E24: website typecheck, export, `llms.txt`, Playwright | pass; identical; 164 passed |
+| With E26–E28: website typecheck, export, `llms.txt`, `npm audit`, Playwright | pass; identical; 0 vulnerabilities; 166 passed |
+| After merging #247: real demo run, `commands.sh` replay, `nfclaw verify` (server) | run and replay succeeded, every task image recorded at container start; 42 identical, 34 changed (timestamped reports), 0 missing, 0 extra; environment identical |
+
+- **Smoke, exactly as the workflow runs it** (its step extracted from `smoke.yml` and run on the
+  server, 17 minutes): exit 0. All 95 pins pass `--check --demo`, configuration probe included, on
+  their advised engine (21.10.3 to 26.04.4); none wrote its `--outdir`. On the default 26.04.3
+  without `--nxf-ver`, 70 pass and 25 are refused with "cannot parse its configuration": atacseq,
+  bactmap, callingcards, chipseq, circdna, crisprseq, cutandrun, denovotranscript, hgtseq, hic,
+  hicar, marsseq, metaboigniter, metapep, methylseq, multiplesequencealign, nanoseq, nascent,
+  pangenome, proteinfold, rangeland, readsimulator, reportho, viralintegration, viralrecon.
+- **The same workflow on GitHub** (dispatched on this branch): both steps succeeded; all 95 pins pass
+  on their advised engine; the runner's launcher defaults to 25.10.4, on which only airrflow is
+  refused without `--nxf-ver` (it declares ≥ 26.04.1).
+- **methylseq 4.2.0 `--demo --check`** on 26.04.3: refused in 5 s, quoting `Invalid include
+  source: …/conf/aws/batch/nextflow.config` and naming `--nxf-ver 25.04.0` and
+  `--nxf-env NXF_SYNTAX_PARSER=v1`; each remedy then passes (6–8 s) with `profile_config` checked.
+- **A chain's probe reads the pinned tree; `run --check` reads the corrected one.** They differ only
+  for bactmap 1.0.0, whose correction edits `conf/test.config`; `nextflow config` of the pinned tree
+  gives the same verdict as the corrected run's probe on both 24.10.5 (parses) and 26.04.3 (refused
+  at `nextflow.config:184`).
+
 ## Left to the maintainers
 
-- `nfclaw run --check` still defers the pipeline's profile configuration; parsing it on the target
-  engine (as chains do) would catch E02 before launch at the cost of a `nextflow config` probe per
-  check. E02's error names the fix when it happens.
-- The acceptance gate judges each pin on its *declared* engine, not on the newest one, so a pin that
-  the current Nextflow rejects (E02) is found by users, not by the gate.
+- The acceptance gate still judges each pin on its declared engine, deliberately: a release is
+  accepted on the engine it was written for. Users of a newer engine get a refusal from `--check`
+  (E17) or at launch (E02) that names the remedy, and the smoke summary lists those pins (E18).
 - The earlier records' product items (DAG chains, more handoff rules, chain-wide replay packages,
   offline bundles, distribution beyond an editable checkout) remain product decisions.

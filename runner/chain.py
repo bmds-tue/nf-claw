@@ -18,16 +18,14 @@ import os
 import re
 import shutil
 import stat
-import subprocess
 import sys
-import tempfile
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from runner import (atomic, budget, consumption, discovery, engine_version, execution, handoff,
+from runner import (atomic, budget, config_probe, consumption, discovery, execution, handoff,
                     inputs, input_safety, locking, nextflow_command, orchestration, parameters,
                     preflight, provenance, resources, runlog, sheetgen, source_corrections,
                     versions)
@@ -35,8 +33,6 @@ from runner import schema as schema_mod
 from runner import outputs as output_mod
 from runner import exact_json as json
 from runner.errors import ErrorCode, NfclawError
-from runner.probes import capture
-from runner.settings import seconds
 from runner.submodule import SubmoduleStatus
 
 RECORD_DIRNAME = "chain"
@@ -50,10 +46,6 @@ _CHAIN_KEYS = {"stages", "allow_spaces"} | _OPTION_KEYS
 _STAGE_KEYS = {"id", "pipeline", "input", "params", "params_file", "pipeline_version",
                "retries", "demo", "handoff", "sheet_set"} | _OPTION_KEYS
 _LIMIT_KEYS = {"cpus", "memory", "time"}
-_PROBE_TIMEOUT = 300
-# What the Nextflow launcher prints when it cannot set an engine up at all (no jars, no Java).
-_ENGINE_DOWN = re.compile(r"Unable to initialize nextflow environment|CAPSULE EXCEPTION|"
-                          r"Cannot download nextflow|Unable to download")
 
 
 # --- the spec --------------------------------------------------------------------------------
@@ -624,62 +616,17 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
 
 def _probe_config(spec: ChainSpec, p: Planned, *,
                   timeout_seconds: float | None = None) -> list[str]:
-    """Whether the stage's Nextflow configuration parses with the engine it will run under.
-
-    `nextflow config` resolves the pipeline's config and profiles without running anything (a few
-    seconds). It catches the one failure no schema can predict: a release whose config the engine
-    rejects outright — an older release on Nextflow 26's strict parser — which would otherwise
-    surface only when that stage launches, after every stage before it has run. Run from a scratch
-    directory so nothing lands in the output directory. A probe that cannot run or does not
-    finish cannot establish configuration validity and blocks the chain before any launch."""
+    """Whether the stage's Nextflow configuration parses with the engine it will run under
+    (runner.config_probe): checked for every stage before the first launches, so a release the
+    engine rejects is not found only after every stage before it has run."""
     opts = options(spec, p.stage)
-    engine = f"Nextflow {opts.nxf_ver}" if opts.nxf_ver else "the installed Nextflow"
-    label = f"{p.stage.dirname} ({p.stage.pipeline})"
-    if shutil.which("nextflow") is None:
-        return [f"{label}: configuration could not be verified — nextflow is not on PATH"]
     overlay = dict(opts.nxf_env)
     if opts.nxf_ver:
         overlay["NXF_VER"] = opts.nxf_ver
-    # `-c` is the launcher's own option for `nextflow config` (`nextflow -c x.config config …`);
-    # after the command it is rejected as unknown, unlike `nextflow run … -c x.config`.
-    cmd = ["nextflow"]
-    for cfg in opts.configs:
-        cmd += ["-c", cfg]
-    cmd += ["config", str(p.tree.path),
-            "-profile", nextflow_command.compose_profile(opts.profile, demo=p.stage.demo)]
-    operation_timeout = seconds("NFCLAW_CONFIG_TIMEOUT", _PROBE_TIMEOUT)
-    probe_timeout = budget.remaining(min(operation_timeout, timeout_seconds)
-                                     if timeout_seconds is not None else operation_timeout)
-    with tempfile.TemporaryDirectory(prefix="nfclaw-probe-") as scratch:
-        try:
-            r = capture(cmd, cwd=scratch, env={**os.environ, **overlay}, timeout=probe_timeout)
-        except subprocess.TimeoutExpired:
-            return [f"{label}: configuration could not be verified — {engine} did not finish "
-                    f"its configuration probe within {probe_timeout:g} seconds"]
-        except (OSError, subprocess.SubprocessError) as exc:
-            return [f"{label}: configuration could not be verified — {engine}'s "
-                    f"configuration probe could not run: {exc}"]
-    if r.returncode == 0:
-        return []
-    report = (runlog.error_excerpt(r.stdout or "")
-              + runlog.stderr_excerpt(r.stderr or "")) or [f"exit status {r.returncode}"]
-    if _ENGINE_DOWN.search((r.stdout or "") + (r.stderr or "")):
-        # The launcher could not set the engine up (a pinned version is downloaded on first use):
-        # the stage could not start either, but not because of its configuration.
-        return [f"{p.stage.dirname} ({p.stage.pipeline}): {engine} could not be started — "
-                "Nextflow downloads a pinned engine on first use; check this host can:\n"
-                + "\n".join(f"      {line}" for line in report)]
-    # The engine the release was written for is the one it declares (docs/compatibility.md).
-    declared = engine_version.minimum_version(
-        engine_version.required_spec(p.tree.path / "nextflow.config"))
-    hint = (f" — the release declares Nextflow {declared}: try \"nxf_ver\": \"{declared}\""
-            if declared and declared != opts.nxf_ver else "")
-    # From 26.04 strict syntax is the default; the legacy parser stays selectable in place.
-    if overlay.get("NXF_SYNTAX_PARSER", "").strip() != "v1":
-        hint += (f"{';' if hint else ' —'} on Nextflow 26.04+ the legacy parser may parse it: "
-                 '"nxf_env": {"NXF_SYNTAX_PARSER": "v1"}')
-    return [f"{p.stage.dirname} ({p.stage.pipeline}): {engine} cannot parse its "
-            f"configuration{hint}:\n" + "\n".join(f"      {line}" for line in report)]
+    return config_probe.probe(
+        pipeline=p.tree.path, configs=opts.configs, overlay=overlay, spelling="chain",
+        profile=nextflow_command.compose_profile(opts.profile, demo=p.stage.demo),
+        label=f"{p.stage.dirname} ({p.stage.pipeline})", timeout_seconds=timeout_seconds)
 
 
 def _data_change(p: Planned, entry: dict, spec: ChainSpec, repo_root: Path) -> str | None:
@@ -1466,6 +1413,10 @@ def format_status(state: dict, problems: list[str]) -> str:
         outcome = (f"stopped without an outcome — nfclaw{pid} is no longer "
                    "running and never recorded how the chain ended (SIGKILL, out of memory, a "
                    "full disk, a restart); resume it with --resume")
+    elif state.get("log_state") == "elsewhere":
+        # As `nfclaw status` says of a run: its nfclaw cannot be inspected from this host.
+        outcome = (f"unknown here — launched on {state.get('log_host')} and not finished; run "
+                   "`nfclaw chain status` there")
     elif state.get("log_state") == "unreadable":
         reason = "; ".join(state.get("log_error") or [])
         outcome = (f"unknown — its chain log cannot be read ({reason}); "

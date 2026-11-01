@@ -47,7 +47,9 @@ function score(item: Item, q: string): number {
   const label = item.label.toLowerCase();
   if (label === q) return 100;
   if (label.startsWith(q)) return 80 - label.length / 100;
-  if (label.includes(q)) return 60 - label.indexOf(q);
+  // An earlier match ranks higher, but any match in the label outranks the hint and description:
+  // a query copied from an error often matches the end of a long heading.
+  if (label.includes(q)) return 59 - Math.min(label.indexOf(q), 28);
   if (item.kind === "pipeline") {
     if (item.hint.toLowerCase().includes(q)) return 30;
     if (item.description.toLowerCase().includes(q)) return 20;

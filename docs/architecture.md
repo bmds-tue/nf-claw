@@ -65,17 +65,18 @@ Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight ch
 - **Pipeline Code Integrity:** Refuses a pinned `upstream/` that is not at the commit its `skill.md` documents, and any tree (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names code that did not run.
 - **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0 or cannot be identified; older engines ignore `process.resourceLimits` silently.
 - **Reproducibility Advisories:** `runner/reproducibility.py` scans pinned task scripts before launch to detect known sources of run-to-run variability (such as dada2 `assignTaxonomy` tie-breaking or unseeded QIIME2 rarefaction) and announces prelaunch advisories unless those steps are explicitly skipped. It also announces pinned workflow code that reorders, in place, a list Nextflow hands to several processes at once (createtaxdb 3.1.0's sourmash step) when that step runs.
+- **Configuration Probe (`runner/config_probe.py`, `--check` only):** Asks the run's engine — its `--nxf-ver`, `--nxf-env` and every `-c`, generated ones included — to resolve the pipeline's configuration and selected profiles with `nextflow config`, from a scratch directory. A release that engine cannot parse (an older one under Nextflow 26.04's strict parser) is refused with the declared engine or the legacy parser to use, and `profile_config` is reported checked.
 - **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
 
 #### What is left to Nextflow and the pinned release
 Every pinned release checks itself at launch, before any task runs. Nextflow enforces the manifest's `nextflowVersion`, and every pinned release uses the strict `!>=` form. The release's validation code checks every parameter and samplesheet against its schemas: nf-schema, nf-validation in older releases, or the `NfcoreSchema` library of the oldest template. nfclaw does not repeat a check whose result Nextflow or the release produces just as early:
 - **Engine version:** a launch does not probe for it. When Nextflow refuses an older engine, nfclaw's error names the `--nxf-ver` to pass, and `skill.md` states the declared engine. `--check` warns about it, because `nextflow config` does not enforce it.
 - **Java:** nfclaw looks for it where the Nextflow launcher does (`NXF_JAVA_HOME`, `JAVA_HOME`, then `PATH`). The launcher checks the version.
-- **Profiles, config syntax, conditional and nested schema constraints, remote files:** Nextflow and the plugin judge them at launch.
+- **Profile values, conditional and nested schema constraints, remote files:** Nextflow and the plugin judge them at launch; `--check` has the engine parse the configuration first.
 - **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo validation compares its runs with that snapshot instead of re-deriving the tools' output.
 
 nfclaw keeps its own schema checks where they act before Nextflow could:
-- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never launch pipeline tasks.
+- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never launch pipeline tasks: Nextflow runs only to report its version (`nextflow -version`) and resolve the configuration (`nextflow config`).
 - A chain validates every stage before the first one launches. Otherwise a later stage's own validation would run only after the stages before it have finished.
 - Unknown parameters are refused. nf-schema only warns about them by default, because institutional profiles may set extra parameters, so a mistyped flag would run with its default.
 - Declared local samplesheet paths must be absolute and identifiers shell-safe. A real run hashes its discovered local dependencies before launching Nextflow from `--outdir`; `--check` inspects paths without establishing every data file's byte readability. Implicit, transitive and remote dependencies retain the limits in [preflight scope](preflight.md).
@@ -213,7 +214,7 @@ the replay entry point and the reference for dependency and output checks.
 - Runs multi-pipeline workflows sequentially, passing outputs from stage $k$ to inputs of stage $k+1$.
 - **Chain Locking:** Locks `<outdir>/chain/.lock` against concurrent chain execution.
 - **Preflight Configuration Probe:** Runs `nextflow config` under each stage's engine before
-  launching stage 1. Parser failures, unavailable engines and inconclusive probes stop the chain.
+  launching stage 1 (`runner/config_probe.py`, shared with `nfclaw run --check`). Parser failures, unavailable engines and inconclusive probes stop the chain.
 - **Handoff Output Verification:** Validates upstream output bytes and complete recorded namespaces before constructing downstream inputs; inherited local references also require producer input evidence.
 - **Lineage Verification:** `nfclaw chain status` checks recorded stage identities, live stage
   outputs, and handoff files/references against upstream and downstream checksum inventories.

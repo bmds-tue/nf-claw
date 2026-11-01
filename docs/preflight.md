@@ -4,7 +4,12 @@
 `preflight` lines list checks completed by the wrapper, deferred to workflow launch, and unsupported
 by preparation. A real run retains the detailed versioned report as `validation_scope` in
 `provenance/run_manifest.json`. Failed preparation reports the failing check through its error;
-it does not claim that later checks ran. The report adds no network or engine probes.
+it does not claim that later checks ran. One engine probe runs: `--check` asks the Nextflow the
+run would use (its `--nxf-ver`, `--nxf-env` and every `-c`, generated ones included) to resolve the
+pipeline's configuration and selected profiles with `nextflow config`, from a scratch directory, and
+refuses a release that engine cannot parse — an older one under Nextflow 26.04's strict parser —
+naming the declared engine or the legacy parser to use; `profile_config` is then reported checked.
+It resolves no parameter values, and a pinned engine not yet on the host is downloaded first.
 Generated tables count as validated local sheets too. A check-only preparation inspects local data
 paths but does not read every data file's bytes; `local_data_bytes` stays deferred until a real run
 has taken its input snapshots. A successful check can therefore still encounter unreadable data at

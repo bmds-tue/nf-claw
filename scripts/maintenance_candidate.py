@@ -57,10 +57,7 @@ def inventory(base: str, sha: str, kind: str) -> dict[str, str]:
             raise ValueError('Unsupported deletion, source conversion or generated file mode')
         if before.get(path) and before[path][0] != entry[0]:
             raise ValueError('Maintenance cannot convert an existing path type')
-        if match and match[2] == 'upstream':
-            entry = after.get(path)
-            if not entry or entry[0] != '160000':
-                raise ValueError('A changed pipeline must retain a pinned gitlink')
+        if match and match[2] == 'upstream':           # a gitlink, by the mode check above
             pins[match[1]] = entry[1]
     old_policies = registrations(base, before)
     new_policies = registrations(sha, after)

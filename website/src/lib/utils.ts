@@ -15,6 +15,15 @@ export function asset(path: string): string {
   return `${BASE_PATH}${path}`;
 }
 
+/**
+ * Whether a link target may be rendered as a link: relative, or a web or mail URL — the protocols
+ * react-markdown's default URL transform keeps.
+ */
+export function safeHref(href: string): boolean {
+  const scheme = href.match(/^([a-z][a-z0-9+.-]*):/i);
+  return !scheme || /^(https?|mailto)$/i.test(scheme[1]);
+}
+
 /** Title-case a snake_case or kebab-case identifier. */
 export function humanize(id: string): string {
   return id

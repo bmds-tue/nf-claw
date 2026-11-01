@@ -88,24 +88,27 @@ class ContainerWatch:
         return self
 
     def _read(self) -> None:
-        for line in self._process.stdout:
-            try:
-                event = json.loads(line)
-            except ValueError:
-                continue
-            if not isinstance(event, dict):
-                continue
-            name = _name(event)
-            reference = _reference(event)
-            # Nextflow names task containers `nxf-…`; anything else is another program's.
-            if reference is None or (name and not name.startswith("nxf-")):
-                continue
-            now = time.monotonic()
-            last = self._checked.get(reference)
-            if last is None or now - last >= RECHECK_SECONDS:
-                self._checked[reference] = now
-                self._queue.put(reference)
-        self._queue.put(None)
+        try:
+            with self._process.stdout as stream:      # closed when the events stream ends
+                for line in stream:
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(event, dict):
+                        continue
+                    name = _name(event)
+                    reference = _reference(event)
+                    # Nextflow names task containers `nxf-…`; anything else is another program's.
+                    if reference is None or (name and not name.startswith("nxf-")):
+                        continue
+                    now = time.monotonic()
+                    last = self._checked.get(reference)
+                    if last is None or now - last >= RECHECK_SECONDS:
+                        self._checked[reference] = now
+                        self._queue.put(reference)
+        finally:
+            self._queue.put(None)                     # the inspector stops after what is queued
 
     def _inspect(self) -> None:
         while (reference := self._queue.get()) is not None:
