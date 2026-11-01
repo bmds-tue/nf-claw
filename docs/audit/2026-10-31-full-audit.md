@@ -100,7 +100,7 @@ Audited: `45df56a` (`main` after #246); #247 (the follow-through audit, F01–F2
 and was merged in. None of its findings overlaps these; its three textual conflicts with this
 round (an import list, the MCP test session, one sentence of the architecture guide) keep both
 changes. The first round left three things open: `run --check` did
-not parse configuration, nothing reported which pins the newest Nextflow refuses, and parts of the
+not parse configuration, nothing reported which pins an unpinned engine refuses, and parts of the
 tree had been examined only through the static gates. This round read the rest line by line — the
 samplesheet generator, handoffs, the skill writer, the replay guard and environment record,
 provenance, source corrections, the fastqrepair correction, demo defaults, the scientific
@@ -112,11 +112,12 @@ ordinary run does not.
 | ID | Severity | Location | Finding | Disposition |
 |---|---|---|---|---|
 | E17 | Medium | `runner/orchestration.py`, new `runner/config_probe.py`, `runner/cli.py` | `nfclaw run --check` (and MCP `run_pipeline(check=true)`) passed a pin that the engine it would run cannot parse — 25 of the 95 pins on Nextflow 26.04.3 — which then failed at launch (E02's remaining gap). Only a chain probed configuration. | `--check` asks the run's engine to resolve exactly what the printed command loads: the source it runs (corrected, where a release needs it), its profile and every `-c`, generated ones included, under its `NXF_*` overlay. A refusal names the declared engine and the legacy parser; nothing staged for it is left behind; `profile_config` is reported `checked`. The probe is one module shared with the chain's. |
-| E18 | Medium | `.github/workflows/smoke.yml` | The smoke check ran every pin's `--check --demo` on the launcher's default engine and judged no configuration; with E17 it would have failed on the 25 pins that need their declared engine, while the newest engine's refusals were reported nowhere (the gate judges declared engines only, by design). | Each pin is checked, and gated, on the engine its `skill.md` advises; beside it the summary reports, without failing, whether the default engine accepts it without `--nxf-ver`. |
+| E18 | Medium | `.github/workflows/smoke.yml` | The smoke check ran every pin's `--check --demo` on the launcher's default engine and judged no configuration; with E17 it would have failed on the 25 pins that need their declared engine, while the default engine's refusals were reported nowhere (the gate judges declared engines only, by design). | Each pin is checked, and gated, on the engine its `skill.md` advises; beside it the summary reports, without failing, whether the default engine accepts it without `--nxf-ver`. |
 | E19 | Low | `runner/container_watch.py` (`_read`), `runner/replay_guard.py` (`run_replay_command`) | The `docker events` pipe of every run, and a replay supervisor's console pipe, were never closed (`ResourceWarning: unclosed file`, about 70 test cases under the strict run). | Each reader closes its pipe when the stream ends. A test fails without the fix. |
 | E20 | Low | `runner/scientific.py` (`assess`) | `with sqlite3.connect(...)` only commits; the connection stayed open (`unclosed database`, Python 3.13). | `contextlib.closing`. A test fails without the fix. |
 | E21 | Low | `website/src/components/ui/inline-markdown.tsx` | Inline Markdown linked any URL scheme. It renders parameter descriptions, upstream schema text that the update bot regenerates; React 19 neutralises `javascript:` but not, for example, `data:`. | Only relative, web and mail targets become links (the protocols react-markdown's default URL transform keeps); a spec covers the helper. |
 | E24 | Low | `website/src/components/layout/command-palette.tsx` (`score`) | A label match scored `60 − its position`, so a query matching past the 60th character scored below zero and was dropped: `major version 61`, copied from the error it names, did not find its known-issues section (25 guide headings exceed 60 characters). | Any label match scores above hint and description matches, earlier ones higher; a browser test fails without the fix. |
+| E25 | Low | `runner/config_probe.py` | Found by the smoke run on GitHub, whose launcher defaults to 25.10.4: the probe offered `NXF_SYNTAX_PARSER=v1` for airrflow 4.x (which needs ≥ 26.04.1) although an engine older than 26.04 parses with the legacy parser already. | The legacy parser is offered only to an engine of 26.04 or later, or of unknown version, as the launch-failure hint already did; a test fails without the fix. |
 | E15 | Low | `runner/samplesheet.py` (`value_problems`) | `integer` and `number` cells written with digit separators (`1_000`) passed the check: Python's `int()` takes them, nf-schema's Groovy casts do not, so the sheet failed at launch. | Refused before launch. |
 | E16 | Low | `runner/chain.py` (`format_status`) | A chain still running on another host printed its recorded `running` with exit status 1; `nfclaw status` says "unknown here — launched on <host>". | The same wording. |
 | E22 | Low | `tests/test_mcp_server.py`, `tests/test_bundle_self_contained.py`, `tests/test_nextflow_integration.py`, `tests/test_cli.py`, `tests/test_provenance.py` | Test harnesses left pipe ends, HTTP server sockets, a child's stderr and an unfinished run log open (68 of the first strict run's failures). | Closed. |
@@ -142,6 +143,9 @@ Evidence for round 2:
   bactmap, callingcards, chipseq, circdna, crisprseq, cutandrun, denovotranscript, hgtseq, hic,
   hicar, marsseq, metaboigniter, metapep, methylseq, multiplesequencealign, nanoseq, nascent,
   pangenome, proteinfold, rangeland, readsimulator, reportho, viralintegration, viralrecon.
+- **The same workflow on GitHub** (dispatched on this branch): both steps succeeded; all 95 pins pass
+  on their advised engine; the runner's launcher defaults to 25.10.4, on which only airrflow is
+  refused without `--nxf-ver` (it declares ≥ 26.04.1).
 - **methylseq 4.2.0 `--demo --check`** on 26.04.3: refused in 5 s, quoting `Invalid include
   source: …/conf/aws/batch/nextflow.config` and naming `--nxf-ver 25.04.0` and
   `--nxf-env NXF_SYNTAX_PARSER=v1`; each remedy then passes (6–8 s) with `profile_config` checked.

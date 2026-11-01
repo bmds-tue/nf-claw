@@ -213,7 +213,7 @@ def test_smoke_rejects_failed_partial_inventories_before_checking_subset(tmp_pat
 @pytest.mark.parametrize("advised_passes", [True, False])
 def test_smoke_gates_the_advised_engine_and_only_reports_the_default_one(tmp_path, advised_passes):
     # Each pin is checked on the engine its skill.md advises (gated); what a user who pins none
-    # gets, the launcher's newest engine, is a column in the summary and a warning, never a failure.
+    # gets, the launcher's default engine, is a column in the summary and a warning, never a failure.
     step = "Build + preflight the demo command for every pipeline"
     raw = _text("smoke.yml").split(f"- name: {step}", 1)[1].split("        run: |\n", 1)[1]
     raw = raw.split("\n      - ", 1)[0]

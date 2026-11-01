@@ -49,7 +49,7 @@ each change, are in [`docs/audit/`](docs/audit/).
   the maintenance gate are never cancelled (#234).
 - The smoke workflow checks each pin's demo on the engine its `skill.md` advises, which now also
   has that engine parse the configuration, and reports beside it — without failing — which pins
-  the launcher's default (newest) Nextflow refuses when no `--nxf-ver` is given (#248).
+  the launcher's default Nextflow refuses when no `--nxf-ver` is given (#248).
 
 ### Fixed
 

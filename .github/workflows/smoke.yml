@@ -5,8 +5,8 @@ name: smoke
 # test profile, builds + preflights the demo command and has the engine parse its
 # configuration — i.e. `nfclaw run --check --demo` stops just before execution —
 # on the engine the pipeline's skill.md tells users to pin. What a user who pins
-# no engine gets (the launcher's default, the newest) is reported beside it, not
-# gated: a release written for an older engine may not parse on the newest one.
+# no engine gets (the launcher's default engine) is reported beside it, not gated:
+# a release can need an older or a newer engine than that default.
 # Scientific correctness of a release is nf-core's own CI's job; this guards what
 # nf-claw owns (schema parse, generated command, submodule integrity, the advised
 # engine) and stays cheap as the library grows.
@@ -78,16 +78,16 @@ jobs:
             fi
             # Reported, never gated: nfclaw refuses such a run with its remedy (docs/known-issues.md).
             if [ -z "$ver" ] || [ "$ver" = "$default" ]; then
-              newest="$result (the same run)"
+              unpinned="$result (the same run)"
             elif nfclaw run "$name" --outdir "$out" --check --demo -profile docker \
                 > "$RUNNER_TEMP/$name.default.log" 2>&1; then
-              newest="✅"
+              unpinned="✅"
             else
               echo "::warning::$name: --check without --nxf-ver (Nextflow $default) refused"
               echo "::group::$name on Nextflow $default"; cat "$RUNNER_TEMP/$name.default.log"; echo "::endgroup::"
-              newest="⚠️ refused"
+              unpinned="⚠️ refused"
             fi
-            echo "| \`$name\` | ${ver:-none declared} | $result | $newest |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| \`$name\` | ${ver:-none declared} | $result | $unpinned |" >> "$GITHUB_STEP_SUMMARY"
           done
           exit $fail
       # Every chain the registry defines (handoffs/), with both stages on their test profile, is
