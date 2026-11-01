@@ -159,14 +159,26 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             return [] if values else ["input file has no values"]
         if path.suffix.lower() not in (".csv", ".tsv"):
             # Some nf-core pipelines (notably Sarek) accept JSON/YAML inputs while also shipping a
-            # tabular schema_input.json. Flat records get identity and local-path guards; full
-            # format-specific and nested-structure validation stays with nf-schema.
+            # tabular schema_input.json. Apply the same scalar/presence/relationship subset to
+            # flat records; nested structures still need the pinned plugin's full schema.
             data = serialized_rows(path)
             if data is None:
                 return []
+            if not data:
+                return ["samplesheet has no data rows"]
+            normalized = []
             for i, row in enumerate(data, start=1):
+                values = {key: ("" if value is None else json_scalar(value)).strip()
+                          for key, value in row.items()
+                          if value is None or isinstance(value, (str, *json.NUMBER_TYPES, bool))}
+                normalized.append({**row, **values})
                 for col in named:
                     value = row.get(col.name)
+                    if col.required and (value is None or isinstance(value, str)
+                                         and not value.strip()):
+                        issues.append(f"row {i}: empty required '{col.name}'")
+                    if values.get(col.name):
+                        issues.extend(_value_issues(i, col, values[col.name]))
                     if col.is_identifier and value is not None and not isinstance(
                             value, (str, *json.NUMBER_TYPES, bool)):
                         issues.append(f"row {i}: '{col.name}' identifier must be a literal scalar; "
@@ -181,6 +193,10 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
                     if isinstance(value, str):
                         issues.extend(_info_identifier_issues(i, col, value))
                         issues.extend(_quoted_value_issues(i, col, value))
+                present = {**{key: "<structured>" for key, value in row.items()
+                              if isinstance(value, (dict, list))}, **values}
+                issues.extend(_relationship_issues(i, present, input_schema))
+            issues.extend(_unique_issues(normalized, input_schema, start=1))
             return issues
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter, strict=True)
@@ -233,14 +249,48 @@ def validate(path: Path, input_schema: InputSchema) -> list[str]:
             elif col.name in pattern_files and val:
                 issues.extend(_pattern_file_issues(i, col, val))
         values = {col.name: (row.get(col.name) or "").strip() for col in named}
-        for trigger, required in input_schema.dependent_required:
-            if values.get(trigger):
-                for req in required:
-                    if not values.get(req):
-                        issues.append(f"row {i}: '{trigger}' requires '{req}'")
-        branches = input_schema.any_of_dependent_required
-        if branches and not _any_branch_satisfied(values, branches):
-            issues.append(f"row {i}: {_any_of_message(branches)}")
+        issues.extend(_relationship_issues(i, values, input_schema))
+    normalized = [{key: (value or "").strip() for key, value in row.items() if key is not None}
+                  for row in rows]
+    issues.extend(_unique_issues(normalized, input_schema, start=2))
+    return issues
+
+
+def _relationship_issues(number: int, values: dict, schema: InputSchema) -> list[str]:
+    issues = []
+    for trigger, required in schema.dependent_required:
+        if values.get(trigger):
+            issues.extend(f"row {number}: '{trigger}' requires '{req}'"
+                          for req in required if not values.get(req))
+    branches = schema.any_of_dependent_required
+    if branches and schema.any_of_dependencies_complete and not _any_branch_satisfied(
+            values, branches):
+        issues.append(f"row {number}: {_any_of_message(branches)}")
+    for groups, complete in ((schema.one_of, schema.one_of_complete),
+                              (schema.any_of_required, schema.any_of_required_complete)):
+        if (complete and groups
+                and not any(all(values.get(key) for key in group) for group in groups)):
+            issues.append(f"row {number}: needs one of these column sets: "
+                          + "; ".join(", ".join(group) for group in groups))
+    return issues
+
+
+def _unique_issues(rows: list[dict], schema: InputSchema, *, start: int) -> list[str]:
+    """The same nonempty-cell uniqueEntries policy used when generating sheets."""
+    issues = []
+    for combo in schema.unique_entries:
+        seen = {}
+        for number, row in enumerate(rows, start=start):
+            if any(isinstance(row.get(column), (dict, list)) for column in combo):
+                continue  # nested equality remains the plugin's responsibility
+            key = tuple((column, row[column]) for column in combo if row.get(column))
+            if not key:
+                continue
+            if key in seen:
+                issues.append(f"rows {seen[key]} and {number} repeat values of "
+                              + ", ".join(combo) + "; these entries must be unique")
+            else:
+                seen[key] = number
     return issues
 
 
@@ -329,14 +379,16 @@ def header_issues(columns: Iterable[str], input_schema: InputSchema) -> list[str
               if c.name and c.required and c.name not in have]
     issues += [f"missing positional header column '{name}'" for name in input_schema.header_prefix
                if name not in have and not any(f"'{name}'" in issue for issue in issues)]
-    if input_schema.one_of and not any(set(group) <= have for group in input_schema.one_of):
+    if (input_schema.one_of_complete and input_schema.one_of
+            and not any(set(group) <= have for group in input_schema.one_of)):
         issues.append("needs one of these column sets: "
                       + "; ".join(", ".join(group) for group in input_schema.one_of))
     for trigger, required in input_schema.dependent_required:
         if trigger in have:
             issues += [f"'{trigger}' requires '{req}'" for req in required if req not in have]
     branches = input_schema.any_of_dependent_required
-    if branches and not _any_branch_satisfied({c: "x" for c in have}, branches):
+    if (input_schema.any_of_dependencies_complete and branches
+            and not _any_branch_satisfied({c: "x" for c in have}, branches)):
         issues.append(_any_of_message(branches))
     return issues
 

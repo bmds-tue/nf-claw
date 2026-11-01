@@ -29,9 +29,9 @@ launch, and is not a byte-readability guarantee.
 |---|---|---|
 | Explicit parameters | Known names; declared string, boolean, integer and number types; enums with exact JSON numeric identity; string patterns/lengths and numeric bounds. Required values without defaults are checked when not deferred to a profile/handoff. | Effective profile/config values, nested object/array constraints, general composition and conditional validation. |
 | Local CSV/TSV | Parsing, duplicate headers, required columns/nonempty values, extra fields, supported scalar/pattern/range constraints, literal safe identifiers and declared local paths. | Unimplemented schema keywords and analysis-specific consistency. |
-| Handwritten CSV/TSV relationships | Supported `dependentRequired` rules and extracted `anyOf` dependency groups, using nonempty-cell semantics. | General branch evaluation, `oneOf`/`anyOf` required-group exclusivity, cross-row `uniqueEntries`, arbitrary predicates, `if`/`then`/`else` and nested rules. |
-| Generated sheets and handoff headers | Generation additionally applies its extracted required column groups and `uniqueEntries` tuples; handoff headers check which declared groups can be supplied. | These checks are not equivalent to full row-level JSON Schema evaluation. A supplied handwritten table does not receive every generation-only check. |
-| Local JSON/YAML samplesheets | Flat arrays of objects receive declared identifier and local-file safety checks; duplicate mapping keys are rejected. YAML needs the optional `yaml` dependency. | CSV/TSV required-field, scalar, relationship and uniqueness validation is not equivalently implemented for serialized rows. Nested structures and the complete format schema require runtime validation. |
+| Handwritten CSV/TSV relationships | Supported `dependentRequired` rules, extracted `anyOf` dependency groups, necessary required-column sets and scalar `uniqueEntries` tuples, using nonempty-cell semantics. | Full branch evaluation/exclusivity, arbitrary predicates, `if`/`then`/`else` and nested rules. |
+| Generated sheets and handoff headers | Generation and supplied rows share supported relationships and uniqueness checks; handoff headers check which declared groups can be supplied. | These checks are not equivalent to full row-level JSON Schema evaluation. |
+| Local JSON/YAML samplesheets | Flat arrays of objects receive required-field, supported scalar/pattern/range, relationship, scalar uniqueness, identifier and local-file checks; empty arrays and duplicate mapping keys are rejected. YAML needs the optional `yaml` dependency. | Nested structures, nested equality and the complete format schema require runtime validation. Checking necessary column sets does not establish general branch exclusivity. |
 | Headerless accession lists | At least one nonempty value. | Per-accession pattern and service validation. |
 | Remote sheets/data; config/profile expressions | Explicit path syntax and declared write separation where values are available. | URL availability, remote inventory/content and resolved profile/config values. A successful check does not establish these. |
 | Scientific results | Preparation establishes no result completeness or biological accuracy. | Expected/processed samples, required scientific artifacts, formats and analysis-specific assessments. Exit zero alone does not establish these. |
@@ -44,12 +44,20 @@ includes, Conda environments and task-managed downloads are not comprehensively 
 
 ## Replay integrity limits
 
-Source replay integrity currently means the recorded revision and tracked file contents. The
-source archive retains executable/nonexecutable permissions when created, but `pipeline.sha256`
-does not independently authenticate those mode bits or symlink identities. Tracked symlinks are
-archived as their resolved contents; untracked/ignored source files are not archived or comprehensively
-judged for runtime significance. These are explicit limits, so a tracked-byte match is not a claim
-that every possible filesystem dependency or continuous source state was reproduced.
+New ordinary runs use source identity version 2: `pipeline-source-identity.json` binds the full
+source namespace, permissions, regular-file bytes, internal relative symlinks and internal hard-link
+topology. Untracked and ignored files are included; only the root `.git` administration entry is
+excluded. Source links that escape the tree, aliases into excluded Git metadata, outside hard-link
+aliases, privileged executable bits and special objects are refused. Archives retain this identity
+and extract under a private root. Source modes, links and new files are checked after execution too,
+including with `--no-provenance`. Put generated caches and other writes outside the source tree;
+their appearance inside it is a source change.
+
+Legacy source identity version 1 authenticates the recorded revision and file contents only;
+its source archive dereferences tracked symlinks and does not independently bind their identity,
+permissions or an ordinary Git checkout's untracked/ignored files. Reading an old bundle does not
+upgrade this evidence. Neither version establishes continuous immutability or captures transitive
+dependencies outside its recorded namespace, filesystem ownership/ACLs or Git administration data.
 
 The three exact-pin [recorded source corrections](source-corrections.md) (Createtaxdb, Funcscan, and Bactmap) use independent regular-file
 copies with a separately bound inventory, executable modes and complete directory namespace.

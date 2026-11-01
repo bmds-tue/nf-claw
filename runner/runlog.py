@@ -514,9 +514,10 @@ class RunState:
     host_id: str | None = None
     pid: int | None = None
     nextflow_pid: int | None = None
-    nextflow_alive: bool = False
+    nextflow_alive: bool | None = False
     supervisor_pid: int | None = None
-    supervisor_alive: bool = False
+    supervisor_alive: bool | None = False
+    inspection_issues: list[str] = field(default_factory=list)
     nextflow_log: str | None = None
     error: list[str] = field(default_factory=list)
     console: str = ""                                    # the tail of the launch's console output
@@ -537,7 +538,7 @@ def _argv(pid: int) -> list[str] | None:
                              text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return None
-    return out.stdout.split() if out.returncode == 0 else []
+    return out.stdout.split() if out.returncode == 0 else None
 
 
 def host_header() -> list[str]:
@@ -547,7 +548,7 @@ def host_header() -> list[str]:
     return lines
 
 
-def _is_process(pid: int | None, names: tuple[str, ...]) -> bool:
+def _is_process(pid: int | None, names: tuple[str, ...]) -> bool | None:
     """Whether `pid` is alive and running one of `names` (an argument's basename, or the argument
     itself) — a zombie or a reused pid is not."""
     if not pid or pid <= 0:
@@ -562,7 +563,15 @@ def _is_process(pid: int | None, names: tuple[str, ...]) -> bool:
         return False
     argv = _argv(pid)
     if argv is None:
-        return True                                      # alive; nothing more can be checked
+        # Existence is not authenticated identity. A denied process inventory cannot justify
+        # either a running claim or advice to signal a possibly reused PID.
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            pass
+        return None
     return any(a in names or os.path.basename(a) in names for a in argv)
 
 
@@ -710,5 +719,11 @@ def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
         st.nextflow_alive = _is_process(st.nextflow_pid, ("nextflow", "java"))
         st.supervisor_alive = st.kind == "replay" and _is_process(
             st.supervisor_pid, ("replay_guard.py",))
-        st.state = "running" if _is_process(st.pid, _RUN_NAMES[st.kind]) else "dead"
+        live = _is_process(st.pid, _RUN_NAMES[st.kind])
+        st.state = "unknown" if live is None else "running" if live else "dead"
+        for name, pid, known in (("nfclaw", st.pid, live),
+                                 ("Nextflow", st.nextflow_pid, st.nextflow_alive),
+                                 ("replay supervisor", st.supervisor_pid, st.supervisor_alive)):
+            if pid is not None and known is None:
+                st.inspection_issues.append(f"{name} pid {pid}: process identity is unreadable")
     return st

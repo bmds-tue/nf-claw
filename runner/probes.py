@@ -6,7 +6,7 @@ import signal
 import subprocess
 from pathlib import Path
 
-from runner import budget
+from runner import budget, replay_guard
 
 
 def capture(command: list[str], *, timeout: float,
@@ -30,7 +30,7 @@ def capture(command: list[str], *, timeout: float,
         except BaseException as exc:
             try:
                 if grouped:
-                    os.killpg(proc.pid, signal.SIGKILL)
+                    replay_guard.signal_process_group(proc.pid, signal.SIGKILL)
                 else:
                     proc.kill()
             except ProcessLookupError:

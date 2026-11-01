@@ -5,6 +5,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from subprocess import SubprocessError
 
+from runner import source_identity
+
 from runner.replay_guard import (check_corrected_source, hash_pipeline, pipeline_head,
                                  snapshot_inputs)
 
@@ -15,7 +17,8 @@ FAILED_EXECUTION_OUTCOME = "failed (local dependencies changed during execution)
 def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
             configs: tuple[Path, ...], config_checksums: dict, config_inventory: dict,
             pipeline: Path, pipeline_checksums: dict, git_head: str | None,
-            corrected_source: dict | None = None) -> dict:
+            corrected_source: dict | None = None,
+            pipeline_source_identity: dict | None = None) -> dict:
     issues = []
     for kind, paths, before_hashes, before_nodes in (
         ("inputs", inputs, input_checksums, input_inventory),
@@ -37,7 +40,11 @@ def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
     try:
         if corrected_source is not None:
             check_corrected_source(pipeline, corrected_source)
-        after_hashes = hash_pipeline(pipeline)
+        if pipeline_source_identity is not None:
+            source_identity.check(pipeline, pipeline_source_identity)
+            after_hashes = source_identity.files(pipeline_source_identity)
+        else:
+            after_hashes = hash_pipeline(pipeline)
         after_head = pipeline_head(pipeline)
     except (OSError, ValueError, SubprocessError) as exc:
         issues.append({"kind": "pipeline", "change": "unreadable", "error": str(exc)})

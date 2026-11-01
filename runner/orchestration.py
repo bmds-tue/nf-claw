@@ -12,9 +12,9 @@ from pathlib import Path
 from runner import (budget, config_probe, container_watch, demo_defaults, dependency_stability,
                     discovery, engine_version, environment_record, execution, fastqrepair_compat,
                     input_safety, inputs, institutional, nextflow_command, outputs, parameters,
-                    path_roles, plugin_compat, preflight, provenance, reproducibility, resources,
-                    resume_safety, runlog, samplesheet, sheetgen, source_corrections, submodule,
-                    versions)
+                    path_roles, plugin_compat, preflight, provenance, replay_guard, reproducibility,
+                    resources, resume_safety, runlog, samplesheet, sheetgen, source_corrections,
+                    source_identity, submodule, versions)
 from runner import schema as schema_mod
 from runner.errors import ErrorCode, NfclawError
 from runner.locking import output_writer
@@ -32,10 +32,8 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
 
     Resuming re-launches whatever the request resolves to *now*. For a release that is the code the
     earlier run used, but `dev` moves: the run being resumed may have executed an older commit.
-    Nextflow's cache stays correct either way (it reuses only tasks whose code and inputs are
-    unchanged), so this is advisory — it explains why some tasks re-run and that the results now
-    mix two commits. The earlier commit comes from that run's provenance manifest, if it
-    wrote one."""
+    The earlier commit comes from that run's provenance manifest. The source/input resume guards
+    below decide whether cached outputs can be reused or a fresh session is required."""
     try:
         prev = json.loads((outdir / "provenance" / "run_manifest.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -45,8 +43,8 @@ def _resume_advisory(outdir: Path, st: SubmoduleStatus) -> list[str]:
         return []
     return [f"--resume continues a run that executed {prev.get('version') or '?'} "
             f"(commit {prev_commit[:12]}); this launch executes {st.version} (commit "
-            f"{st.commit[:12]}). Nextflow reuses only tasks whose code and inputs are unchanged, "
-            "so tasks touched by the change re-run and the results combine both commits."]
+            f"{st.commit[:12]}). Source and input checks decide whether cached outputs can be "
+            "reused; changed or unverified source identity requires a fresh session."]
 
 
 def _directory_nodes(inventory: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
@@ -143,6 +141,28 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
             "File and directory metadata alone cannot establish unchanged task inputs; all tasks "
             "will be recomputed to prevent stale results. An existing output directory will be "
             "preserved in a sibling archive before launching.")
+
+
+def _source_resume_warning(outdir: Path, pipeline: Path, current: dict) -> str | None:
+    """Do not attribute cached tasks to ignored code or modes an earlier run never authenticated."""
+    try:
+        bundle = outdir / 'provenance'
+        manifest = json.loads((bundle / 'run_manifest.json').read_text())
+        if not isinstance(manifest, dict):
+            raise ValueError('the previous manifest is not an object')
+        previous = replay_guard.pipeline_source_record(bundle, manifest)
+        if previous is None:
+            reason = 'the earlier run did not record complete pipeline source identity'
+        elif (previous != current or manifest.get('pipeline_path') != str(pipeline.absolute())
+              or manifest.get('pipeline_git_head') != pipeline_head(pipeline)):
+            reason = 'the pipeline source namespace, permissions, content or revision changed'
+        else:
+            return None
+    except (OSError, ValueError, TypeError):
+        reason = 'the earlier complete pipeline source identity is unavailable or invalid'
+    return (f'--resume starts a fresh Nextflow cache session because {reason}. '
+            'Cached outputs cannot be attributed to the current source; all tasks will be '
+            'recomputed and the previous run will be preserved in a sibling archive.')
 
 
 def work_directory(nxf_overlay: dict[str, str], repo_root: Path) -> Path:
@@ -675,6 +695,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
         # only after the run has finished. Remote references and runtime downloads remain
         # upstream inputs.
         input_snapshot = config_snapshot = pipeline_snapshot = None
+        pipeline_source_identity = None
         input_inventory = config_inventory = None
         if not check_only:
             try:
@@ -698,6 +719,17 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 if on_warning is not None:
                     on_warning(warning)
 
+        if source_plan is None and (not check_only or resume):
+            try:
+                pipeline_source_identity = source_identity.snapshot(st.path)
+                pipeline_snapshot = source_identity.files(pipeline_source_identity)
+            except (OSError, ValueError) as exc:
+                raise NfclawError(ErrorCode.ENVIRONMENT,
+                                  f'cannot authenticate the pipeline source namespace: {exc}',
+                                  fix='Use a stable, readable source tree with internal relative '
+                                      'links and no outside hard-link aliases or special objects.'
+                                  ) from exc
+
         effective_resume = resume
         if resume:
             try:
@@ -711,7 +743,10 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
             except OSError as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot read local inputs before resume: {exc}") from exc
-            if warning := _input_resume_warning(outdir, resume_inventory, resume_digests):
+            warning = _input_resume_warning(outdir, resume_inventory, resume_digests)
+            if warning is None and pipeline_source_identity is not None:
+                warning = _source_resume_warning(outdir, st.path, pipeline_source_identity)
+            if warning:
                 effective_resume = False
                 warnings.append(warning)
                 if on_warning is not None:
@@ -801,12 +836,13 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                                                 if execution_source else [])]))
         git_head = None
         if not check_only:
+            _check_pipeline_identity(st, pin_doc)
             try:
                 config_snapshot, config_inventory = provenance.snapshot_inputs(list(replay_configs))
                 if execution_source is not None:
                     source_corrections.verify(execution_source)
-                pipeline_snapshot = provenance.hash_pipeline(pipeline_path)
                 if execution_source is not None:
+                    pipeline_snapshot = provenance.hash_pipeline(pipeline_path)
                     expected = execution_source.metadata['files']
                     if pipeline_snapshot != expected:
                         raise NfclawError(
@@ -815,12 +851,15 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                             'its launch snapshot.',
                             fix='Preserve the changed source for inspection and use a fresh cache.')
                     pipeline_snapshot = dict(expected)
+                else:
+                    source_identity.check(pipeline_path, pipeline_source_identity)
                 git_head = pipeline_head(pipeline_path)
-            except OSError as exc:
+            except (OSError, ValueError) as exc:
                 raise NfclawError(ErrorCode.ENVIRONMENT,
                                   f"cannot snapshot local run dependencies: {exc}",
-                                  fix="Make the configuration and pipeline files "
-                                      "readable before launching.") from exc
+                                  fix="Keep the pipeline and configuration stable and readable; "
+                                      "resolve unsupported source entries before launching."
+                                  ) from exc
 
             if st.commit and pipeline_head(st.path) != st.commit:
                 raise NfclawError(
@@ -880,6 +919,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              config_paths=replay_configs, config_checksums=config_snapshot,
                              config_inventory=config_inventory,
                              pipeline_checksums=pipeline_snapshot,
+                             pipeline_source_identity=pipeline_source_identity,
                              unverified_local_paths=unverified_paths,
                              nextflow_version=run_log.nextflow_version or "",
                              generated_samplesheet=generation_record,
@@ -941,6 +981,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                             configs=replay_configs, config_checksums=config_snapshot,
                             config_inventory=config_inventory,
                             pipeline=pipeline_path, pipeline_checksums=pipeline_snapshot,
+                            pipeline_source_identity=pipeline_source_identity,
                             git_head=git_head,
                             corrected_source=(execution_source.metadata
                                               if execution_source else None))
@@ -979,6 +1020,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                     configs=replay_configs, config_checksums=config_snapshot,
                     config_inventory=config_inventory,
                     pipeline=pipeline_path, pipeline_checksums=pipeline_snapshot, git_head=git_head,
+                    pipeline_source_identity=pipeline_source_identity,
                     corrected_source=execution_source.metadata if execution_source else None)
                 if stability["status"] != "unchanged":
                     if write_provenance:

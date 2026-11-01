@@ -178,6 +178,11 @@ class InputSchema:
     audit_note: str = ""
     destination_columns: tuple[str, ...] = ()
     metadata_columns: tuple[str, ...] = ()
+    # Extracted branches are necessary checks only when every alternative carries the
+    # represented requirement. Partial extraction must never reject a valid other branch.
+    one_of_complete: bool = True
+    any_of_required_complete: bool = True
+    any_of_dependencies_complete: bool = True
 
 
 def json_scalar(value: Any) -> str:
@@ -388,6 +393,13 @@ def load_input_schema(repo: Path, rel: str = "assets/schema_input.json") -> Inpu
         audit_note=audited.get("note", ""),
         destination_columns=tuple(audited.get("destination_columns", [])),
         metadata_columns=tuple(audited.get("metadata_columns", [])),
+        one_of_complete=all(isinstance(branch, dict) and bool(branch.get("required"))
+                            for branch in items.get("oneOf") or []),
+        any_of_required_complete=all(isinstance(branch, dict) and bool(branch.get("required"))
+                                     for branch in items.get("anyOf") or []),
+        any_of_dependencies_complete=all(
+            isinstance(branch, dict) and bool(_dependent_required(branch.get("dependentRequired")))
+            for branch in items.get("anyOf") or []),
     )
 
 

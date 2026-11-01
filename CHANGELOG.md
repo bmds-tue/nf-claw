@@ -53,6 +53,22 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- New ordinary runs authenticate source permissions, links, empty directories and untracked/ignored
+  source files as well as bytes. Source archives preserve that identity. Resume preserves the old
+  run and recomputes when complete source identity changed or was never recorded; unchanged source
+  keeps normal cache reuse. Legacy bundles retain their original evidence scope.
+- Redact sensitive environment values from shell/MCP job reports and keep execution records
+  private. Stop foreground MCP descendants on timeout or cancellation; recover and safely cancel
+  commands that survive a killed job supervisor. Reserve MCP control workers and bound slow-work
+  admission. Offline release listings retain and label the committed pipeline pin.
+- Apply supported scalar, required-field, relationship and uniqueness checks to flat JSON/YAML
+  samplesheets as well as CSV/TSV. Report unreadable process identities as unknown, and unreadable
+  task-container inventories as unconfirmed cleanup.
+- Distinguish macOS zombie-only process groups from genuine signal permission failures during
+  replay and metadata cleanup; retain failure when live members or unreadable inventory remain.
+- Foreground MCP work reports unconfirmed cleanup if process inspection becomes unreadable after
+  launch or an authenticated descendant survives; a successful command cannot hide that outcome.
+
 - Resolve verified current-product audit findings in process cancellation, completion caveats,
   environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage
   identity, website navigation/guidance/static counts, manifest parsing and MCP/job error handling

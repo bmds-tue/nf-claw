@@ -71,11 +71,69 @@ def _wait_for(state: Path, *names: str) -> None:
 
 
 def _kill(proc: subprocess.Popen) -> None:
-    try:
-        os.killpg(proc.pid, 9)
-    except ProcessLookupError:
-        pass
+    replay_guard.signal_process_group(proc.pid, 9)
     proc.wait()
+
+
+def test_exited_unreaped_group_is_cleaned_without_a_false_permission_failure():
+    proc = subprocess.Popen([sys.executable, '-c', 'pass'], start_new_session=True)
+    try:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            result = subprocess.run(['ps', '-p', str(proc.pid), '-o', 'stat='],
+                                    capture_output=True, text=True, timeout=2)
+            if result.stdout.strip().startswith('Z'):
+                break
+            time.sleep(0.02)
+        else:
+            pytest.fail('could not observe the owned unreaped child')
+        # Keep it unreaped: this reliably produces EPERM on Darwin, not on Linux.
+        assert proc.returncode is None
+        assert replay_guard._stop_replay_group(proc, grace=0.1) == []
+        assert proc.returncode == 0
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+
+
+@pytest.mark.parametrize('inventory', ['live', 'unreadable', 'incomplete'])
+def test_process_group_permission_denial_is_not_suppressed_without_proof(
+        monkeypatch, inventory):
+    monkeypatch.setattr(replay_guard.sys, 'platform', 'darwin')
+
+    def denied(*_args):
+        raise PermissionError('signal denied')
+
+    monkeypatch.setattr(os, 'killpg', denied)
+    output = (f'{os.getpid()} 999 S\n123 123 S\n' if inventory == 'live' else '')
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: subprocess.CompletedProcess(
+        a[0], 1 if inventory == 'unreadable' else 0, output, ''))
+    with pytest.raises(PermissionError, match='signal denied'):
+        replay_guard.signal_process_group(123, 0)
+
+
+def test_denied_inventory_is_reported_without_claiming_no_containers(monkeypatch, capsys):
+    monkeypatch.setattr(replay_guard.os.path, "isdir", lambda _path: False)
+    monkeypatch.setattr(replay_guard.subprocess, "run", lambda *a, **k:
+                        subprocess.CompletedProcess(a[0], 1, "", "inspection denied"))
+    inventory = execution._observe_task_containers(123, None)
+    assert inventory == {}
+    assert inventory.issues and "cannot be confirmed" in inventory.issues[0]
+    assert "cleanup cannot be confirmed" in capsys.readouterr().err
+
+
+def test_replay_reports_unconfirmed_container_cleanup_when_inventory_is_unreadable(
+        tmp_path, monkeypatch):
+    inventory = replay_guard._ContainerInventory()
+    inventory.issues = ["process inventory unavailable; task-container cleanup cannot be confirmed"]
+    monkeypatch.setattr(replay_guard, "task_containers", lambda _pid: inventory)
+    proc = _group(tmp_path)
+    try:
+        messages = replay_guard._stop_replay_group(proc, grace=0.1)
+        assert any("cleanup cannot be confirmed" in message for message in messages)
+    finally:
+        _kill(proc)
 
 
 def test_the_group_s_task_containers_are_found_by_name(engine, tmp_path):
