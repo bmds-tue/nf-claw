@@ -78,6 +78,9 @@ each change, are in [`docs/audit/`](docs/audit/).
   web or mail target; any other scheme is shown as its label (#248).
 - The website's search palette finds a long heading by words near its end (`major version 61`
   finds its Java 17 known issue); such a match ranked below zero and was dropped (#248).
+- The website words a workflow schedule only when it can word it correctly (a step, range or list
+  is shown as written), groups the release timeline by UTC month as it labels it, and steps back
+  to the last pipeline in the constellation from no selection (#248).
 - `--limit-memory` and `--limit-time` (and a chain's `limits`) accept only spellings Nextflow parses.
   `1.5.TB`, `100.B`, `15.gb`, `5.secs`, `5.mins` or `1.H` passed the check and the run then died at
   its first task (`Caused by: multiple points`), in a chain after every earlier stage had run (#246).

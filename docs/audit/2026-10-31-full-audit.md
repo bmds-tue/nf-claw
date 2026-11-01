@@ -104,8 +104,8 @@ not parse configuration, nothing reported which pins an unpinned engine refuses,
 tree had been examined only through the static gates. This round read the rest line by line — the
 samplesheet generator, handoffs, the skill writer, the replay guard and environment record,
 provenance, source corrections, the fastqrepair correction, demo defaults, the scientific
-assessors, versions, run logs, every script and workflow, and the website's data layer, renderers
-and links — and ran the complete suite with Python's resource warnings as errors
+assessors, versions, run logs, every script and workflow, and the website: its data layer,
+renderers, links, search, explorers, constellation, timeline, navigation and pages — and ran the complete suite with Python's resource warnings as errors
 (`-X dev -W error::ResourceWarning -W error::pytest.PytestUnraisableExceptionWarning`), which the
 ordinary run does not.
 
@@ -118,6 +118,9 @@ ordinary run does not.
 | E21 | Low | `website/src/components/ui/inline-markdown.tsx` | Inline Markdown linked any URL scheme. It renders parameter descriptions, upstream schema text that the update bot regenerates; React 19 neutralises `javascript:` but not, for example, `data:`. | Only relative, web and mail targets become links (the protocols react-markdown's default URL transform keeps); a spec covers the helper. |
 | E24 | Low | `website/src/components/layout/command-palette.tsx` (`score`) | A label match scored `60 − its position`, so a query matching past the 60th character scored below zero and was dropped: `major version 61`, copied from the error it names, did not find its known-issues section (25 guide headings exceed 60 characters). | Any label match scores above hint and description matches, earlier ones higher; a browser test fails without the fix. |
 | E25 | Low | `runner/config_probe.py` | Found by the smoke run on GitHub, whose launcher defaults to 25.10.4: the probe offered `NXF_SYNTAX_PARSER=v1` for airrflow 4.x (which needs ≥ 26.04.1) although an engine older than 26.04 parses with the legacy parser already. | The legacy parser is offered only to an engine of 26.04 or later, or of unknown version, as the launch-failure hint already did; a test fails without the fix. |
+| E26 | Low | `website/src/lib/format.ts` (`humanizeCron`) | The activity section's schedule wording was wrong outside fixed times: `*/30 * * * *` and `0 * * * *` read "Every minute", `0 6 * * 1-5` "Weekly · 1-5", day 7 "Weekly · 7". The repository's own schedules are all fixed times, so nothing is mislabelled today. | Only single values and wildcards are worded (hourly and Sunday-as-7 included); anything else is shown as written. A spec fails without the fix. |
+| E27 | Low | `website/src/components/home/release-timeline.tsx` (`groupByMonth`) | Entries were grouped by the month their date was written in (git keeps the committer's offset) but labelled with the UTC month, so a release at 23:30 −05:00 on 31 March joined March under an April label. | Grouped in UTC, as labelled (now `lib/format.ts`); a spec covers it. |
+| E28 | Low | `website/src/components/home/pipeline-universe.tsx` (`onChartKey`) | With no visible pipeline selected, ArrowLeft in the constellation selected the second-to-last pipeline (`(−1 − 1 + n) mod n`). | It selects the last, as ArrowRight selects the first. |
 | E15 | Low | `runner/samplesheet.py` (`value_problems`) | `integer` and `number` cells written with digit separators (`1_000`) passed the check: Python's `int()` takes them, nf-schema's Groovy casts do not, so the sheet failed at launch. | Refused before launch. |
 | E16 | Low | `runner/chain.py` (`format_status`) | A chain still running on another host printed its recorded `running` with exit status 1; `nfclaw status` says "unknown here — launched on <host>". | The same wording. |
 | E22 | Low | `tests/test_mcp_server.py`, `tests/test_bundle_self_contained.py`, `tests/test_nextflow_integration.py`, `tests/test_cli.py`, `tests/test_provenance.py` | Test harnesses left pipe ends, HTTP server sockets, a child's stderr and an unfinished run log open (68 of the first strict run's failures). | Closed. |
@@ -134,6 +137,7 @@ Evidence for round 2:
 | After merging #247 (`9a705ba`): `pytest`, complete suite, server, clean checkout | 4022 run, 0 failed, 0 errors, 5 skipped (as above) |
 | After merging #247: `pytest`, macOS, strict resource warnings | 3719 passed, 239 skipped, 0 failed |
 | After merging #247, with E24: website typecheck, export, `llms.txt`, Playwright | pass; identical; 164 passed |
+| With E26–E28: website typecheck, export, `llms.txt`, `npm audit`, Playwright | pass; identical; 0 vulnerabilities; 166 passed |
 | After merging #247: real demo run, `commands.sh` replay, `nfclaw verify` (server) | run and replay succeeded, every task image recorded at container start; 42 identical, 34 changed (timestamped reports), 0 missing, 0 extra; environment identical |
 
 - **Smoke, exactly as the workflow runs it** (its step extracted from `smoke.yml` and run on the
