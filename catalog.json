@@ -325,11 +325,18 @@
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nf-core/createpanelrefs is a bioinformatics helper pipeline that will help in creating panel of normals and other models.",
     "tools": [
-      "CNVKIT",
+      "CNVkit",
       "GATK",
-      "MultiQC"
+      "GNU Awk",
+      "GNU Coreutils",
+      "GNU Findutils",
+      "GNU Gzip",
+      "Mosdepth",
+      "MultiQC",
+      "pigz",
+      "SAMtools"
     ],
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   {
     "description": "Parallelised and automated creation of metagenomic classifier databases of different tools",
