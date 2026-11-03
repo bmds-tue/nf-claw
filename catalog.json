@@ -1536,7 +1536,7 @@
       "cutadapt",
       "fastp"
     ],
-    "version": "5.0.3"
+    "version": "6.0.0"
   },
   {
     "description": "This pipeline takes PMO format and provides key metrics on supplied markers applicable to drug resistance",
@@ -2198,7 +2198,7 @@
       "Space Ranger",
       "SpatialData"
     ],
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   {
     "description": "A pipeline to process spatialomics data from 10x Xenium In Situ or 10x Atera.",

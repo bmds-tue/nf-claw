@@ -1,8 +1,8 @@
 ---
 name: sopa
 pipeline: nf-core/sopa
-version: 1.0.1
-commit: 0b959963a3984ff78725209113d9ecdb78cef0b6
+version: 1.0.2
+commit: 64a9f6bce616cbe7dc94d06f5719dee394d303a7
 description: Technology-invariant pipeline for spatial omics analysis that scales to millions of cells
 summary: nf-core/sopa is the Nextflow version of Sopa. Built on top of SpatialData, Sopa enables processing and analyses of spatial omics data with single-cell resolution (spatial transcriptomics or multiplex imaging data) using a standard data structure and output. We currently support the following technologies: Xenium, Visium HD, MERSCOPE, CosMX, PhenoCycler, MACSima, Molecural Cartography, and others. It outputs a .zarr directory containing a processed SpatialData object, and a .explorer directory for visualization.
 has_samplesheet: true
@@ -71,13 +71,13 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 - **Patches** (`patches`) — 7 parameters
 - **Proseg** (`proseg`) — 4 parameters
-- **Reader** (`reader`) — 2 parameters
+- **Reader** (`reader`) — 3 parameters
 - **Scanpy preprocessing** (`scanpy_preprocessing`) — 4 parameters
 - **Space Ranger options** (`spaceranger_options`) — 2 parameters
 - **Stardist** (`stardist`) — 6 parameters
 - **Tissue segmentation** (`tissue_segmentation`) — 4 parameters
 
-Upstream usage: https://github.com/nf-core/sopa/blob/1.0.1/docs/usage.md
+Upstream usage: https://github.com/nf-core/sopa/blob/1.0.2/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -101,18 +101,18 @@ nfclaw run sopa ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/sopa/blob/1.0.1/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/sopa/blob/1.0.2/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: AnnData, Scanpy, Space Ranger, SpatialData.
 
-Full list with references: https://github.com/nf-core/sopa/blob/1.0.1/CITATIONS.md
+Full list with references: https://github.com/nf-core/sopa/blob/1.0.2/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run sopa --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/sopa@0b959963a3984ff78725209113d9ecdb78cef0b6. Do not edit by hand. -->
+<!-- Generated from nf-core/sopa@64a9f6bce616cbe7dc94d06f5719dee394d303a7. Do not edit by hand. -->

@@ -1,8 +1,8 @@
 ---
 name: pixelator
 pipeline: nf-core/pixelator
-version: 5.0.3
-commit: d7376a8bca8b262b858ed440b6dd49c1853911e8
+version: 6.0.0
+commit: 32210d270ca5e8fd2eb46bb405674f24b2319980
 description: Pipeline for analysis of Proximity Network Assay data
 summary: nf-core/pixelator is a bioinformatics best-practice analysis pipeline for analysis of data from the Proximity Network (PNA) assay. It takes a samplesheet as input and will process your data using pixelator to produce a PXL file containing single-cell protein abundance and protein interactomics data.
 has_samplesheet: true
@@ -64,7 +64,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Input/output options** (`input_output_options`) — 4 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 - **Amplicon options** (`pna_amplicon_options`) — 9 parameters
-- **Analysis options** (`pna_analysis_options`) — 7 parameters
+- **Analysis options** (`pna_analysis_options`) — 6 parameters
 - **Collapse options** (`pna_collapse_options`) — 3 parameters
 - **Demux options** (`pna_demux_options`) — 7 parameters
 - **Denoise options** (`pna_denoise_options`) — 9 parameters
@@ -72,7 +72,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Layout options** (`pna_layout_options`) — 5 parameters
 - **Sample calling options** (`pna_sample_calling_options`) — 4 parameters
 
-Upstream usage: https://github.com/nf-core/pixelator/blob/5.0.3/docs/usage.md
+Upstream usage: https://github.com/nf-core/pixelator/blob/6.0.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -96,18 +96,18 @@ nfclaw run pixelator ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/pixelator/blob/5.0.3/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/pixelator/blob/6.0.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: pixelator, cutadapt, fastp.
 
-Full list with references: https://github.com/nf-core/pixelator/blob/5.0.3/CITATIONS.md
+Full list with references: https://github.com/nf-core/pixelator/blob/6.0.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run pixelator --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/pixelator@d7376a8bca8b262b858ed440b6dd49c1853911e8. Do not edit by hand. -->
+<!-- Generated from nf-core/pixelator@32210d270ca5e8fd2eb46bb405674f24b2319980. Do not edit by hand. -->

@@ -1,7 +1,7 @@
 ---
 name: sopa
-version: 1.0.1
-commit: 0b959963a3984ff78725209113d9ecdb78cef0b6
+version: 1.0.2
+commit: 64a9f6bce616cbe7dc94d06f5719dee394d303a7
 ---
 
 # sopa — full parameter reference
@@ -38,7 +38,7 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 | `--cellpose-diameter` | number |  |  |  |  |  | Cellpose `diameter` parameter |
 | `--cellpose-kwargs` | string |  |  |  |  |  | Additional cellpose parameters as a python dict string |
 | `--cellpose-model-type` | string |  |  |  |  |  | Cellpose model type to use |
-| `--cellpose-use-gpu` | boolean |  |  |  |  |  | Whether to use GPU for Cellpose segmentation |
+| `--cellpose-version` | integer or string |  |  | `3`, `4`, `3`, `4` |  |  | Cellpose major version (3 or 4). Defaults to Cellpose v3. The 'gpu' profile selects the pytorch/CUDA image of the chosen version. |
 | `--cellprob-threshold` | number |  |  |  |  |  | Cellpose `cellprob_threshold` parameter |
 | `--flow-threshold` | number |  |  |  |  |  | Cellpose `flow_threshold` parameter |
 | `--pretrained-model` | string |  |  |  |  |  | Cellpose `pretrained_model` parameter |
@@ -149,6 +149,7 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
+| `--reader-kwargs` | string |  |  |  |  |  | Additional keyword arguments for the sopa reader, written as an inline python dictionary. |
 | `--technology` | string | yes |  | `xenium`, `merscope`, `cosmx`, `visium_hd`, `molecular_cartography`, `macsima`, `phenocycler`, `hyperion`, `ome_tif`, `toy_dataset` |  | `xenium` | Technology used for the spatial data, e.g., 'xenium', 'merscope', ... |
 | `--visium-hd-imread-page` | number |  |  |  |  |  | Optional page for the imageio reader |
 
@@ -188,4 +189,4 @@ nf-core/sopa pipeline parameters. Every parameter from the pinned `nextflow_sche
 | `--tissue-segmentation-kwargs` | string |  |  |  |  |  | Additional tissue segmentation parameters as a python dict string |
 | `--use-tissue-segmentation` | boolean |  |  |  |  |  | Whether to run tissue segmentation |
 
-<!-- Generated from nf-core/sopa@0b959963a3984ff78725209113d9ecdb78cef0b6. Do not edit by hand. -->
+<!-- Generated from nf-core/sopa@64a9f6bce616cbe7dc94d06f5719dee394d303a7. Do not edit by hand. -->
