@@ -216,7 +216,18 @@ def check(path, record, *, private_root=False):
     if current != expected:
         changed = sorted(name for name in current['entries'].keys() | record['entries'].keys()
                          if current['entries'].get(name) != record['entries'].get(name))
-        raise ValueError('pipeline source namespace, permissions or content changed: '
+        content_changed = namespace_changed = False
+        for name in changed:
+            before, after = record['entries'].get(name, {}), current['entries'].get(name, {})
+            if before.get('type') == after.get('type') == 'file':
+                content_changed |= before['sha256'] != after['sha256']
+            namespace_changed |= ({key: value for key, value in before.items()
+                                   if key not in ('mode', 'sha256')} !=
+                                  {key: value for key, value in after.items()
+                                   if key not in ('mode', 'sha256')})
+        category = ('content' if content_changed else
+                    'namespace' if namespace_changed else 'permissions')
+        raise ValueError(f'pipeline source {category} changed: '
                          + ', '.join(changed[:5] or ['root directory permissions']))
 
 

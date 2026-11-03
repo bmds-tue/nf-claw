@@ -45,13 +45,17 @@ def test_snapshot_includes_ignored_files_and_empty_directories_but_excludes_git_
     source_identity.check(root, record)
 
 
-@pytest.mark.parametrize('mutation', ['mode', 'link-target', 'link-type', 'ignored-addition',
-                                     'empty-directory', 'hardlink-topology'])
+@pytest.mark.parametrize('mutation', ['mode', 'root-mode', 'content', 'link-target', 'link-type',
+                                     'ignored-addition', 'empty-directory', 'hardlink-topology'])
 def test_source_identity_detects_changes_legacy_content_hashes_miss(tmp_path, mutation):
     root = tree(tmp_path)
     record = source_identity.snapshot(root)
     if mutation == 'mode':
         (root / 'main.nf').chmod(0o755)
+    elif mutation == 'root-mode':
+        root.chmod(root.stat().st_mode ^ 0o020)
+    elif mutation == 'content':
+        (root / 'main.nf').write_text('changed scientific code')
     elif mutation == 'link-target':
         (root / 'config-link').unlink()
         (root / 'config-link').symlink_to('assets/other')  # byte-identical target
@@ -67,7 +71,9 @@ def test_source_identity_detects_changes_legacy_content_hashes_miss(tmp_path, mu
         (root / 'tool-alias').unlink()
         (root / 'tool-alias').write_bytes(content)
         (root / 'tool-alias').chmod(0o755)
-    with pytest.raises(ValueError, match='namespace, permissions or content changed'):
+    category = ('permissions' if mutation in ('mode', 'root-mode') else
+                'content' if mutation == 'content' else 'namespace')
+    with pytest.raises(ValueError, match=f'pipeline source {category} changed'):
         source_identity.check(root, record)
 
 
