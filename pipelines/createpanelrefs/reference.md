@@ -1,7 +1,7 @@
 ---
 name: createpanelrefs
-version: 1.0.0
-commit: 8ce86a84b5af74facf99abb76216531622b52bc8
+version: 1.1.0
+commit: b9d0e44a41543c9c37441de97684f8e1efde3901
 ---
 
 # createpanelrefs — full parameter reference
@@ -12,6 +12,8 @@ nf-core/createpanelrefs pipeline parameters. Every parameter from the pinned `ne
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
+| `--cnvkit-annotate` | string (file or directory path) |  |  |  |  |  | Path to a gene annotation file used to label the CNVkit target regions. |
+| `--cnvkit-method` | string |  |  | `hybrid`, `amplicon`, `wgs` |  | `wgs` | Sequencing method used by CNVkit batch. |
 | `--cnvkit-pon-name` | string |  |  |  |  | `cnvkit` | Name for panel of normals. |
 | `--cnvkit-targets` | string (file or directory path) |  |  |  |  |  | Path to directory for target file. |
 
@@ -44,6 +46,7 @@ nf-core/createpanelrefs pipeline parameters. Every parameter from the pinned `ne
 | `--gens-bin-length` | number |  |  |  |  | `100` | Length (in bp) of the bins. If zero, no binning will be performed. |
 | `--gens-maximum-chunk-size` | number |  |  |  |  | `167772150` | Maximum chunk size when writing the HDF5 file |
 | `--gens-min-interval-median-percentile` | number |  |  |  |  | `5` | Minimum interval median percentile for gatk CreateReadCountPanelOfNormals |
+| `--gens-mosdepth-fast-mode` | boolean |  |  |  |  | `true` | Run mosdepth with `--fast-mode` when computing long-read coverage ('lrs'). |
 | `--gens-pon-name` | string |  |  |  |  | `gens` | Name for panel of normals. |
 | `--gens-readcount-format` | string |  |  | `HDF5`, `TSV` |  | `HDF5` | Output file format for count data |
 
@@ -111,4 +114,4 @@ nf-core/createpanelrefs pipeline parameters. Every parameter from the pinned `ne
 | `--igenomes-ignore` | boolean |  | yes |  |  |  | Do not load the iGenomes reference config. |
 | `--mutect2-target-bed` | string (file path) |  |  |  | matches `^\S+\.bed$` |  | Path to target bed file |
 
-<!-- Generated from nf-core/createpanelrefs@8ce86a84b5af74facf99abb76216531622b52bc8. Do not edit by hand. -->
+<!-- Generated from nf-core/createpanelrefs@b9d0e44a41543c9c37441de97684f8e1efde3901. Do not edit by hand. -->

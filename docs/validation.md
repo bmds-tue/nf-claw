@@ -222,6 +222,7 @@ the automated updater's gates.
 | rnastructurome | 1.1.0 | 25.10.4 | success | 52 completed | 2026-10-23, bump from 1.0.0 published by the updater, host network |
 | genomeassembler | 2.0.1 | 25.10.4 | success | 88 completed | 2026-10-23, bump from 2.0.0 published by the updater, host network |
 | stableexpression | 1.1.0 | 26.04.4 | success | 246 completed | 2026-10-25, added, host network |
+| createpanelrefs | 1.1.0 | 26.04.3 | success | 2 completed | 2026-11-03, bump from 1.0.0, default bridge network |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -286,6 +287,17 @@ identical execution environment and again matched all of those checksums.
   logs that embed dates or timings. The snapshot's 111 checksummed files, its stable outputs, were identical in
   both runs. 2.0.0's new LeafCutter and RegTools steps belong to upstream's separate `leafcutter` test, not to
   `-profile test`, and were not run.
+- **createpanelrefs 1.1.0** (2026-11-03) was bumped by hand. The updater ran the same bump that day and refused it
+  at its preview gate: like 1.0.0, the release's default preview prints "Pipeline completed successfully" and never
+  exits ([known issues](known-issues.md#upstream-pipeline-bugs-documented-not-patched)). A preview of its commit
+  `b9d0e44` on 26.04.0 reproduced that timeout with the documented evidence (`known-timeout`). The bundled test
+  (CNVkit on two BAMs) completed: CNVKIT_BATCH and MultiQC. Its outputs matched the paths of the release's closest
+  `-profile test` snapshot (`--cnvkit_method hybrid --cnvkit_targets`), apart from the reference BEDs named after
+  their source (`genome.*.bed` instead of `multi_intervals.*.bed`), and the versions it records (cnvkit 0.9.14,
+  samtools 1.24). As with 1.0.0, the antitarget coverage tables hold only their header. The replay from
+  `provenance/commands.sh` succeeded with an identical environment: `nfclaw verify` reported 13 identical, 9
+  changed, 0 missing, 0 extra, and the panel of normals, both target coverage tables and the reference BEDs were
+  byte-identical. The changed files were run metadata and MultiQC reports.
 
 ## nfclaw features
 
