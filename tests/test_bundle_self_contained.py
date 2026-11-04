@@ -733,12 +733,21 @@ def test_a_staged_directory_that_cannot_be_listed_has_no_tree_digest(tmp_path, m
     assert "Permission denied" in record["s3://bucket/db/"]["unresolved"]
 
 
-@pytest.mark.parametrize("name", ["replay_guard.py", "environment_record.py"])
+@pytest.mark.parametrize("name", sorted(provenance._BUNDLED_SCRIPTS))
 def test_bundled_scripts_stay_within_the_documented_python(name):
     # A bundle replays under whatever `python3` the replay host has; docs/replay.md promises 3.9.
     # Grammar newer than that (match, `except*`, parenthesised context managers) would fail there
-    # with a SyntaxError before the guard could refuse anything.
+    # with a SyntaxError before the guard could refuse anything. Every script the bundle carries
+    # is checked, so one added to it later cannot skip this.
     import ast
     source = (Path(__file__).resolve().parent.parent / "runner" / name).read_text()
     ast.parse(source, filename=name, feature_version=(3, 9))
     assert "from __future__ import annotations" in source  # `X | None` stays unevaluated on 3.9
+
+
+def test_bundled_scripts_are_exempt_from_modernising_lint_rules():
+    # Ruff's UP rules rewrite code for the package's own Python (3.11+), e.g. `datetime.UTC`, which
+    # 3.9 lacks; a `ruff --fix` must never apply them to a script a bundle replays with.
+    pyproject = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text()
+    for name in provenance._BUNDLED_SCRIPTS:
+        assert f'"runner/{name}" = ["UP"]' in pyproject, name
