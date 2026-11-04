@@ -346,6 +346,25 @@ def test_every_pytest_lane_runs_the_whole_suite_on_every_core():
     assert '"pytest-xdist' in dev
 
 
+@pytest.mark.parametrize('job, uploaded', [
+    ('pytest', '${{ runner.temp }}/pytest-evidence'),
+    ('nextflow-integration', '${{ runner.temp }}/jvm-crashes'),
+])
+def test_a_failed_job_that_runs_nextflow_keeps_the_jvm_crash_reports(job, uploaded):
+    # A Nextflow JVM crashed in CI (SIGSEGV in ld-linux-x86-64.so.2) and its hs_err report left
+    # with the runner. Each job that runs Nextflow collects the reports on failure into a
+    # directory that an upload on failure keeps.
+    yaml = pytest.importorskip('yaml')
+    steps = yaml.load(_text('tests.yml'), Loader=yaml.BaseLoader)['jobs'][job]['steps']
+    [keep] = [i for i, step in enumerate(steps)
+              if 'scripts/keep_jvm_crash_reports.py' in step.get('run', '')]
+    assert steps[keep]['if'] == 'failure()'
+    assert uploaded.replace('${{ runner.temp }}', '"$RUNNER_TEMP') in steps[keep]['run']
+    assert any(step.get('uses', '').startswith('actions/upload-artifact@')
+               and step['with']['path'] == uploaded and 'failure()' in step['if']
+               for step in steps[keep + 1:])
+
+
 def test_a_new_pull_request_push_cancels_only_that_pull_request_s_previous_run():
     # Superseded pull request runs stayed queued for hours behind the five-at-a-time macOS
     # runners. A push to a pull request now cancels its own previous run; a push to main, a

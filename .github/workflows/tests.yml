@@ -82,6 +82,15 @@ jobs:
           python scripts/check_maintenance_pytest.py --report "$evidence/report.xml" \
             --os "$LANE_OS" --python "$LANE_PYTHON" --candidate "$CANDIDATE_SHA" \
             --output "$evidence/record.json"
+      # A Nextflow JVM that crashes (CI has seen SIGSEGV in ld-linux-x86-64.so.2) writes its
+      # hs_err report into pytest's temporary tree, which leaves with the runner. Keep it with the
+      # diagnostics uploaded below, so the crashing thread and its native frames can be read.
+      - name: Keep JVM crash reports
+        if: failure()
+        env:
+          LANE_OS: ${{ matrix.os }}
+          LANE_PYTHON: ${{ matrix.python }}
+        run: python scripts/keep_jvm_crash_reports.py "$RUNNER_TEMP/pytest-evidence/$LANE_OS-$LANE_PYTHON/jvm-crashes"
       - run: ruff check .
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: success() && inputs.candidate_sha != ''
@@ -162,3 +171,13 @@ jobs:
       - run: pip install -e ".[dev,yaml]"
       - uses: ./.github/actions/setup-nextflow
       - run: pytest -q tests/test_nextflow_integration.py tests/test_git_path_identity.py tests/test_timeout_integration.py
+      - name: Keep JVM crash reports
+        if: failure()
+        run: python scripts/keep_jvm_crash_reports.py "$RUNNER_TEMP/jvm-crashes"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: nextflow-integration-jvm-crashes-${{ inputs.candidate_sha || github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/jvm-crashes
+          if-no-files-found: ignore
+          retention-days: 90
