@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from runner import chain, engine_version, provenance
+from runner import chain, engine_version, execution, probes, provenance
 
 
 @pytest.mark.parametrize("probe", [provenance._nextflow_version, engine_version._installed_raw])
@@ -89,6 +89,45 @@ def test_stopped_version_probe_cleans_up_download_children(tmp_path, monkeypatch
         while _alive(child) and time.monotonic() < deadline:
             time.sleep(0.02)
         assert not _alive(child), "the stopped bootstrap left its download child alive"
+    finally:
+        if child and _alive(child):
+            os.kill(child, signal.SIGKILL)
+
+
+def test_a_stop_while_the_probe_launches_still_stops_its_children(tmp_path, monkeypatch):
+    # On a loaded host the launcher can start its helper while Popen is still returning. A stop
+    # raised there lost the child handle, and the helper ran on (discovery's SIGTERM test, 1 in
+    # 224 runs). Here the stop always lands inside Popen, once the helper exists.
+    launcher = tmp_path / "nextflow"
+    marker = tmp_path / "child.pid"
+    launcher.write_text('#!/bin/sh\nsleep 60 &\n'
+                        'echo $! >"$CHILD_PID_FILE.tmp"\n'
+                        'mv "$CHILD_PID_FILE.tmp" "$CHILD_PID_FILE"\nwait\n')
+    launcher.chmod(0o755)
+    monkeypatch.setenv("CHILD_PID_FILE", str(marker))
+    stopped = []
+
+    class StoppedWhileLaunching(subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            if not stopped:  # only the probe: `_alive` launches `ps` the same way
+                stopped.append(True)
+                deadline = time.monotonic() + 10
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                os.kill(os.getpid(), signal.SIGTERM)
+
+    monkeypatch.setattr(subprocess, "Popen", StoppedWhileLaunching)
+    child = None
+    try:
+        with execution.stop_on_signals(), pytest.raises(execution.Terminated):
+            probes.capture([str(launcher)], timeout=60)
+        assert marker.exists(), "the fixture must launch a child before the stop"
+        child = int(marker.read_text())
+        deadline = time.monotonic() + 2
+        while _alive(child) and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert not _alive(child), "a stop during the probe's launch left its child alive"
     finally:
         if child and _alive(child):
             os.kill(child, signal.SIGKILL)
