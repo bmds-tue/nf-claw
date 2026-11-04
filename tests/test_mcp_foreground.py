@@ -159,6 +159,27 @@ def test_foreground_does_not_report_success_if_cleanup_inventory_becomes_unreada
     assert 'foreground cleanup is unconfirmed' in capsys.readouterr().err
 
 
+def test_one_failed_inventory_while_running_does_not_end_the_command(tmp_path, monkeypatch):
+    # A `ps` that times out once on a loaded host is not a reason to kill a healthy command.
+    from runner import foreground
+
+    descendants = process_identity.descendants
+    calls = 0
+
+    def inventory(pid):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise subprocess.TimeoutExpired(["ps"], 2)
+        return descendants(pid)
+
+    monkeypatch.setattr(process_identity, 'descendants', inventory)
+    marker = tmp_path / 'finished'
+    script = f"import time; time.sleep(0.3); open({str(marker)!r}, 'w').close()"
+    assert foreground.run([sys.executable, '-c', script]) == 0
+    assert marker.exists() and calls > 1
+
+
 def test_foreground_restores_signal_handlers_when_cleanup_is_unconfirmed(monkeypatch):
     from runner import foreground
 

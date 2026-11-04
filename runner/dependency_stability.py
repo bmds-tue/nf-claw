@@ -6,7 +6,6 @@ from pathlib import Path
 from subprocess import SubprocessError
 
 from runner import source_identity
-
 from runner.replay_guard import (check_corrected_source, hash_pipeline, pipeline_head,
                                  snapshot_inputs)
 

@@ -1,8 +1,9 @@
 """Versioned source namespace snapshots; also copied beside the standalone replay guard.
 
-Only the root .git administration entry is excluded. Files outside Git's index are source
-dependencies too. Internal relative symlinks and hard links retain their topology. Escaping
-links, outside hard-link aliases and special objects are refused rather than dereferenced.
+Only the root .git administration entry and Python bytecode caches (`__pycache__`) are excluded.
+Files outside Git's index are source dependencies too. Internal relative symlinks and hard links
+retain their topology. Escaping links, outside hard-link aliases and special objects are refused
+rather than dereferenced.
 """
 from __future__ import annotations
 
@@ -18,6 +19,15 @@ from pathlib import Path
 VERSION = 2
 RECORD = 'pipeline-source-identity.json'
 POLICY = 'posix-namespace-private-archive-root-v1'
+# Task scripts in bin/ that import a sibling module make CPython write `__pycache__` into the
+# source while the pipeline runs (circdna, reportho, viralmetagenome). Bytecode is derived from
+# the recorded `.py` bytes and revalidated against them by the interpreter; recording it would
+# fail every first run and every replay of an archived source.
+CACHE_DIRECTORY = '__pycache__'
+# Symlink permission bits are not used for access on Linux or macOS, and only macOS can set them
+# (Linux always creates 0777): recording the host's value would make a bundle recorded on one
+# platform unreplayable from its archive on the other.
+SYMLINK_MODE = 0o777
 
 
 def _mode(value):
@@ -142,9 +152,13 @@ def snapshot(path):
     path = Path(path)
     entries, hardlinks = {}, {}
 
+    def listed(fd, relative):
+        return sorted(n for n in os.listdir(fd)
+                      if n != CACHE_DIRECTORY and (relative or n != '.git'))
+
     def walk(fd, relative):
         before = os.fstat(fd)
-        names = sorted(n for n in os.listdir(fd) if relative or n != '.git')
+        names = listed(fd, relative)
         for name in names:
             key = f'{relative}/{name}' if relative else name
             _name(key)
@@ -180,15 +194,14 @@ def snapshot(path):
                 finally:
                     os.close(child)
             elif stat.S_ISLNK(info.st_mode):
-                entries[key] = {'type': 'symlink', 'mode': mode,
+                entries[key] = {'type': 'symlink', 'mode': SYMLINK_MODE,
                                 'target': os.readlink(name, dir_fd=fd)}
             else:
                 raise ValueError(f'unsupported special object in pipeline source: {key}')
             if _stamp(info) != _stamp(os.stat(name, dir_fd=fd, follow_symlinks=False)):
                 raise ValueError(f'pipeline source entry changed during inspection: {key}')
         after = os.fstat(fd)
-        if (names != sorted(n for n in os.listdir(fd) if relative or n != '.git')
-                or _stamp(before) != _stamp(after)):
+        if names != listed(fd, relative) or _stamp(before) != _stamp(after):
             raise ValueError('pipeline source directory changed during inspection: '
                              f'{relative or "."}')
 
@@ -345,12 +358,7 @@ def _check_archive(archive, record, destination=None):
             elif item['type'] == 'symlink':
                 valid = member.issym() and member.linkname == item['target']
                 if valid and target is not None:
-                    target.symlink_to(item['target'])
-                    if stat.S_IMODE(target.lstat().st_mode) != item['mode']:
-                        if not hasattr(os, 'lchmod'):
-                            raise ValueError('this host cannot restore recorded symlink mode: '
-                                             f'{name}')
-                        os.lchmod(target, item['mode'])
+                    target.symlink_to(item['target'])  # its mode is the host's (SYMLINK_MODE)
             elif 'hardlink_to' in item:
                 valid = (member.islnk() and member.linkname == item['hardlink_to']
                          and item['hardlink_to'] in seen)

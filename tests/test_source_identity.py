@@ -45,6 +45,44 @@ def test_snapshot_includes_ignored_files_and_empty_directories_but_excludes_git_
     source_identity.check(root, record)
 
 
+def test_python_bytecode_written_by_tasks_is_not_a_source_change(tmp_path):
+    # circdna, reportho and viralmetagenome bin/ scripts import sibling modules, so their tasks
+    # leave bin/__pycache__ (and bin/utils/__pycache__) in the pipeline source while running.
+    root = tree(tmp_path)
+    (root / 'bin/utils').mkdir(parents=True)
+    (root / 'bin/helper.py').write_text('VALUE = 1\n')
+    (root / 'bin/utils/__init__.py').write_text('')
+    record = source_identity.snapshot(root)
+    for cache in (root / 'bin/__pycache__', root / 'bin/utils/__pycache__'):
+        cache.mkdir()
+        (cache / 'helper.cpython-312.pyc').write_bytes(b'\x00bytecode')
+    source_identity.check(root, record)
+    assert not any('__pycache__' in name for name in source_identity.snapshot(root)['entries'])
+    archive = tmp_path / 'source.tar.gz'
+    source_identity.write_archive(root, record, archive)
+    with tarfile.open(archive) as tar:
+        assert not any('__pycache__' in name for name in tar.getnames())
+    (root / 'bin/helper.py').write_text('VALUE = 2\n')   # the source itself still counts
+    with pytest.raises(ValueError, match='pipeline source content changed'):
+        source_identity.check(root, record)
+
+
+def test_symlink_modes_are_recorded_portably(tmp_path):
+    # Linux creates every symlink 0777 and cannot change it; macOS follows the umask. A bundle
+    # recorded on either must extract and verify on the other.
+    root = tree(tmp_path)
+    record = source_identity.snapshot(root)
+    assert {item['mode'] for item in record['entries'].values()
+            if item['type'] == 'symlink'} == {source_identity.SYMLINK_MODE}
+    archive = tmp_path / 'source.tar.gz'
+    source_identity.write_archive(root, record, archive)
+    previous = os.umask(0o022)
+    try:
+        source_identity.check_archive(archive, record, tmp_path / 'restored')
+    finally:
+        os.umask(previous)
+
+
 @pytest.mark.parametrize('mutation', ['mode', 'root-mode', 'content', 'link-target', 'link-type',
                                      'ignored-addition', 'empty-directory', 'hardlink-topology'])
 def test_source_identity_detects_changes_legacy_content_hashes_miss(tmp_path, mutation):

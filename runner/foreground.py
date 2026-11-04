@@ -40,10 +40,19 @@ def run(command: list[str], *, parent: int | None = None) -> int:
             result = 143
         else:
             proc = subprocess.Popen(command, stdin=subprocess.DEVNULL)
+            # A Linux subreaper adopts every orphan, so the final inventory finds them all; Darwin
+            # can only remember helpers it saw before they were reparented away.
+            interval = 1.0 if sys.platform == "linux" else 0.05
+            scanned = None
             while True:
-                for pid in process_identity.descendants(os.getpid()):
-                    if identity := process_identity.read(pid):
-                        owned[pid] = identity
+                if scanned is None or time.monotonic() - scanned >= interval:
+                    scanned = time.monotonic()
+                    try:
+                        for pid in process_identity.descendants(os.getpid()):
+                            if identity := process_identity.read(pid):
+                                owned[pid] = identity
+                    except (OSError, subprocess.SubprocessError):
+                        pass  # one missed inventory (a slow `ps`) must not end the command
                 if stopping or parent is not None and os.getppid() != parent:
                     result = 143
                     break
