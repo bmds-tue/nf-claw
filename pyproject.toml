@@ -45,4 +45,5 @@ select = ["E4", "E501", "E7", "E9", "F", "B", "UP"]
 # Keep them portable rather than modern.
 "runner/replay_guard.py" = ["UP"]
 "runner/environment_record.py" = ["UP"]
+"runner/source_identity.py" = ["UP"]
 "runner/fastqrepair_compat.py" = ["UP"]
