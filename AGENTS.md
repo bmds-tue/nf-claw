@@ -47,7 +47,8 @@ tests, install `pip install -e ".[dev,yaml]"` to include pytest and YAML support
   profiles. `--params-file PATH` loads JSON (or YAML with the `yaml` extra); explicit CLI values
   override file values. Pipeline flags accept hyphens or underscores (raw Nextflow needs their
   exact schema spelling). `--no-provenance` skips the replay bundle and checksum records but keeps
-  the parameter file and run logs.
+  the parameter file and run logs; without those records a later `--resume` cannot reuse its
+  cached tasks and recomputes them all ([why](docs/replay.md#local-inputs-and-resume)).
 - **What `--check` covers:** inputs, parameters and environment requirements, and whether the
   run's engine parses the release's configuration (`nextflow config`): a release Nextflow 26.04+'s
   strict parser rejects is refused with its remedy. It can initialize submodules, fetch a requested
