@@ -20,14 +20,25 @@ VERSION = 2
 RECORD = 'pipeline-source-identity.json'
 POLICY = 'posix-namespace-private-archive-root-v1'
 # Task scripts in bin/ that import a sibling module make CPython write `__pycache__` into the
-# source while the pipeline runs (circdna, reportho, viralmetagenome). Bytecode is derived from
-# the recorded `.py` bytes and revalidated against them by the interpreter; recording it would
-# fail every first run and every replay of an archived source.
+# source while the pipeline runs (circdna, reportho, viralmetagenome). The bytecode is derived
+# from the recorded `.py` files, and CPython checks a default (timestamp) .pyc only against its
+# source's mtime and size, not its bytes. It is excluded because tasks rewrite it: recording it
+# failed every first run and every replay of an archived source. A stale .pyc with a matching
+# header is therefore outside the identity; an archived replay regenerates it from the source.
 CACHE_DIRECTORY = '__pycache__'
 # Symlink permission bits are not used for access on Linux or macOS, and only macOS can set them
 # (Linux always creates 0777): recording the host's value would make a bundle recorded on one
 # platform unreplayable from its archive on the other.
 SYMLINK_MODE = 0o777
+
+
+class SourceChanged(ValueError):
+    """The source differs from its recorded identity: `category` is content, namespace or
+    permissions."""
+
+    def __init__(self, category, message):
+        super().__init__(message)
+        self.category = category
 
 
 def _mode(value):
@@ -240,8 +251,8 @@ def check(path, record, *, private_root=False):
                                    if key not in ('mode', 'sha256')})
         category = ('content' if content_changed else
                     'namespace' if namespace_changed else 'permissions')
-        raise ValueError(f'pipeline source {category} changed: '
-                         + ', '.join(changed[:5] or ['root directory permissions']))
+        raise SourceChanged(category, f'pipeline source {category} changed: '
+                            + ', '.join(changed[:5] or ['root directory permissions']))
 
 
 @contextmanager

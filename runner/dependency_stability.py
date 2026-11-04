@@ -45,6 +45,8 @@ def compare(*, inputs: list[Path], input_checksums: dict, input_inventory: dict,
         else:
             after_hashes = hash_pipeline(pipeline)
         after_head = pipeline_head(pipeline)
+    except source_identity.SourceChanged as exc:
+        issues.append({"kind": "pipeline", "change": exc.category, "error": str(exc)})
     except (OSError, ValueError, SubprocessError) as exc:
         issues.append({"kind": "pipeline", "change": "unreadable", "error": str(exc)})
     else:
