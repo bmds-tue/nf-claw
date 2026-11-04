@@ -37,7 +37,9 @@ def test_foreground_owns_independently_grouped_helpers(tmp_path, monkeypatch, st
         f"time.sleep({1 if stop == 'success' else 60})")]
     monkeypatch.setattr(jobs, "cli_command", lambda _argv: command)
     tools = mcp_tools.NfclawTools(Path(__file__).resolve().parent.parent, cwd=str(tmp_path))
-    tools.command_timeout = 2
+    # Only the timeout case needs a short limit. The others start four interpreters and clean
+    # up through `ps` on Darwin: 1.3 s on an idle Mac, past 2 s on a loaded CI runner.
+    tools.command_timeout = 2 if stop == "timeout" else 30
     ctx = Context()
     outcome = []
 
