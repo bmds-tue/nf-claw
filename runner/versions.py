@@ -90,7 +90,8 @@ def _release_key(tag: str) -> tuple[int, ...]:
     return tuple(int(x) for x in m.groups(default="0")) if m else (0, 0, 0)
 
 
-def release_tags(name: str, *, pipelines_dir: Path, repo_root: Path) -> list[str]:
+def release_tags(name: str, *, pipelines_dir: Path, repo_root: Path,
+                 evidence: dict | None = None) -> list[str]:
     """Every release tag (`X.Y.Z` or `X.Y`) for the pipeline, newest first.
 
     Union of the remote's tags and any already fetched locally, so it still returns
@@ -98,18 +99,30 @@ def release_tags(name: str, *, pipelines_dir: Path, repo_root: Path) -> list[str
     dropped — only immutable releases are runnable as a tag.
     """
     url = _url_for(name, repo_root)
-    tags = list(remote_tags(url)) if url else []
-    tags += _local_tags(pipelines_dir / name / "upstream")
+    remote = list(remote_tags(url)) if url else []
+    local = _local_tags(pipelines_dir / name / "upstream")
+    if evidence is not None:
+        evidence.update(remote_tags=sorted(t for t in remote if _RELEASE_TAG.fullmatch(t)),
+                        local_tags=sorted(t for t in local if _RELEASE_TAG.fullmatch(t)))
+    tags = remote + local
     releases = {t for t in tags if _RELEASE_TAG.match(t)}
     return sorted(releases, key=_release_key, reverse=True)
 
 
-def available(name: str, *, pipelines_dir: Path, repo_root: Path) -> list[tuple[str, bool]]:
+def available(name: str, *, pipelines_dir: Path, repo_root: Path,
+              evidence: dict | None = None) -> list[tuple[str, bool]]:
     """`(tag, is_pin)` for every release, newest first. The pin is the committed
     (latest) version from the pipeline's skill.md — known offline, no init required."""
     pipeline = discovery.find(name, pipelines_dir)             # 404 if unknown
     pin = pipeline.frontmatter.get("version", "").lstrip("v")
-    tags = release_tags(name, pipelines_dir=pipelines_dir, repo_root=repo_root)
+    tags = release_tags(name, pipelines_dir=pipelines_dir, repo_root=repo_root, evidence=evidence)
+    fallback = bool(_RELEASE_TAG.fullmatch(pin) and not _match_tag(pin, tags))
+    if evidence is not None:
+        evidence.update(committed_pin=pin, observed_tags=list(tags), pin_fallback=fallback)
+    # This is documented repository knowledge, not an observed remote tag. Keep it out of
+    # release_tags(), whose callers use that inventory to authorize fetching other releases.
+    if fallback:
+        tags = sorted([*tags, pin], key=_release_key, reverse=True)
     return [(t, t.lstrip("v") == pin) for t in tags]
 
 

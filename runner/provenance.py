@@ -12,7 +12,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from runner import atomic, budget, environment_record, outputs, sheetgen
+from runner import atomic, budget, environment_record, outputs, sheetgen, source_identity
 from runner import exact_json as json
 from runner.engine_version import version_text
 from runner.errors import ErrorCode, NfclawError
@@ -43,7 +43,7 @@ _URI_CREDENTIALS_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^/\s?#]*@")
 # The standalone scripts a bundle carries, read once with the code that writes `commands.sh`: an
 # nfclaw upgraded while a long run goes on must not pair the old script with the new helpers.
 _BUNDLED_SCRIPTS = {name: Path(__file__).with_name(name).read_bytes()
-                    for name in ("replay_guard.py", "environment_record.py")}
+                    for name in ("replay_guard.py", "environment_record.py", "source_identity.py")}
 _DEFAULT_EXECUTION_HEAD = object()
 
 
@@ -440,7 +440,8 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
           validation_scope: dict | None = None,
           execution_path: Path | None = None,
           execution_git_head: str | None | object = _DEFAULT_EXECUTION_HEAD,
-          source_corrections: dict | None = None) -> Path:
+          source_corrections: dict | None = None,
+          pipeline_source_identity: dict | None = None) -> Path:
     try:
         grace = (seconds("NFCLAW_SHUTDOWN_GRACE", 10)
                  if shutdown_grace_seconds is None else float(shutdown_grace_seconds))
@@ -532,7 +533,26 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         manifest['source_corrections'] = {'file': correction_file.name,
                                          'sha256': sha256_file(correction_file)}
     if pipeline_checksums is not None or actual_source.is_dir():
-        manifest["pipeline_identity_version"] = 1
+        if (pipeline_source_identity is None and pipeline_checksums is None
+                and source_corrections is None):
+            pipeline_source_identity = source_identity.snapshot(actual_source)
+        if pipeline_source_identity is not None:
+            hashes = source_identity.files(pipeline_source_identity)
+            if source_corrections is not None or (pipeline_checksums is not None
+                                                  and hashes != pipeline_checksums):
+                raise ValueError('pipeline source identity differs from its launch snapshot')
+            pipeline_checksums = hashes
+            identity_file = prov / source_identity.RECORD
+            atomic.write_text(identity_file, json.dumps(
+                pipeline_source_identity, sort_keys=True, indent=2) + '\n')
+            manifest['pipeline_source_identity'] = {
+                'file': identity_file.name, 'sha256': sha256_file(identity_file)}
+        manifest["pipeline_identity_version"] = 2 if pipeline_source_identity is not None else 1
+        manifest['pipeline_identity_scope'] = (
+            'complete source namespace excluding root .git'
+            if pipeline_source_identity is not None else
+            'corrected source namespace and normalized modes' if source_corrections is not None
+            else 'legacy content and revision only')
         manifest["pipeline_path"] = str(actual_source.absolute())
         manifest["pipeline_git_head"] = (
             (submodule.commit if re.fullmatch(r"[0-9a-fA-F]{40,64}", submodule.commit) else None)
@@ -547,9 +567,13 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
             try:
                 if source_corrections is not None:
                     check_corrected_source(actual_source, source_corrections)
+                digest = (source_identity.write_archive(actual_source, pipeline_source_identity,
+                                                        archive)
+                          if pipeline_source_identity is not None
+                          else write_pipeline_archive(actual_source, pipeline_hashes, archive))
                 manifest["pipeline_archive"] = {
                     "file": PIPELINE_ARCHIVE, "files": len(pipeline_hashes),
-                    "sha256": write_pipeline_archive(actual_source, pipeline_hashes, archive)}
+                    "sha256": digest}
             except (OSError, ValueError) as exc:
                 archive.unlink(missing_ok=True)
                 manifest["pipeline_archive_error"] = str(exc)
@@ -696,6 +720,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
                 if previous in ("-c", "-config") else None
             if (index == 2 and command_args[1] == "run" and "pipeline_archive" in manifest
                     and str(Path(arg).absolute()) == manifest.get("pipeline_path")):
+                manifest['pipeline_source_selection'] = True
                 rendered.append('"$pipeline"')
                 replay_setup = ('pipeline="$(python3 "$_script_dir/replay_guard.py" '
                                 '--pipeline-source "$_script_dir" "$target")" || exit 1\n')

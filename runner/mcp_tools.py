@@ -15,14 +15,18 @@ import math
 import os
 import re
 import shlex
+import signal
 import stat
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
+from contextvars import ContextVar
 from decimal import Decimal
 from pathlib import Path
 
-from runner import chain, cli, discovery, job_reports, jobs, parameters, settings
+from runner import (atomic, chain, cli, discovery, job_reports, jobs, parameters, redaction,
+                    replay_guard, settings)
 from runner import exact_json as json
 from runner.errors import NfclawError
 from runner.mcp_server import INVALID_PARAMS, RESOURCE_NOT_FOUND, Context, RpcError, tool_result
@@ -62,6 +66,7 @@ _URI = re.compile(r"^nfclaw://(?:(?P<guide>guide)|(?P<catalog>catalog)|docs/(?P<
                   r"pipelines/(?P<pipeline>[^/]+)/(?P<document>skill|reference))$")
 _MAX_WAIT = 600
 _DEFAULT_RUN_WAIT = 20
+_request_context: ContextVar[Context | None] = ContextVar("nfclaw_mcp_request", default=None)
 
 
 def server_version() -> str:
@@ -391,6 +396,7 @@ class NfclawTools:
         tool = _TOOLS_BY_NAME[name]
         # Many clients send null for an optional argument they leave unset: it means "omitted".
         arguments = {k: v for k, v in arguments.items() if v is not None}
+        token = _request_context.set(ctx)
         try:
             _check_args(tool, arguments)
             return getattr(self, f"_tool_{name}")(arguments, ctx)
@@ -401,9 +407,12 @@ class NfclawTools:
         except jobs.JobError as exc:
             return tool_result(f"{name}: {exc}", error=True)
         except subprocess.TimeoutExpired as exc:
-            return tool_result(f"{name}: `{shlex.join(['nfclaw', *exc.cmd[3:]])}` did not finish "
+            command = shlex.join(redaction.argv(['nfclaw', *exc.cmd[3:]]))
+            return tool_result(f"{name}: `{command}` did not finish "
                                f"within {exc.timeout:.0f} s (NFCLAW_MCP_COMMAND_TIMEOUT).",
                                error=True)
+        finally:
+            _request_context.reset(token)
 
     def list_resources(self, ctx: Context) -> list[dict]:
         out = [_resource("nfclaw://guide", "AGENTS.md",
@@ -498,10 +507,48 @@ class NfclawTools:
         return str((Path(self.cwd) / Path(value).expanduser()).resolve())
 
     def _cli(self, argv: list[str]) -> CliResult:
-        proc = subprocess.run(jobs.cli_command(argv), cwd=self.cwd, env=jobs.child_env(),
-                              stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                              timeout=self.command_timeout)
-        return CliResult(proc.returncode, proc.stdout, proc.stderr)
+        command = jobs.cli_command(argv)
+        ctx = _request_context.get()
+        if ctx is not None and ctx.cancelled.is_set():
+            raise ToolError("foreground command cancelled")
+        proc = subprocess.Popen([sys.executable, "-m", "runner.foreground", str(os.getpid()),
+                                 *command],
+                                cwd=self.cwd, env=jobs.child_env(), stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                start_new_session=True)
+        deadline = time.monotonic() + self.command_timeout
+        try:
+            while True:
+                if ctx is not None and ctx.cancelled.is_set():
+                    raise ToolError("foreground command cancelled")
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    raise subprocess.TimeoutExpired(command, self.command_timeout)
+                try:
+                    stdout, stderr = proc.communicate(timeout=min(0.1, left))
+                    env = redaction.assignments(argv)
+                    return CliResult(proc.returncode, redaction.text(stdout, env),
+                                     redaction.text(stderr, env))
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            cleanup_unconfirmed = False
+            if proc.returncode is None:
+                proc.terminate()  # the worker cleans independently grouped descendants too
+                try:
+                    proc.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    try:
+                        replay_guard.signal_process_group(proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    proc.wait(timeout=2)
+                    cleanup_unconfirmed = True
+            proc.stdout.close()
+            proc.stderr.close()
+            if cleanup_unconfirmed:
+                raise ToolError("foreground supervisor did not finish cleanup; descendant "
+                                "cleanup is unconfirmed, inspect the executor before retrying")
 
     def _cli_or_error(self, argv: list[str]) -> CliResult:
         res = self._cli(argv)
@@ -677,7 +724,7 @@ class NfclawTools:
         spec_path = None
         if spec is not None:
             spec_path = job_dir / "spec.json"
-            spec_path.write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
+            atomic.write_text(spec_path, json.dumps(spec, indent=2) + "\n", mode=0o600)
         log_path = Path(outdir) / chain.RECORD_DIRNAME / "logs" / chain.LOG_NAME
         job = jobs.launch(job_dir, kind="chain", argv=self.chain_argv(args, spec_path),
                           cwd=self.cwd, outdir=outdir, check=check, log_path=str(log_path))
@@ -714,7 +761,8 @@ class NfclawTools:
         delay = 0.25
         while True:
             job = jobs.load(job_id)
-            if jobs.state(job) != "running" or (until_launched and self._launched(job)):
+            if (ctx._skip_waits or jobs.state(job) != "running"
+                    or (until_launched and self._launched(job))):
                 return job
             elapsed = time.monotonic() - start
             remaining = seconds - elapsed

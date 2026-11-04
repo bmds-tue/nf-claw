@@ -1,8 +1,16 @@
 {
   "version": 1,
-  "captured_at": "2026-10-26T23:57:18.767042+00:00",
-  "wrapper_base_commit": "0aa795091ca5b378900bfff9d2eacf6dedd839cd",
-  "classifier_sha256": "dfdb04ca48c48b97a825dba4e2e738cda7840bf5f269e94e44a620adba792a32",
+  "captured_at": "2026-11-01T00:31:41.499570+00:00",
+  "wrapper_base_commit": "05b4ff92aa62639457ad0ab1106244509fcd1d27",
+  "classifier_sha256": "d6abed336322b56a3235e5a1919853eaf0b35e899e1978caf5e162218fbaaab8",
+  "classifier_files": {
+    "runner/sheetgen.py": "d6abed336322b56a3235e5a1919853eaf0b35e899e1978caf5e162218fbaaab8",
+    "runner/schema.py": "f56e3739ac306dc2b26e3cd1e09b2bd5b8785ea24231096de413be7a9957aff8",
+    "runner/inputs.py": "dbcc116933da86552c4c5be61ed98d3ac0bddf4b8d3b53d985147526b6dfcef1",
+    "runner/submodule.py": "3d8d05e30db4a17ffb26a3c4d02718c39581bcc2837351974a1ca77bf0a73f7e",
+    "runner/input_roles.json": "d3a564f294911b40b7b6187714dd54471e6e588812857695579555cd62d547c1",
+    "runner/param_roles.json": "e79af58edb36012084ce40f59bafe6e802fa4106f125303cf16280a0be3939f5"
+  },
   "scope": "Schema classification, not execution or scientific input validation.",
   "counts": {
     "manual": 12,
@@ -22,7 +30,7 @@
     },
     {
       "pipeline": "ampliseq",
-      "pipeline_commit": "992e6df34065067185b5e34665b5861b6827981d",
+      "pipeline_commit": "b9bd579c0480ee23ecf24655f51c0c67777cd6b3",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",
@@ -67,7 +75,7 @@
     },
     {
       "pipeline": "bacmodel",
-      "pipeline_commit": "1abf4e28d250edf801c0f671a19f233f18128875",
+      "pipeline_commit": "8a9ad093d0431b4f69fa829513248c7863f37d7f",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",
@@ -264,7 +272,7 @@
     },
     {
       "pipeline": "detaxizer",
-      "pipeline_commit": "3586921aa3a4c49271f1b2082309bdc33c819749",
+      "pipeline_commit": "f348e37b6ba368a08edd4056af10e3fec8c10bb3",
       "status": "column_selection",
       "reason": "the samplesheet takes reads in several column groups (short_reads_fastq_1 + short_reads_fastq_2; long_reads_fastq_1) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set long_reads_fastq_1=",
       "schema": "assets/schema_input.json",
@@ -1036,7 +1044,7 @@
     },
     {
       "pipeline": "sarek",
-      "pipeline_commit": "8ccac7ad37b05dd792447763bf9671b719824587",
+      "pipeline_commit": "6e9b164daa2a54c98f7dda538645d340c561ac24",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",
@@ -1180,7 +1188,7 @@
     },
     {
       "pipeline": "variantbenchmarking",
-      "pipeline_commit": "8b21c01749c4447b285d242a198127736f3ffe51",
+      "pipeline_commit": "de4e43900039edd09106198d83c2559ea6a61b1a",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",

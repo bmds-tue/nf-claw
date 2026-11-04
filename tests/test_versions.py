@@ -135,6 +135,32 @@ def test_available_flags_the_pin(tmp_path, monkeypatch):
         ("2.0.0", True), ("1.2.0", False)]
 
 
+@pytest.mark.parametrize("observed", [[], ["1.0.0"], ["v2.0.0"]])
+def test_offline_listing_retains_committed_pin_without_inventing_remote_tags(
+        tmp_path, monkeypatch, observed):
+    d = tmp_path / "p"
+    d.mkdir()
+    (d / "skill.md").write_text("---\nname: p\nversion: 2.0.0\n---\n# p\n")
+    monkeypatch.setattr(versions, "release_tags", lambda *a, **k: list(observed))
+    evidence = {}
+    listing = versions.available("p", pipelines_dir=tmp_path, repo_root=tmp_path, evidence=evidence)
+    assert sum(pin for _, pin in listing) == 1
+    assert listing[0][0] in ("2.0.0", "v2.0.0")
+    assert evidence == {"committed_pin": "2.0.0", "observed_tags": observed,
+                        "pin_fallback": "v2.0.0" not in observed}
+    assert versions.release_tags("p", pipelines_dir=tmp_path, repo_root=tmp_path) == observed
+
+
+def test_release_evidence_distinguishes_remote_and_local_observations(tmp_path, monkeypatch):
+    monkeypatch.setattr(versions, "_url_for", lambda *a: "https://example.invalid/p")
+    monkeypatch.setattr(versions, "remote_tags", lambda *a: ["2.0.0", "dev"])
+    monkeypatch.setattr(versions, "_local_tags", lambda *a: ["1.0.0", "2.0.0"])
+    evidence = {}
+    assert versions.release_tags("p", pipelines_dir=tmp_path, repo_root=tmp_path,
+                                 evidence=evidence) == ["2.0.0", "1.0.0"]
+    assert evidence == {"remote_tags": ["2.0.0"], "local_tags": ["1.0.0", "2.0.0"]}
+
+
 # --- materialize: a real git worktree pinned to the tag (the robustness core) ---
 _GIT_ID = ("-c", "user.email=t@t", "-c", "user.name=t")
 

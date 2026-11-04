@@ -236,6 +236,9 @@ def _status_report(st: runlog.RunState) -> str:
     elif st.state == "elsewhere":
         lines.append(f"status: unknown here — launched on {st.host} and not finished; "
                      "run `nfclaw status` there")
+    elif st.state == "unknown":
+        lines.append("status: unknown — process identity cannot be inspected; "
+                     "neither continued execution nor cleanup is confirmed")
     else:
         pid = f" (pid {st.pid})" if st.pid else ""
         lines.append(f"status: stopped without an outcome — {who}{pid} is no longer "
@@ -245,6 +248,7 @@ def _status_report(st: runlog.RunState) -> str:
     lines += [times, f"log: {st.log}"]
     if st.nextflow_log:
         lines.append(f"nextflow log: {st.nextflow_log}")
+    lines.extend(f"inspection: {issue}" for issue in st.inspection_issues)
     if st.state in ("dead", "elsewhere") and st.nextflow_alive:
         lines.append(f"Nextflow (pid {st.nextflow_pid}) is still running — stop it with: "
                      f"kill {st.nextflow_pid}")
@@ -276,6 +280,7 @@ def _status_record(st: runlog.RunState, report: str, code: int) -> dict:
             "host": st.host, "pid": st.pid, "nextflow_pid": st.nextflow_pid,
             "nextflow_alive": st.nextflow_alive, "supervisor_pid": st.supervisor_pid,
             "supervisor_alive": st.supervisor_alive, "caveats": st.caveats, "error": st.error,
+            "inspection_issues": st.inspection_issues,
             "last_output": st.last_output, "report": report}
 
 
@@ -664,7 +669,9 @@ def _main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "versions":
         try:
-            avail = versions.available(args.name, pipelines_dir=pdir, repo_root=root)
+            release_evidence = {}
+            avail = versions.available(args.name, pipelines_dir=pdir, repo_root=root,
+                                       evidence=release_evidence)
             dev_commit, dev_fresh = versions.dev_head(args.name, pipelines_dir=pdir,
                                                       repo_root=root)
         except NfclawError as exc:
@@ -674,7 +681,15 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"No releases found for {args.name} (check network connectivity).",
                   file=sys.stderr)
         for tag, is_pin in avail:
-            print(f"{tag}\tlatest (pinned)" if is_pin else tag)
+            notes = ["latest (pinned)"] if is_pin else []
+            if tag in release_evidence.get("remote_tags", []):
+                notes.append("observed on remote")
+            elif tag in release_evidence.get("local_tags", []):
+                notes.append("locally cached tag; remote availability unverified")
+            if is_pin and release_evidence.get("pin_fallback"):
+                notes.append("committed pin; tag availability unverified")
+            note = "; ".join(notes)
+            print(f"{tag}\t{note}" if note else tag)
         # The unreleased development branch goes last, after every release: it is not one, and a
         # caller reading the first line still gets the newest release.
         if dev_commit:

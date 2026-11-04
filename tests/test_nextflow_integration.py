@@ -37,9 +37,74 @@ pytestmark = pytest.mark.skipif(shutil.which("nextflow") is None,
                                 reason="requires a real Nextflow engine")
 
 
+@pytest.mark.parametrize('engine', ['25.10.4', '26.04.0'])
+@pytest.mark.parametrize('provenance_enabled', [True, False])
+def test_ignored_runtime_code_change_cannot_reuse_or_relabel_cached_results(
+        tmp_path, engine, provenance_enabled):
+    root = tmp_path / 'library'
+    pipeline = root / 'pipelines/fixture/upstream'
+    pipeline.mkdir(parents=True)
+    (pipeline.parent / 'skill.md').write_text('---\nname: fixture\n---\n')
+    (pipeline / 'nextflow.config').write_text('nextflow.enable.dsl=2\n')
+    (pipeline / 'nextflow_schema.json').write_text(json.dumps({'properties': {
+        'outdir': {'type': 'string', 'format': 'directory-path'}}}))
+    (pipeline / 'main.nf').write_text('''process OBSERVE {
+ publishDir params.outdir, mode: 'copy'
+ output:
+ path 'answer.txt'
+ script:
+ """
+ "${projectDir}/runtime-helper.sh" > answer.txt
+ """
+}
+workflow { OBSERVE() }
+''')
+    (pipeline / '.gitignore').write_text('runtime-helper.sh\n')
+    subprocess.run(['git', 'init', '-q', str(pipeline)], check=True)
+    subprocess.run(['git', '-C', str(pipeline), 'add', '.'], check=True)
+    subprocess.run(['git', '-C', str(pipeline), '-c', 'user.name=Test',
+                    '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture'],
+                   check=True)
+    subprocess.run(['git', '-C', str(pipeline), 'tag', '1.0.0'], check=True)
+    counter = tmp_path / 'executions'
+    helper = pipeline / 'runtime-helper.sh'
+
+    def contents(value):
+        return (f"#!/bin/sh\nprintf '%s\\n' {value}\n"
+                f"printf 'executed\\n' >> {shlex.quote(str(counter))}\n")
+
+    helper.write_text(contents('old'))
+    helper.chmod(0o755)
+    out = tmp_path / 'result'
+
+    def launch(*, resume=False, provenance=True):
+        return orchestration.run_pipeline('fixture', repo_root=root, input_path=None, outdir=out,
+            profile='', params_file=None, cli_overrides={}, resume=resume, demo=False,
+            check_only=False, write_provenance=provenance, timeout_seconds=90, nxf_ver=engine)
+
+    launch()
+    unchanged = launch(resume=True)
+    assert '-resume' in shlex.split(unchanged.command)
+    assert counter.read_text().splitlines() == ['executed']
+    metadata = helper.stat()
+    helper.write_text(contents('new'))
+    os.utime(helper, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
+    assert helper.stat().st_size == metadata.st_size
+    changed = launch(resume=True, provenance=provenance_enabled)
+    assert '-resume' not in shlex.split(changed.command)
+    assert any('pipeline source namespace' in warning for warning in changed.warnings)
+    assert (out / 'answer.txt').read_text().strip() == 'new'
+    assert counter.read_text().splitlines() == ['executed', 'executed']
+    archives = list(tmp_path.glob('result.previous-*'))
+    assert len(archives) == 1
+    assert (archives[0] / 'answer.txt').read_text().strip() == 'old'
+
+
 @pytest.mark.parametrize("engine", ["25.10.4", "26.04.0"])
 @pytest.mark.parametrize("kind,provenance", [("data", True), ("data", False), ("config", True),
-                                           ("source", True), ("unchanged", True)])
+                                           ("source", True), ("source-mode", True),
+                                           ("source-mode", False), ("ignored-source", True),
+                                           ("source-link", True), ("unchanged", True)])
 def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_path, engine,
                                                                             kind, provenance):
     root = tmp_path / "library"
@@ -72,6 +137,10 @@ def test_dependencies_changing_during_native_execution_cannot_claim_success(tmp_
 }
 workflow { OBSERVE(file(params.input)) }
 '''.replace("COUNTER", shlex.quote(str(tmp_path / "counter"))))
+    if kind == 'source-link':
+        (tree / 'runtime-A').write_text('same helper bytes\n')
+        (tree / 'runtime-B').write_text('same helper bytes\n')
+        (tree / 'runtime-entry').symlink_to('runtime-A')
     original = b"@S\nACGT\n+\nIIII\n"
     changed = b"@S\nACGA\n+\nIIII\n"
     source = tmp_path / "reads.fastq"
@@ -114,6 +183,23 @@ workflow { OBSERVE(file(params.input)) }
                 script.write_bytes(before + b"\n// changed after compilation\n")
                 def restore():
                     script.write_bytes(before)
+            elif kind == 'source-mode':
+                before_mode = script.stat().st_mode & 0o7777
+                script.chmod(before_mode ^ 0o100)
+                def restore():
+                    script.chmod(before_mode)
+            elif kind == 'ignored-source':
+                helper = tree / '.ignored-runtime-helper'
+                helper.write_text('new code added after launch\n')
+                def restore():
+                    helper.unlink()
+            elif kind == 'source-link':
+                link = tree / 'runtime-entry'
+                link.unlink()
+                link.symlink_to('runtime-B')
+                def restore():
+                    link.unlink()
+                    link.symlink_to('runtime-A')
         finally:
             release.touch()
         if kind == "unchanged":

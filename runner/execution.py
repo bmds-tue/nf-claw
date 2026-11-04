@@ -445,12 +445,11 @@ _GRACE_SECONDS = 10
 
 def _group_alive(pgid: int) -> bool:
     try:
-        os.killpg(pgid, 0)
+        return replay_guard.signal_process_group(pgid, 0)
     except ProcessLookupError:
         return False
     except OSError:                       # members exist that we may not signal: still not gone
         return True
-    return True
 
 
 def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
@@ -475,7 +474,7 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
     pgid = proc.pid                                   # start_new_session: the child leads its group
     if proc.returncode is not None and not _group_alive(pgid):
         return                                        # reaped, and nothing of the group is left
-    containers = replay_guard.task_containers(pgid)
+    containers = _observe_task_containers(pgid, run_log)
     deadline = time.monotonic() + grace
     try:
         os.killpg(pgid, signal.SIGTERM)
@@ -496,7 +495,7 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
         held = proc.returncode is None or _group_alive(pgid)
         try:
             if held:
-                for engine, names in replay_guard.task_containers(pgid).items():
+                for engine, names in _observe_task_containers(pgid, run_log).items():
                     containers.setdefault(engine, set()).update(names)
         finally:
             if held:
@@ -507,6 +506,16 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
             proc.wait()
         if containers:                                # a second Ctrl-C still stops them too
             _remove_task_containers(containers, run_log)
+
+
+def _observe_task_containers(pgid: int, run_log: runlog.RunLog | None) -> dict:
+    containers = replay_guard.task_containers(pgid)
+    for issue in getattr(containers, "issues", []):
+        message = f"nfclaw: {issue}"
+        print(message, file=sys.stderr, flush=True)
+        if run_log is not None:
+            run_log.note(message)
+    return containers
 
 
 def _remove_task_containers(containers: dict[tuple[str, ...], set[str]],

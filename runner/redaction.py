@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import json
+import shlex
 
 from runner.provenance import safe_env
 
@@ -21,11 +23,25 @@ def assignments(argv: list[str]) -> list[tuple[str, str]]:
 def text(value: str, env: list[tuple[str, str]]) -> str:
     secrets = {item for key, item in env if item and safe_env({key: item})[1]}
     for secret in sorted(secrets, key=len, reverse=True):
-        value = value.replace(secret, "<redacted>")
-        value = value.replace(repr(secret)[1:-1], "<redacted>")
+        forms = {secret, repr(secret)[1:-1], shlex.quote(secret),
+                 json.dumps(secret, ensure_ascii=False)[1:-1],
+                 json.dumps(secret, ensure_ascii=True)[1:-1]}
+        for form in sorted(forms, key=len, reverse=True):
+            value = value.replace(form, "<redacted>")
     return value
 
 
 def argv(args: list[str]) -> list[str]:
     env = assignments(args)
     return [text(arg, env) for arg in args]
+
+
+def data(value, env: list[tuple[str, str]]):
+    """Redact every string in a presentation, before rendering or JSON serialization."""
+    if isinstance(value, str):
+        return text(value, env)
+    if isinstance(value, list):
+        return [data(item, env) for item in value]
+    if isinstance(value, dict):
+        return {key: data(item, env) for key, item in value.items()}
+    return value

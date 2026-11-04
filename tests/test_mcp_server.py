@@ -480,6 +480,51 @@ def test_eight_long_polls_leave_ping_status_and_cancellation_responsive():
         client.close()
 
 
+def test_slow_ordinary_calls_cannot_starve_controls_and_work_admission_is_bounded():
+    class SaturatedHandler(FakeHandler):
+        def __init__(self):
+            super().__init__()
+            self.ready = threading.Condition()
+            self.started = 0
+
+        def list_tools(self, ctx):
+            return [{"name": name, "inputSchema": {"type": "object"}}
+                    for name in ("show_pipeline", "list_versions", "verify_replay", "get_job",
+                                 "run_status", "list_jobs", "cancel_job")]
+
+        def call_tool(self, name, arguments, ctx):
+            if name in ("show_pipeline", "list_versions", "verify_replay"):
+                with self.ready:
+                    self.started += 1
+                    self.ready.notify_all()
+                ctx.cancelled.wait(30)
+            return tool_result(name)
+
+    handler = SaturatedHandler()
+    client = Session(handler, max_workers=2)
+    try:
+        client.initialize()
+        for rid, name in enumerate(("show_pipeline", "list_versions"), 10):
+            client.send({"jsonrpc": "2.0", "id": rid, "method": "tools/call",
+                         "params": {"name": name, "arguments": {}}})
+        with handler.ready:
+            assert handler.ready.wait_for(lambda: handler.started == 2, timeout=5)
+        # Fill the bounded queue, then verify immediate overload rather than unbounded retention.
+        for rid in (12, 13):
+            client.send({"jsonrpc": "2.0", "id": rid, "method": "tools/call",
+                         "params": {"name": "verify_replay", "arguments": {}}})
+        reply = client.request(14, "tools/call", {"name": "show_pipeline", "arguments": {}},
+                               timeout=1)
+        assert reply["error"]["code"] == mcp_server.SERVER_BUSY
+        assert client.request(20, "ping", timeout=1)["result"] == {}
+        for rid, name in enumerate(("get_job", "run_status", "list_jobs", "cancel_job"), 21):
+            reply = client.request(rid, "tools/call", {"name": name, "arguments": {}}, timeout=1)
+            assert reply["result"]["content"][0]["text"] == name
+        assert len(client.server._inflight) <= 4
+    finally:
+        client.close()
+
+
 def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
         tmp_path, monkeypatch):
     from types import SimpleNamespace
@@ -514,6 +559,47 @@ def test_cancellation_waits_preserve_ping_and_immediate_cancellation_capacity(
         reply = client.request(21, 'tools/call', {'name': 'cancel_job', 'arguments': {
             'job_id': 'fixture', 'wait_seconds': 0}}, timeout=1)
         assert reply['result']['content'][0]['text'] == 'stop requested'
+    finally:
+        client.close()
+
+
+def test_full_wait_queue_omits_only_the_optional_cancel_wait(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from runner import jobs, mcp_tools
+
+    handler = mcp_tools.NfclawTools(ROOT, cwd=str(tmp_path))
+    ready = threading.Event()
+    stopped = []
+    job = SimpleNamespace(id='fixture', check=False, log_path=None)
+
+    def load(_id):
+        ready.set()
+        return job
+
+    def result(*_args, **_kwargs):
+        ctx = mcp_tools._request_context.get()
+        if ctx is not None and ctx._skip_waits:
+            # Overload must not impersonate withdrawal or cancel the foreground status report.
+            assert not ctx.cancelled.is_set()
+        return tool_result('stop accepted')
+
+    monkeypatch.setattr(jobs, 'load', load)
+    monkeypatch.setattr(jobs, 'state', lambda _job: 'running')
+    monkeypatch.setattr(jobs, 'cancel', lambda _job: stopped.append(True) or True)
+    monkeypatch.setattr(handler, '_job_result', result)
+    client = Session(handler, max_workers=1)
+    try:
+        client.initialize()
+        for rid in (10, 11):  # one active wait and one queued: admission is now full
+            client.send({'jsonrpc': '2.0', 'id': rid, 'method': 'tools/call',
+                         'params': {'name': 'get_job', 'arguments': {
+                             'job_id': 'fixture', 'wait_seconds': 30}}})
+        assert ready.wait(5)
+        reply = client.request(12, 'tools/call', {'name': 'cancel_job', 'arguments': {
+            'job_id': 'fixture', 'wait_seconds': 15}}, timeout=2)
+        assert reply['result']['content'][0]['text'] == 'stop accepted'
+        assert stopped == [True]
+        assert client.request(13, 'ping', timeout=1)['result'] == {}
     finally:
         client.close()
 

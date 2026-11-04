@@ -5,7 +5,7 @@ import shlex
 from collections.abc import Callable
 from pathlib import Path
 
-from runner import jobs
+from runner import jobs, redaction
 
 
 def launched(job: jobs.Job) -> bool:
@@ -36,7 +36,7 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     command = job.command if job.kind == "replay" else ["nfclaw", *job.argv]
     view = {"job_id": job.id, "kind": job.kind, "pipeline": job.pipeline, "state": state,
             "check": job.check, "outdir": job.outdir,
-            "command": shlex.join(command),
+            "command": shlex.join(redaction.argv(command)),
             "cwd": job.cwd,
             "created_at": job.created_at, "finished_at": job.finished_at,
             "exit_code": job.exit_code}
@@ -51,6 +51,14 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     if state == "running":
         view["phase"] = ("launched" if view.get("run_state") == "running"
                          else "finishing" if has_launched else "preparing")
+        if not jobs.alive(job):
+            view["phase"] = "orphaned"
+            view["supervision_error"] = ("The supervisor stopped, but its command is still alive. "
+                                         "Cancellation uses its verified birth identity.")
+    elif state == "lost":
+        view["supervision_error"] = ("The supervisor stopped without an outcome. No surviving "
+                                     "command could be authenticated; inspect the executor before "
+                                     "resuming. Unreadable identity is not proof of exit.")
     if job.error:
         view["error"] = job.error
     if job.status_error and not frozen:
@@ -59,7 +67,7 @@ def view(job: jobs.Job, *, log_lines: int, live_status: Callable[[str], dict],
     view["output_tail"] = jobs.output_tail(job, log_lines)
     view["output_log"] = str(job.dir / jobs.OUTPUT_LOG)
     view["next"] = next_step(view, cli=cli)
-    return view
+    return redaction.data(view, jobs.redaction_env(job))
 
 
 def list_views(*, state: str | None = None, limit: int = 20) -> list[dict]:
@@ -136,6 +144,8 @@ def render(view: dict, *, cli: bool = False) -> str:
     if view.get("status_error"):
         live = f"`nfclaw status {view['outdir']}`" if cli else "run_status(outdir)"
         lines.append(f"status: {view['status_error']}; {live} reads the live log")
+    if view.get("supervision_error"):
+        lines.append(view["supervision_error"])
     if view.get("status_report"):
         lines += ["", "nfclaw status:", view["status_report"]]
     if view.get("output_tail"):

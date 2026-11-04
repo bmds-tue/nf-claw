@@ -128,6 +128,20 @@ def test_cancel_of_a_finished_job_signals_nothing(tmp_path):
     assert not job.cancel_requested and jobs.state(job) == "succeeded"
 
 
+def test_output_redaction_precedes_tail_slicing_and_line_splitting(tmp_path):
+    job = _launch(tmp_path, _py("pass"))
+    assert _finished(job.id)
+    secret = "synthetic-credential-first\nsynthetic-credential-second"
+    job.argv += [f"--nxf-env=NXF_API_TOKEN={secret}"]
+    # The ordinary byte window begins inside the second half of the credential.
+    padding = "x" * (jobs._TAIL_BYTES - 12)
+    (job.dir / jobs.OUTPUT_LOG).write_text("prefix\n" + secret + "\n" + padding + "\nend\n")
+    tail = "\n".join(jobs.output_tail(job, 100))
+    assert "credential" not in tail
+    assert "synthetic" not in tail
+    assert tail.endswith("end")
+
+
 def test_a_job_outlives_the_process_that_launched_it(tmp_path):
     # The MCP server is that process: closing the client (or restarting the server) must not stop
     # an analysis. Launch from a short-lived interpreter, then read the job back from here.
@@ -151,15 +165,49 @@ def test_a_job_outlives_the_process_that_launched_it(tmp_path):
     assert jobs.state(job) == "succeeded" and "still here" in jobs.output_tail(job, 3)
 
 
-def test_a_supervisor_killed_outright_leaves_a_lost_job(tmp_path):
+@pytest.mark.parametrize("missing_supervisor_record", [False, True])
+def test_a_supervisor_killed_outright_leaves_a_recoverable_job(
+        tmp_path, missing_supervisor_record, monkeypatch):
     job = _launch(tmp_path, _py("import time; print('up', flush=True); time.sleep(60)"))
     assert _until(lambda: "up" in jobs.output_tail(jobs.load(job.id), 5))
     job = jobs.load(job.id)
     os.kill(job.supervisor_pid, signal.SIGKILL)
     try:
         assert _finished(job.id)
+        if missing_supervisor_record:
+            (job.dir / jobs.SUPERVISOR_FILE).unlink()
         job = jobs.load(job.id)
-        assert job.exit_code is None and jobs.state(job) == "lost"
+        assert job.exit_code is None and jobs.state(job) == "running"
+        assert jobs.orphan_alive(job)
+        with monkeypatch.context() as patch:
+            patch.setattr(jobs.process_identity, 'send', lambda *_args: False)
+            with pytest.raises(jobs.JobError, match='still running'):
+                jobs.cancel(job)
+            assert jobs.state(job) == 'running'
+        assert jobs.cancel(job)
+        assert _until(lambda: not jobs.orphan_alive(jobs.load(job.id)))
+        assert jobs.state(jobs.load(job.id)) == "cancelled"
+    finally:
+        try:
+            os.kill(job.child_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def test_orphan_recovery_never_signals_a_reused_or_unreadable_identity(tmp_path, monkeypatch):
+    job = _launch(tmp_path, _py("import time; print('up', flush=True); time.sleep(60)"))
+    assert _until(lambda: "up" in jobs.output_tail(jobs.load(job.id), 5))
+    assert _until(lambda: jobs.load(job.id).child_identity is not None)
+    job = jobs.load(job.id)
+    os.kill(job.supervisor_pid, signal.SIGKILL)
+    assert _finished(job.id)
+    try:
+        job.child_identity = {**job.child_identity, "start": "a different process"}
+        assert not jobs.cancel(job)
+        assert jobs.state(job) == "lost"
+        monkeypatch.setattr(jobs.process_identity, "read", lambda _pid: None)
+        assert not jobs.cancel(jobs.load(job.id))
+        assert not job.cancel_requested
     finally:
         os.kill(job.child_pid, signal.SIGKILL)
 
