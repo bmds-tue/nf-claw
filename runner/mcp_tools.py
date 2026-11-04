@@ -526,7 +526,9 @@ class NfclawTools:
                     raise subprocess.TimeoutExpired(command, self.command_timeout)
                 try:
                     stdout, stderr = proc.communicate(timeout=min(0.1, left))
-                    env = redaction.assignments(argv)
+                    # The same secrets a job view removes: assignments and inherited NXF_* values.
+                    env = [*redaction.assignments(argv),
+                           *((k, v) for k, v in os.environ.items() if k.startswith("NXF_"))]
                     return CliResult(proc.returncode, redaction.text(stdout, env),
                                      redaction.text(stderr, env))
                 except subprocess.TimeoutExpired:

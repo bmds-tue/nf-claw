@@ -40,11 +40,15 @@ def _lock_inactive_sessions(original: Path, locks: ExitStack) -> None:
                           f"({'; '.join(state.error)}) in {original}.",
                           fix="Make the run log readable, and stop any engine still running "
                               "there, before resuming.")
-    if state.nextflow_alive or state.state == "elsewhere":
+    # None: a live PID whose identity cannot be read. That is not proof the engine has ended.
+    if (state.nextflow_alive is not False or state.state in ("elsewhere", "unknown")
+            or state.supervisor_alive is None):
         raise NfclawError(ErrorCode.ENVIRONMENT,
-                          f"Cannot preserve the previous run: its Nextflow process is active "
-                          f"or its remote outcome is unknown in {original}.",
-                          fix="Stop the existing engine and its tasks before resuming.")
+                          f"Cannot preserve the previous run: its Nextflow process is active, "
+                          f"cannot be identified, or its remote outcome is unknown in {original}.",
+                          fix="Stop the existing engine and its tasks before resuming"
+                              + ("; " + "; ".join(state.inspection_issues)
+                                 if state.inspection_issues else "") + ".")
     cache = original / ".nextflow/cache"
     if not cache.exists() and not cache.is_symlink():
         return

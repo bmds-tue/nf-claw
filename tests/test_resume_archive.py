@@ -250,6 +250,26 @@ def test_a_previous_run_whose_log_cannot_be_read_is_not_moved(tmp_path, monkeypa
     assert not list(tmp_path.glob("analysis.previous-*"))
 
 
+@pytest.mark.parametrize("unidentified", ["nextflow", "nfclaw"])
+def test_a_previous_run_whose_live_process_cannot_be_identified_is_not_moved(
+        tmp_path, monkeypatch, unidentified):
+    # A live PID whose command line cannot be read may still be the engine writing this tree;
+    # "unknown" must block the move exactly as "alive" does.
+    from runner import runlog
+    out = tmp_path / "analysis"
+    (out / "provenance" / "logs").mkdir(parents=True)
+    (out / "provenance" / "logs" / "run.log").write_text(
+        "==> nfclaw run started 2026-10-28T00:00:00+00:00\n    pid: 1\n")
+    (out / "reads.txt").write_text("retained")
+
+    monkeypatch.setattr(runlog, "_is_process",
+                        lambda pid, names: None if unidentified in names else False)
+    with pytest.raises(NfclawError, match="cannot be identified"):
+        resume_safety.archive_previous_run(out, {}, [])
+    assert (out / "reads.txt").read_text() == "retained"
+    assert not list(tmp_path.glob("analysis.previous-*"))
+
+
 @pytest.mark.skipif(os.geteuid() == 0, reason="requires non-root permissions")
 def test_unwritable_publication_directory_leaves_original_results_readable(tmp_path):
     out = tmp_path / "analysis"

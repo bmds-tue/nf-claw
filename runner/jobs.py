@@ -29,9 +29,7 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from pathlib import Path
 
-from runner import process_identity
-
-from runner import atomic
+from runner import atomic, process_identity
 
 try:
     import fcntl
@@ -254,7 +252,7 @@ def load(job_id: str) -> Job:
     # The child writes this before exec, so killing the supervisor between Popen and its
     # metadata write cannot leave a launched analysis without recoverable identity.
     child = _read_json(job_dir / CHILD_FILE)
-    if (child and pid(child.get("pid")) and child.get("pid") is not None
+    if (child and pid(child.get("pid"))
             and isinstance(child.get("boot"), str) and isinstance(child.get("start"), str)
             and type(child.get("uid")) is int):
         if job.child_pid is None or job.child_pid == child["pid"]:
@@ -366,20 +364,21 @@ def output_tail(job: Job, lines: int) -> list[str]:
     from runner import redaction
     env = redaction_env(job)
     # Read an overlap so a credential crossing the tail boundary can be removed as a whole.
-    margin = max((6 * len(value.encode("utf-8", errors="replace")) for _, value in env), default=0)
+    margin = max((6 * len(value.encode("utf-8", errors="replace")) for key, value in env
+                  if value and redaction.safe_env({key: value})[1]), default=0)
     try:
         with (job.dir / OUTPUT_LOG).open("rb") as fh:
             fh.seek(0, os.SEEK_END)
-            size = fh.tell()
-            fh.seek(max(0, size - _TAIL_BYTES - margin))
+            start = max(0, fh.tell() - _TAIL_BYTES - margin)
+            fh.seek(start)
             data = fh.read()
     except OSError:
         return []
-    text = redaction.text(data.decode("utf-8", errors="replace"), env)
-    text = text.encode("utf-8")[-_TAIL_BYTES:].decode("utf-8", errors="replace")
+    redacted = redaction.text(data.decode("utf-8", errors="replace"), env).encode("utf-8")
+    text = redacted[-_TAIL_BYTES:].decode("utf-8", errors="replace")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     out = text.split("\n")
-    if size > _TAIL_BYTES and out:
+    if (start or len(redacted) > _TAIL_BYTES) and out:
         out = out[1:]                                 # the first line may be cut mid-way
     while out and not out[-1].strip():
         out.pop()

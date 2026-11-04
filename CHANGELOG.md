@@ -53,6 +53,12 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,
+  reportho and viralmetagenome) no longer fail a successful run or its archived replay as a source
+  change, and symlink modes are recorded portably so a macOS bundle replays from its archive on
+  Linux. A previous run whose live Nextflow, nfclaw or replay process cannot be identified is no
+  longer moved aside by `--resume`. A slow process inventory no longer stops a foreground MCP
+  command; foreground output redacts inherited `NXF_*` secrets as job views do.
 - New ordinary runs authenticate source permissions, links, empty directories and untracked/ignored
   source files as well as bytes. Source archives preserve that identity. Resume preserves the old
   run and recomputes when complete source identity changed or was never recorded; unchanged source

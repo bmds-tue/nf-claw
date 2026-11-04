@@ -92,3 +92,14 @@ def test_tainted_log_forces_fresh_resume_even_without_local_inputs_or_provenance
     log.fail(dependency_stability.FAILED_OUTCOME, "local source changed")
     log.finish()
     assert "previous execution" in orchestration._input_resume_warning(tmp_path, {}, {})
+
+
+def test_a_source_change_is_reported_as_a_change_not_as_unreadable(tmp_path):
+    from runner import source_identity
+    options = capture(tmp_path)
+    options["pipeline_source_identity"] = source_identity.snapshot(options["pipeline"])
+    (options["pipeline"] / "helper.nf").write_text("// new code\n")
+    result = dependency_stability.compare(**options)
+    assert [(issue["kind"], issue["change"]) for issue in result["issues"]] == [
+        ("pipeline", "namespace")]
+    assert "helper.nf" in result["issues"][0]["error"]

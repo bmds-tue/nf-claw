@@ -142,6 +142,17 @@ def test_output_redaction_precedes_tail_slicing_and_line_splitting(tmp_path):
     assert tail.endswith("end")
 
 
+def test_a_tail_lengthened_by_redaction_never_starts_mid_line(tmp_path):
+    # The log fits the window, but each short secret becomes the longer "<redacted>".
+    job = _launch(tmp_path, _py("pass"))
+    assert _finished(job.id)
+    job.argv += ["--nxf-env=NXF_API_TOKEN=k"]
+    line = "first-line " + "k" * (jobs._TAIL_BYTES // 2)
+    (job.dir / jobs.OUTPUT_LOG).write_text(line + "\nend\n")
+    tail = jobs.output_tail(job, 100)
+    assert tail == ["end"]
+
+
 def test_a_job_outlives_the_process_that_launched_it(tmp_path):
     # The MCP server is that process: closing the client (or restarting the server) must not stop
     # an analysis. Launch from a short-lived interpreter, then read the job back from here.

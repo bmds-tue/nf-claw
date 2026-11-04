@@ -46,12 +46,15 @@ includes, Conda environments and task-managed downloads are not comprehensively 
 
 New ordinary runs use source identity version 2: `pipeline-source-identity.json` binds the full
 source namespace, permissions, regular-file bytes, internal relative symlinks and internal hard-link
-topology. Untracked and ignored files are included; only the root `.git` administration entry is
-excluded. Source links that escape the tree, aliases into excluded Git metadata, outside hard-link
-aliases, privileged executable bits and special objects are refused. Archives retain this identity
-and extract under a private root. Source modes, links and new files are checked after execution too,
-including with `--no-provenance`. Put generated caches and other writes outside the source tree;
-their appearance inside it is a source change.
+topology. Untracked and ignored files are included; only the root `.git` administration entry and
+Python bytecode caches (`__pycache__` directories, which tasks running a `bin/` script that imports
+a sibling module write into the source, as circdna, reportho and viralmetagenome do) are excluded.
+Symlink permission bits are recorded as `0777`: Linux cannot set them and neither platform uses
+them, so a bundle replays from its archive on either. Source links that escape the tree, aliases
+into excluded Git metadata, outside hard-link aliases, privileged executable bits and special
+objects are refused. Archives retain this identity and extract under a private root. Source modes,
+links and new files are checked after execution too, including with `--no-provenance`. Put other
+generated files and writes outside the source tree; their appearance inside it is a source change.
 
 Legacy source identity version 1 authenticates the recorded revision and file contents only;
 its source archive dereferences tracked symlinks and does not independently bind their identity,
