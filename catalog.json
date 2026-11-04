@@ -115,33 +115,40 @@
     "input": "samplesheet (ID, R1, R2, LongFastQ, Fast5, GenomeSize)",
     "name": "bacass",
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
-    "summary": "nf-core/bacass is a bioinformatics best-practice analysis pipeline for simple bacterial assembly and annotation. The pipeline is able to assemble short reads, long reads, or a mixture of short and long reads (hybrid assembly).",
+    "summary": "nf-core/bacass is a bioinformatics best-practice analysis pipeline for simple bacterial assembly and annotation. The pipeline is able to assemble short reads, long reads, or a mixture of short and long reads (hybrid assembly). By default, nf-core/bacass detects the available read type for each sample and routes it to compatible assembly strategies automatically.",
     "tools": [
       "FastQC",
       "FastP",
       "Porechop",
+      "Filtlong",
       "NanoPlot",
       "ToulligQC",
       "pycoQC",
       "Unicycler",
       "MEGAHIT",
       "Miniasm",
+      "Racon",
       "Canu",
       "Flye",
       "Raven",
       "Autocycler",
+      "Dragonflye",
+      "Minimap2",
       "QUAST",
       "Prokka",
+      "Bakta",
       "DFAST",
       "Liftoff",
       "Medaka",
       "Nanopolish",
+      "BUSCO",
       "SAMtools",
       "Kraken2",
+      "KmerFinder",
       "Rasusa",
       "MultiQC"
     ],
-    "version": "2.6.1"
+    "version": "2.7.0"
   },
   {
     "description": "Systems-based bacterial functional modeling pipeline",
@@ -325,11 +332,18 @@
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nf-core/createpanelrefs is a bioinformatics helper pipeline that will help in creating panel of normals and other models.",
     "tools": [
-      "CNVKIT",
+      "CNVkit",
       "GATK",
-      "MultiQC"
+      "GNU Awk",
+      "GNU Coreutils",
+      "GNU Findutils",
+      "GNU Gzip",
+      "Mosdepth",
+      "MultiQC",
+      "pigz",
+      "SAMtools"
     ],
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   {
     "description": "Parallelised and automated creation of metagenomic classifier databases of different tools",
@@ -1529,7 +1543,7 @@
       "cutadapt",
       "fastp"
     ],
-    "version": "5.0.3"
+    "version": "6.0.0"
   },
   {
     "description": "This pipeline takes PMO format and provides key metrics on supplied markers applicable to drug resistance",
@@ -2191,7 +2205,7 @@
       "Space Ranger",
       "SpatialData"
     ],
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   {
     "description": "A pipeline to process spatialomics data from 10x Xenium In Situ or 10x Atera.",

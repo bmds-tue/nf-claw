@@ -1,7 +1,7 @@
 ---
 name: pixelator
-version: 5.0.3
-commit: d7376a8bca8b262b858ed440b6dd49c1853911e8
+version: 6.0.0
+commit: 32210d270ca5e8fd2eb46bb405674f24b2319980
 ---
 
 # pixelator — full parameter reference
@@ -82,7 +82,6 @@ nf-core/pixelator pipeline parameters. Every parameter from the pinned `nextflow
 | `--pna-analysis-compute-k-cores` | boolean |  |  |  |  | `true` | Compute k-core summary tables for each component |
 | `--pna-analysis-compute-proximity` | boolean |  |  |  |  | `true` | Compute proximity scores |
 | `--pna-analysis-compute-svd-var-explained` | boolean |  |  |  |  | `true` | Compute the variance explained by the SVD components |
-| `--pna-analysis-proximity-nbr-of-permutations` | integer |  |  |  | ≥ 50 | `100` | Number of permutations to use when computing the expected proximity scores |
 | `--pna-analysis-svd-nbr-of-pivots` | integer |  |  |  | ≥ 10; ≤ 200 | `50` | Number of pivots to use for the SVD decomposition |
 | `--save-pna-analysis-pixelfile` | boolean |  |  |  |  |  | Save the PXL dataset after the analysis stage. |
 | `--skip-analysis` | boolean |  |  |  |  |  | Skip analysis step |
@@ -158,4 +157,4 @@ nf-core/pixelator pipeline parameters. Every parameter from the pinned `nextflow
 | `--pna-sample-calling-save-undetermined` | boolean |  |  |  |  |  | Save components that could not be confidently assigned to any sample to a separate pxl file. |
 | `--save-pna-sample-calling-pixelfile` | boolean |  |  |  |  |  | Save the PXL dataset after the sample calling stage. |
 
-<!-- Generated from nf-core/pixelator@d7376a8bca8b262b858ed440b6dd49c1853911e8. Do not edit by hand. -->
+<!-- Generated from nf-core/pixelator@32210d270ca5e8fd2eb46bb405674f24b2319980. Do not edit by hand. -->

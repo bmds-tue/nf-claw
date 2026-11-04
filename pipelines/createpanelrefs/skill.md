@@ -1,14 +1,14 @@
 ---
 name: createpanelrefs
 pipeline: nf-core/createpanelrefs
-version: 1.0.0
-commit: 8ce86a84b5af74facf99abb76216531622b52bc8
+version: 1.1.0
+commit: b9d0e44a41543c9c37441de97684f8e1efde3901
 description: Generate Panel of Normals, models or other similar references from lots of samples
 summary: nf-core/createpanelrefs is a bioinformatics helper pipeline that will help in creating panel of normals and other models.
 has_samplesheet: true
 input: samplesheet (sample, bam, bai, cram, crai)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["CNVKIT", "GATK", "MultiQC"]
+tools: ["CNVkit", "GATK", "GNU Awk", "GNU Coreutils", "GNU Findutils", "GNU Gzip", "Mosdepth", "MultiQC", "pigz", "SAMtools"]
 ---
 # createpanelrefs
 
@@ -61,9 +61,9 @@ No reference genome is set by default: supply your own reference. The schema dec
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
-- **CNVkit options** (`cnvkit_options`) — 2 parameters
+- **CNVkit options** (`cnvkit_options`) — 4 parameters
 - **Generic options** (`generic_options`) — 16 parameters
-- **GENS options** (`gens_options`) — 6 parameters
+- **GENS options** (`gens_options`) — 7 parameters
 - **Germlinecnvcaller options** (`germlinecnvcaller_options`) — 6 parameters
 - **Input/output options** (`input_output_options`) — 4 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
@@ -71,7 +71,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Mutect2 options** (`mutect2_options`) — 2 parameters
 - **Reference genome options** (`reference_genome_options`) — 15 parameters
 
-Upstream usage: https://github.com/nf-core/createpanelrefs/blob/1.0.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/createpanelrefs/blob/1.1.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -95,18 +95,18 @@ nfclaw run createpanelrefs ... --nxf-ver 26.04.0
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/createpanelrefs/blob/1.0.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/createpanelrefs/blob/1.1.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: CNVKIT, GATK, MultiQC.
+The tools/methods this pipeline runs, per the authors' own list: CNVkit, GATK, GNU Awk, GNU Coreutils, GNU Findutils, GNU Gzip, Mosdepth, MultiQC, pigz, SAMtools.
 
-Full list with references: https://github.com/nf-core/createpanelrefs/blob/1.0.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/createpanelrefs/blob/1.1.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run createpanelrefs --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/createpanelrefs@8ce86a84b5af74facf99abb76216531622b52bc8. Do not edit by hand. -->
+<!-- Generated from nf-core/createpanelrefs@b9d0e44a41543c9c37441de97684f8e1efde3901. Do not edit by hand. -->
