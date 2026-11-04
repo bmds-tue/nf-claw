@@ -1,7 +1,7 @@
 ---
 name: bacass
-version: 2.6.1
-commit: 5ed7c2dd9a05d2434d8ba39ace1116368a4ba570
+version: 2.7.0
+commit: ce30c3a857adad365856e5565455c4cdae60ef3f
 ---
 
 # bacass — full parameter reference
@@ -26,7 +26,8 @@ nf-core/bacass pipeline parameters. Every parameter from the pinned `nextflow_sc
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--assembler` | string |  |  |  |  | `autocycler,canu,dragonflye,flye,megahit,miniasm,unicycler,raven` | The assembler(s) to use for assembly. |
-| `--assembly-type` | string |  |  | `short`, `long`, `hybrid` |  |  | Which type of assembly to perform. |
+| `--assembly-type` | string |  |  | `short`, `long`, `hybrid`, `auto` |  | `auto` | Assembly mode to use for all samples, or per-sample autodetection when set to `auto`. |
+| `--assembly-type-label` | boolean |  |  |  |  | `true` | Add the detected assembly type to output sample IDs in auto mode. |
 | `--autocycler-assemblers` | string |  |  |  |  | `canu,flye,miniasm,raven` | What assemblers to use for autocycler |
 | `--autocycler-cluster-args` | string |  |  |  |  |  | Arguments to autocycler cluster. |
 | `--autocycler-subsample-count` | integer |  |  |  |  | `4` | Number of subsets to assemble. |
@@ -70,7 +71,6 @@ nf-core/bacass pipeline parameters. Every parameter from the pinned `nextflow_sc
 | `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
-| `--hook-url` | string |  | yes |  |  |  | Incoming hook URL for messaging service |
 | `--max-multiqc-email-size` | string |  | yes |  | matches `^\d+(\.\d+)?\.?\s*(K\|M\|G\|T)?B$` | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
 | `--monochrome-logs` | boolean |  | yes |  |  |  | Do not use coloured log outputs. |
 | `--multiqc-config` | string (file path) |  | yes |  |  |  | Custom config file to supply to MultiQC. |
@@ -131,7 +131,7 @@ nf-core/bacass pipeline parameters. Every parameter from the pinned `nextflow_sc
 | `--skip-kmerfinder` | boolean |  |  |  |  |  | Skip contamination analysis with [Kmerfinder](https://bitbucket.org/genomicepidemiology/kmerfinder/src/master/) |
 | `--skip-kraken2` | boolean |  |  |  |  |  | Skip running Kraken2 classifier on reads. |
 | `--skip-multiqc` | boolean |  |  |  |  |  | Skip MultiQC |
-| `--skip-polish` | boolean |  |  |  |  |  | Skip polishing the long-read assembly with fast5 input. Will not affect short/hybrid assemblies. |
+| `--skip-polish` | boolean |  |  |  |  |  | Skip Medaka or Nanopolish polishing for long-read and hybrid assemblies. |
 | `--skip-pycoqc` | boolean |  |  |  |  |  | Skip running `PycoQC` on long read input. |
 
-<!-- Generated from nf-core/bacass@5ed7c2dd9a05d2434d8ba39ace1116368a4ba570. Do not edit by hand. -->
+<!-- Generated from nf-core/bacass@ce30c3a857adad365856e5565455c4cdae60ef3f. Do not edit by hand. -->
