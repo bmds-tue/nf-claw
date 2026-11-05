@@ -1,7 +1,7 @@
 ---
 name: variantbenchmarking
-version: 1.6.0
-commit: de4e43900039edd09106198d83c2559ea6a61b1a
+version: 1.6.1
+commit: c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1
 ---
 
 # variantbenchmarking — full parameter reference
@@ -88,4 +88,4 @@ nf-core/variantbenchmarking pipeline parameters. Every parameter from the pinned
 | `--stratification-bed` | string (directory path) |  |  |  |  |  | Path to stratification BED files provided in a directory. This directory has to be given together with stratification_tsv, list BED files in stratification_tsv. Only applicable to happy tool. |
 | `--stratification-tsv` | string (file path) |  |  |  | matches `^\S+\.tsv$` |  | List the stratification BED files in this file, to be used with stratification_bed |
 
-<!-- Generated from nf-core/variantbenchmarking@de4e43900039edd09106198d83c2559ea6a61b1a. Do not edit by hand. -->
+<!-- Generated from nf-core/variantbenchmarking@c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1. Do not edit by hand. -->
