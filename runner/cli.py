@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    exact_json, job_reports, jobs, preflight, resources, runlog, sheetgen,
-                    verify, versions)
+                    exact_json, job_reports, jobs, preflight, provenance, resources, runlog,
+                    sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -264,8 +264,21 @@ def _status_report(st: runlog.RunState) -> str:
             quoted = runlog.error_excerpt(st.console)
             lines += ["last output:", *(f"  {line}" if line else "" for line in quoted)]
         if st.state == "dead":
-            lines.append("Re-run the same command with --resume to continue where it stopped.")
+            lines.append(_after_dead_run(st))
     return "\n".join(lines) + "\n"
+
+
+def _after_dead_run(st: runlog.RunState) -> str:
+    """What to do about a launch whose nfclaw vanished without recording an outcome."""
+    if st.kind == "replay":
+        return ("A replay cannot continue in place: run commands.sh again into a new empty "
+                "directory.")
+    bundle = st.log.parent.parent
+    if st.kind == "run" and not ((bundle / "run_manifest.json").exists()
+                                 or (bundle / provenance.LAUNCH_RECORD).exists()):
+        return ("--resume recomputes every task: this launch recorded nothing to compare its "
+                "inputs against (--no-provenance).")
+    return "Re-run the same command with --resume to continue where it stopped."
 
 
 # The `--json` reports keep their keys; a change that removes or redefines one bumps this.
@@ -364,6 +377,12 @@ def main(argv: list[str] | None = None) -> int:
         # A path nfclaw could not reach (before Python 3.14, even `Path.exists` raises under a
         # directory that cannot be searched): name it, as for any other refusal.
         print(str(_os_error(exc)), file=sys.stderr)
+        return 1
+    except RuntimeError as exc:
+        # What pathlib raises for `~nosuchuser/x`, and before Python 3.13 for a symlink loop.
+        print(str(NfclawError(ErrorCode.ENVIRONMENT, f"cannot resolve a path: {exc}",
+                              fix="Check the paths given: a leading `~` must name an existing "
+                                  "user, and links must not form a loop.")), file=sys.stderr)
         return 1
 
 
@@ -592,7 +611,8 @@ def _main(argv: list[str] | None = None) -> int:
                          if name == "-config" else
                          "nfclaw sets Nextflow's own single-dash options itself; pass a config "
                          "file with `--config PATH` (or `-c PATH`) and pipeline parameters as "
-                         "--param value.")), file=sys.stderr)
+                         "--param value. A parameter value that starts with `-` goes after `=`: "
+                         f"--param={shlex.quote(tok)}.")), file=sys.stderr)
                 return 1
     args, extras = parser.parse_known_args(argv)
     # Only `run` forwards unrecognised flags (to the pipeline). Anywhere else an unknown flag is a

@@ -91,22 +91,29 @@ def _input_resume_warning(outdir: Path, current: dict[str, dict[str, str]],
                 "what cached tasks consumed; all tasks will be recomputed and the previous run "
                 "will be preserved in a sibling archive.")
     try:
-        previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
-        manifest = json.loads((outdir / "provenance/run_manifest.json").read_text(encoding="utf-8"))
-        if (not isinstance(manifest, dict)
-                or type(manifest.get("dependency_inventory_version")) is not int
-                or manifest["dependency_inventory_version"] != 1
-                or "inputs" in manifest.get("unverified_dependency_inventories", [])):
-            raise ValueError("previous namespace was not captured")
-        previous_stability = manifest.get("dependency_stability")
-        if previous_stability is not None and not isinstance(previous_stability, dict):
-            raise ValueError("previous dependency stability record is invalid")
-        if previous_stability and previous_stability.get("status") != "unchanged":
-            return ("--resume starts a fresh Nextflow cache session because the previous run's "
-                    "local dependency attribution failed. Cached tasks may have consumed changed "
-                    "data; all tasks will be recomputed and the previous run will be archived.")
-        previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
-                                                     relative=False)
+        # A launch that wrote no bundle (its nfclaw was killed outright) left its launch record.
+        launch = provenance.read_launch_record(outdir / "provenance")
+        if launch is not None:
+            previous, previous_digests = launch["input_inventory"], launch["input_checksums"]
+        else:
+            previous = provenance.read_input_inventory(outdir / "provenance/inputs.inventory.json")
+            manifest = json.loads((outdir / "provenance/run_manifest.json")
+                                  .read_text(encoding="utf-8"))
+            if (not isinstance(manifest, dict)
+                    or type(manifest.get("dependency_inventory_version")) is not int
+                    or manifest["dependency_inventory_version"] != 1
+                    or "inputs" in manifest.get("unverified_dependency_inventories", [])):
+                raise ValueError("previous namespace was not captured")
+            previous_stability = manifest.get("dependency_stability")
+            if previous_stability is not None and not isinstance(previous_stability, dict):
+                raise ValueError("previous dependency stability record is invalid")
+            if previous_stability and previous_stability.get("status") != "unchanged":
+                return ("--resume starts a fresh Nextflow cache session because the previous run's "
+                        "local dependency attribution failed. Cached tasks may have consumed "
+                        "changed data; all tasks will be recomputed and the previous run will be "
+                        "archived.")
+            previous_digests = provenance.read_checksums(outdir / "provenance/inputs.sha256",
+                                                         relative=False)
     except (OSError, ValueError, TypeError):
         if not current:
             return None
@@ -147,14 +154,19 @@ def _source_resume_warning(outdir: Path, pipeline: Path, current: dict) -> str |
     """Do not attribute cached tasks to ignored code or modes an earlier run never authenticated."""
     try:
         bundle = outdir / 'provenance'
-        manifest = json.loads((bundle / 'run_manifest.json').read_text())
-        if not isinstance(manifest, dict):
-            raise ValueError('the previous manifest is not an object')
-        previous = replay_guard.pipeline_source_record(bundle, manifest)
+        launch = provenance.read_launch_record(bundle)
+        if launch is not None:
+            previous = launch.get('source_identity')
+            recorded = launch
+        else:
+            recorded = json.loads((bundle / 'run_manifest.json').read_text(encoding='utf-8'))
+            if not isinstance(recorded, dict):
+                raise ValueError('the previous manifest is not an object')
+            previous = replay_guard.pipeline_source_record(bundle, recorded)
         if previous is None:
             reason = 'the earlier run did not record complete pipeline source identity'
-        elif (previous != current or manifest.get('pipeline_path') != str(pipeline.absolute())
-              or manifest.get('pipeline_git_head') != pipeline_head(pipeline)):
+        elif (previous != current or recorded.get('pipeline_path') != str(pipeline.absolute())
+              or recorded.get('pipeline_git_head') != pipeline_head(pipeline)):
             reason = 'the pipeline source namespace, permissions, content or revision changed'
         else:
             return None
@@ -752,7 +764,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                 if on_warning is not None:
                     on_warning(warning)
 
-                if not check_only and outdir.exists():
+                if not check_only and outdir.exists() and any(outdir.iterdir()):
                     archive = resume_safety.archive_previous_run(outdir, resume_inventory,
                                                                 [st.path, *extra_configs])
                     warning = (f"Preserved the previous run in {archive}; this output "
@@ -934,6 +946,12 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                              source_corrections=execution_source.metadata if execution_source
                              else None)
 
+        if write_provenance:
+            provenance.write_launch_record(outdir / "provenance", pipeline_path=pipeline_path,
+                                           git_head=git_head,
+                                           source_identity_record=pipeline_source_identity,
+                                           input_checksums=input_snapshot,
+                                           input_inventory=input_inventory, chain=chain_link)
         # Launch from the outdir so each run owns its `.nextflow/` history and cache: `-resume` then
         # resumes THIS run, never another pipeline's session. Paths in the command are absolute, so
         # the cwd only decides where the engine state lands — including Nextflow's own log.

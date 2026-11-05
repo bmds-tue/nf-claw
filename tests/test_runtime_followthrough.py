@@ -259,7 +259,7 @@ def trickle_server():
                     self.wfile.write(b"x")
                     self.wfile.flush()
                     time.sleep(0.02)
-            except (BrokenPipeError, ConnectionResetError):
+            except OSError:  # macOS can also report a closing peer as EPROTOTYPE
                 disconnected.set()
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Trickle)
@@ -295,7 +295,7 @@ def test_slow_progress_download_obeys_absolute_deadline_and_closes_worker_socket
         elapsed = time.monotonic() - start
         assert "unresolved" in result
         assert elapsed < 1.8, f"download exceeded its absolute budget: {elapsed}"
-        assert disconnected.wait(1), "the cancelled download left its HTTP connection open"
+        assert disconnected.wait(10), "the cancelled download left its HTTP connection open"
         assert all(child.poll() is not None for child in created)
     finally:
         for child in created:

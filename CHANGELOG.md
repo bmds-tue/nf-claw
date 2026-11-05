@@ -53,6 +53,17 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Fixed
 
+- `--resume` after a nfclaw that vanished (SIGKILL, out of memory, a host restart) or could not write
+  its bundle (a full disk) reuses the finished tasks. A launch now records what it consumes before
+  Nextflow starts; it used to recompute every task, while `nfclaw status` and the full-disk error
+  promised otherwise. A killed replay is no longer told to `--resume`.
+- A documented `--outdir results` run leaves the checkout clean: its writer lock, replay and the
+  previous run `--resume` preserves are ignored by Git.
+- `--check` names a profile the release does not define, instead of suggesting another engine.
+- `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
+  `ImportError`, and a `~` naming no user is an error instead of a traceback.
+- A stop while the container engine is still creating a task container no longer leaves it behind,
+  never started: nfclaw waits for it to appear (up to 15 s) and removes it.
 - Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,
   reportho and viralmetagenome) no longer fail a successful run or its archived replay as a source
   change, and symlink modes are recorded portably so a macOS bundle replays from its archive on

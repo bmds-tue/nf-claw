@@ -19,7 +19,8 @@ from runner.errors import ErrorCode, NfclawError
 from runner.inputs import is_remote_url
 from runner.probes import capture
 # Re-exported (`X as X`): callers read the bundle's checksum helpers from this module.
-from runner.replay_guard import (PIPELINE_ARCHIVE, check_corrected_source, write_pipeline_archive,
+from runner.replay_guard import (PIPELINE_ARCHIVE, check_corrected_source, check_input_inventory,
+                                 parse_checksums, write_pipeline_archive,
                                  MissingInputSource as MissingInputSource,
                                  checksum_text as checksum_text,
                                  hash_inputs as hash_inputs, hash_pipeline as hash_pipeline,
@@ -45,6 +46,8 @@ _URI_CREDENTIALS_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^/\s?#]*@")
 _BUNDLED_SCRIPTS = {name: Path(__file__).with_name(name).read_bytes()
                     for name in ("replay_guard.py", "environment_record.py", "source_identity.py")}
 _DEFAULT_EXECUTION_HEAD = object()
+LAUNCH_RECORD = "launch-record.json"
+_LAUNCH_RECORD_VERSION = 1
 
 
 def sha256_file(path: Path) -> str:
@@ -124,6 +127,44 @@ def samplesheet_dependencies(path: Path, schema: InputSchema) -> list[Path]:
     """
     return sorted(set(samplesheet_input_paths(path, schema))
                   | set(samplesheet_file_paths(path, schema)))
+
+
+def write_launch_record(prov: Path, *, pipeline_path: Path, git_head: str | None,
+                        source_identity_record: dict | None, input_checksums: dict[str, str],
+                        input_inventory: dict[str, dict[str, str]],
+                        chain: dict | None = None) -> None:
+    """What this launch consumes, on disk before Nextflow starts.
+
+    The bundle is written when a run ends, so a nfclaw killed outright (SIGKILL, out of memory, a
+    host restart) or unable to finish it (a full disk) leaves none. `--resume` then has this
+    record to compare the sources and inputs against, and can reuse the finished tasks instead of
+    recomputing them. The published bundle replaces it."""
+    atomic.write_text(prov / LAUNCH_RECORD, json.dumps(
+        {"version": _LAUNCH_RECORD_VERSION, "pipeline_path": str(pipeline_path.absolute()),
+         "pipeline_git_head": git_head, "source_identity": source_identity_record,
+         "input_checksums": input_checksums, "input_inventory": input_inventory,
+         **({"chain": chain} if chain else {})},
+        indent=2, sort_keys=True) + "\n")
+
+
+def read_launch_record(prov: Path) -> dict | None:
+    """The launch record of a run that wrote no bundle, or None: there is a bundle to read
+    instead, or the launch recorded nothing (`--no-provenance`, or an older nfclaw). ValueError
+    when the record is damaged; OSError when it cannot be read."""
+    if (prov / "run_manifest.json").exists():
+        return None
+    try:
+        record = json.loads((prov / LAUNCH_RECORD).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    if (not isinstance(record, dict) or record.get("version") != _LAUNCH_RECORD_VERSION
+            or not isinstance(record.get("pipeline_path"), str)
+            or not isinstance(record.get("input_checksums"), dict)):
+        raise ValueError(f"invalid launch record: {prov / LAUNCH_RECORD}")
+    parse_checksums(checksum_text(record["input_checksums"]), source=str(prov / LAUNCH_RECORD),
+                    relative=False)
+    check_input_inventory(record.get("input_inventory"), prov / LAUNCH_RECORD)
+    return record
 
 
 def mark_timed_out(outdir: Path, timeout_seconds: float) -> None:
@@ -779,6 +820,7 @@ def write(*, outdir: Path, pipeline: str, command_str: str,
         manifest.update(outcome="failed",
                         timeout_seconds=deadline_failure.details["timeout_seconds"])
     atomic.write_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    (prov / LAUNCH_RECORD).unlink(missing_ok=True)      # the bundle now says all it said
     if outcome == "success" and deadline_failure is None:
         try:
             budget.check()

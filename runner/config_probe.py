@@ -26,6 +26,7 @@ _STRICT_PARSER_DEFAULT = (26, 4)
 # What the Nextflow launcher prints when it cannot set an engine up at all (no jars, no Java).
 _ENGINE_DOWN = re.compile(r"Unable to initialize nextflow environment|CAPSULE EXCEPTION|"
                           r"Cannot download nextflow|Unable to download")
+_UNKNOWN_PROFILE = re.compile(r"Unknown configuration profile: ")
 
 
 def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], label: str,
@@ -64,6 +65,10 @@ def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], lab
         # the run could not start either, but not because of its configuration.
         return [f"{label}: {engine} could not be started — Nextflow downloads a pinned engine on "
                 "first use; check this host can:\n" + "\n".join(f"      {line}" for line in report)]
+    if any(_UNKNOWN_PROFILE.search(line) for line in report):
+        # The configuration parsed; it just has no such profile, and no engine would change that.
+        return [f"{label}: the release defines no such profile ({profile}):\n"
+                + "\n".join(f"      {line}" for line in report)]
     chain = spelling == "chain"
     # The engine the release was written for is the one it declares (docs/compatibility.md).
     declared = engine_version.minimum_version(

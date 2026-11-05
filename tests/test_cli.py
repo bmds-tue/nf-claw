@@ -1,5 +1,6 @@
 import json
 import os
+import runpy
 import signal
 import socket
 import subprocess
@@ -977,3 +978,25 @@ def test_an_os_error_without_a_path_is_named_as_such(tmp_path, monkeypatch, caps
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 1
     assert "[environment] operating-system error: No space left on device" in \
         capsys.readouterr().err
+
+
+def test_a_value_that_looks_like_a_short_option_is_told_to_attach_it(capsys):
+    # argparse would read `-c 3` as `-c` with the value ` 3`: refused, naming what works.
+    assert cli.main(["run", "demo", "--outdir", "x", "--multiqc-title", "-c 3"]) == 1
+    assert "--param='-c 3'" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("argv", [["status", "~nfclaw-no-such-user/x"],
+                                  ["chain", "status", "~nfclaw-no-such-user/x"],
+                                  ["verify", "~nfclaw-no-such-user/x", "--against", "/x"],
+                                  ["run", "demo", "--outdir", "~nfclaw-no-such-user/x"]])
+def test_a_tilde_naming_no_user_is_an_error_not_a_traceback(argv, capsys):
+    assert cli.main(argv) == 1
+    assert "cannot resolve a path" in capsys.readouterr().err
+
+
+def test_the_no_install_form_names_the_python_it_needs(monkeypatch):
+    monkeypatch.setattr(sys, "version_info", (3, 9, 6, "final", 0))
+    with pytest.raises(SystemExit) as stopped:
+        runpy.run_module("runner", run_name="__main__")
+    assert "needs Python 3.11 or newer" in str(stopped.value)

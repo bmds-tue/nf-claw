@@ -134,6 +134,7 @@ Executions attempt to record a provenance bundle in `<outdir>/provenance/`, incl
 | `configs.sha256` | Digests of the resolved params file, generated configs and explicit external Nextflow configuration files passed via `-c`. |
 | `inputs.inventory.json` / `configs.inventory.json` | Prelaunch dependency namespaces, empty directories, entry types and link identities, checked alongside file bytes. |
 | `outputs.inventory.json` | Published output namespace used by replay verification and handoff checks. |
+| `launch-record.json` | Written before Nextflow starts and removed when the manifest is published: the pipeline source identity and the input bytes and namespace of this launch, which `--resume` compares against when a vanished nfclaw left no manifest. |
 | `resource_limits.config` | Generated resource ceiling configuration when `--limit-*` flags are used. |
 | `nf_schema_compat.config` / `fastqrepair_compat.config` | Conditional plugin adjustments and recorded task corrections. |
 
@@ -152,7 +153,8 @@ Unlisted paths, changed releases and reused `storeDir` caches retain their input
 whole-path shell arguments also check parent folders and resolved symlink paths.
 
 Before `--resume`, declared local inputs are compared with the prior byte and namespace
-snapshots. Unchanged inputs retain caching; changed data or an unavailable inventory
+snapshots (the manifest's, or the launch record's when no manifest was published). Unchanged inputs
+retain caching; changed data or an unavailable inventory
 archives the complete prior run in `<outdir>.previous-<id>` and starts a fresh cache
 session. Prior logs are copied forward. This also applies with `--no-provenance`.
 

@@ -137,8 +137,8 @@ nfclaw run rnaseq --input /data/fastq --sheet-set strandedness=auto --outdir res
 nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' --outdir results
 ```
 
-The pinned schema decides the columns, sample names come unaltered from file names, and gaps,
-ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings; [AGENTS.md](AGENTS.md) gives the pairing and identity rules ([in full](docs/preflight.md#inputs-refused-before-launch)),
+The pinned schema decides the columns, sample names come unaltered from file names, and gaps and
+ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings. [AGENTS.md](AGENTS.md) gives the pairing and identity rules ([in full](docs/preflight.md#inputs-refused-before-launch)),
 and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
 releases whose contracts were corrected from their pinned source.
 

@@ -927,6 +927,28 @@ def test_check_refuses_a_configuration_the_engine_cannot_parse(tmp_path, monkeyp
     assert not (tmp_path / "out").exists()
 
 
+def test_check_names_an_unknown_profile_instead_of_blaming_the_parser(tmp_path, monkeypatch):
+    # A profile the release does not define parses fine; no engine or parser would change that.
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.config_probe.shutil, "which", lambda name: "/bin/nextflow")
+    monkeypatch.setattr(orchestration.config_probe.engine_version, "effective",
+                        lambda pinned=None: pinned or "26.04.3")
+    monkeypatch.setattr(orchestration.config_probe, "capture",
+                        lambda cmd, **kw: subprocess.CompletedProcess(
+                            cmd, 1, "Unknown configuration profile: 'nope'\n", ""))
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+            profile="nope", params_file=None, cli_overrides={}, resume=False,
+            demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
+            probe_config=True)
+    [issue] = exc.value.details["issues"]
+    assert "defines no such profile (test,nope)" in issue
+    assert "Unknown configuration profile: 'nope'" in issue
+    assert "NXF_SYNTAX_PARSER" not in issue and "--nxf-ver" not in issue
+
+
 def test_a_real_run_takes_no_configuration_probe(tmp_path):
     # A launch is its own probe: the flag exists for `--check` alone.
     with pytest.raises(ValueError, match="probe_config"):

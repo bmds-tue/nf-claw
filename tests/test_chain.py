@@ -777,6 +777,30 @@ def test_the_chain_log_is_read_like_a_run_log(library, fake_runs, tmp_path):
     assert st.host_id == runlog.host_identity()
 
 
+def test_unchanged_handoff_is_found_through_a_killed_attempt_s_launch_record(tmp_path):
+    # A stage whose nfclaw was killed outright wrote no bundle; a new handoff path would change its
+    # input paths, and with them recompute every task the attempt finished.
+    stage = tmp_path / "02-mini"
+    previous = tmp_path / "handoffs" / "02-mini"
+    previous.mkdir(parents=True)
+    (previous / "sheet.csv").write_text("a,b\n")
+    (previous / "handoff.json").write_text(
+        json.dumps({"params": {"input": {"value": str(previous)}}}))
+    fresh = previous / "attempts" / "1"
+    fresh.mkdir(parents=True)
+    (fresh / "sheet.csv").write_text("a,b\n")
+    written = fresh / "handoff.json"
+    written.write_text(json.dumps({"params": {"input": {"value": str(fresh)}}}))
+    (stage / "provenance").mkdir(parents=True)
+    provenance.write_launch_record(
+        stage / "provenance", pipeline_path=tmp_path / "up", git_head=None,
+        source_identity_record=None, input_checksums={}, input_inventory={},
+        chain={"upstream": {"handoff": str(previous / "handoff.json"),
+                            "handoff_sha256": provenance.sha256_file(previous / "handoff.json")}})
+    kept = chain._unchanged_handoff(stage, fresh, written)
+    assert kept is not None and kept[0] == previous / "handoff.json"
+
+
 def test_status_tells_a_chain_whose_nfclaw_was_killed(library, fake_runs, tmp_path):
     # SIGKILL leaves no last line: state.json still says "running", the log's pid is gone.
     root = library("mini_up", "mini", rules={("mini_up", "mini"): RULE})

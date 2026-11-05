@@ -50,12 +50,18 @@ version 2 source identity also starts fresh: old content-only checks cannot cert
 ignored runtime code. Unchanged complete source identity retains normal cache reuse. This guard
 also applies when the new launch disables provenance.
 
-A previous launch that wrote no bundle has no source identity or input snapshot to compare: one
-run with `--no-provenance`, or one whose nfclaw was stopped outright (SIGKILL, out of memory, a
-host restart) before it recorded its outcome. A failed, timed-out or `kill <pid>`-stopped run
-still writes its bundle and resumes normally. `--resume` after a launch without one starts a fresh
-session too: the earlier run is preserved in a sibling `<outdir>.previous-<id>` archive and every
-task is recomputed. Keep provenance on for long runs you may need to resume.
+A failed, timed-out or `kill <pid>`-stopped run writes its bundle and resumes normally. A launch
+whose nfclaw vanished before writing one (SIGKILL, out of memory, a host restart) or could not
+finish it (a full disk) leaves `provenance/launch-record.json`, written before Nextflow starts: the
+source identity and the input bytes and namespace it launched with. `--resume` compares those with
+what it finds and reuses the finished tasks if they agree. The record cannot show a change made
+and undone while that run ran, nor can the comparison a stopped run makes when it ends. The
+published bundle replaces the record.
+
+A launch with `--no-provenance` records neither, so it has no source identity or input snapshot to
+compare: `--resume` after it starts a fresh session, the earlier run is preserved in a sibling
+`<outdir>.previous-<id>` archive and every task is recomputed. Keep provenance on for long runs you
+may need to resume.
 
 Ordinary Nextflow caching can miss file byte changes when size and timestamp are preserved, as well as recursive directory changes when root metadata is unchanged. Before a real `--resume`, nfclaw compares the prelaunch directory namespace and the SHA-256 of every explicitly declared local input file, including samplesheet data paths, with the previous bundle. An unchanged namespace and content retain normal caching; a changed namespace, changed file content, or an unavailable inventory preserves the complete previous run in a sibling `<outdir>.previous-<id>` archive, announces its path, and recomputes all tasks in a fresh Nextflow cache session. Prior logs remain in the archive and are copied forward so the current run log still appends. Previous publications cannot contaminate the fresh result inventory. Archiving refuses active engine database locks and dependencies that overlap the run directory. This safeguard also applies when the new launch disables provenance. Without a valid earlier input snapshot, local-input runs start fresh because unchanged data cannot be established. It covers explicitly declared local inputs, not remote or indirectly configured inputs.
 

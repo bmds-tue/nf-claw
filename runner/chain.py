@@ -1052,6 +1052,11 @@ def _unchanged_handoff(stage_dir: Path, fresh: Path, written: Path) -> tuple[Pat
     written to `fresh` matches it: the same record once `fresh` reads as its directory, and the same
     bytes in every file. None when there is no such attempt, or its record changed since it ran."""
     manifest = _read_json(stage_dir / "provenance" / "run_manifest.json")
+    if not isinstance(manifest, dict):        # an attempt whose nfclaw vanished wrote no bundle
+        try:
+            manifest = provenance.read_launch_record(stage_dir / "provenance")
+        except (OSError, ValueError):
+            return None
     chain_link = manifest.get("chain") if isinstance(manifest, dict) else None
     upstream = chain_link.get("upstream") if isinstance(chain_link, dict) else None
     if not isinstance(upstream, dict) or not isinstance(upstream.get("handoff"), str):

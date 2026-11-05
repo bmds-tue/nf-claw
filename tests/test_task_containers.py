@@ -8,6 +8,7 @@ left its task containers behind exited, and with a shorter grace still running.
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -30,6 +31,8 @@ case "$1" in
     esac; done
     trap '' TERM
     while :; do sleep 0.1; done ;;
+  ps)
+    ls "$ENGINE_STATE" ;;
   rm)
     shift; [ "$1" = -f ] && shift
     for name; do
@@ -325,3 +328,43 @@ def test_a_group_that_outlives_its_reaped_leader_is_still_stopped(engine, tmp_pa
         _kill(proc)
     assert not list(state.iterdir())
     assert "rm -f nxf-Orphan1" in log.read_text().splitlines()
+
+
+def test_a_container_still_being_created_is_waited_for_and_removed(engine, tmp_path, monkeypatch):
+    # A stop while the daemon creates a container: `rm` finds nothing, the daemon then finishes it,
+    # and a container that never started stays behind for good.
+    docker, state, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 10)
+    containers = {(str(docker),): {"nxf-late"}}
+    assert replay_guard.unlisted_containers(containers) == {"nxf-late"}
+    timer = threading.Timer(1.5, (state / "nxf-late").touch)
+    timer.start()
+    try:
+        removed, problems = replay_guard.remove_task_containers(containers, creating={"nxf-late"})
+    finally:
+        timer.join()
+    assert removed == ["nxf-late"] and problems == []
+    assert not (state / "nxf-late").exists()
+
+
+def test_a_container_its_wrapper_removed_is_not_waited_for(engine, monkeypatch):
+    docker, state, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 60)
+    (state / "nxf-seen").touch()
+    containers = {(str(docker),): {"nxf-seen"}}
+    assert replay_guard.unlisted_containers(containers) == set()
+    (state / "nxf-seen").unlink()                # the wrapper removed it when it was signalled
+    started = time.monotonic()
+    assert replay_guard.remove_task_containers(containers) == ([], [])
+    assert time.monotonic() - started < 30
+
+
+def test_a_creating_container_that_never_appears_ends_the_wait(engine, monkeypatch):
+    docker, _, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    containers = {(str(docker),): {"nxf-never"}}
+    assert replay_guard.remove_task_containers(containers, creating={"nxf-never"}) == ([], [])
+
+
+def test_an_engine_that_cannot_list_waits_for_nothing(tmp_path):
+    assert replay_guard.unlisted_containers({(str(tmp_path / "no-engine"),): {"nxf-a"}}) == set()

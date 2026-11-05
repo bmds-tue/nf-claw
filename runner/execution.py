@@ -480,7 +480,9 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
         os.killpg(pgid, signal.SIGTERM)
     except OSError:
         pass
+    creating: set[str] = set()
     try:
+        creating = replay_guard.unlisted_containers(containers)
         try:
             proc.wait(timeout=grace)
         except subprocess.TimeoutExpired:
@@ -505,7 +507,7 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
                     pass                              # the group is already gone
             proc.wait()
         if containers:                                # a second Ctrl-C still stops them too
-            _remove_task_containers(containers, run_log)
+            _remove_task_containers(containers, run_log, creating)
 
 
 def _observe_task_containers(pgid: int, run_log: runlog.RunLog | None) -> dict:
@@ -519,9 +521,9 @@ def _observe_task_containers(pgid: int, run_log: runlog.RunLog | None) -> dict:
 
 
 def _remove_task_containers(containers: dict[tuple[str, ...], set[str]],
-                            run_log: runlog.RunLog | None) -> None:
+                            run_log: runlog.RunLog | None, creating: set[str]) -> None:
     """Remove the task containers a stopped run left behind, and say so."""
-    removed, problems = replay_guard.remove_task_containers(containers)
+    removed, problems = replay_guard.remove_task_containers(containers, creating=creating)
     messages = ([f"nfclaw: removed {len(removed)} task container(s) the stopped run left behind: "
                  f"{', '.join(removed)}"] if removed else []) + \
         [f"nfclaw: a task container of the stopped run could not be removed: {problem}"
