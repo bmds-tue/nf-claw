@@ -378,6 +378,23 @@ def test_a_creating_container_that_never_appears_ends_the_wait(engine, monkeypat
     assert len(problems) == 1 and "nxf-never had not appeared 1 s after the stop" in problems[0]
 
 
+def test_a_late_container_is_named_with_the_engine_that_started_it(engine, tmp_path, monkeypatch):
+    # A Podman or `docker.sudo` run has nothing to find with a bare `docker ps`.
+    docker, _, _ = engine
+    podman = tmp_path / "podman"
+    podman.symlink_to(docker)
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    containers = {(str(docker),): {"nxf-a"}, (str(podman),): {"nxf-b", "nxf-c"}}
+    _, problems = replay_guard.remove_task_containers(containers,
+                                                      creating={"nxf-a", "nxf-b", "nxf-c"})
+    assert len(problems) == 2
+    by_docker, by_podman = sorted(problems, key=lambda problem: "nxf-a" not in problem)
+    assert by_docker.startswith("nxf-a had not appeared")
+    assert f"`{docker} ps -a --filter name=nxf-`" in by_docker and f"`{docker} rm`" in by_docker
+    assert by_podman.startswith("nxf-b, nxf-c had not appeared")
+    assert f"`{podman} ps -a --filter name=nxf-`" in by_podman and f"`{podman} rm`" in by_podman
+
+
 def test_one_wait_covers_every_container_being_created(engine, monkeypatch):
     # Removal runs 16 at a time: a wait per container would make a stop take several of them.
     docker, _, log = engine

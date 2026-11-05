@@ -1323,11 +1323,16 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout:
         if gone:
             removed.append(work[index][1])
         problems += [problem for problem in found if problem not in problems]
-    if late := sorted(work[index][1] for index, outcome in enumerate(outcomes) if outcome[2]):
-        problems.append(f"{', '.join(late)} had not appeared {_CREATION_SETTLE:g} s after the "
+    late: dict[tuple[str, ...], list[str]] = {}
+    for index, outcome in enumerate(outcomes):
+        if outcome[2]:
+            late.setdefault(work[index][0], []).append(work[index][1])
+    for engine, names in late.items():
+        command = " ".join(engine)
+        problems.append(f"{', '.join(names)} had not appeared {_CREATION_SETTLE:g} s after the "
                         "stop. A container the engine was still creating stays behind, never "
-                        "started: `docker ps -a --filter name=nxf-` lists them, and `docker rm` "
-                        "removes them")
+                        f"started: `{command} ps -a --filter name=nxf-` lists them, and "
+                        f"`{command} rm` removes them")
     return sorted(removed), problems
 
 
