@@ -63,7 +63,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   - Or, if you know your pipeline tolerates spaces, pass `--allow-spaces` to bypass the preflight check.
 
 ### IPv6-only host — JVM can't reach GitHub
-- **Symptom:** `java.net.SocketException: Network is unreachable` while Nextflow downloads `https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config`; Nextflow 26.04 prints only `Unable to parse config file`, and `--check` says the engine could not fetch a remote configuration.
+- **Symptom:** `java.net.SocketException: Network is unreachable` while Nextflow downloads `https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config`; Nextflow 26.04 prints only `Unable to parse config file`, and `--check` says the engine could not use a remote configuration.
 - **Why:** The host has no default IPv4 route; the JVM prefers IPv4 by default and never attempts IPv6.
 - **Fix:** `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`. To skip remote config fetches entirely (offline): `--nxf-env NXF_OFFLINE=true`.
 - **Dual Requirement on IPv6 Hosts:** On an IPv6-only host you usually need BOTH this *and* the [Docker host-network config](#docker-bridge-network-has-no-dns-ipv6-only-host) together: the JVM flag fixes Nextflow's own GitHub download, while host-network fixes DNS *inside* containers — neither alone is sufficient:
@@ -75,6 +75,11 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### No network at run time — a tool downloads a database
 - **Symptom:** A step (e.g. BUSCO) hangs then fails trying to fetch a database it requires.
 - **Fix:** Supply the step's database locally through the pinned release's declared parameters, or deliberately skip that analysis if the release supports it. Where `reference.md` declares `skip_busco`, use `--skip-busco true` (or `{"skip_busco": true}` via `--params-file params.json`). Skipping a step changes the analysis; `NXF_OFFLINE` does not prevent tools inside containers from attempting downloads.
+
+### A samplesheet's remote file is reported as missing, but it exists
+- **Symptom:** the run stops before any task with `Validation of file failed`, naming one `https://` URL with `the file or directory '…' does not exist`, while `curl -IL` on that URL answers 200.
+- **Seen:** seqinspector 1.1.2 and metatdenovo 2.0.0 on 2026-11-05: one URL each on `github.com`, on both attempts a minute apart. The same commands passed two hours later. What the server answered at the time was not recorded, and nothing in the log says.
+- **Fix:** wait and run the same command again. Nothing has been computed yet, so nothing is lost.
 
 ### A process requests more memory than the host has — aborts before any work
 - **Symptom:** A run aborts at scheduling time because a single step requests more RAM than the machine has, e.g. `Process requirement exceeds available memory -- req: 80 GB; avail: 62.8 GB`. Seen with `detaxizer` 1.3.0 run with `--classification_bbduk`: its `BBMAP_BBDUK` step carries nf-core's `process_high` label, which `conf/base.config` sizes at `80.GB * task.attempt` — more than a typical workstation or small VM has.
@@ -196,6 +201,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
 ### Intermittent `No signature of method: java.util.LinkedHashMap.subMap() is applicable …`
 - **Symptom:** A run fails in a channel operator rather than in a task: `.nextflow.log` shows `groovy.lang.MissingMethodException: No signature of method: java.util.LinkedHashMap.subMap() is applicable for argument types: (String, String, String)`, although the pipeline calls the ordinary varargs `meta.subMap('a', 'b', 'c')`.
 - **Observed:** Once among the fastqrepair 1.1.1 native validations on Nextflow 25.10.4 (GitHub-hosted Ubuntu runner, 2026-10-13); the identical job passed in every run before and after it. The stack trace fails inside Groovy's invokedynamic call-site cache (`IndyInterface.fromCache`), not in pipeline or nfclaw code, and no input changed.
+- **Also seen:** `Cannot invoke "java.util.Map.get(Object)" because "self" is null`, printed with no failed task, followed by `Pipeline completed with errors`: once in hgtseq 1.1.0 on Nextflow 22.10.1 (2026-11-05). Its `--resume` and replay then passed. The cause was not established.
 - **Fix:** Re-run the same command with `--resume`: completed tasks are reused. If it recurs, report it to Nextflow with the `.nextflow.log` stack trace.
 
 ### `--resume` resumed the wrong session
@@ -326,6 +332,12 @@ the replay; `nfclaw verify` keys on the path precisely to separate the two quest
 - **Symptom:** `nfclaw run` ends with `provenance: N process(es) are not pinned to an image digest for replay: …` or `provenance: N container image(s) have no recorded identity: …`.
 - **Why:** For named Docker/Podman profiles, nfclaw observes task-container start events and inspects image identities while the run is active. Observation is best effort, reinspecting a reused reference after 600 seconds; missing observations fall back to post-run inspection or an earlier attempt's record when available. Locally built images can lack registry digests, a process running several images or containerless tasks has no single pin, and ephemeral Wave references are excluded. Remote executors may leave no image in the local engine. Singularity/Apptainer files are hashed after execution and do not receive registry pins.
 - **Fix:** Inspect `environment.json` (`images`, `pinned_containers`, `issues`) and the manifest's `container_pins` entry. `containers.config` is absent when no process qualifies. Unpinned processes retain their original container configuration, which may use tags or local image files; the replay compares the evidence it can obtain. Push locally built images to a registry and reference them by digest when registry pins are needed.
+- **Tasks that run no container:** mcmicro 2.0.0's `OMEVALIDATION` is an `exec:` task, which runs inside Nextflow. Its replay's environment check therefore stays `unverified` for that process, and `nfclaw verify --require-environment` fails, however faithful the replay.
+
+### A run has no task records: `Nextflow holds no task records for this run`
+- **Symptom:** a successful run warns `provenance: Nextflow holds no task records for this run…`. Its replay reports `execution environment unverified` and `the recording holds no task records to compare containers with`, and `nfclaw verify --require-environment` fails with `no complete process inventory was recorded`.
+- **Why:** `cleanup = true` makes Nextflow delete a successful run's task records along with its work files, so nfclaw cannot identify or pin any container. A replay then runs the images its references resolve to at that time, and nothing compares them. genomeqc 1.0.1's `test` and `test_gca` profiles set it, so its `--demo` always ends this way. Measured with the demo pipeline and `cleanup = true` in a `--config` file: 0 processes, 0 images and 0 pins recorded, and the replay succeeded unverified.
+- **Fix:** for a complete record, pass a config holding `cleanup = false` with `--config`: on Nextflow 25.10.4, `nextflow config -profile test,docker` of genomeqc 1.0.1 then resolves to `cleanup = false`.
 
 ### Replay refuses an unobserved engine or malformed environment names
 - **Why:** New bundles pin replays to the engine version observed in the executed
@@ -605,8 +617,9 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
   - `longraredisease` 1.0.0 names its MultiQC report after the output directory (`<outdir basename>-pipeline-report_multiqc_report.html`), so a replay into `<outdir>.replay` names it differently.
   - `createtaxdb` 3.1.0: `kraken2-build` gives the files it adds to `library/added/` random names. `nfclaw verify` pairs exactly these names one to one within their directory, lists them under `renamed` and compares their bytes, so a faithful replay no longer reports them as missing and extra.
   - `hicar` 1.0.0: across runs, its MultiQC report included different samtools sections (`flagstat` once, `stats` and the alignment plots another time), and one `.hic` file under `cooler/MAPS/` was published under different names.
-  - `nanoseq` 3.1.0: NanoPlot names its log by the minute it ran (`NanoPlot_<date>_<time>.log`).
+  - `nanoseq` 3.1.0: NanoPlot names its log by the minute it ran (`NanoPlot_<date>_<time>.log`). `MULTIQC` also receives only one FastQC file, whichever arrives first, because the workflow does not collect that channel. A report that received `sample_R1_fastqc.zip` has FastQC sections and 44 more files under `multiqc_data` and `multiqc_plots` than one that received `sample_R2_fastqc.html`. The FastQC results themselves were identical across both runs.
   - `nanostring` 1.3.3: MultiQC exported four plots in one run and not in its replay.
+  - `coproid` 2.0.1: MultiQC exported 25 plots in one run and not in its replay, on 2026-11-05; an earlier replay had them all.
   - `mag` 5.5.0: Prokka publishes temporary protein files named by its process ID (`….AMR.tmp.<pid>.faa`).
   - `rnafusion` 4.1.3: FusionInspector publishes `fi_workdir/pipeliner.<pid>.cmds`.
   - `rnasplice` 1.0.4: MISO names its batch logs by the time they were written.

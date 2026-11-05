@@ -63,6 +63,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   for links into the inputs (`--outdir /` never finished): a run refuses a non-empty directory without
   `--resume` anyway. (#257)
 - `--check` names a profile the release does not define, instead of suggesting another engine. (#257)
+- A run whose task records are gone, because a config set `cleanup = true`, now warns that no container
+  was identified or pinned for its replay, instead of recording no gap. (#257)
 - `--check` on a host that cannot fetch a release's remote configuration says so and names the network
   remedies, instead of suggesting another engine and parser. (#257)
 - A Fast5 directory in a bacass 2.7.0 samplesheet is part of the run's input identity again: the bump

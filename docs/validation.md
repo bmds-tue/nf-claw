@@ -504,9 +504,11 @@ files are reports, logs and plots that embed timestamps or paths. Notes on the r
   launch-stamped reports ([known issue](known-issues.md#pipeline-specific-run-notes)).
 - **Reruns**: the table shows each pipeline's last run. The shared host's full disk and image
   removals stopped some first attempts, and pipelines whose bundles came from an nfclaw version with a
-  defect listed below were run again. genomeqc's first replay was reported unverified: the Nextflow
-  cache of that replay returned no task records, although its tasks had run. A fresh run and its
-  replay were identical.
+  defect listed below were run again.
+- **genomeqc**: the table's `0`, `0/0` and `identical` mean no images were compared. Its `test` profile sets
+  `cleanup = true`, which removes a successful run's task records ([known issue](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run)).
+  The check now reports this as `unverified`. An earlier version of this page blamed one replay's
+  Nextflow cache.
 
 The nfclaw feature paths were replayed the same way:
 
