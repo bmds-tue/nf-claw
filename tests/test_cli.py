@@ -1000,3 +1000,12 @@ def test_the_no_install_form_names_the_python_it_needs(monkeypatch):
     with pytest.raises(SystemExit) as stopped:
         runpy.run_module("runner", run_name="__main__")
     assert "needs Python 3.11 or newer" in str(stopped.value)
+
+
+def test_output_a_terminal_cannot_show_is_no_traceback(tmp_path):
+    env = {**os.environ, "PYTHONIOENCODING": "ascii"}
+    result = subprocess.run([sys.executable, "-m", "runner", "status", str(tmp_path / "none")],
+                            capture_output=True, text=True, env=env,
+                            cwd=Path(__file__).resolve().parent.parent)
+    assert result.returncode == 1 and "Traceback" not in result.stderr
+    assert "status: no run log \\u2014" in result.stdout

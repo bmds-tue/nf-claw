@@ -63,7 +63,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   (`--outdir /` never finished) before saying a non-empty directory takes no run without `--resume`.
 - `--check` names a profile the release does not define, instead of suggesting another engine.
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
-  `ImportError`, and a `~` naming no user is an error instead of a traceback.
+  `ImportError`; a `~` naming no user, or a report a terminal's encoding cannot show, is no
+  traceback.
 - A stop while the container engine is still creating a task container no longer leaves it behind,
   never started: nfclaw waits for it to appear (up to 15 s) and removes it.
 - Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,

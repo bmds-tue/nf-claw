@@ -363,6 +363,9 @@ def main(argv: list[str] | None = None) -> int:
     rather than with a BrokenPipeError traceback. SIGPIPE itself stays ignored (Python's default): a
     run whose terminal goes away must keep tearing down Nextflow and writing its provenance,
     not die."""
+    # Reports hold `—` and `≥`: one a Latin-1 terminal or an ASCII pipe cannot show is not a crash.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     try:
         code = _main(argv)
         sys.stdout.flush()                    # surface a closed pipe here, not at interpreter exit

@@ -598,7 +598,12 @@ def check_replay_destination(bundle: Path, target: Path) -> None:
                                  env.get("TMPDIR", "") if name == "NXF_TEMP" else "")
         if value:
             writes.append((f"Nextflow {name}", local(value), False))
-    check_write_boundaries(sources, writes)
+    # `commands.sh` refuses a target that holds files: walking one only delays saying so.
+    try:
+        occupied = (target,) if any(target.iterdir()) else ()
+    except OSError:
+        occupied = ()
+    check_write_boundaries(sources, writes, occupied)
 
 
 def pipeline_head(repo: Path) -> str | None:

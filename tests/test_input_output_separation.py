@@ -539,3 +539,20 @@ def test_a_refused_outdir_is_not_walked(tmp_path, monkeypatch):
 
 def test_a_missing_outdir_is_nothing_to_skip(tmp_path):
     assert input_safety.refused_outdir(tmp_path / "missing", resume=False) == ()
+
+
+def test_a_replay_target_that_holds_files_is_not_walked(tmp_path, monkeypatch):
+    # `commands.sh` refuses it right after this check, which used to walk all of it first.
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "run_manifest.json").write_text('{"command": "nextflow run x"}')
+    for name in ("inputs", "configs"):
+        (bundle / f"{name}.inventory.json").write_text("{}")
+    target = tmp_path / "big"
+    (target / "existing").mkdir(parents=True)
+    walked = []
+    scandir = replay_guard.os.scandir
+    monkeypatch.setattr(replay_guard.os, "scandir",
+                        lambda path: walked.append(str(path)) or scandir(path))
+    replay_guard.check_replay_destination(bundle, target)
+    assert str(target / "existing") not in walked
