@@ -444,13 +444,15 @@ def check_input_inventory(data, path) -> dict[str, dict[str, str]]:
 
 
 def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
-                           writes: list[tuple[str, Path, bool]]) -> None:
+                           writes: list[tuple[str, Path, bool]],
+                           unwalked: tuple[Path, ...] = ()) -> None:
     """Refuse writes beneath any consumed directory, including nested directory aliases.
 
     The boolean also refuses dependencies inside a destination that can publish arbitrary
     results. Work/cache trees use False: previously computed files there are legitimate
     inputs for a later task, but a whole consumed directory must never acquire new work.
     Inspect metadata only; prelaunch content snapshots remain the source of byte evidence.
+    Destinations in `unwalked` will not be written, so the links inside them are not looked for.
     """
     if not sources:
         return
@@ -502,7 +504,7 @@ def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
 
     try:
         for label, path, contains in writes:
-            inspect_writer(label, path.expanduser(), contains)
+            inspect_writer(label, path.expanduser(), contains and path not in unwalked)
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"Cannot inspect execution destination boundaries: {exc}") from exc
 

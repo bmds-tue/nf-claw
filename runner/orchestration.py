@@ -577,7 +577,8 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
     if check_only:
         writes.append(("check staging directory", Path(tempfile.gettempdir()), False))
     writes += input_safety.engine_write_paths(outdir, nxf_overlay)
-    input_safety.check_write_boundaries(local_dependencies, writes)
+    input_safety.check_write_boundaries(local_dependencies, writes,
+                                        input_safety.refused_outdir(outdir, resume=resume))
     if source_destination is not None:
         input_safety.check_write_boundaries(
             tuple(path for path in local_dependencies if path != source_destination),

@@ -59,6 +59,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   promised otherwise. A killed replay is no longer told to `--resume`.
 - A documented `--outdir results` run leaves the checkout clean: its writer lock, replay and the
   previous run `--resume` preserves are ignored by Git.
+- `--check` with a large existing directory as `--outdir` returns at once: nfclaw walked all of it
+  (`--outdir /` never finished) before saying a non-empty directory takes no run without `--resume`.
 - `--check` names a profile the release does not define, instead of suggesting another engine.
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
   `ImportError`, and a `~` naming no user is an error instead of a traceback.

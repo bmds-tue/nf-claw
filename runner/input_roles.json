@@ -728,6 +728,42 @@
     },
     "use": "Actual consumed image/bundle paths verified in pinned channel construction"
   },
+  "f6aa8364db86b8c9b06df458d46721e17cb047d020644feb66800f2abcdf1263": {
+    "columns": {
+      "Fast5": {
+        "format": "path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "LongFastQ": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "R1": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      },
+      "R2": {
+        "format": "file-path",
+        "sentinels": [
+          "NA"
+        ]
+      }
+    },
+    "commit": "ce30c3a857adad365856e5565455c4cdae60ef3f",
+    "pipeline": "bacass",
+    "schema": "assets/schema_input.json",
+    "source": [
+      "subworkflows/local/utils_nfcore_bacass_pipeline/main.nf:112-125",
+      "subworkflows/local/utils_nfcore_bacass_pipeline/main.nf:306-316"
+    ],
+    "use": "resolveFilePath stages read files and Fast5 locations; NA and empty values mean absence"
+  },
   "ff48324f6046a6ee05285608f45dedcb1672498c5da23d9165f0ab7c5fcb2264": {
     "columns": {},
     "commit": "683daaf41bb396839445e603152b45daa141ced4",

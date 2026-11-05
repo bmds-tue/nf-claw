@@ -576,7 +576,7 @@ def _deferred(p: Planned) -> frozenset[str]:
 
 
 def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: Path,
-           on_warning, keep: bool) -> list[tuple[str, str]]:
+           on_warning, keep: bool, resume: bool = False) -> list[tuple[str, str]]:
     """Validate each stage as `nfclaw run --check` would, writing nothing into --outdir. A later
     stage's handoff parameters do not exist yet; they are named as deferred, so only the stage's own
     parameters are judged (the handoff itself was checked statically by `plan`). `keep` keeps the
@@ -599,7 +599,8 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
                 [("chain --outdir", outdir, True),
                  ("Nextflow work directory",
                   orchestration.work_directory(res.env, repo_root), False),
-                 *input_safety.engine_write_paths(res.outdir, res.env)])
+                 *input_safety.engine_write_paths(res.outdir, res.env)],
+                input_safety.refused_outdir(outdir, resume=resume))
         except BaseException:
             if res.staging is not None:
                 shutil.rmtree(res.staging, ignore_errors=True)
@@ -764,7 +765,8 @@ def run_chain(spec: ChainSpec | None, *, repo_root: Path, outdir: Path, check_on
     # A real run says each stage's advisories when that stage launches; only --check says them here.
     todo = [p for p in planned if p.stage.id not in done]
     commands = _check(spec, todo, repo_root=repo_root, outdir=outdir,
-                      on_warning=on_warning if check_only else None, keep=check_only)
+                      on_warning=on_warning if check_only else None, keep=check_only,
+                      resume=resume)
     unparsable = []
     for p in todo:
         unparsable += _probe_config(spec, p, timeout_seconds=budget.remaining())

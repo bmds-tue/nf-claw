@@ -31,11 +31,21 @@ def engine_write_paths(outdir: Path, overlay: dict[str, str]) -> list[tuple[str,
     return writes
 
 
+def refused_outdir(outdir: Path, *, resume: bool) -> tuple[Path, ...]:
+    """`outdir` when no run can write to it: without --resume, a non-empty one is refused. Walking
+    it would only delay saying so, by minutes for a large directory and forever for `/`."""
+    try:
+        return (outdir,) if not resume and any(outdir.iterdir()) else ()
+    except OSError:
+        return ()
+
+
 def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
-                           writes: list[tuple[str, Path, bool]]) -> None:
+                           writes: list[tuple[str, Path, bool]],
+                           unwalked: tuple[Path, ...] = ()) -> None:
     """Share the standalone replay's filesystem boundary checks with ordinary runs."""
     try:
-        _check_write_boundaries(sources, writes)
+        _check_write_boundaries(sources, writes, unwalked)
     except (ValueError, OSError, RuntimeError) as exc:
         # A path that could not be inspected is not an overlap: say what would let it be checked.
         # Either way nothing is written, since no separation could be established.
