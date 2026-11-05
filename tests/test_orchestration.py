@@ -979,7 +979,7 @@ def test_check_blames_the_network_when_only_remote_includes_stop_the_configurati
             cmd, 0 if offline else 1, "" if offline else f"{_PARSE_FAILURE}\n", "")
 
     issue = _probe_issue(tmp_path, monkeypatch, capture)
-    assert "could not fetch a remote configuration" in issue
+    assert "could not use a remote configuration it includes (it parses without them)" in issue
     assert "--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true" in issue
     assert "--nxf-env NXF_OFFLINE=true" in issue
     assert "NXF_SYNTAX_PARSER" not in issue and "--nxf-ver" not in issue

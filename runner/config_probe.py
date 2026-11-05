@@ -91,10 +91,11 @@ def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], lab
                           '"nxf_env": {"NXF_OFFLINE": "true"}') if chain else
                          ("--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true",
                           "--nxf-env NXF_OFFLINE=true"))
-        return [f"{label}: {engine} could not fetch "
-                f"{include[1] if include else 'a remote configuration it includes'} — check this "
-                f"host's network; on an IPv6-only host: {ipv6}; to skip remote configs: "
-                f"{offline}:\n" + "\n".join(f"      {line}" for line in report)]
+        what = (f"could not fetch {include[1]}" if include else
+                "could not use a remote configuration it includes (it parses without them)")
+        return [f"{label}: {engine} {what} — check this host's network; on an IPv6-only host: "
+                f"{ipv6}; to skip remote configs: {offline}:\n"
+                + "\n".join(f"      {line}" for line in report)]
     # The engine the release was written for is the one it declares (docs/compatibility.md).
     declared = engine_version.minimum_version(
         engine_version.required_spec(pipeline / "nextflow.config"))
