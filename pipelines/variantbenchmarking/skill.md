@@ -1,8 +1,8 @@
 ---
 name: variantbenchmarking
 pipeline: nf-core/variantbenchmarking
-version: 1.6.0
-commit: de4e43900039edd09106198d83c2559ea6a61b1a
+version: 1.6.1
+commit: c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1
 description: Variant Benchmarking pipeline for germline and somatic variant callers
 summary: nf-core/variantbenchmarking is designed to evaluate and validate the accuracy of variant calling methods in genomic research. Initially, the pipeline is tuned well for available gold standard truth sets (for example, Genome in a Bottle and SEQC2 samples) but it can be used to compare any two variant calling results. The workflow provides benchmarking tools for small variants including SNVs and INDELs, Structural Variants (SVs) and Copy Number Variations (CNVs) for germline and somatic analysis.
 has_samplesheet: true
@@ -88,7 +88,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Institutional config options** (`institutional_config_options`) — 7 parameters
 - **Reference genome options** (`reference_genome_options`) — 12 parameters
 
-Upstream usage: https://github.com/nf-core/variantbenchmarking/blob/1.6.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/variantbenchmarking/blob/1.6.1/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -112,18 +112,18 @@ nfclaw run variantbenchmarking ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/variantbenchmarking/blob/1.6.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/variantbenchmarking/blob/1.6.1/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: aardvark, Bcftools, BEDTools, bedops, gatk4-concordance, datavzrd, hap.py, manta, MultiQC, picard, RTG Tools, SURVIVOR, som.py, SVanalyzer, svtk, svync, tabix, truvari, UCSC, variant-extractor, witty.er, pysam, plotly, upsetplot.
 
-Full list with references: https://github.com/nf-core/variantbenchmarking/blob/1.6.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/variantbenchmarking/blob/1.6.1/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run variantbenchmarking --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/variantbenchmarking@de4e43900039edd09106198d83c2559ea6a61b1a. Do not edit by hand. -->
+<!-- Generated from nf-core/variantbenchmarking@c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1. Do not edit by hand. -->

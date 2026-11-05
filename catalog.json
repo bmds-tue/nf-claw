@@ -2335,7 +2335,7 @@
       "plotly",
       "upsetplot"
     ],
-    "version": "1.6.0"
+    "version": "1.6.1"
   },
   {
     "description": "pipeline for the functional annotation and translation of somatic SNVs/InDels and copy number abberations for precision cancer medicine",
