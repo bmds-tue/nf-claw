@@ -229,6 +229,9 @@ def _status_report(st: runlog.RunState) -> str:
         if st.caveats:
             lines += ["caveats (as reported; results may be incomplete):",
                       *(f"  {caveat}" for caveat in st.caveats)]
+        if st.provenance_gaps:
+            lines += ["provenance gaps (the results stand; a replay can check less):",
+                      *(f"  {gap}" for gap in st.provenance_gaps)]
     elif st.state == "ended":
         lines.append(f"status: {st.outcome}")
     elif st.state == "running":
@@ -292,7 +295,8 @@ def _status_record(st: runlog.RunState, report: str, code: int) -> dict:
             "finished": st.finished, "log": str(st.log), "nextflow_log": st.nextflow_log,
             "host": st.host, "pid": st.pid, "nextflow_pid": st.nextflow_pid,
             "nextflow_alive": st.nextflow_alive, "supervisor_pid": st.supervisor_pid,
-            "supervisor_alive": st.supervisor_alive, "caveats": st.caveats, "error": st.error,
+            "supervisor_alive": st.supervisor_alive, "caveats": st.caveats,
+            "provenance_gaps": st.provenance_gaps, "error": st.error,
             "inspection_issues": st.inspection_issues,
             "last_output": st.last_output, "report": report}
 

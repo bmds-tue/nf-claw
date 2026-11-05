@@ -1068,6 +1068,7 @@ def run_pipeline(name: str, *, repo_root: Path, input_path: Path | str | list[st
                     for issue in provenance.recorded_environment_issues(outdir):
                         message = f"provenance: {issue}"
                         warnings.append(message)
+                        run_log.note(f"{runlog.PROVENANCE_GAP}{issue}")
                         if on_warning is not None:
                             on_warning(message)
                 budget.check()

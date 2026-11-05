@@ -72,6 +72,9 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
   `ImportError`; a `~` naming no user, or a report a terminal's encoding cannot show, is no
   traceback. (#257)
+- `provenance:` warnings about gaps in a run's recorded environment reached only stderr, which a
+  background run usually loses. They are now also in the run log, and `nfclaw status` lists them under
+  `provenance gaps` (`provenance_gaps` with `--json`). (#257)
 - A stop while the container engine is still creating a task container removes it once it appears,
   instead of leaving it behind, never started. nfclaw waits up to 30 s; one that takes longer is
   named on stderr and in the run log, with how to find and remove it. A container its task wrapper is

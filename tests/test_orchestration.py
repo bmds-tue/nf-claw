@@ -146,6 +146,28 @@ def test_a_successful_run_reports_the_caveats_its_pipeline_printed(tmp_path, mon
     assert manifest.get("completion_caveats", []) == expected
 
 
+def test_a_gap_in_the_recorded_environment_is_in_the_run_log(tmp_path, monkeypatch):
+    # A background run's stderr is usually gone, and this log is what `nfclaw status` points to.
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.execution, "run", lambda *a, **k: None)
+    monkeypatch.setattr(orchestration.provenance, "recorded_environment_issues",
+                        lambda outdir: ["no task records"])
+    shown = []
+    orchestration.run_pipeline(
+        "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+        profile="docker", params_file=None, cli_overrides={}, resume=False,
+        demo=True, check_only=False, write_provenance=True, timeout_seconds=10,
+        on_warning=shown.append)
+    assert "provenance: no task records" in shown
+    log = tmp_path / "out/provenance/logs/run.log"
+    lines = log.read_text().splitlines()
+    assert "    provenance: no task records" in lines
+    assert lines[-1].startswith("==> nfclaw run finished") and lines[-1].endswith(": success")
+    state = orchestration.runlog.read_state(log)
+    assert state.outcome == "success" and state.provenance_gaps == ["no task records"]
+
+
 def test_local_files_given_to_format_less_parameters_are_recorded_inputs(tmp_path, monkeypatch):
     # differentialabundance declares --feature-length-matrix without a path format: the gene lengths
     # a chain handed over were neither hashed nor replay-checked, and the chain's lineage broke.
