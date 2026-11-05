@@ -995,6 +995,27 @@ def test_a_tilde_naming_no_user_is_an_error_not_a_traceback(argv, capsys):
     assert "cannot resolve a path" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("bug", [RuntimeError("dictionary changed size during iteration"),
+                                 RecursionError("maximum recursion depth exceeded"),
+                                 NotImplementedError("not here")])
+def test_only_pathlib_s_runtime_errors_read_as_path_problems(monkeypatch, bug):
+    def broken(_argv):
+        raise bug
+    monkeypatch.setattr(cli, "_main", broken)
+    with pytest.raises(type(bug)):
+        cli.main([])
+
+
+@pytest.mark.parametrize("message", ["Could not determine home directory.",
+                                     "Symlink loop from '/a/b'"])
+def test_pathlib_s_runtime_errors_are_refusals(monkeypatch, capsys, message):
+    def broken(_argv):
+        raise RuntimeError(message)
+    monkeypatch.setattr(cli, "_main", broken)
+    assert cli.main([]) == 1
+    assert "cannot resolve a path" in capsys.readouterr().err
+
+
 def test_the_no_install_form_names_the_python_it_needs(monkeypatch):
     monkeypatch.setattr(sys, "version_info", (3, 9, 6, "final", 0))
     with pytest.raises(SystemExit) as stopped:

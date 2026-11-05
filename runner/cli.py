@@ -382,7 +382,10 @@ def main(argv: list[str] | None = None) -> int:
         print(str(_os_error(exc)), file=sys.stderr)
         return 1
     except RuntimeError as exc:
-        # What pathlib raises for `~nosuchuser/x`, and before Python 3.13 for a symlink loop.
+        # What pathlib raises for `~nosuchuser/x`, and before Python 3.13 for a symlink loop. Any
+        # other RuntimeError (RecursionError among them) is a bug, not a path: it stays visible.
+        if not str(exc).startswith(("Could not determine home directory", "Symlink loop")):
+            raise
         print(str(NfclawError(ErrorCode.ENVIRONMENT, f"cannot resolve a path: {exc}",
                               fix="Check the paths given: a leading `~` must name an existing "
                                   "user, and links must not form a loop.")), file=sys.stderr)
