@@ -56,17 +56,19 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `--resume` after a nfclaw that vanished (SIGKILL, out of memory, a host restart) or could not write
   its bundle (a full disk) reuses the finished tasks. A launch now records what it consumes before
   Nextflow starts; it used to recompute every task, while `nfclaw status` and the full-disk error
-  promised otherwise. A killed replay is no longer told to `--resume`.
+  promised otherwise. A killed replay is no longer told to `--resume`. (#257)
 - A documented `--outdir results` run leaves the checkout clean: its writer lock, replay and the
-  previous run `--resume` preserves are ignored by Git.
+  previous run `--resume` preserves are ignored by Git. (#257)
 - `--check` with a large existing directory as `--outdir` returns at once: nfclaw walked all of it
-  (`--outdir /` never finished) before saying a non-empty directory takes no run without `--resume`.
-- `--check` names a profile the release does not define, instead of suggesting another engine.
+  (`--outdir /` never finished) before saying a non-empty directory takes no run without `--resume`. (#257)
+- `--check` names a profile the release does not define, instead of suggesting another engine. (#257)
+- A Fast5 directory in a bacass 2.7.0 samplesheet is part of the run's input identity again: the bump
+  had changed the schema its audited roles are keyed by. (#257)
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
   `ImportError`; a `~` naming no user, or a report a terminal's encoding cannot show, is no
-  traceback.
+  traceback. (#257)
 - A stop while the container engine is still creating a task container no longer leaves it behind,
-  never started: nfclaw waits for it to appear (up to 15 s) and removes it.
+  never started: nfclaw waits for it to appear (up to 15 s) and removes it. (#257)
 - Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,
   reportho and viralmetagenome) no longer fail a successful run or its archived replay as a source
   change, and symlink modes are recorded portably so a macOS bundle replays from its archive on
