@@ -208,7 +208,7 @@ pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
 Each release below was validated separately on the same host, in one uninterrupted `nfclaw run <name> --demo`
 on the engine its `skill.md` names: before its pin was updated or its pipeline was added, or, for a release the
-automated updater published itself (rnastructurome 1.1.0 and genomeassembler 2.0.1), right after. This execution evidence is additional to
+automated updater published itself (rnastructurome 1.1.0, genomeassembler 2.0.1 and those dated 2026-11-05), after it. This execution evidence is additional to
 the automated updater's gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
@@ -223,6 +223,12 @@ the automated updater's gates.
 | genomeassembler | 2.0.1 | 25.10.4 | success | 88 completed | 2026-10-23, bump from 2.0.0 published by the updater, host network |
 | stableexpression | 1.1.0 | 26.04.4 | success | 246 completed | 2026-10-25, added, host network |
 | createpanelrefs | 1.1.0 | 26.04.3 | success | 2 completed | 2026-11-03, bump from 1.0.0, default bridge network |
+| ampliseq | 3.1.0 | 26.04.0 | success | 130 completed | 2026-11-05, bump from 3.0.0 published by the updater, host network |
+| bacmodel | 1.0.1 | 25.10.4 | success | 2 completed | 2026-11-05, bump from 1.0.0 published by the updater, host network |
+| detaxizer | 1.4.0 | 26.04.0 | success | 54 completed | 2026-11-05, bump from 1.3.0 published by the updater, host network |
+| pixelator | 6.0.0 | 25.10.4 | success | 27 completed | 2026-11-05, bump from 5.0.3 published by the updater, host network |
+| sarek | 3.11.0 | 25.10.4 | success | 22 completed | 2026-11-05, bump from 3.10.0 published by the updater, host network, no replay |
+| sopa | 1.0.2 | 25.10.4 | success | 9 completed | 2026-11-05, bump from 1.0.1 published by the updater, host network, no replay |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -298,6 +304,13 @@ identical execution environment and again matched all of those checksums.
   `provenance/commands.sh` succeeded with an identical environment: `nfclaw verify` reported 13 identical, 9
   changed, 0 missing, 0 extra, and the panel of normals, both target coverage tables and the reference BEDs were
   byte-identical. The changed files were run metadata and MultiQC reports.
+- **The six releases of 2026-11-05** ran for the [final audit](audit/2026-11-05-final-audit.md), with
+  `--limit-cpus 8 --limit-memory 24.GB`, and were not compared with their nf-test snapshots. The replays of
+  ampliseq, bacmodel, detaxizer and pixelator succeeded with an identical execution environment, and `nfclaw verify`
+  reported 0 missing and 0 extra: 1,288 identical and 322 changed, 15 and 5, 80 and 42, 21 and 97. The volume was too
+  full to replay sarek and sopa. It was also too full to finish bacass 2.7.0 and variantbenchmarking 1.6.0, which a
+  disk watchdog stopped after 9 and 53 tasks, so they have no row here; the updater's gate ran their bundled tests
+  at those commits on hosted runners.
 
 ## nfclaw features
 
