@@ -177,6 +177,16 @@ def test_removal_reports_what_it_removed_and_what_it_could_not(engine):
     assert removed == [] and "could not run" in problems[0]
 
 
+def test_a_removal_its_wrapper_already_started_is_not_a_problem(engine):
+    # Seen on every ordinary stop of a real run: the wrappers and nfclaw remove at the same time.
+    docker, _, _ = engine
+    busy = docker.with_name("podman")
+    busy.write_text("#!/bin/bash\necho 'Error response from daemon: removal of container nxf-x is "
+                    "already in progress' >&2\nexit 1\n")
+    busy.chmod(0o755)
+    assert replay_guard.remove_task_containers({(str(busy),): {"nxf-x"}}) == ([], [])
+
+
 def test_removal_through_sudo_never_waits_for_a_password(engine, tmp_path):
     # Nextflow's `docker.sudo = true` runs `sudo docker run …`; the removal goes the same way, but
     # non-interactively: a password prompt would hold the shutdown for the whole removal limit.
@@ -363,7 +373,21 @@ def test_a_creating_container_that_never_appears_ends_the_wait(engine, monkeypat
     docker, _, _ = engine
     monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
     containers = {(str(docker),): {"nxf-never"}}
-    assert replay_guard.remove_task_containers(containers, creating={"nxf-never"}) == ([], [])
+    removed, problems = replay_guard.remove_task_containers(containers, creating={"nxf-never"})
+    assert removed == []
+    assert len(problems) == 1 and "nxf-never had not appeared 1 s after the stop" in problems[0]
+
+
+def test_one_wait_covers_every_container_being_created(engine, monkeypatch):
+    # Removal runs 16 at a time: a wait per container would make a stop take several of them.
+    docker, _, log = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    names = {f"nxf-{number:02}" for number in range(20)}
+    removed, problems = replay_guard.remove_task_containers({(str(docker),): names}, creating=names)
+    assert removed == [] and len(problems) == 1 and all(name in problems[0] for name in names)
+    asked = log.read_text().splitlines()
+    assert asked.count("rm -f nxf-00") > 1       # asked again while it could still appear
+    assert asked.count("rm -f nxf-19") == 1      # its turn came when the wait was over
 
 
 def test_an_engine_that_cannot_list_waits_for_nothing(tmp_path):

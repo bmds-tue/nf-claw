@@ -70,8 +70,10 @@ each change, are in [`docs/audit/`](docs/audit/).
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
   `ImportError`; a `~` naming no user, or a report a terminal's encoding cannot show, is no
   traceback. (#257)
-- A stop while the container engine is still creating a task container no longer leaves it behind,
-  never started: nfclaw waits for it to appear (up to 15 s) and removes it. (#257)
+- A stop while the container engine is still creating a task container removes it once it appears,
+  instead of leaving it behind, never started. nfclaw waits up to 30 s; one that takes longer is
+  named on stderr and in the run log, with how to find and remove it. A container its task wrapper is
+  already removing is no longer reported as one that could not be removed. (#257)
 - Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,
   reportho and viralmetagenome) no longer fail a successful run or its archived replay as a source
   change, and symlink modes are recorded portably so a macOS bundle replays from its archive on

@@ -1268,8 +1268,9 @@ def unlisted_containers(containers: dict[tuple[str, ...], set[str]]) -> set[str]
     return unlisted
 
 
-# How long a container still being created when its run stopped is waited for.
-_CREATION_SETTLE = 15
+# How long containers still being created when their run stopped are waited for. Measured on a
+# loaded host: they appeared 2-15 s after the stop, and once not within 15 s.
+_CREATION_SETTLE = 30
 
 
 def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout: float = 60,
@@ -1280,13 +1281,16 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout:
 
     Returns the names removed and any problem the engine reported. A container the task wrapper
     already removed is not a problem. One in `creating` (`unlisted_containers`) is looked for until
-    it appears: the daemon finishes creating it after its client is gone, and nothing else would
-    ever remove a container that never started."""
+    it appears, for `_CREATION_SETTLE` seconds however many there are: the daemon finishes creating
+    it after its client is gone, and nothing else would ever remove a container that never started.
+    One that has not appeared by then is reported: it may never have been created, or may still be.
+    """
     from concurrent.futures import ThreadPoolExecutor
 
-    def remove(engine: tuple[str, ...], name: str) -> tuple[bool, list[str]]:
+    give_up = time.monotonic() + _CREATION_SETTLE
+
+    def remove(engine: tuple[str, ...], name: str) -> tuple[bool, list[str], bool]:
         command = _engine_command(engine, "rm", "-f", name)
-        give_up = time.monotonic() + (_CREATION_SETTLE if name in creating else 0)
         while True:
             try:
                 result = subprocess.run(command, stdin=subprocess.DEVNULL,
@@ -1294,14 +1298,17 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout:
                                         timeout=timeout, check=False)
             except subprocess.TimeoutExpired:
                 return False, [f"`{' '.join(engine)} rm -f {name}` did not finish within "
-                               f"{timeout:g} s"]
+                               f"{timeout:g} s"], False
             except OSError as exc:
-                return False, [f"`{' '.join(engine)} rm -f` could not run: {exc}"]
+                return False, [f"`{' '.join(engine)} rm -f` could not run: {exc}"], False
             problems = [line.strip() for line in result.stderr.splitlines() if line.strip()]
             absent = [line for line in problems if "no such container" in line.lower()]
-            if not absent or time.monotonic() >= give_up:
+            if not absent or name not in creating or time.monotonic() >= give_up:
                 return (name in (line.strip() for line in result.stdout.splitlines()),
-                        [line for line in problems if line not in absent])
+                        # "already in progress": its wrapper got there first, nothing is left.
+                        [line for line in problems if line not in absent
+                         and "already in progress" not in line],
+                        bool(absent) and name in creating)
             time.sleep(1)
 
     work = [(engine, name) for engine, names in sorted(containers.items())
@@ -1312,10 +1319,15 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout:
         return removed, problems
     with ThreadPoolExecutor(max_workers=min(16, len(work))) as pool:
         outcomes = list(pool.map(lambda job: remove(*job), work))
-    for index, (gone, found) in enumerate(outcomes):
+    for index, (gone, found, _) in enumerate(outcomes):
         if gone:
             removed.append(work[index][1])
         problems += [problem for problem in found if problem not in problems]
+    if late := sorted(work[index][1] for index, outcome in enumerate(outcomes) if outcome[2]):
+        problems.append(f"{', '.join(late)} had not appeared {_CREATION_SETTLE:g} s after the "
+                        "stop. A container the engine was still creating stays behind, never "
+                        "started: `docker ps -a --filter name=nxf-` lists them, and `docker rm` "
+                        "removes them")
     return sorted(removed), problems
 
 
