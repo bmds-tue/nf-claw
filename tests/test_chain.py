@@ -1074,6 +1074,16 @@ def test_chain_status_names_each_stages_completion_caveats(tmp_path):
     assert chain._caveats({"completion_caveats": "not a list"}) == []
 
 
+def test_chain_status_names_each_stages_provenance_gaps(tmp_path):
+    stage = tmp_path / "01-rnaseq"
+    (stage / "provenance").mkdir(parents=True)
+    (stage / "provenance/environment.json").write_text(json.dumps({"issues": ["no task records"]}))
+    state = {"chain_id": "c1", "outcome": "success", "stages": [
+        {"id": "rnaseq", "pipeline": "rnaseq", "index": 1, "outdir": str(stage),
+         "status": "success", "version": "3.27.0", "commit": "a" * 40}]}
+    assert "      provenance gap: no task records" in chain.format_status(state, []).splitlines()
+
+
 def test_chain_records_redact_environment_secrets_and_require_them_for_resume(
         library, fake_runs, tmp_path, monkeypatch):
     import stat

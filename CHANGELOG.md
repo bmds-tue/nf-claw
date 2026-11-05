@@ -74,7 +74,8 @@ each change, are in [`docs/audit/`](docs/audit/).
   traceback. (#257)
 - `provenance:` warnings about gaps in a run's recorded environment reached only stderr, which a
   background run usually loses. They are now also in the run log, and `nfclaw status` lists them under
-  `provenance gaps` (`provenance_gaps` with `--json`). (#257)
+  `provenance gaps` (`provenance_gaps` with `--json`), and `nfclaw chain status` beside each stage.
+  (#257)
 - A stop while the container engine is still creating a task container removes it once it appears,
   instead of leaving it behind, never started. nfclaw waits up to 30 s; one that takes longer is
   named on stderr and in the run log, with how to find and remove it. A container its task wrapper is

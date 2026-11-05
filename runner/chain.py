@@ -1442,6 +1442,8 @@ def format_status(state: dict, problems: list[str]) -> str:
         if s["status"] == "success":
             lines += [f"      caveat: {c}" for c in _caveats(
                 _read_json(Path(s["outdir"]) / "provenance" / "run_manifest.json"))]
+            lines += [f"      provenance gap: {gap}" for gap in
+                      provenance.recorded_environment_issues(Path(s["outdir"]))]
         if s.get("handoff") and i and _valid_entry(stages[i - 1]):
             prev = stages[i - 1]
             lines.append(f"      input ← {prev['index']:02d}-{prev['id']}  ({s['handoff']})")
