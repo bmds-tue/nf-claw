@@ -63,7 +63,7 @@ When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (
   - Or, if you know your pipeline tolerates spaces, pass `--allow-spaces` to bypass the preflight check.
 
 ### IPv6-only host — JVM can't reach GitHub
-- **Symptom:** `java.net.SocketException: Network is unreachable` while Nextflow downloads `https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config`.
+- **Symptom:** `java.net.SocketException: Network is unreachable` while Nextflow downloads `https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config`; Nextflow 26.04 prints only `Unable to parse config file`, and `--check` says the engine could not fetch a remote configuration.
 - **Why:** The host has no default IPv4 route; the JVM prefers IPv4 by default and never attempts IPv6.
 - **Fix:** `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`. To skip remote config fetches entirely (offline): `--nxf-env NXF_OFFLINE=true`.
 - **Dual Requirement on IPv6 Hosts:** On an IPv6-only host you usually need BOTH this *and* the [Docker host-network config](#docker-bridge-network-has-no-dns-ipv6-only-host) together: the JVM flag fixes Nextflow's own GitHub download, while host-network fixes DNS *inside* containers — neither alone is sufficient:

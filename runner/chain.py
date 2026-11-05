@@ -600,7 +600,7 @@ def _check(spec: ChainSpec, planned: list[Planned], *, repo_root: Path, outdir: 
                  ("Nextflow work directory",
                   orchestration.work_directory(res.env, repo_root), False),
                  *input_safety.engine_write_paths(res.outdir, res.env)],
-                input_safety.refused_outdir(outdir, resume=resume))
+                input_safety.refused_outdir(outdir, resume=resume, own=RECORD_DIRNAME))
         except BaseException:
             if res.staging is not None:
                 shutil.rmtree(res.staging, ignore_errors=True)

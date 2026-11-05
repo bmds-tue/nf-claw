@@ -59,9 +59,12 @@ each change, are in [`docs/audit/`](docs/audit/).
   promised otherwise. A killed replay is no longer told to `--resume`. (#257)
 - A documented `--outdir results` run leaves the checkout clean: its writer lock, replay and the
   previous run `--resume` preserves are ignored by Git. (#257)
-- `--check` with a large existing directory as `--outdir` returns at once: nfclaw walked all of it
-  (`--outdir /` never finished) before saying a non-empty directory takes no run without `--resume`. (#257)
+- `--check`, or a run, with a large existing directory as `--outdir` no longer walks all of it looking
+  for links into the inputs (`--outdir /` never finished): a run refuses a non-empty directory without
+  `--resume` anyway. (#257)
 - `--check` names a profile the release does not define, instead of suggesting another engine. (#257)
+- `--check` on a host that cannot fetch a release's remote configuration says so and names the network
+  remedies, instead of suggesting another engine and parser. (#257)
 - A Fast5 directory in a bacass 2.7.0 samplesheet is part of the run's input identity again: the bump
   had changed the schema its audited roles are keyed by. (#257)
 - `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an

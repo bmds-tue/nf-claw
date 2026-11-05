@@ -541,6 +541,16 @@ def test_a_missing_outdir_is_nothing_to_skip(tmp_path):
     assert input_safety.refused_outdir(tmp_path / "missing", resume=False) == ()
 
 
+def test_a_chain_outdir_holding_only_its_record_is_still_walked(tmp_path):
+    # A chain refuses a non-empty --outdir only when something beside its record is there, so one
+    # that holds just the record can still be written to: its links must be looked for.
+    outdir = tmp_path / "chain-out"
+    (outdir / "chain").mkdir(parents=True)
+    assert input_safety.refused_outdir(outdir, resume=False, own="chain") == ()
+    (outdir / "other").mkdir()
+    assert input_safety.refused_outdir(outdir, resume=False, own="chain") == (outdir,)
+
+
 def test_a_replay_target_that_holds_files_is_not_walked(tmp_path, monkeypatch):
     # `commands.sh` refuses it right after this check, which used to walk all of it first.
     bundle = tmp_path / "bundle"

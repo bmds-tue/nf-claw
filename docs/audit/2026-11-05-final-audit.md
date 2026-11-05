@@ -1,6 +1,6 @@
 # Final pre-release audit, 2026-11-05
 
-Audited: `8f0f6de` (`main` after #256). Findings are numbered G01–G13, after the A–F series of the
+Audited: `8f0f6de` (`main` after #256). Findings are numbered G01–G14, after the A–F series of the
 earlier records. Server: `denbi_instance`, Python 3.12.3, Nextflow 26.04.3 (build 12259), OpenJDK
 17.0.20.1, Docker 29.1.3, every pipeline submodule initialised. Local: macOS, Python 3.13 (and the
 system Python 3.9.6 for G09 and the bundled scripts).
@@ -36,7 +36,7 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 | G03 | Medium | `runner/replay_guard.py` (`remove_task_containers`), `runner/execution.py` (`_terminate`) | A stop while the daemon is still creating a task container: its wrapper's `docker stop` and nfclaw's `docker rm -f` both find `No such container`, the daemon then finishes creating it, and a container that never started is removed by nothing. Six of them stayed behind after one SIGTERM on the loaded server, contradicting "removes the task containers". | The containers the engine does not yet list when the stop begins are looked for until they appear (up to 15 s). Containers already listed are not waited for, so an ordinary stop takes no longer. |
 | G04 | Medium | `.gitignore` | The documented `--outdir results` left the checkout dirty: its writer lock `.results.nfclaw.lock`, the default replay target `results.replay/` and the archive `results.previous-<id>/` are not `results/`. | All three are ignored. A test asks Git itself. |
 | G05 | Medium | `runner/cli.py` (`_status_report`) | `nfclaw status` told a killed *replay* to re-run with `--resume`, which `commands.sh` does not have. | A replay is told to run `commands.sh` into a new empty directory; a run launched with `--no-provenance` is told that `--resume` will recompute. |
-| G06 | Medium | `runner/replay_guard.py` (`check_write_boundaries`), `runner/input_safety.py` | `nfclaw run … --check --outdir /` never returned, and any large existing directory given as `--outdir` took minutes, as did one given to `commands.sh`: the boundary check walked every entry under it looking for links into the inputs, before anything said a non-empty directory takes no run without `--resume` (or no replay at all). | A destination that will be refused is not walked. An input inside it is still refused as an overlap, by path. |
+| G06 | Medium | `runner/replay_guard.py` (`check_write_boundaries`), `runner/input_safety.py` | `nfclaw run … --check --outdir /` never returned, and any large existing directory given as `--outdir` took minutes, as did one given to `commands.sh`: the boundary check walked every entry under it looking for links into the inputs, although a real run refuses a non-empty directory without `--resume` (and a replay refuses any that holds files). `--check` deliberately does not refuse one, so it now exits without walking it. | A destination that will be refused is not walked. An input inside it is still refused as an overlap, by path. |
 | G07 | Medium | `runner/input_roles.json` | Audited roles are keyed by schema digest, and the bump to bacass 2.7.0 changed its schema. `R1`, `R2` and `LongFastQ` fell back safely to pattern-based file columns, but a Fast5 directory silently left the run's input identity, so a changed one was invisible to `--resume` and the replay guard. Ampliseq 3.1.0 and rnasplice 2.0.0 keep or now declare their roles; pixelator 6.0.0 kept its digest. | An audit of 2.7.0's consumer (`resolveFilePath`, `subworkflows/local/utils_nfcore_bacass_pipeline/main.nf`) with the same roles. |
 | G08 | Low | `runner/cli.py` (`main`), `runner/probes.py` | A `~` naming no user (`nfclaw status ~nosuchuser/x`) ended in a `RuntimeError` traceback, in 13 of the fuzzed commands. `nfclaw show` and `status`, whose reports hold `—` and `≥`, crashed with `UnicodeEncodeError` on a stdout that cannot show them (a Latin-1 terminal, `PYTHONIOENCODING=ascii`). | One refusal, naming the path rule. It answers only pathlib's own two messages: a peer review pointed out that catching every `RuntimeError` would have hidden real bugs behind the same line. Such characters print escaped, and a probe's undecodable output is replaced rather than fatal. |
 | G09 | Low | `runner/__main__.py` | The documented no-install form on macOS's `python3` (3.9) ended in `ImportError: cannot import name 'UTC'`. | It names the Python it needs. |
@@ -44,6 +44,7 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 | G11 | Low | `runner/parameters.py`, `runner/cli.py` | A params file's `multiqc-title` was reported as an unknown parameter `--multiqc-title`, a flag the command line accepts. A value starting with `-c` was told to pass pipeline parameters as `--param value`, which is what the caller had done. | The first names its spelling in a file; the second names `--param='-c 3'`. |
 | G12 | Low | `runner/orchestration.py` | `--resume` into an empty `--outdir` archived the empty directory and reported preserving a previous run. | Nothing to preserve, nothing archived. |
 | G13 | Low | `tests/test_runtime_followthrough.py`, `README.md`, `docs/mcp.md`, `runner/replay_guard.py`, `runner/source_corrections.py` | The socket test behind a red macOS lane on `main` (run 41939826353) caught only `EPIPE`/`ECONNRESET`, while macOS can report a closing peer as `EPROTOTYPE`, and allowed the handler 1 s on a loaded runner. A garbled README sentence. The job store's growth was undocumented. Four reads relied on the locale's encoding (harmless today: those records are ASCII). | Any closed-peer error, within 10 s. Fixed, documented, and explicit. |
+| G14 | Low | `runner/config_probe.py`, `runner/input_safety.py` | On a host whose JVM cannot reach GitHub, `--check` said the engine "cannot parse its configuration" and suggested another engine and parser. Nextflow 26.04 prints only `Unable to parse config file` there, and the documented IPv6 flag alone fixes it. Separately, a chain `--outdir` holding only the chain's own record counted as refused, so its links were not looked for, although a chain still writes there. | A failed probe is repeated with remote includes skipped: if that parses, the report names the network and its remedies. A chain's record no longer makes its `--outdir` non-empty. |
 
 ## Evidence
 
@@ -89,8 +90,9 @@ website and part of the packaging ran locally. The per-pin record is
 - **MCP, through the official SDK.** 14 tools; a refused job reports its cause; a real job succeeds and
   `nfclaw jobs` agrees; path traversal is refused; replay and verify pass; `cancel_job` took 3 task
   containers to 0.
-- **Every pin.** The maintenance smoke step exits 0: 95 pins pass on Nextflow 26.04.3, and 25 are
-  refused without `--nxf-ver` or `NXF_SYNTAX_PARSER=v1`, as documented.
+- **Every pin.** The maintenance smoke step exits 0: all 95 pins pass on the engine their `skill.md`
+  names. On Nextflow 26.04.3, 25 of them are refused without `--nxf-ver` or `NXF_SYNTAX_PARSER=v1`,
+  as documented.
 
 Pins moved since their last on-host validation, each on the engine its `skill.md` names:
 
@@ -118,7 +120,7 @@ logs. They were not compared one by one.
   (bacass: [run 41837654947](https://github.com/bmds-tue/nf-claw/actions/runs/41837654947),
   variantbenchmarking: [run 41176597064](https://github.com/bmds-tue/nf-claw/actions/runs/41176597064)).
   The same shortage left sarek and sopa without a replay at their current version.
-- **Most pipelines did not run again.** The 112 pins that did not move keep the on-host evidence of
+- **Most pipelines did not run again.** The 87 pins that did not move keep the on-host evidence of
   [`docs/validation.md`](../validation.md) at the same commits; the smoke step above checks only that
   each one parses and validates.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,

@@ -949,6 +949,81 @@ def test_check_names_an_unknown_profile_instead_of_blaming_the_parser(tmp_path, 
     assert "NXF_SYNTAX_PARSER" not in issue and "--nxf-ver" not in issue
 
 
+_PARSE_FAILURE = "ERROR ~ Unable to parse config file: 'x'"
+
+
+def _probe_issue(tmp_path, monkeypatch, capture, nxf_env=None):
+    root = _make_pipeline(tmp_path, "mini")
+    monkeypatch.setattr(orchestration.preflight, "check_environment", lambda **k: [])
+    monkeypatch.setattr(orchestration.config_probe.shutil, "which", lambda name: "/bin/nextflow")
+    monkeypatch.setattr(orchestration.config_probe.engine_version, "effective",
+                        lambda pinned=None: pinned or "26.04.3")
+    monkeypatch.setattr(orchestration.config_probe, "capture", capture)
+    with pytest.raises(NfclawError) as exc:
+        orchestration.run_pipeline(
+            "mini", repo_root=root, input_path=None, outdir=tmp_path / "out",
+            profile="docker", params_file=None, cli_overrides={}, resume=False,
+            demo=True, check_only=True, write_provenance=False, timeout_seconds=10,
+            probe_config=True, nxf_env=nxf_env)
+    [issue] = exc.value.details["issues"]
+    return issue
+
+
+def test_check_blames_the_network_when_only_remote_includes_stop_the_configuration(tmp_path,
+                                                                                   monkeypatch):
+    # Nextflow 26.04 prints only "Unable to parse config file" for an include it cannot fetch. The
+    # configuration parses once remote includes are skipped, so no engine or parser is the remedy.
+    def capture(cmd, **kw):
+        offline = kw["env"].get("NXF_OFFLINE") == "true"
+        return subprocess.CompletedProcess(
+            cmd, 0 if offline else 1, "" if offline else f"{_PARSE_FAILURE}\n", "")
+
+    issue = _probe_issue(tmp_path, monkeypatch, capture)
+    assert "could not fetch a remote configuration" in issue
+    assert "--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true" in issue
+    assert "--nxf-env NXF_OFFLINE=true" in issue
+    assert "NXF_SYNTAX_PARSER" not in issue and "--nxf-ver" not in issue
+
+
+def test_check_names_the_include_an_older_engine_could_not_read(tmp_path, monkeypatch):
+    url = "https://raw.githubusercontent.com/nf-core/configs/master/nfcore_custom.config"
+    seen = []
+
+    def capture(cmd, **kw):
+        seen.append(kw["env"].get("NXF_OFFLINE"))
+        return subprocess.CompletedProcess(
+            cmd, 1, f"{_PARSE_FAILURE}\n\n  Cannot read config file include: {url}\n", "")
+
+    issue = _probe_issue(tmp_path, monkeypatch, capture)
+    assert f"could not fetch {url}" in issue and "--nxf-ver" not in issue
+    assert seen == [None]                      # it said so itself: nothing more to ask
+
+
+def test_check_still_blames_the_parser_when_skipping_remote_includes_changes_nothing(tmp_path,
+                                                                                     monkeypatch):
+    seen = []
+
+    def capture(cmd, **kw):
+        seen.append(kw["env"].get("NXF_OFFLINE"))
+        return subprocess.CompletedProcess(cmd, 1, f"{_PARSE_FAILURE}\n", "")
+
+    issue = _probe_issue(tmp_path, monkeypatch, capture)
+    assert "cannot parse its configuration" in issue and "NXF_SYNTAX_PARSER" in issue
+    assert seen == [None, "true"]
+
+
+def test_check_does_not_probe_again_when_the_run_is_already_offline(tmp_path, monkeypatch):
+    seen = []
+
+    def capture(cmd, **kw):
+        seen.append(kw["env"].get("NXF_OFFLINE"))
+        return subprocess.CompletedProcess(cmd, 1, f"{_PARSE_FAILURE}\n", "")
+
+    issue = _probe_issue(tmp_path, monkeypatch, capture, nxf_env={"NXF_OFFLINE": "true"})
+    assert "cannot parse its configuration" in issue
+    assert seen == ["true"]
+
+
 def test_a_real_run_takes_no_configuration_probe(tmp_path):
     # A launch is its own probe: the flag exists for `--check` alone.
     with pytest.raises(ValueError, match="probe_config"):

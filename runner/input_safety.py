@@ -31,11 +31,12 @@ def engine_write_paths(outdir: Path, overlay: dict[str, str]) -> list[tuple[str,
     return writes
 
 
-def refused_outdir(outdir: Path, *, resume: bool) -> tuple[Path, ...]:
-    """`outdir` when no run can write to it: without --resume, a non-empty one is refused. Walking
-    it would only delay saying so, by minutes for a large directory and forever for `/`."""
+def refused_outdir(outdir: Path, *, resume: bool, own: str | None = None) -> tuple[Path, ...]:
+    """`outdir` when no run can write to it: without --resume, a run refuses a non-empty one, and
+    `--check` launches nothing. Walking it would only take minutes for a large directory and forever
+    for `/`. A chain's record, named by `own`, does not make its --outdir non-empty."""
     try:
-        return (outdir,) if not resume and any(outdir.iterdir()) else ()
+        return (outdir,) if not resume and any(p.name != own for p in outdir.iterdir()) else ()
     except OSError:
         return ()
 
