@@ -143,14 +143,16 @@ pipelines' behaviour and the network's:
 
 - **Files on one side only.** rnafusion, nanostring, longraredisease, mag, spatialaxe, nanoseq and rnasplice have
   known causes, and [the guide lists them](../known-issues.md#pipeline-specific-run-notes). rnasplice's were
-  not read this time. coproid's 25 missing plot exports and 11 changed links have no established cause.
+  not read this time. coproid's 25 missing plot exports fit MultiQC's 30-second limit on exporting them, which fails
+  silently, as a test in that image showed. That this is what happened is inferred, since the task logs were not kept.
 - **Remote files reported as missing.** seqinspector, metatdenovo and drop, in two windows (08:56–09:00 and 15:36–15:42
   UTC). Their reruns were clean. The cause is not established, and
   [the guide now describes it](../known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists).
 - **funcscan's test limit.** A slow download reached the one-hour limit of its `test` profile while still
   progressing, and `--resume` took 11 minutes to finish it.
 - **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and its replay did not complete. One
-  `DIAMOND_CLUSTER (HBB)` timeout is unexplained.
+  `DIAMOND_CLUSTER (HBB)` passed upstream's 3-minute limit as another pipeline's first tasks spent over four minutes
+  outside their scripts. That an image download slowed the shared volume is inferred from the traces.
 - **The failures cutandrun, hicar and mag ignore.** The [remediation record](2026-11-01-report-remediation.md) asks to
   reproduce and resolve them. All three reproduced, in separate demos that kept the failed tasks' files, on `aea5fa4`
   with the later status changes. `PRESEQ_LCEXTRAP`, `CIRCOS_PREPARE` and `MAXBIN2` each stopped with a message saying

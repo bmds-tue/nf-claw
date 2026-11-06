@@ -340,7 +340,8 @@ What did not come out clean, by kind:
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
   [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes), and one
-  `DIAMOND_CLUSTER (HBB)` hit its 3-minute limit, unexplained.
+  `DIAMOND_CLUSTER (HBB)` hit upstream's 3-minute limit while, as far as the traces show, a first image download
+  slowed the shared volume. That link is inferred.
 - **The environment check stays `unverified`.** mcmicro, circdna and raredisease run
   [tasks with no container](known-issues.md#a-process-cannot-be-pinned-to-an-image-digest),
   and genomeqc's test profile [leaves no task records](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run).
@@ -351,7 +352,7 @@ What did not come out clean, by kind:
   [Their differences are listed](known-issues.md#pipeline-specific-run-notes): rnafusion, nanostring, longraredisease,
   mag, spatialaxe (9 and 10 cells), nanoseq and rnasplice. rnasplice's 20 missing and 20 extra files were not read,
   since the run directory was gone; the count matches 2.0.0's earlier row. coproid has 25 plot exports missing and 11 links
-  changed, and why is not established.
+  changed. The exports fit MultiQC's 30-second limit on them, which is inferred because the task logs were not kept.
 - **A first attempt failed and a rerun passed.** seqinspector, metatdenovo and drop stopped on a
   [remote file reported as missing](known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists),
   and drop's left one container behind. coproid's failed downloading NCBI's taxonomy. funcscan's
