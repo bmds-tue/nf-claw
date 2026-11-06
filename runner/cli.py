@@ -464,7 +464,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_status.add_argument("outdir", help="--outdir of the run (or replay target) to report on")
     p_status.add_argument("--json", action="store_true",
                           help="print one JSON object instead: the state, outcome, times, pids, "
-                               "logs, caveats, recorded error and last output, and this report")
+                               "logs, caveats, provenance gaps, recorded error and last output, "
+                               "and this report")
     # Compare a replay against the run it reproduces. Keyed on path, because comparing the raw
     # `outputs.sha256` lines counts one changed file as both a missing and an extra one.
     p_verify = sub.add_parser("verify", help="compare a replay with the run it reproduces")
