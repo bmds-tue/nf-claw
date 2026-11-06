@@ -28,10 +28,11 @@ These before/after observations do not establish continuous immutability.
 
 The BAM/VCF and H5AD adapters are optional. h5py 3.16 has no Python 3.15 wheel: installation on
 that interpreter needs a source build with HDF5 development headers/libraries (and pkg-config, or
-explicit HDF5 include/library paths). The server's Python 3.15 adapter tests passed with a private
+explicit HDF5 include/library paths). The validation server's Python 3.15 adapter tests passed with a private
 HDF5 1.10.10 build environment. CI prepares HDF5 on Linux 3.15; macOS 3.15 tests the runner and
 BAM/VCF adapters, while its H5AD lane awaits an available wheel. Other CI Python versions install
-all adapters. This describes configured CI scope, not a claim that macOS was executed on denbi.
+all adapters. This describes the configured CI scope; each workflow run is the evidence for its own
+lanes.
 
 ## Contract specification
 
@@ -121,7 +122,7 @@ See the [AnnData format](https://anndata.readthedocs.io/en/stable/fileformat-pro
 | [Tumourevo tiny demo](../runner/output_contracts/tumourevo-1.0.0-demo.json) | Exact 1.0.0 source, intended `2:3` grid, three keyed PyClone input tables with both expected B/C samples and the known-answer control's 630/626/429 rows, plus six filtered VCFs. Only the declared positional dataframe index and bcftools command metadata are excluded. | The row counts are fixture regression expectations, not biological truth. Joint MS VCFs retain four cohort sample columns; SS/SS_nobam each retain the selected tumour and normal. This does not validate inferred trees, fitted signatures, CNAqc accuracy, all outputs or another input cohort. The upstream test profile's remaining implicit remote defaults are not authenticated by parameter binding. |
 
 Other pins/branches still need their own reviewed output contracts. The generic adapters and two
-selected fixture contracts do not establish scientific validation for all 95 pipelines. In
+selected fixture contracts do not establish scientific validation for the other pipelines. In
 particular H5AD currently has adversarial format controls, not a newly executed biological pipeline
 benchmark. Exact assembly comparison intentionally flags a lost Flye contig; changing RNG output,
 reports or filenames does not become acceptable merely because it is variable.

@@ -6,7 +6,7 @@ nf-claw derives its parameter documentation and general input validation from ea
 
 ## Navigation
 
-[System Overview](#system-overview) • [1. pipelines/ Library](#1-pipelines--the-library-content) • [2. runner/ Engine](#2-runner--the-runtime-engine-nfclaw) • [3. handoffs/ Rules](#3-handoffs--chaining-rules) • [4. librarian/ Maintenance](#4-librarian--maintenance--code-generation)
+[System Overview](#system-overview) • [1. pipelines/ Library](#1-pipelines--the-library-content) • [2. runner/ Engine](#2-runner--the-runtime-engine-nfclaw) • [Module Map](#module-map) • [Preflight](#21-schema-preflight--fast-fail-parameter-validation) • [Provenance](#25-provenance-bundles--dependency-hashing) • [Replay](#26-replay--replay-guard) • [Verification](#27-verification-engine-nfclaw-verify) • [Assessment](#28-scientific-output-assessment-nfclaw-assess) • [Chaining](#210-chaining-engine-runnerchainpy) • [3. handoffs/ Rules](#3-handoffs--chaining-rules) • [4. librarian/ Maintenance](#4-librarian--maintenance--code-generation)
 
 ---
 
@@ -28,6 +28,10 @@ The repository is structured into four distinct, decoupled functional zones:
 └───────────────┘     └───────────────┘     └───────────────┘     └───────────────┘
 ```
 
+Around them, `scripts/` holds the acceptance gate and the validation helpers CI runs, `.github/` the
+[workflows](compatibility.md#3-automated-continuous-validation), and `website/` the
+[portal](../website/README.md) built from all of it.
+
 ---
 
 ## 1. `pipelines/` — The Library Content
@@ -48,6 +52,24 @@ The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas
 ## 2. `runner/` — The Runtime Engine (`nfclaw`)
 
 The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)).
+
+### Module map
+
+| Concern | Modules in `runner/` |
+|---|---|
+| Command line | `cli.py`, `__main__.py`, `discovery.py` (finding pipelines), `version.py`, `errors.py` |
+| Preflight | `preflight.py`, `schema.py`, `parameters.py`, `inputs.py`, `samplesheet.py`, `sheetgen.py`, `input_safety.py`, `path_roles.py`, `exact_json.py`, `config_probe.py`, `engine_version.py`, `resources.py` (`--limit-*`), `settings.py`, `reproducibility.py` |
+| Pipeline source | `submodule.py`, `versions.py`, `source_identity.py`, `source_corrections.py`, `fastqrepair_compat.py`, `plugin_compat.py`, `demo_defaults.py`, `institutional.py` |
+| Execution | `orchestration.py`, `nextflow_command.py`, `execution.py`, `locking.py`, `probes.py`, `budget.py`, `process_identity.py`, `container_watch.py`, `runlog.py`, `outputs.py`, `atomic.py` |
+| Provenance and replay | `provenance.py`, `replay_guard.py`, `environment_record.py`, `dependency_stability.py`, `resume_safety.py`, `redaction.py` |
+| Verification and assessment | `verify.py`, `scientific.py`, `scientific_hts.py`, `scientific_h5ad.py` |
+| Chains | `chain.py`, `handoff.py`, `consumption.py` |
+| MCP and jobs | `mcp_server.py`, `mcp_tools.py`, `jobs.py`, `job_reports.py`, `foreground.py` |
+| Reference preparation | `dramp.py` (`nfclaw prepare-dramp`) |
+
+`replay_guard.py`, `environment_record.py` and `source_identity.py` are also copied into each
+provenance bundle, so a replay's checks need neither nfclaw nor any Python package
+([what a replay still needs](replay.md#what-the-bundle-carries)).
 
 ### 2.1 Schema Preflight & Fast-Fail Parameter Validation
 `nfclaw run --check` lists completed, deferred and unsupported checks; real runs record the detailed
@@ -190,6 +212,7 @@ the replay entry point and the reference for dependency and output checks.
 - **Strict Mode (`--strict`):** Requires byte-for-byte identity for every paired result, including metadata, and agreement of recorded link identities. When both `environment.json` records are readable JSON objects, the environment comparison must also report `identical`; `differs` and `unverified` fail strict mode. Otherwise the report says `not recorded by both runs` and no environment condition is enforced.
 - **Environment Comparison:** Compares the container engine name, loaded plugin list, comparable images for processes present in both records, and the recorded remote-input URLs and hashes. Java runtime changes and processes present on only one side are notes. Nextflow build, container engine version, host platform and task counts are recorded but not equality gates. Default verification reports these findings without changing its structural exit criterion; standalone replay fails detected mismatches, but permits `unverified` results.
 - **Recording Scope:** An `identical` verdict covers the evidence compared. Inspect `issues`, `unverified` and `notes` as well; missing task or staging records are not comprehensively detected, and the verdict does not certify that every execution dependency was captured.
+- **Complete Environment (`--require-environment`):** Requires complete matching recorded environment evidence even if output structure alone agrees. It refuses missing records, unknown engine builds/runtimes/platforms/container engine versions, absent process or image identities, containerless tasks, missing plugin/remote inventories, recording issues and refetched validation inputs. Engine build/runtime, host platform and process inventories must agree as well as the container/plugin/remote comparisons. Combine it with `--strict` to also require output byte identity. This checks declared recorded evidence; it does not discover undeclared task downloads or prove continuous input immutability. The default and `--strict` modes keep their behavior.
 - **Scientific Scope:** Inventory agreement alone establishes no analytical agreement. Matching
   bytes demonstrate agreement of the observed artifacts, not biological accuracy or universal reproducibility.
 
@@ -242,17 +265,7 @@ Invoked via `make`, the librarian automates generation and release tracking for 
 |---|---|---|
 | `write_skill.py` | `make build` | Generates `skill.md` and `reference.md` from `nextflow_schema.json` and `assets/schema_input.json`. |
 | `write_catalog.py` | `make build` | Compiles `catalog.json` and `catalog.md` across all tracked pipelines. |
+| `add_pipeline.py` | `make add` | Prints the `.gitmodules` entries and `git submodule add` commands for every pipeline in `sources.tsv`; changes nothing itself. |
 | `check_drift.py` | `make check` | Enforces bidirectional synchronization across `sources.tsv`, `.gitmodules`, disk directories, skills, references, and handoff rules. |
 | `update_pipelines.py` | `make update` | Scans upstream remotes for newly published release tags and bumps submodules. |
-| `discover_pipelines.py` | Workflow | Discovers newly published DSL2 nf-core pipelines and scaffolds initial submodules. |
-
-### Complete environment verification
-
-`nfclaw verify REPLAY --against ORIGINAL --require-environment` requires complete matching recorded
-environment evidence even if output structure alone agrees. It refuses missing records, unknown
-engine builds/runtimes/platforms/container engine versions, absent process or image identities,
-containerless tasks, missing plugin/remote inventories, recording issues and refetched validation
-inputs. Engine build/runtime, host platform and process inventories must agree as well as the
-container/plugin/remote comparisons. Combine it with `--strict` to also require output byte identity.
-This checks declared recorded evidence; it does not discover undeclared task downloads or prove
-continuous input immutability. The legacy default and `--strict` retain their existing behavior.
+| `discover_pipelines.py` | `discover-pipelines.yml` | Discovers newly published DSL2 nf-core pipelines and scaffolds initial submodules. |

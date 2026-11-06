@@ -70,8 +70,8 @@ verified single parent makes an accepted update a fast-forward; a concurrent mai
 deferral, including when another actor has already put the candidate on main. An up-to-date Git
 response is not recorded as publication by this job. When main already equals the fully validated
 candidate, the publisher retries all required follow-up workflow dispatches without another main
-update. This recovers a prior publication whose deployment/test dispatch failed. The publisher never rebases or creates a
-post-validation commit. Successful publication dispatches tests, smoke checks, CodeQL and Pages;
+update. This recovers a prior publication whose deployment/test dispatch failed. The publisher never
+rebases or creates a post-validation commit. Successful publication dispatches tests, smoke checks, CodeQL and Pages;
 network, permission, ruleset or dispatch errors remain visible failures.
 
 ## Verification boundaries

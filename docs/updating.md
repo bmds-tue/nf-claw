@@ -27,7 +27,7 @@ Tracking policies are declared in `sources.tsv`:
 
 ## 2. Automated Daily Updates (`auto-update.yml`)
 
-The `.github/workflows/auto-update.yml` workflow executes daily:
+The `.github/workflows/auto-update.yml` workflow is scheduled daily at 06:00 UTC:
 
 ```
 ┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
@@ -57,15 +57,15 @@ The `.github/workflows/auto-update.yml` workflow executes daily:
    follow-up dispatch failures remain failures. Both bots share one concurrency group and bind
    preparation to their event commit; a queued stale run defers rather than changing main.
    The [publication evidence policy](maintenance.md) defines resources, artifact identities,
-   supported skips, retention, reruns and the limits of actual-task evidence. The bots retain the
-   existing checked fast-forward route and dispatch tests, smoke, CodeQL and Pages after publication.
+   supported skips, retention, reruns and the limits of actual-task evidence. After publishing, the
+   bots dispatch tests, smoke, CodeQL and Pages.
 6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
 
 ---
 
 ## 3. Automated Weekly Discovery (`discover-pipelines.yml`)
 
-The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard newly created nf-core pipelines:
+The `.github/workflows/discover-pipelines.yml` workflow is scheduled weekly (Mondays, 07:00 UTC) to onboard newly created nf-core pipelines:
 
 1. **DSL2 Filtering:** Inspects the nf-core pipeline registry, excluding archived or disabled entries and entries explicitly marked `is_DSL2: false`. A missing marker alone does not exclude a candidate; the Nextflow acceptance gate must still pass before onboarding. Legacy DSL1 workflows are unsupported.
 2. **Name Sanitization & Security:**
@@ -90,7 +90,6 @@ The `.github/workflows/discover-pipelines.yml` workflow runs weekly to onboard n
    real execution blocks the frozen candidate rather than silently dropping that pipeline.
    The isolated publisher verifies raw evidence and updates main only from its validated parent.
 
-
 ---
 
 ## 4. The Schema Drift Gate (`librarian/check_drift.py`)
@@ -108,6 +107,10 @@ If any upstream pipeline is updated without regenerating context, or if a manual
 ---
 
 ## 5. Manual Maintenance Commands
+
+The bots change only generated paths and pins, so they do not update hand-written guides: a new pin
+leaves [`docs/validation.md`](validation.md) and the [generation matrix](preflight.md#support-matrix)
+as of their stated dates. `skill.md` is always current.
 
 Developers can run maintenance tasks locally from the repository root with Python 3.11+
 and initialized submodules. Install test dependencies with `pip install -e ".[dev,yaml]"`.
