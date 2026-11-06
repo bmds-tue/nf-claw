@@ -30,9 +30,8 @@
    "none": 4,
    "unverified": 4
   },
-  "verify_exit_0": 78,
+  "verify_exit_0": 79,
   "verify_exit_1": [
-   "coproid",
    "longraredisease",
    "mag",
    "nanoseq",
@@ -47,7 +46,11 @@
   "pinned": 2375,
   "processes": 2380,
   "remote_inputs": 687,
-  "bundle_issues": {},
+  "bundle_issues": {
+   "marsseq": [
+    "Nextflow holds no task records for this run, so no container image was identified or pinned for its replay; `cleanup = true` in a config removes them when a run succeeds"
+   ]
+  },
   "not_in_this_sweep": {
    "ampliseq": "already run, replayed and verified on this code",
    "bacmodel": "already run, replayed and verified on this code",
@@ -421,7 +424,7 @@
     "exit": 0,
     "attempts": 1,
     "first_attempt_exit": null,
-    "seconds": 1088,
+    "seconds": 670,
     "status": "status: success",
     "tasks": {
      "COMPLETED": 47
@@ -437,16 +440,16 @@
    },
    "replay": {
     "exit": 0,
-    "seconds": 1165,
+    "seconds": 384,
     "environment": "identical",
     "mismatches": [],
     "unverified": []
    },
    "verify": {
-    "exit": 1,
-    "identical": 182,
-    "changed": 155,
-    "missing": 25,
+    "exit": 0,
+    "identical": 184,
+    "changed": 178,
+    "missing": 0,
     "extra": 0,
     "renamed": 1,
     "missing_directories": 0,
@@ -461,8 +464,26 @@
      "replay_exit": null,
      "verify": null,
      "containers_left": 0
+    },
+    {
+     "run_exit": 0,
+     "replay_exit": 0,
+     "verify": {
+      "exit": 1,
+      "identical": 182,
+      "changed": 155,
+      "missing": 25,
+      "extra": 0,
+      "renamed": 1,
+      "missing_directories": 0,
+      "extra_directories": 0,
+      "changed_links": 11,
+      "environment": "identical"
+     },
+     "containers_left": 0
     }
-   ]
+   ],
+   "tree": "85313d4"
   },
   "createpanelrefs": {
    "name": "createpanelrefs",
@@ -1814,7 +1835,9 @@
     "images": 0,
     "pinned": 0,
     "remote_inputs": 0,
-    "issues": []
+    "issues": [
+     "Nextflow holds no task records for this run, so no container image was identified or pinned for its replay; `cleanup = true` in a config removes them when a run succeeds"
+    ]
    },
    "replay": {
     "exit": null,
@@ -1824,7 +1847,16 @@
     "unverified": null
    },
    "verify": null,
-   "containers_left": 0
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ],
+   "tree": "85313d4"
   },
   "marsseq-refs": {
    "name": "marsseq",
@@ -1835,11 +1867,11 @@
     "exit": 143,
     "attempts": 1,
     "first_attempt_exit": null,
-    "seconds": 739,
+    "seconds": 4019,
     "status": "status: terminated by SIGTERM",
     "tasks": {
-     "COMPLETED": 6,
-     "ABORTED": 2
+     "COMPLETED": 7,
+     "ABORTED": 1
     },
     "caveats": null
    },
@@ -1858,7 +1890,16 @@
     "unverified": null
    },
    "verify": null,
-   "containers_left": 0
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 143,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ],
+   "tree": "85313d4"
   },
   "mcmicro": {
    "name": "mcmicro",

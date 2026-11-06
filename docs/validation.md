@@ -318,8 +318,8 @@ identical execution environment and again matched all of those checksums.
 ## Final pin sweep
 
 For the [final audit](audit/2026-11-05-final-audit.md), 90 of the 95 pins ran again from 2026-11-05 to
-2026-11-06, all at one commit of the runner (`a23a092`): the bundled test, its replay from
-`provenance/commands.sh`, then `nfclaw verify`. Three jobs ran at a time, each on the engine its `skill.md`
+2026-11-06, at one commit of the runner (`a23a092`): the bundled test, its replay from
+`provenance/commands.sh`, then `nfclaw verify`. The last reruns of coproid and marsseq ran on `85313d4`, and their rows say so. Three jobs ran at a time, each on the engine its `skill.md`
 names and the host network, with `--limit-cpus 8 --limit-memory 20.GB` on every engine that applies them (77 of
 the 91 jobs: marsseq has one job to build its references and one to analyse). funcscan and marsseq ran alone at
 the end. The per-job record is [`audit/evidence/2026-11-05-pin-sweep.json`](audit/evidence/2026-11-05-pin-sweep.json).
@@ -332,17 +332,17 @@ The other five pins: ampliseq, bacmodel, detaxizer and pixelator ran separately 
 [listed above](#releases-bumped-or-added-after-the-sweep). oncoanalyser did not run: its references were deleted on
 2026-10-16 and no longer fit. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
 
-Of the 91 jobs, 88 runs succeeded; the 3 others are seqsubmit and the two marsseq jobs. Of their replays, 86 succeeded, and the environment of 82 was identical to the recording. `nfclaw verify` exited 0 for 78 and 1 for 8. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
+Of the 91 jobs, 88 runs succeeded; the 3 others are seqsubmit and the two marsseq jobs. Of their replays, 86 succeeded, and the environment of 82 was identical to the recording. `nfclaw verify` exited 0 for 79 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
 
 What did not come out clean, by kind:
 
-- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result: the sweep's memory guard stopped its reference build at 2.6 GB available, with no bearing on the pipeline, and its analysis then failed on the missing references.
+- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result, and neither stop says anything about the pipeline. The sweep's memory guard stopped its reference build at 2.6 GB available. A rerun on `85313d4`, one task at a time, ran out of room: it started with 56 GB free, and a disk guard stopped it at 2.8 GB, 64 minutes and 7 tasks in, in `STAR_GENOMEGENERATE`. Its analysis failed on the missing references both times. Its [earlier run and replay](#provenance-bundles) are at this same pin.
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
   [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes). Two replays failed, one of
-  them because two `DIAMOND_CLUSTER` tasks hit upstream's 3-minute limit while, as far as the traces show, a first image
-  download slowed the shared volume. That link is inferred. A third, from the kept bundle, passed: environment
-  identical, 30 identical and 26 changed.
+  them because two `DIAMOND_CLUSTER` tasks hit upstream's 3-minute limit. The traces suggest a first image download
+  slowing the shared volume, but one pull on an idle host did not reproduce that, so the link is unproven. A third,
+  from the kept bundle, passed: environment identical, 30 identical and 26 changed.
 - **The environment check stays `unverified`.** mcmicro, circdna and raredisease run
   [tasks with no container](known-issues.md#a-process-cannot-be-pinned-to-an-image-digest),
   and genomeqc's test profile [leaves no task records](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run).
@@ -352,11 +352,13 @@ What did not come out clean, by kind:
 - **`nfclaw verify` exits 1: a file exists on one side only.** All of these replays have an identical environment.
   [Their differences are listed](known-issues.md#pipeline-specific-run-notes): rnafusion, nanostring, longraredisease,
   mag, spatialaxe (9 and 10 cells), nanoseq and rnasplice. rnasplice's 20 missing and 20 extra files were not read,
-  since the run directory was gone; the count matches 2.0.0's earlier row. coproid has 25 plot exports missing and 11 links
-  changed. The exports fit MultiQC's 30-second limit on them, which is inferred because the task logs were not kept.
+  since the run directory was gone; the count matches 2.0.0's earlier row.
 - **A first attempt failed and a rerun passed.** seqinspector, metatdenovo and drop stopped on a
   [remote file reported as missing](known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists),
-  and drop's left one container behind. coproid's failed downloading NCBI's taxonomy. funcscan's
+  and drop's left one container behind. coproid's failed downloading NCBI's taxonomy, and its rerun's replay, under
+  load, lost 25 plot exports. A further rerun on an idle host, on `85313d4`, kept them all and `nfclaw verify` exited 0.
+  That fits [MultiQC's 30-second limit on exports](known-issues.md#pipeline-specific-run-notes): the whole task took
+  27.4 s there. The link is inferred, because the logs of the replay that lost them were not kept. funcscan's
   `RUNDBCAN_DATABASE` hit the test profile's one-hour limit on a slow download and took 11 minutes on `--resume`.
   hgtseq, rerun with the references its contract needs, stopped once with `Pipeline completed with errors` and
   passed on `--resume`. No cause was read for that stop or for coproid's. reportho's run also needed its resume.
@@ -376,7 +378,7 @@ Nextflow's retry, so these runs carry no caveat.
 | callingcards 1.0.0 | 23.04.0 | success | 122 | 12 | 19/19 | 5 | success | identical | 273 identical, 180 changed |
 | chipseq 2.1.0 | 23.04.0 | success | 215 | 26 | 50/50 | 15 | success | identical | 288 identical, 363 changed |
 | circdna 1.1.0 | 23.04.0 | success | 89 | 15 | 31/33 | 8 | success | unverified | 106 identical, 75 changed |
-| coproid 2.0.1 | 25.04.0 | success | 47 | 15 | 25/25 | 13 | success | identical | 182 identical, 155 changed, 25 missing, 11 links changed |
+| coproid 2.0.1, on `85313d4` | 25.04.0 | success | 47 | 15 | 25/25 | 13 | success | identical | 184 identical, 178 changed, 11 links changed |
 | createpanelrefs 1.1.0 | 26.04.0 | success | 2 | 2 | 2/2 | 3 | success | identical | 13 identical, 9 changed |
 | createtaxdb 3.1.0 | 25.10.4 | success | 28 | 16 | 22/22 | 17 | success | identical | 61 identical, 19 changed |
 | crisprseq 2.3.0 | 24.04.2 | success | 44 | 15 | 17/17 | 6 | success | identical | 108 identical, 83 changed |
@@ -406,8 +408,8 @@ Nextflow's retry, so these runs carry no caveat.
 | lsmquant 1.0.3 | 25.10.4 | success | 14 | 5 | 7/7 | 2 | success | identical | 223 identical, 33 changed |
 | mag 5.5.0 | 26.04.0 | success, with caveats | 188 | 25 | 41/41 | 8 | success | identical | 857 identical, 507 changed, 15 missing, 15 extra |
 | magmap 1.3.1 | 26.04.0 | success | 59 | 16 | 29/29 | 11 | success | identical | 82 identical, 55 changed |
-| marsseq 1.0.3 | 23.04.0 | failed | 0 | 0 | 0/0 | 0 | not run | — | — |
-| marsseq-refs 1.0.3 | 23.04.0 | failed | 8 | 6 | 8/8 | 0 | not run | — | — |
+| marsseq 1.0.3, on `85313d4` | 23.04.0 | failed | 0 | 0 | 0/0 | 0 | not run | — | — |
+| marsseq-refs 1.0.3, on `85313d4` | 23.04.0 | failed | 8 | 6 | 8/8 | 0 | not run | — | — |
 | mcmicro 2.0.0 | 25.04.0 | success | 11 | 6 | 10/11 | 1 | success | unverified | 18 identical, 13 changed |
 | metaboigniter 2.0.1 | 23.04.0 | success | 13 | 3 | 7/7 | 3 | success | identical | 20 identical, 21 changed, 27 links changed |
 | metapep 1.0.0 | 24.04.2 | success | 27 | 9 | 18/18 | 4 | success | identical | 25 identical, 21 changed |

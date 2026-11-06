@@ -140,14 +140,15 @@ logs. They were not compared one by one.
 ## The pin sweep
 
 90 pins ran their bundled test, replay and `nfclaw verify` from 2026-11-05 to 2026-11-06, at `a23a092`, on the
-engine each `skill.md` names. [`docs/validation.md`](../validation.md#final-pin-sweep) has the method, the per-job
-table and what did not come out clean. In short:
+engine each `skill.md` names; the last reruns of coproid and marsseq ran on `85313d4`.
+[`docs/validation.md`](../validation.md#final-pin-sweep) has the method, the per-job table and what did not come out
+clean. In short:
 
 - **Runs.** 88 of the 91 jobs succeeded. seqsubmit needs credentials, and marsseq's two jobs have no result.
 - **Replays.** 86 succeeded. sopa's was refused, and reportho's failed twice before a third passed, which the counts
   here leave out. The environment was identical in 82, differs in 1 (sopa) and is `unverified` in 4: mcmicro, circdna and raredisease run tasks with no container, and genomeqc leaves
   no task records.
-- **`nfclaw verify`.** It exited 0 for 78 replays and 1 for 8.
+- **`nfclaw verify`.** It exited 0 for 79 replays and 1 for 7.
 - **First attempts.** 69 jobs ended with success, an identical environment and `nfclaw verify` 0 at the first attempt.
   3 of those carry caveats: proteinfold is a stub run, and cutandrun and hicar ignore a failure. So do not read 69
   as free of caveats.
@@ -161,16 +162,22 @@ recorded rather than fixed, because these are the pipelines' behaviour and the n
 
 - **Files on one side only.** rnafusion, nanostring, longraredisease, mag, spatialaxe, nanoseq and rnasplice have
   known causes, and [the guide lists them](../known-issues.md#pipeline-specific-run-notes). rnasplice's were
-  not read this time. coproid's 25 missing plot exports fit MultiQC's 30-second limit on exporting them, which fails
-  silently, as a test in that image showed. That this is what happened is inferred, since the task logs were not kept.
+  not read this time. coproid's replay lost 25 plot exports under load. That fits MultiQC's 30-second limit on exporting
+  them, which fails silently, as a test in that image showed. Rerun on an idle host on `85313d4`, it kept them all and
+  `nfclaw verify` exited 0, with no timeout in its log and the whole task taking 27.4 s. That the limit caused the loss
+  is strongly supported and still inferred: the logs of the replay that lost them were not kept, and the rerun also differs
+  by 16 commits of the runner, none of which mentions MultiQC or its exports. nanostring's four rest only on the same mechanism.
 - **Remote files reported as missing.** seqinspector, metatdenovo and drop, in two windows (08:56–09:00 and 15:36–15:42
-  UTC). Their reruns were clean. The cause is not established, and
+  UTC). Their reruns were clean. A probe of six such URLs on 2026-11-06, 1,488 requests over 4 hours, got the redirect
+  every time, so no window recurred to catch. The cause is not established, and
   [the guide now describes it](../known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists).
 - **funcscan's test limit.** A slow download reached the one-hour limit of its `test` profile while still
   progressing, and `--resume` took 11 minutes to finish it.
 - **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and two replays failed before a third
-  passed. Two `DIAMOND_CLUSTER` tasks passed upstream's 3-minute limit as another pipeline's first tasks spent over four
-  minutes outside their scripts. That an image download slowed the shared volume is inferred from the traces.
+  passed. Two `DIAMOND_CLUSTER` tasks stopped exactly 3 minutes after submission, upstream's limit, as another pipeline's
+  first tasks spent over four minutes outside their scripts. That an image download slowed the shared volume is unproven:
+  one 1.22 GB pull on an idle host slowed a small container by about 1 s at the median and 18 s at worst, and host writes
+  barely moved. That was not several pipelines pulling at once, so it does not rule the link out either.
 - **The failures cutandrun, hicar and mag ignore.** The [remediation record](2026-11-01-report-remediation.md) asks to
   reproduce and resolve them. All three reproduced, in separate demos that kept the failed tasks' files, on `aea5fa4`
   with the later status changes. `PRESEQ_LCEXTRAP`, `CIRCOS_PREPARE` and `MAXBIN2` each stopped with a message saying
@@ -185,8 +192,11 @@ recorded rather than fixed, because these are the pipelines' behaviour and the n
   (G03), `config_probe` (G14), `environment_record` (G15, G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli`
   and `chain` (G15). Only the [later runs](#evidence) cover those changes, and no second sweep did.
 - **marsseq has no result.** The sweep's memory guard stopped its reference build at 2.6 GB available, with STAR and
-  Bowtie2 building side by side, and its analysis then failed on the missing references. That says nothing about the
-  pipeline.
+  Bowtie2 building side by side. Rerun on `85313d4`, one task at a time, it started with 56 GB free and a disk guard
+  stopped it at 2.8 GB, 64 minutes and 7 tasks in, in `STAR_GENOMEGENERATE`. Its analysis failed on the missing references
+  both times. None of that says anything about the pipeline. What fills the rest of the volume is other work and the
+  shared image cache, so this was not forced further. Its [earlier run and replay](../validation.md#provenance-bundles),
+  at this same pin, succeeded with an identical environment; the runner has changed since.
 - **oncoanalyser did not run.** Its references were deleted on 2026-10-16 and no longer fit. Its last on-host run,
   in [`docs/validation.md`](../validation.md), is at the same commit.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,
