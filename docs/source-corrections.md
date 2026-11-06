@@ -1,12 +1,15 @@
 # Recorded workflow-source corrections
 
-Three pinned releases need source changes that a process configuration cannot supply:
+Three pinned releases need source changes that a process configuration cannot supply. nfclaw applies
+them to an independently copied working source, records them with the run and replays them; the
+upstream checkout is never edited. A fourth, FastQRepair 1.1.1, is corrected through a recorded
+runtime configuration instead.
 
 ---
 
 ## Navigation
 
-[Overview](#overview) • [Source Cache & Isolation](#source-cache-and-isolation) • [Preflight & Provenance](#preflight-checks-resume-and-provenance) • [Bactmap Matched Demo](#bactmap-matched-demo-fixture) • [FastQRepair Runtime Corrections](#runtime-configuration-corrections-fastqrepair-111)
+[Overview](#overview) • [Source Cache & Isolation](#source-cache-and-isolation) • [Preflight & Provenance](#preflight-checks-resume-and-provenance) • [Bactmap Matched Demo](#bactmap-matched-demo-fixture) • [Acceptance Staging](#internal-acceptance-staging) • [FastQRepair Runtime Corrections](#runtime-configuration-corrections-fastqrepair-111)
 
 ---
 
@@ -98,16 +101,21 @@ itself with Nextflow, and keeps all staged files under the gate's private tempor
 
 ## Runtime configuration corrections (FastQRepair 1.1.1)
 
-Unlike the three workflow-source corrections above that stage an independently copied working source,
-FastQRepair 1.1.1 receives its corrections through a recorded runtime configuration
-(`provenance/fastqrepair_compat.config`) without altering workflow source:
-- **Record Splitting & Quality Offsets:** A chunk splitter ensures FastQwiper chunks wipe identically to
-  the complete file, and preserves quality offsets (`-s` / `--sanger-offset`) during chunk recombination.
-- **BBMap Shell Continuation:** Fixes the missing line continuation in upstream task shell commands.
-- **Separated Publications:** Distinguishes read, log, and MultiQC report publication channels.
+Unlike the three workflow-source corrections above, the exact affected FastQRepair 1.1.1 commit keeps
+its workflow source and receives its corrections through a recorded runtime configuration,
+`provenance/fastqrepair_compat.config`:
 
-The complete standalone implementation and its digest are recorded in provenance bundles for replay;
-internal recipe prefixes invalidate prior task caches. See
-[`docs/architecture.md`](architecture.md#25-provenance-bundles--dependency-hashing).
+- **Record splitting:** a splitter whose chunks wipe exactly as the whole file does. Input with no
+  line where a split is invisible to fastqwiper is wiped whole beside an empty placeholder chunk.
+- **Quality offsets:** the declared offset (`-s` / `--sanger-offset`) is preserved through chunk
+  recombination, and report gathering is exact.
+- **BBMap shell continuation:** restores the line continuation missing from the upstream task's
+  shell command.
+- **Separated publications:** distinct read, log and MultiQC report publication channels.
 
-The exact affected fastqrepair 1.1.1 commit receives `provenance/fastqrepair_compat.config`: a splitter whose chunks wipe exactly as the whole file, exact report gathering, the missing BBMap shell continuation and distinct read/log/report publication. The complete standalone implementation and its source digest are recorded for replay; internal recipe prefixes invalidate prior task caches. The pinned source tree remains unchanged, while generated task scripts explicitly incorporate these corrections. Input with no line where a split is invisible to fastqwiper is wiped whole beside an empty placeholder chunk. Inspect actual task `.command.sh` files and retained read/report inventories; process success alone does not establish read conservation or biological accuracy.
+The complete standalone implementation and its source digest are recorded in provenance bundles for
+replay ([bundle contents](architecture.md#25-provenance-bundles--dependency-hashing)); internal recipe
+prefixes invalidate prior task caches. The pinned source tree remains unchanged, while generated task
+scripts explicitly incorporate these corrections, so inspect actual task `.command.sh` files and
+retained read and report inventories. Process success alone does not establish read conservation or
+biological accuracy.

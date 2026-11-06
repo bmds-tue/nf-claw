@@ -6,7 +6,7 @@ Welcome! nf-claw provides AI agents and bioinformaticians with a token-minimal, 
 
 ## Navigation
 
-[Core Tenets](#core-development-tenets) • [Repository Structure](#repository-structure) • [Reporting Bugs](#reporting-bugs) • [Proposing New Features](#proposing-new-features) • [Fixing Inconsistencies](#fixing-inconsistencies--schema-drift) • [Contribution Workflow](#contribution-workflow) • [Coding Standards](#coding-standards--implementation-guidelines) • [Adding Pipelines](#adding-a-new-pipeline) • [Chaining Handoff Rules](#adding-a-chaining-handoff-rule) • [Testing & Quality](#testing-requirements--quality-assurance) • [Agent Guidance](#agent-guidance)
+[Core Tenets](#core-development-tenets) • [Repository Structure](#repository-structure) • [Reporting Bugs](#reporting-bugs) • [Proposing New Features](#proposing-new-features) • [Fixing Inconsistencies](#fixing-inconsistencies--schema-drift) • [Contribution Workflow](#contribution-workflow) • [Coding Standards](#coding-standards--implementation-guidelines) • [Adding Pipelines](#adding-a-new-pipeline) • [Chaining Handoff Rules](#adding-a-chaining-handoff-rule) • [Testing & Quality](#testing-requirements--quality-assurance) • [Writing Documentation](#writing-documentation)
 
 ---
 
@@ -16,7 +16,7 @@ All contributions must uphold four architectural invariants:
 
 | Tenet | Rule & Invariant |
 |---|---|
-| **1. Pipeline-Agnostic Design** | General behavior in `runner/` (execution runtime) and `librarian/` (maintenance) comes from pinned schemas and declarative handoff rules, rather than biological assumptions about names or columns. Narrow, audited exceptions in `runner/fastqrepair_compat.py`, `runner/path_roles.json`, `runner/input_roles.json` and `runner/param_roles.json` require explicit source evidence and appropriate identity guards. Runtime corrections record their evidence for replay. Keep new compatibility logic equally explicit and guarded. |
+| **1. Pipeline-Agnostic Design** | General behavior in `runner/` (execution runtime) and `librarian/` (maintenance) comes from pinned schemas and declarative handoff rules, rather than biological assumptions about names or columns. Narrow, audited exceptions in `runner/fastqrepair_compat.py`, `runner/source_corrections.py`, `runner/demo_defaults.py`, `runner/path_roles.json`, `runner/input_roles.json` and `runner/param_roles.json` require explicit source evidence and appropriate identity guards. Runtime corrections record their evidence for replay. Keep new compatibility logic equally explicit and guarded. |
 | **2. Deterministic Outputs** | Generated markdown and JSON documents must remain bit-identical across repeated runs on the same commits. Timestamps are forbidden in generated context; git commit hashes serve as immutable version anchors. |
 | **3. Test-Driven Development (TDD)** | Every bugfix or new feature must be paired with regression tests. Write the failing test first, implement the minimal fix, and verify with `make test`. |
 | **4. Zero-Drift Invariant** | Committed context (`skill.md`, `reference.md`, `catalog.*`) must always match pinned submodule code. Any discrepancy between context files and pinned submodules is rejected by the drift gate (`python3 -m librarian.check_drift`). |
@@ -43,7 +43,7 @@ Before opening a bug report, determine which category the issue falls into:
 | Category | Typical Symptoms | Resolution Path |
 |---|---|---|
 | **Host / Environment Issue** | Spaces in directory path, missing Python packages, IPv6 JVM socket timeouts, Docker permissions, workstation OOMs. | Consult [`docs/known-issues.md`](docs/known-issues.md). Fix via flags (`--nxf-env`, `--limit-*`, `--config`) or system configuration. |
-| **Upstream Pipeline Defect** | A task failure inside an nf-core process (`.command.err`), container image bugs, or conflicting test profiles. | Pinned releases are wrapped **unmodified**. Document the workaround in `docs/known-issues.md` and report the bug upstream to the respective [nf-core repository](https://github.com/nf-core). |
+| **Upstream Pipeline Defect** | A task failure inside an nf-core process (`.command.err`), container image bugs, or conflicting test profiles. | Pinned source trees stay **unmodified**. Document the workaround in `docs/known-issues.md` and report the bug upstream to the respective [nf-core repository](https://github.com/nf-core). |
 | **nf-claw Runtime Defect** | Preflight parameter validation falsely rejecting valid values, locking deadlocks, broken provenance bundles, or chaining errors. | File a bug report on [GitHub Issues](https://github.com/bmds-tue/nf-claw/issues). |
 
 ### 2. How to File an Issue
@@ -93,7 +93,7 @@ If `python3 -m librarian.check_drift` reports drift:
 
 ### 2. Upstream Defects vs. Local Workarounds
 - **Never edit files inside `pipelines/<name>/upstream/` directly.** Git submodules point to upstream release commits and must remain vendor-clean.
-- Workarounds for upstream defects are implemented via narrow runtime mechanisms (such as `-c` compatibility configs or documentation in `docs/known-issues.md`).
+- Workarounds for upstream defects are narrow runtime mechanisms ([recorded corrections](docs/source-corrections.md), `-c` compatibility configs) or documentation in [`docs/known-issues.md`](docs/known-issues.md).
 
 ---
 
@@ -139,7 +139,8 @@ Before opening a PR:
 1. Ensure all tests pass: `make test`.
 2. Verify zero schema drift: `python3 -m librarian.check_drift`.
 3. Check linting as CI does: `ruff check .`.
-4. If documentation or data files were modified, verify the static site build:
+4. If documentation or data files were modified, check the links and anchors with
+   `pytest tests/test_agent_docs.py`, then verify the static site build:
    ```bash
    # Use Node.js 24 LTS, matching CI
    npm --prefix website ci
@@ -262,9 +263,10 @@ We require regression tests for every bugfix:
 
 ### Running Test Commands
 ```bash
-make test                      # Run full pytest test suite
-pytest tests/test_chain.py     # Run focused test module
-pytest -k "test_verify"        # Run tests matching an expression
+make test                         # Run the full pytest suite, one test at a time
+pytest -n auto --dist worksteal   # The same suite on every core, as CI runs it
+pytest tests/test_chain.py        # Run a focused test module
+pytest -k "test_verify"           # Run tests matching an expression
 ```
 
 ### Makefile Targets Summary
@@ -279,7 +281,29 @@ pytest -k "test_verify"        # Run tests matching an expression
 
 ---
 
-## Agent Guidance
+## Writing Documentation
 
-`AGENTS.md` is the one agent guide. `CLAUDE.md` imports it (`@AGENTS.md`) for Claude Code instead of
-holding a copy, so edit `AGENTS.md` only; `tests/test_agent_docs.py` checks the import.
+Every behaviour has one home; other documents link to it rather than repeat it.
+
+| Content | Where it lives |
+|---|---|
+| What an agent or user must do to find, run, follow, replay or chain a pipeline | [`AGENTS.md`](AGENTS.md), kept short because every agent session loads it. `CLAUDE.md` imports it (`@AGENTS.md`) instead of holding a copy, so edit `AGENTS.md` only. |
+| The guarantees behind those steps, and their limits | The focused guide in `docs/` that covers them. A new `docs/*.md` also needs a row in the [README's guides](README.md#documentation-guides) and an entry in [`llms.txt`](llms.txt). |
+| A symptom and its fix | [`docs/known-issues.md`](docs/known-issues.md), under the section for that symptom. |
+| Generated context (`skill.md`, `reference.md`, `catalog.*`) | Never by hand: change the generator in `librarian/`, then `make build`. |
+| A user-visible change | [`CHANGELOG.md`](CHANGELOG.md), under **Unreleased**, with the pull request's number. |
+| What an audit found and the evidence for it | A new dated record in [`docs/audit/`](docs/audit/README.md). A record describes its own date: correct the guides, not old records. |
+
+**Conventions.**
+
+- A guide opens with an H1 and a paragraph saying what it covers, then a `Navigation` line of links
+  to its main sections, and does not skip heading levels. The site's accessibility check fails on a
+  skipped level or a table without headers.
+- Name the version and date of a measurement ("measured at ampliseq 3.0.0 on 2026-10-15"). The daily
+  updater moves pins without editing hand-written guides, so write "pinned" only for a fact the
+  guide can keep true, and point to `skill.md` for the current pin.
+- State what was run and what it does not establish; a passing check is not biological validation.
+- Test a claim about the code against the code. `tests/test_agent_docs.py` checks every relative
+  link and anchor, that the guides are listed, that `docs/mcp.md` lists every MCP tool, and the
+  `CLAUDE.md` import. Keep such tests independent of the pins and of the pipeline count: the
+  maintenance gate runs them on every candidate that changes those.

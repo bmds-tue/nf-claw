@@ -27,7 +27,7 @@ PORTIONS ADAPTED FROM ClawBio (MIT, Copyright (c) Manuel Corpas)
 nf-claw adapts some files and its repository structure from ClawBio
 (https://clawbio.ai), created by Manuel Corpas and released under the MIT
 License. As required by MIT, ClawBio's copyright notice is retained in LICENSE.
-Provenance (per the implementation plan):
+Provenance:
   - runner/      generic pipeline runtime — consolidated and adapted from
                  ClawBio's per-pipeline nf-core wrapper modules (command builder,
                  executor, pipeline source, schema/params, samplesheet, preflight,

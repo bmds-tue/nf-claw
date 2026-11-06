@@ -12,7 +12,7 @@ job id. The agent docs (`skill.md`, `reference.md`, `AGENTS.md`, `docs/`) are se
 
 ## Navigation
 
-[Setup](#setup) • [Tools](#tools) • [Jobs](#jobs-long-analyses-and-chains) • [Resources and prompt](#resources-and-prompt) • [Environment](#environment) • [Protocol](#protocol)
+[Setup](#setup) • [Tools](#tools) • [Jobs](#jobs-long-analyses-and-chains) • [Foreground Commands](#foreground-commands) • [Privacy](#privacy-and-redaction) • [Resources and Prompt](#resources-and-prompt) • [Environment](#environment) • [Protocol](#protocol)
 
 ---
 
@@ -108,6 +108,27 @@ values are staged privately in a params file and still undergo the pipeline's sc
 Use absolute paths. A relative path means what it would on the command line in the directory the
 client started the server from.
 
+### Tool details
+
+- **`run_pipeline.params`** accepts arrays and objects as well as scalar values. Structured values
+  are merged with `params_file` into an exact-number JSON file inside the private job directory
+  (0600); explicit `params` values win. The user's source params file is preserved. Pipeline schemas
+  still determine which arrays and objects are valid.
+- **`verify_replay(require_environment=true)`** requests the CLI's `--require-environment` gate. It
+  requires complete matching environment evidence even when output structure agrees; combine it with
+  `strict=true` to require identical output bytes as well.
+- **`replay_run(original, outdir)`** reuses the original bundle's guarded replay script under the same
+  job supervisor as runs and chains, with detached execution, status and cancellation. Keep the
+  original bundle: the replay directory contains its results and execution records, not a new complete
+  replay bundle. A retry needs a new empty destination.
+- **`read_artifact(job_id, path, max_bytes=16384)`** previews at most 65536 bytes of UTF-8 text. The
+  path is relative to that job's output directory. Traversal, binary files, nonregular files and
+  symlinks outside the output tree are refused; inspect external published symlinks explicitly on the
+  server. A running job's preview may be incomplete and does not validate scientific results.
+- **`list_versions`** retains the committed pin even in an uninitialized, tagless offline clone. Notes
+  distinguish remote observations, locally cached tags and a pin whose tag availability is unverified;
+  the committed fallback is not added to the inventory authorizing other remote releases.
+
 ---
 
 ## Jobs: long analyses and chains
@@ -141,6 +162,10 @@ message, completion caveats, and the log paths. A job refused before it opened a
 parameters into a fresh `--outdir`) has no such report: its `output_tail` holds the refusal. A
 finished job whose own report could not be retained says why in `status_error`;
 `run_status(outdir)` then reads the live log.
+
+Completed jobs retain a private snapshot of their own run status. Reusing the output directory
+for a later retry does not replace an older job ID's outcome or caveats. Historical jobs without
+that snapshot retain their supervisor outcome, but do not borrow a later run's status report. Malformed job records are rejected individually and omitted from global listing.
 
 Long-poll with `get_job(job_id, wait_seconds=N)`, keeping `N` below your client's tool timeout; the
 job is not affected when a call returns or is cancelled. Clients that send a progress token receive
@@ -198,11 +223,40 @@ when present it describes whether a request was issued before the error. Invalid
 uses argparse's normal exit code 2 and stderr usage text, including when `--json` was supplied.
 Future incompatible JSON changes will increment `version`.
 
-**Chains.** `run_chain` takes the chain spec ([format](chaining.md)) as a JSON object, writes it into
+### Chains as jobs
+
+`run_chain` takes the chain spec ([format](chaining.md)) as a JSON object, writes it into
 the job's directory, and runs `nfclaw chain run`: each stage starts only after the previous one
 succeeded, from inputs prepared out of that stage's checksummed outputs. Validate first with
 `check: true`; continue a failed chain with `resume: true`; verify its lineage with
 `run_status(outdir, chain: true)`.
+
+---
+
+## Foreground commands
+
+Foreground CLI calls run under a separate process supervisor. Timeout, request cancellation,
+disconnect and MCP process death stop their helpers, including metadata probes in other process
+groups. Linux uses a subreaper to adopt helpers whose intermediate parent exits; macOS follows
+process ancestry while the command runs. If process inspection is unavailable, foreground work
+is refused before launch; unreadable inventories during run/replay cleanup are reported as
+unconfirmed cleanup. Deliberately detached analysis jobs remain independent of foreground calls.
+On macOS, an arbitrary helper that forks twice and is reparented before observation cannot be
+certified by ancestry polling. Darwin rejects automatic descendant tracking with `NOTE_TRACK`
+([kernel implementation](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_event.c));
+Linux's subreaper provides the stronger ownership boundary for that case.
+
+---
+
+## Privacy and redaction
+
+Shared shell/MCP job views redact sensitive `NXF_*` values from commands, frozen/live diagnostics
+and output tails under the provenance policy. This includes overwritten environment options,
+quoted/JSON-escaped values, multiline values and credentials crossing the bounded tail boundary.
+Private chain/stage environment overlays and the original inherited environment remain available
+for redaction after server restarts. Historical records cannot recover ambient values they never
+recorded; only their recoverable values can be redacted.
+Raw execution records and raw logs remain private; redact them before sharing them directly.
 
 ---
 
@@ -269,6 +323,13 @@ Requests are answered concurrently, so a waiting `get_job` never blocks another 
 protocol messages: its own stray output, and that of any process it starts, goes to stderr. Closing
 stdin ends the server, never a job.
 
+Long polls and ordinary work have separate, bounded admission; excess requests receive a retryable
+`server busy` JSON-RPC error (-32000). Immediate job/status/cancel controls have reserved workers,
+and ping is handled directly. Slow version lookup, source materialization and verification cannot
+fill the control workers. A chain status that hashes lineage uses ordinary work capacity.
+If a cancellation's optional completion wait cannot be admitted, the stop remains acknowledged
+and only that wait is omitted.
+
 Interoperability is tested against the official Python SDK in both eras (`tests/test_mcp_interop.py`,
 run when `mcp` is installed). On 2026-10-24, with `nfclaw mcp` and its jobs on an IPv6-only Linux
 server, an agent in each client below found nf-core/demo, read its skill, validated, ran and
@@ -281,56 +342,3 @@ from nfclaw's error:
 | Codex 0.144.4 | `initialize`, 2025-06-18 |
 | Antigravity CLI (`agy`) 1.4.7 | `server/discover`, 2026-07-28 |
 | MCP Python SDK 2.3.0 (scripted: runs, a chain, cancel, resume, replay) | both |
-
-Completed jobs retain a private snapshot of their own run status. Reusing the output directory
-for a later retry does not replace an older job ID's outcome or caveats. Historical jobs without
-that snapshot retain their supervisor outcome, but do not borrow a later run's status report.
-Long polls and ordinary work have separate, bounded admission; excess requests receive a retryable
-`server busy` JSON-RPC error (-32000). Immediate job/status/cancel controls have reserved workers,
-and ping is handled directly. Slow version lookup, source materialization and verification cannot
-fill the control workers. A chain status that hashes lineage uses ordinary work capacity.
-If a cancellation's optional completion wait cannot be admitted, the stop remains acknowledged
-and only that wait is omitted.
-Malformed job records are rejected individually and omitted from global listing.
-
-Foreground CLI calls run under a separate process supervisor. Timeout, request cancellation,
-disconnect and MCP process death stop their helpers, including metadata probes in other process
-groups. Linux uses a subreaper to adopt helpers whose intermediate parent exits; macOS follows
-process ancestry while the command runs. If process inspection is unavailable, foreground work
-is refused before launch; unreadable inventories during run/replay cleanup are reported as
-unconfirmed cleanup. Deliberately detached analysis jobs remain independent of foreground calls.
-On macOS, an arbitrary helper that forks twice and is reparented before observation cannot be
-certified by ancestry polling. Darwin rejects automatic descendant tracking with `NOTE_TRACK`
-([kernel implementation](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_event.c));
-Linux's subreaper provides the stronger ownership boundary for that case.
-
-Shared shell/MCP job views redact sensitive `NXF_*` values from commands, frozen/live diagnostics
-and output tails under the provenance policy. This includes overwritten environment options,
-quoted/JSON-escaped values, multiline values and credentials crossing the bounded tail boundary.
-Private chain/stage environment overlays and the original inherited environment remain available
-for redaction after server restarts. Historical records cannot recover ambient values they never
-recorded; only their recoverable values can be redacted.
-Raw execution records and raw logs remain private; redact them before sharing them directly.
-
-Version listings retain the committed pin even in an uninitialized, tagless offline clone. Notes
-distinguish remote observations, locally cached tags and a pin whose tag availability is unverified;
-the committed fallback is not added to the inventory authorizing other remote releases.
-
-`run_pipeline.params` accepts arrays and objects as well as scalar values. Structured values are
-merged with `params_file` into an exact-number JSON file inside the private job directory (0600);
-explicit `params` values win. The user's source params file is preserved. Pipeline schemas still
-determine which arrays/objects are valid.
-
-`verify_replay(require_environment=true)` requests the CLI's `--require-environment` gate. It
-requires complete matching environment evidence even when output structure agrees; combine it
-with `strict=true` to require identical output bytes as well.
-
-`replay_run(original, outdir)` reuses the original bundle's guarded replay script under the same
-job supervisor as runs and chains. It supports detached execution, status and cancellation. Keep
-the original bundle; the replay directory contains its results and execution records, not a new
-complete replay bundle. A retry needs a new empty destination.
-
-`read_artifact(job_id, path, max_bytes=16384)` previews at most 65536 bytes of UTF-8 text. The path
-is relative to that job's output directory. Traversal, binary files, nonregular files and symlinks
-outside the output tree are refused. For external published symlinks, inspect them explicitly on
-the server. A running job's preview may be incomplete and does not validate scientific results.
