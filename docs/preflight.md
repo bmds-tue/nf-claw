@@ -4,7 +4,9 @@
 `preflight` lines list checks completed by the wrapper, deferred to workflow launch, and unsupported
 by preparation. A real run retains the detailed versioned report as `validation_scope` in
 `provenance/run_manifest.json`. Failed preparation reports the failing check through its error;
-it does not claim that later checks ran. One engine probe runs: `--check` asks the Nextflow the
+it does not claim that later checks ran. `host_requirements` means the run's tools are on the host:
+Git, Nextflow, Java and the profile's container engine, and a Docker profile's daemon must answer
+`docker info`, so start Docker before checking. One engine probe runs: `--check` asks the Nextflow the
 run would use (its `--nxf-ver`, `--nxf-env` and every `-c`, generated ones included) to resolve the
 pipeline's configuration and selected profiles with `nextflow config`, from a scratch directory, and
 refuses a release that engine cannot parse — an older one under Nextflow 26.04's strict parser —

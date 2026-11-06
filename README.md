@@ -159,7 +159,8 @@ nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
 ```
 
 `--check` leaves `--outdir` untouched; conditional and complex schema rules remain subject to
-upstream runtime validation.
+upstream runtime validation. It does need the run's tools on the host: Git, Nextflow, Java and the
+profile's container engine, and a Docker profile needs a responding daemon.
 
 ### 3. Samplesheet from Data Files
 

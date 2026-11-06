@@ -49,7 +49,8 @@ tests, install `pip install -e ".[dev,yaml]"` to include pytest and YAML support
   exact schema spelling). `--no-provenance` skips the replay bundle and checksum records but keeps
   the parameter file and run logs; without those records a later `--resume` cannot reuse its
   cached tasks and recomputes them all ([why](docs/replay.md#local-inputs-and-resume)).
-- **What `--check` covers:** inputs, parameters and environment requirements, and whether the
+- **What `--check` covers:** inputs, parameters and environment requirements (Git, Nextflow, Java,
+  the profile's container engine and, for Docker, a responding daemon), and whether the
   run's engine parses the release's configuration (`nextflow config`): a release Nextflow 26.04+'s
   strict parser rejects is refused with its remedy. It can initialize submodules, fetch a requested
   version and download a pinned engine. Its `preflight` lines say which checks
