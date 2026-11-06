@@ -25,7 +25,7 @@ FAKE_ENGINE = """#!/bin/bash
 echo "$*" >> "$ENGINE_LOG"
 case "$1" in
   run)
-    for arg; do case "$arg" in
+    [ -n "$ENGINE_CREATES_LATER" ] || for arg; do case "$arg" in
       nxf-*) touch "$ENGINE_STATE/$arg" ;;
       --name=nxf-*) touch "$ENGINE_STATE/${arg#--name=}" ;;
     esac; done
@@ -355,6 +355,73 @@ def test_a_container_still_being_created_is_waited_for_and_removed(engine, tmp_p
         timer.join()
     assert removed == ["nxf-late"] and problems == []
     assert not (state / "nxf-late").exists()
+
+
+def _late_task(tmp_path: Path, docker: Path, name: str) -> Path:
+    """A wrapper that goes on through the signal and starts its client only then, which ends by
+    itself soon after: seen on a real chain, whose client started its container 5 s after the stop
+    and was gone, the container left behind, long before the grace period ended."""
+    task = tmp_path / "late-task.sh"
+    task.write_text(f"#!/bin/bash\ntrap '' TERM\ntouch {tmp_path}/armed\nsleep 0.5\n"
+                    f"{docker} run -i --name {name} img &\nclient=$!\nsleep 1\nkill -9 $client\n")
+    task.chmod(0o755)
+    return task
+
+
+def test_a_client_that_starts_after_the_signal_has_its_container_removed(engine, tmp_path):
+    docker, state, log = engine
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    try:
+        _wait_for(tmp_path, "armed")                   # the task is running, its client is not yet
+        execution._terminate(proc, grace=20)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Late" in log.read_text().splitlines()
+
+
+def test_a_replay_s_client_that_starts_after_the_signal_has_its_container_removed(engine, tmp_path):
+    docker, state, _ = engine
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    try:
+        _wait_for(tmp_path, "armed")
+        report = replay_guard._stop_replay_group(proc, grace=20)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert any("removed 1 task container(s)" in line and "nxf-Late" in line for line in report)
+
+
+def test_a_late_client_killed_while_its_container_is_being_created_still_has_it_removed(
+        engine, tmp_path, monkeypatch):
+    docker, state, log = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 15)
+    monkeypatch.setenv("ENGINE_CREATES_LATER", "1")
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    timer = threading.Timer(3, (state / "nxf-Late").touch)     # after its client is gone
+    timer.start()
+    try:
+        _wait_for(tmp_path, "armed")
+        execution._terminate(proc, grace=20)
+    finally:
+        timer.join()
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Late" in log.read_text().splitlines()
+
+
+def test_a_look_at_a_stopping_group_asks_the_engine_only_about_new_names(engine):
+    docker, state, log = engine
+    (state / "nxf-Listed").touch()
+    client = (str(docker),)
+    containers: dict[tuple[str, ...], set[str]] = {}
+    creating: set[str] = set()
+    replay_guard.note_task_containers({client: {"nxf-Listed", "nxf-Late"}}, containers, creating)
+    assert containers == {client: {"nxf-Listed", "nxf-Late"}}
+    assert creating == {"nxf-Late"}                   # one already listed is not waited for
+    asked = log.read_text().count("ps -a")
+    replay_guard.note_task_containers({client: {"nxf-Late"}}, containers, creating)
+    assert log.read_text().count("ps -a") == asked
 
 
 def test_a_container_its_wrapper_removed_is_not_waited_for(engine, monkeypatch):

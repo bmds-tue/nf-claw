@@ -1268,9 +1268,27 @@ def unlisted_containers(containers: dict[tuple[str, ...], set[str]]) -> set[str]
     return unlisted
 
 
+def note_task_containers(found: dict[tuple[str, ...], set[str]],
+                         containers: dict[tuple[str, ...], set[str]], creating: set[str]) -> None:
+    """Add the names in `found`, a later look at a stopping group, to those of the stop.
+
+    A client can outlive the signal or start after it, and create its container seconds later, with
+    its wrapper's `docker stop` and `docker rm` already over: nothing else would remove that one.
+    Only new names cost a question to the engine, and one it already lists is not waited for."""
+    new = {engine: fresh for engine, names in found.items()
+           if (fresh := names - containers.get(engine, set()))}
+    if new:
+        creating |= unlisted_containers(new)
+        for engine, names in new.items():
+            containers.setdefault(engine, set()).update(names)
+
+
 # How long containers still being created when their run stopped are waited for. Measured on a
 # loaded host: they appeared 2-15 s after the stop, and once not within 15 s.
 _CREATION_SETTLE = 30
+# How often a stopping group is looked through. On a real chain, a client that started as the stop
+# began lived 6 s: one that starts and ends between two looks can still leave its container behind.
+STOP_LOOK_SECONDS = 0.25
 
 
 def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout: float = 60,
@@ -1330,8 +1348,9 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout:
     for engine, names in late.items():
         command = " ".join(engine)
         problems.append(f"{', '.join(names)} had not appeared {_CREATION_SETTLE:g} s after the "
-                        "stop. A container the engine was still creating stays behind, never "
-                        f"started: `{command} ps -a --filter name=nxf-` lists them, and "
+                        "stop: its client may have ended before the engine created anything. One "
+                        "the engine was still creating stays behind, never started: "
+                        f"`{command} ps -a --filter name=nxf-` lists them, and "
                         f"`{command} rm` removes them")
     return sorted(removed), problems
 
@@ -1392,17 +1411,18 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
             if not signal_process_group(proc.pid, 0):
                 gone = True
                 break
-            time.sleep(0.05)
+            note_task_containers(task_containers(proc.pid), containers, creating)
+            time.sleep(STOP_LOOK_SECONDS)
     finally:
         # A reaped leader with no member left frees the group's number for another group: it is
         # neither searched nor signalled then.
+        latest: dict[tuple[str, ...], set[str]] = {}
         if not (gone and proc.returncode is not None):
             latest = task_containers(proc.pid)
             inspection.extend(getattr(latest, "issues", []))
-            for engine, names in latest.items():
-                containers.setdefault(engine, set()).update(names)
             signal_process_group(proc.pid, signal.SIGKILL)
         proc.wait(timeout=2)
+    note_task_containers(latest, containers, creating)
     if not containers:
         return sorted(set(inspection))
     removed, problems = remove_task_containers(containers, creating=creating)
