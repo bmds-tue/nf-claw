@@ -20,6 +20,7 @@ behaviour, read the guides in [`docs/`](../../README.md#documentation-guides).
 | 2026-10-31 | [Full audit](2026-10-31-full-audit.md) | Findings E01–E29. |
 | 2026-10-31 | [Follow-through audit](2026-10-31-followthrough-audit.md) | Verified findings in the current product, and their limits. |
 | 2026-11-01 | [Report remediation](2026-11-01-report-remediation.md) | Remediation of the 31 October repository review. |
+| 2026-11-05 | [Final audit](2026-11-05-final-audit.md) | Findings G01–G16, and a sweep of every pin with its replay. |
 
 [`evidence/`](evidence/) holds the raw records these cite: run records, assessment scripts (stored
 as `.py.txt` so they are read rather than run), logs and validation summaries. Pipeline documentation

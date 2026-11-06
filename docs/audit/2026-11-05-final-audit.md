@@ -20,7 +20,7 @@ the static gates beside it, and then went after what those audits had no reason 
   directory, invalid `NFCLAW_*` values, a POSIX locale. A Python traceback or a timeout counts as a
   finding (G06, G08).
 - **Pins moved since their last on-host validation.** Each one's demo, replay and verification,
-  and what each bump did to the audited input roles (G07).
+  and what each bump did to the audited input roles (G07). Then a [sweep of every pin](#the-pin-sweep).
 - **Every documented command.** All 304 `nfclaw` command lines in the guides, the README and the
   website, parsed against the real argument parser; every internal link and anchor; every
   `NFCLAW_*` variable against its documentation. No mismatch.
@@ -51,8 +51,9 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 ## Evidence
 
 Runs, stops, chains, MCP and the CLI cases ran on the server on the fixed tree. The static gates, the
-website and part of the packaging ran locally. The per-pin record is
-[`evidence/2026-11-05-pin-runs.json`](evidence/2026-11-05-pin-runs.json).
+website and part of the packaging ran locally. The per-pin records are
+[`evidence/2026-11-05-pin-runs.json`](evidence/2026-11-05-pin-runs.json), for the pins that had moved, and
+[`evidence/2026-11-05-pin-sweep.json`](evidence/2026-11-05-pin-sweep.json), for the sweep.
 
 - **Suites.** 4,175 tests, 0 failures, 4 skips, in two runs; `ruff` and the drift check clean. `main`
   before the fixes: 4,129 tests, 0 failures, 4 skips. The 4 skips are audited-commit fixtures that a
@@ -82,8 +83,11 @@ website and part of the packaging ran locally. The per-pin record is
   tasks, then `--resume`: exit 0, stage 2 cached, no archive, lineage verified by SHA-256.
   `chain --check`: 15 of 19 edges pass on Nextflow 26.04.3 unpinned, and the other 4 are refused
   with the remedy named.
-- **Stops at the worst moment (G03).** Before the fix, 6 containers stayed `created` under load. After
-  it, in 4 trials, no container was left and the stops took 8.3–20.0 s.
+- **Stops at the worst moment (G03).** Under load, with no wait, 6, 4 and 6 containers stayed `created`.
+  With a wait of 15 s, 0, 6 and 0 did: containers appeared 2 to 15 s after the SIGTERM, and the slowest stop
+  took 79.6 s, with `rm -f` at its 60 s bound. Hence one wait of 30 s, and a report of what still has not
+  appeared. With it, on `aea5fa4`, 3 trials left no container and took 7.7–15.9 s. An ordinary stop, whose
+  containers already run, listed nothing to wait for, and the 5 false "could not be removed" lines are gone.
 - **Odd input (G06, G08).** `--outdir /` is refused in 0.6 s, `/mnt/volume` (771 GB in use) in 0.9 s,
   the same in a chain in 2.1 s, and `commands.sh /mnt/volume` in 0.2 s. Of the 115 cases on the final
   tree, 114 end cleanly at once, with no traceback. The other, `NXF_HOME='~nosuchuser/h'`, is Nextflow
@@ -96,7 +100,8 @@ website and part of the packaging ran locally. The per-pin record is
   names. On Nextflow 26.04.3, 25 of them are refused without `--nxf-ver` or `NXF_SYNTAX_PARSER=v1`,
   as documented.
 
-Pins moved since their last on-host validation, each on the engine its `skill.md` names:
+Pins moved since their last on-host validation, each on the engine its `skill.md` names. Sarek, sopa,
+bacass and variantbenchmarking first ran short of disk, so these rows are from the sweep below:
 
 | Pin | Nextflow | Run | Replay | `nfclaw verify` |
 |---|---|---|---|---|
@@ -104,30 +109,66 @@ Pins moved since their last on-host validation, each on the engine its `skill.md
 | bacmodel 1.0.1 | 25.10.4 | success, 2 tasks | success, environment identical | 15 identical, 5 changed |
 | detaxizer 1.4.0 | 26.04.0 | success, 54 tasks (on `8f0f6de`) | success, environment identical | 80 identical, 42 changed |
 | pixelator 6.0.0 | 25.10.4 | success, 27 tasks | success, environment identical | 21 identical, 97 changed |
-| sarek 3.11.0 | 25.10.4 | success, 22 tasks | not run: disk | — |
-| sopa 1.0.2 | 25.10.4 | success, 9 tasks | not run: disk | — |
-| bacass 2.7.0 | 25.10.4 | stopped by the disk watchdog after 9 tasks | — | — |
-| variantbenchmarking 1.6.0 | 25.10.4 | stopped by the disk watchdog after 53 tasks | — | — |
+| sarek 3.11.0 | 25.10.4 | success, 22 tasks | success, environment identical | 86 identical, 97 changed |
+| sopa 1.0.2 | 25.10.4 | success, 9 tasks | refused by the environment check, as documented | — |
+| bacass 2.7.0 | 25.10.4 | success, 17 tasks | success, environment identical | 130 identical, 114 changed |
+| variantbenchmarking 1.6.0 | 25.10.4 | success, 68 tasks | success, environment identical | 47 identical, 47 changed |
+| variantbenchmarking 1.6.1 | 25.10.4 | success, 68 tasks, twice (on `aea5fa4`) | success, environment identical | 46 identical, 48 changed; 45 and 49 |
 
 Every verified replay has 0 missing and 0 extra files. Ampliseq's changed files are mostly QIIME2
 results and MultiQC reports (257 and 40 of the 322), and pixelator's are its per-stage outputs and
 logs. They were not compared one by one.
 
+## The pin sweep
+
+90 pins ran their bundled test, replay and `nfclaw verify` from 2026-11-05 to 2026-11-06, at `a23a092`, on the
+engine each `skill.md` names. [`docs/validation.md`](../validation.md#final-pin-sweep) has the method, the per-job
+table and what did not come out clean. In short:
+
+- **Runs.** 88 of the 91 jobs succeeded. seqsubmit needs credentials, and marsseq's two jobs have no result.
+- **Replays.** 86 succeeded, and sopa's and reportho's did not complete. The environment was identical in 82, differs in
+  1 (sopa) and is `unverified` in 4: mcmicro, circdna and raredisease run tasks with no container, and genomeqc leaves
+  no task records.
+- **`nfclaw verify`.** It exited 0 for 78 replays and 1 for 8.
+- **First attempts.** 69 jobs ended with success, an identical environment and `nfclaw verify` 0 at the first attempt.
+  3 of those carry caveats: proteinfold is a stub run, and cutandrun and hicar ignore a failure. So do not read 69
+  as free of caveats.
+- **Containers.** One job left one behind (drop's first attempt).
+- **Output contracts.** tumourevo's and hgtseq's demos passed theirs.
+
+The commits of all 91 jobs match the final pins, except variantbenchmarking, which the updater moved to 1.6.1 once the
+sweep had begun; 1.6.1 ran twice on `aea5fa4`, once in each session. No bundle recorded an issue at `a23a092`, although
+genomeqc's should have: that is G16. What else it found was recorded rather than fixed, because these are the
+pipelines' behaviour and the network's:
+
+- **Files on one side only.** rnafusion, nanostring, longraredisease, mag, spatialaxe, nanoseq and rnasplice have
+  known causes, and [the guide lists them](../known-issues.md#pipeline-specific-run-notes). rnasplice's were
+  not read this time. coproid's 25 missing plot exports and 11 changed links have no established cause.
+- **Remote files reported as missing.** seqinspector, metatdenovo and drop, in two windows (08:56–09:00 and 15:36–15:42
+  UTC). Their reruns were clean. The cause is not established, and
+  [the guide now describes it](../known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists).
+- **funcscan's test limit.** A slow download reached the one-hour limit of its `test` profile while still
+  progressing, and `--resume` took 11 minutes to finish it.
+- **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and its replay did not complete. One
+  `DIAMOND_CLUSTER (HBB)` timeout is unexplained.
+
 ## What this audit did not establish
 
-- **bacass 2.7.0 and variantbenchmarking 1.6.0 have no complete on-host run at their current
-  version.** The server's shared volume ran short: 8 GB free, and each needs more for its images.
-  A watchdog stopped both at 3 GB, so neither result says anything about the pipeline. The updater's
-  gate ran each bundled test at the pinned commit on a hosted runner, successfully
-  (bacass: [run 41837654947](https://github.com/bmds-tue/nf-claw/actions/runs/41837654947),
-  variantbenchmarking: [run 41176597064](https://github.com/bmds-tue/nf-claw/actions/runs/41176597064)).
-  The same shortage left sarek and sopa without a replay at their current version.
-- **Most pipelines did not run again.** The 87 pins that did not move keep the on-host evidence of
-  [`docs/validation.md`](../validation.md) at the same commits; the smoke step above checks only that
-  each one parses and validates.
+- **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` (G03),
+  `config_probe` (G14), `environment_record` (G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli` and
+  `chain` (G15). Only the [runs on the final head](#evidence) cover those changes, and no second sweep did.
+- **marsseq has no result.** The sweep's disk guard stopped its reference build at 2.6 GB free, with STAR and
+  Bowtie2 building side by side, and its analysis then failed on the missing references. That says nothing about the
+  pipeline.
+- **oncoanalyser did not run.** Its references were deleted on 2026-10-16 and no longer fit. Its last on-host run,
+  in [`docs/validation.md`](../validation.md), is at the same commit.
+- **Why cutandrun, hicar and mag ignore a failure.** The
+  [remediation record](2026-11-01-report-remediation.md) asks to reproduce and resolve their ignored Preseq, CIRCOS_PREPARE and
+  MaxBin2 failures. All three reproduced: the pipelines' own configuration tolerates them and nfclaw reports them as
+  caveats. Why each one fails is not established, because the sweep deleted their work directories.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,
-  schedulers such as SLURM, and analyses that need a GPU were not run. Apptainer and macOS ran only
-  in CI's lanes.
+  schedulers such as SLURM, and analyses that need a GPU were not run. seqsubmit needs ENA Webin credentials.
+  Apptainer and macOS ran only in CI's lanes.
 
 ## Not changed, and why
 
@@ -152,6 +193,14 @@ logs. They were not compared one by one.
   scientific scratch tables (the table name is an internal constant), `S314` on the JUnit reports
   the publisher parses (Python's expat bounds entity expansion), and `S324` on nf-test's own MD5
   snapshots.
+
+## Review before the merge
+
+Two sessions worked on this branch and checked each other. One ran the sweep and repeated the other's real runs; the
+other fixed what they found and reran them. That found G15, G16, the second round of G03 and the wording of G14, and
+the known issues above. The repeats agreed with the originals: variantbenchmarking 1.6.1 and the `cleanup = true` gap.
+An adversarial read of the run log's gap lines tried to forge one through `\n`, `\r`, CRLF, split chunks, VT, FF, NEL
+and LS, through a resume and through multi-line output, and found no fault.
 
 ## For the release
 
