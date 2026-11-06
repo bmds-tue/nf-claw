@@ -23,7 +23,9 @@ the static gates beside it, and then went after what those audits had no reason 
   and what each bump did to the audited input roles (G07). Then a [sweep of every pin](#the-pin-sweep).
 - **Every documented command.** All 304 `nfclaw` command lines in the guides, the README and the
   website, parsed against the real argument parser; every internal link and anchor; every
-  `NFCLAW_*` variable against its documentation. No mismatch.
+  `NFCLAW_*` variable against its documentation. No mismatch then. #258 reorganized the guides
+  afterwards, so all of it ran again on 329 command forms: one mismatch, `nfclaw --demo` with no
+  command, now corrected. This shows that commands parse and links resolve, not that the prose is true.
 
 Each finding was reproduced before it was fixed; each fix has a test that fails without it.
 
@@ -33,7 +35,7 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 |---|---|---|---|---|
 | G01 | High | `runner/orchestration.py` (`_input_resume_warning`, `_source_resume_warning`), `runner/provenance.py`, `runner/cli.py` | The bundle is written when a run ends. A nfclaw killed outright (SIGKILL, out of memory, a host restart) or unable to finish it (a full disk) left `--resume` nothing to compare sources and inputs against, so it archived the run and recomputed every task of what may be a days-long analysis. `nfclaw status` meanwhile said "re-run the same command with --resume to continue where it stopped", and the full-disk error "every task is reused from the cache". Reproduced: a real `demo` run, SIGKILL after 4 finished tasks, `--resume`: `-resume` absent from the command, the run moved to `.previous-<id>`, nothing cached. | A launch writes `provenance/launch-record.json` before Nextflow starts: the source identity and the input bytes and namespace it launched with. With no manifest, the resume guards compare against it; a changed source or input still starts fresh, and a damaged record counts as none. The published manifest replaces it, so a finished bundle is unchanged. The same run resumes with its finished tasks cached, no archive; its replay succeeds and verifies with an identical environment. |
 | G02 | High | `runner/chain.py` (`_unchanged_handoff`) | The same for a chain: a stage whose nfclaw was killed prepared its handoff again at a new path, and a new input path alone recomputes every task. | The launch record carries the stage's chain link, so the attempt's handoff is found and kept. |
-| G03 | Medium | `runner/replay_guard.py` (`remove_task_containers`), `runner/execution.py` (`_terminate`) | A stop while the daemon is still creating a task container: its wrapper's `docker stop` and nfclaw's `docker rm -f` both find `No such container`, the daemon then finishes creating it, and a container that never started is removed by nothing. Six of them stayed behind after one SIGTERM on the loaded server, contradicting "removes the task containers". | The containers the engine does not yet list when the stop begins are looked for until they appear, within one 30 s wait however many there are. Containers already listed are not waited for, so an ordinary stop takes no longer. One that still has not appeared is reported with the command of the engine that started it, and a removal the engine says is already in progress is no longer reported as a failure. |
+| G03 | Medium | `runner/replay_guard.py` (`remove_task_containers`), `runner/execution.py` (`_terminate`) | A stop while the daemon is still creating a task container: its wrapper's `docker stop` and nfclaw's `docker rm -f` both find `No such container`, the daemon then finishes creating it, and a container that never started is removed by nothing. Six of them stayed behind after one SIGTERM on the loaded server, contradicting "removes the task containers". | The stopping group is looked through every 0.25 s until it ends, because a client can outlive the signal or start after it. A container the engine does not list yet is looked for until it appears, within one 30 s wait however many there are; one already listed is not waited for, so an ordinary stop takes no longer. One that still has not appeared is reported with the command of the engine that started it, and a removal the engine says is already in progress is no longer reported as a failure. This narrows the problem and does not close it: see [Not changed](#not-changed-and-why). |
 | G04 | Medium | `.gitignore` | The documented `--outdir results` left the checkout dirty: its writer lock `.results.nfclaw.lock`, the default replay target `results.replay/` and the archive `results.previous-<id>/` are not `results/`. | All three are ignored. A test asks Git itself. |
 | G05 | Medium | `runner/cli.py` (`_status_report`) | `nfclaw status` told a killed *replay* to re-run with `--resume`, which `commands.sh` does not have. | A replay is told to run `commands.sh` into a new empty directory; a run launched with `--no-provenance` is told that `--resume` will recompute. |
 | G06 | Medium | `runner/replay_guard.py` (`check_write_boundaries`), `runner/input_safety.py` | `nfclaw run … --check --outdir /` never returned, and any large existing directory given as `--outdir` took minutes, as did one given to `commands.sh`: the boundary check walked every entry under it looking for links into the inputs, although a real run refuses a non-empty directory without `--resume` (and a replay refuses any that holds files). `--check` deliberately does not refuse one, so it now exits without walking it. | A destination that will be refused is not walked. An input inside it is still refused as an overlap, by path. |
@@ -45,7 +47,7 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 | G12 | Low | `runner/orchestration.py` | `--resume` into an empty `--outdir` archived the empty directory and reported preserving a previous run. | Nothing to preserve, nothing archived. |
 | G13 | Low | `tests/test_runtime_followthrough.py`, `README.md`, `docs/mcp.md`, `runner/replay_guard.py`, `runner/source_corrections.py` | The socket test behind a red macOS lane on `main` (run 41939826353) caught only `EPIPE`/`ECONNRESET`, while macOS can report a closing peer as `EPROTOTYPE`, and allowed the handler 1 s on a loaded runner. A garbled README sentence. The job store's growth was undocumented. Four reads relied on the locale's encoding (harmless today: those records are ASCII). | Any closed-peer error, within 10 s. Fixed, documented, and explicit. |
 | G14 | Low | `runner/config_probe.py`, `runner/input_safety.py` | On a host whose JVM cannot reach GitHub, `--check` said the engine "cannot parse its configuration" and suggested another engine and parser. Nextflow 26.04 prints only `Unable to parse config file` there, and the documented IPv6 flag alone fixes it. Separately, a chain `--outdir` holding only the chain's own record counted as refused, so its links were not looked for, although a chain still writes there. | A failed probe is repeated with remote includes skipped: if that parses, the report names the network and its remedies, or, when Nextflow names no include, says the release could not use a remote configuration it includes (it parses without them) rather than claim a fetch failed. A chain's record no longer makes its `--outdir` non-empty. |
-| G15 | Medium | `runner/orchestration.py`, `runner/runlog.py`, `runner/cli.py`, `runner/chain.py` | A gap in what a successful run recorded for its replay (an image without a digest, no task records) reached only stderr and `environment.json`. `run.log`, `nfclaw status` and `nfclaw chain status` said nothing, so a background run or a later session could not see it. A peer session's repeat on a real engine found this. | The gap is a line in `run.log`, which console text cannot forge. `nfclaw status` lists it under `provenance gaps` (`provenance_gaps` with `--json`) and `nfclaw chain status` beside the stage. `status: success` and the exit code do not change, because the results stand. |
+| G15 | Medium | `runner/orchestration.py`, `runner/runlog.py`, `runner/cli.py`, `runner/chain.py`, `runner/environment_record.py` | A gap in what a successful run recorded for its replay (an image without a digest, no task records) reached only stderr and `environment.json`, and a task with no container was not recorded as a gap at all. `run.log`, `nfclaw status` and `nfclaw chain status` said nothing, so a background run or a later session could not see it. A peer session's repeat on a real engine found this. | The gap is a line in `run.log`, which console text cannot forge. `nfclaw status` lists it under `provenance gaps` (`provenance_gaps` with `--json`) and `nfclaw chain status` beside the stage. `status: success` and the exit code do not change, because the results stand. |
 | G16 | Medium | `runner/environment_record.py`, `docs/known-issues.md` | A run with no task records (`cleanup = true`, as genomeqc's test profile sets) recorded no gap, so its bundle read as 0 processes, 0 images and nothing wrong. | `environment.json`'s `issues` says that no image was identified or pinned and why. The replay's check reports `unverified`. The guide gives the remedy, a config holding `cleanup = false`. |
 
 ## Evidence
@@ -126,8 +128,8 @@ engine each `skill.md` names. [`docs/validation.md`](../validation.md#final-pin-
 table and what did not come out clean. In short:
 
 - **Runs.** 88 of the 91 jobs succeeded. seqsubmit needs credentials, and marsseq's two jobs have no result.
-- **Replays.** 86 succeeded, and sopa's and reportho's did not complete. The environment was identical in 82, differs in
-  1 (sopa) and is `unverified` in 4: mcmicro, circdna and raredisease run tasks with no container, and genomeqc leaves
+- **Replays.** 86 succeeded. sopa's was refused, and reportho's failed twice before a third passed, which the counts
+  here leave out. The environment was identical in 82, differs in 1 (sopa) and is `unverified` in 4: mcmicro, circdna and raredisease run tasks with no container, and genomeqc leaves
   no task records.
 - **`nfclaw verify`.** It exited 0 for 78 replays and 1 for 8.
 - **First attempts.** 69 jobs ended with success, an identical environment and `nfclaw verify` 0 at the first attempt.
@@ -150,9 +152,9 @@ pipelines' behaviour and the network's:
   [the guide now describes it](../known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists).
 - **funcscan's test limit.** A slow download reached the one-hour limit of its `test` profile while still
   progressing, and `--resume` took 11 minutes to finish it.
-- **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and its replay did not complete. One
-  `DIAMOND_CLUSTER (HBB)` passed upstream's 3-minute limit as another pipeline's first tasks spent over four minutes
-  outside their scripts. That an image download slowed the shared volume is inferred from the traces.
+- **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and two replays failed before a third
+  passed. Two `DIAMOND_CLUSTER` tasks passed upstream's 3-minute limit as another pipeline's first tasks spent over four
+  minutes outside their scripts. That an image download slowed the shared volume is inferred from the traces.
 - **The failures cutandrun, hicar and mag ignore.** The [remediation record](2026-11-01-report-remediation.md) asks to
   reproduce and resolve them. All three reproduced, in separate demos that kept the failed tasks' files, on `aea5fa4`
   with the later status changes. `PRESEQ_LCEXTRAP`, `CIRCOS_PREPARE` and `MAXBIN2` each stopped with a message saying
@@ -163,10 +165,10 @@ pipelines' behaviour and the network's:
 
 ## What this audit did not establish
 
-- **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` (G03),
-  `config_probe` (G14), `environment_record` (G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli` and
+- **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` and `execution`
+  (G03), `config_probe` (G14), `environment_record` (G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli` and
   `chain` (G15). Only the [runs on the final head](#evidence) cover those changes, and no second sweep did.
-- **marsseq has no result.** The sweep's disk guard stopped its reference build at 2.6 GB free, with STAR and
+- **marsseq has no result.** The sweep's memory guard stopped its reference build at 2.6 GB available, with STAR and
   Bowtie2 building side by side, and its analysis then failed on the missing references. That says nothing about the
   pipeline.
 - **oncoanalyser did not run.** Its references were deleted on 2026-10-16 and no longer fit. Its last on-host run,
@@ -188,6 +190,11 @@ pipelines' behaviour and the network's:
   the stalled download above, and that probe's `nextflow config` and `curl` stayed running until
   stopped by hand. A probe normally ends in seconds, and a nfclaw still alive stops it at its bound
   and on a stop, so this needs both SIGKILL and a stalled network.
+- **A stop can still leave a container, more rarely.** A client that starts and ends between two looks at the group is
+  never seen. So is one whose look is held up by a busy engine, for up to 5 s. Telling a run's containers from another's
+  without racing would need matching each container's work directory against the run's own submitted tasks, because a
+  name alone does not say whose it is and `NXF_WORK` is shared by default. That is a larger change than this
+  audit should make. The price of looking is that a client that never created anything can cost a stop the 30 s wait.
 - **A run that fails by itself can leave a container.** One sweep job did (drop's first attempt, 1
   of 91 jobs). On a stop, nfclaw reads the names of the task containers from the commands of the
   run's process group while it is alive. A run that ended by itself has no group left to read, and

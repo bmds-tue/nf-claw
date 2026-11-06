@@ -3080,7 +3080,19 @@
      "verify": null,
      "containers_left": 0
     }
-   ]
+   ],
+   "further_replay": {
+    "exit": 0,
+    "environment": "identical",
+    "verify": {
+     "exit": 0,
+     "identical": 30,
+     "changed": 26,
+     "missing": 0,
+     "extra": 0,
+     "renamed": 1
+    }
+   }
   },
   "ribomsqc": {
    "name": "ribomsqc",

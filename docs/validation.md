@@ -336,12 +336,13 @@ Of the 91 jobs, 88 runs succeeded; the 3 others are seqsubmit and the two marsse
 
 What did not come out clean, by kind:
 
-- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result: the sweep's disk guard stopped its reference build, with no bearing on the pipeline, and its analysis then failed on the missing references.
+- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result: the sweep's memory guard stopped its reference build at 2.6 GB available, with no bearing on the pipeline, and its analysis then failed on the missing references.
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
-  [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes), and one
-  `DIAMOND_CLUSTER (HBB)` hit upstream's 3-minute limit while, as far as the traces show, a first image download
-  slowed the shared volume. That link is inferred.
+  [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes). Two replays failed, one of
+  them because two `DIAMOND_CLUSTER` tasks hit upstream's 3-minute limit while, as far as the traces show, a first image
+  download slowed the shared volume. That link is inferred. A third, from the kept bundle, passed: environment
+  identical, 30 identical and 26 changed.
 - **The environment check stays `unverified`.** mcmicro, circdna and raredisease run
   [tasks with no container](known-issues.md#a-process-cannot-be-pinned-to-an-image-digest),
   and genomeqc's test profile [leaves no task records](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run).
@@ -433,7 +434,7 @@ Nextflow's retry, so these runs carry no caveat.
 | rangeland 1.0.0 | 24.04.2 | success | 280 | 3 | 12/12 | 6 | success | identical | 1177 identical, 42 changed, 861 links changed |
 | raredisease 3.1.2 | 25.10.4 | success | 876 | 43 | 186/188 | 42 | success | unverified | 217 identical, 182 changed |
 | readsimulator 1.0.1 | 23.04.0 | success | 1 | 1 | 1/1 | 0 | success | identical | 5 identical, 7 changed |
-| reportho 1.1.0 | 25.04.0 | success after `--resume` | 70 | 12 | 35/35 | 1 | failed | — | — |
+| reportho 1.1.0 | 25.04.0 | success after `--resume` | 70 | 12 | 35/35 | 1 | failed twice, then success | identical | 30 identical, 26 changed |
 | ribomsqc v1.0.0 | 25.04.0 | success | 4 | 3 | 4/4 | 3 | success | identical | 7 identical, 10 changed |
 | riboseq 2.0.0 | 25.10.4 | success | 356 | 25 | 50/50 | 22 | success | identical | 504 identical, 597 changed |
 | rnadnavar 1.0.0 | 25.10.4 | success | 120 | 17 | 34/34 | 9 | success | identical | 158 identical, 158 changed |

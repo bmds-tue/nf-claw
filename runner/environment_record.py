@@ -605,6 +605,11 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
     if unpinned:
         record["issues"].append(f"{len(unpinned)} process(es) are not pinned to an image digest "
                                 "for replay: " + ", ".join(unpinned))
+    containerless = sorted(name for name, entry in record["processes"].items()
+                           if entry["without_container"])
+    if containerless:
+        record["issues"].append(f"{len(containerless)} process(es) ran tasks with no container, "
+                                "whose tools a replay cannot compare: " + ", ".join(containerless))
     return record
 
 
