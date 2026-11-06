@@ -54,6 +54,7 @@ not create an overall analysis deadline.
 | `NFCLAW_DOCKER_TIMEOUT` | 60 | The `docker info` daemon check before a Docker-profile run |
 | `NFCLAW_GIT_TIMEOUT` | 10, 30, 60 or 120 by operation | Local Git checks, remote discovery and fetching |
 | `NFCLAW_INIT_TIMEOUT` | 300 | Pipeline submodule initialization |
+| `NFCLAW_MCP_COMMAND_TIMEOUT` | 300 | Each foreground MCP command ([MCP environment](mcp.md#environment)) |
 
 For a slow executor, increase shutdown grace according to measured cancellation
 latency. Increase probe limits when deliberate cold setup needs longer, rather than

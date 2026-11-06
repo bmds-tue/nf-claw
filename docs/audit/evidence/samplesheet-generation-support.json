@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "captured_at": "2026-11-01T00:31:41.499570+00:00",
-  "wrapper_base_commit": "05b4ff92aa62639457ad0ab1106244509fcd1d27",
+  "captured_at": "2026-11-06T00:00:00+00:00",
+  "wrapper_base_commit": "a3e8cb33b0fcfbcc46de9e67f54b61bfa4331747",
   "classifier_sha256": "d6abed336322b56a3235e5a1919853eaf0b35e899e1978caf5e162218fbaaab8",
   "classifier_files": {
     "runner/sheetgen.py": "d6abed336322b56a3235e5a1919853eaf0b35e899e1978caf5e162218fbaaab8",
@@ -58,7 +58,7 @@
     },
     {
       "pipeline": "bacass",
-      "pipeline_commit": "5ed7c2dd9a05d2434d8ba39ace1116368a4ba570",
+      "pipeline_commit": "ce30c3a857adad365856e5565455c4cdae60ef3f",
       "status": "column_selection",
       "reason": "the samplesheet takes reads in several column groups (R1 + R2; LongFastQ) and file names cannot tell which yours belong in; leave the groups you do not use empty, e.g. --sheet-set LongFastQ=",
       "schema": "assets/schema_input.json",
@@ -167,7 +167,7 @@
     },
     {
       "pipeline": "createpanelrefs",
-      "pipeline_commit": "8ce86a84b5af74facf99abb76216531622b52bc8",
+      "pipeline_commit": "b9d0e44a41543c9c37441de97684f8e1efde3901",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",
@@ -800,7 +800,7 @@
     },
     {
       "pipeline": "pixelator",
-      "pipeline_commit": "d7376a8bca8b262b858ed440b6dd49c1853911e8",
+      "pipeline_commit": "32210d270ca5e8fd2eb46bb405674f24b2319980",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",
@@ -1131,7 +1131,7 @@
     },
     {
       "pipeline": "sopa",
-      "pipeline_commit": "0b959963a3984ff78725209113d9ecdb78cef0b6",
+      "pipeline_commit": "64a9f6bce616cbe7dc94d06f5719dee394d303a7",
       "status": "manual",
       "reason": "the samplesheet declares no file type nfclaw could match files against (no column's pattern names a file extension)",
       "schema": "assets/schema_input.json",
@@ -1188,7 +1188,7 @@
     },
     {
       "pipeline": "variantbenchmarking",
-      "pipeline_commit": "de4e43900039edd09106198d83c2559ea6a61b1a",
+      "pipeline_commit": "c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1",
       "status": "direct",
       "reason": null,
       "schema": "assets/schema_input.json",

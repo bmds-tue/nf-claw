@@ -19,7 +19,7 @@ nfclaw chain status /abs/chain                           # inspect stage outcome
 
 ## Navigation
 
-[Specification Format](#1-the-specification-file-specjson) • [Execution Lifecycle](#2-execution-lifecycle) • [Handoff Rules](#3-handoff-rules-and-transformations) • [Failure & Resume](#4-failure-recovery-and-resume) • [Cryptographic Lineage](#5-provenance-and-cryptographic-lineage)
+[Specification Format](#1-the-specification-file-specjson) • [Execution Lifecycle](#2-execution-lifecycle) • [Handoff Rules](#3-handoff-rules-and-transformations) • [Failure & Resume](#4-failure-recovery-and-resume) • [Cryptographic Lineage](#5-provenance-and-cryptographic-lineage) • [Sensitive Environment Values](#sensitive-environment-values-in-chain-records)
 
 ---
 

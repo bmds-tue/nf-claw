@@ -1,5 +1,10 @@
 # Security policy
 
+## Supported versions
+
+nf-claw has no tagged release yet. Security fixes land on `main`, and only the current `main` is
+supported.
+
 ## Reporting a vulnerability
 
 Report a suspected vulnerability privately: on the repository's GitHub page open **Security →

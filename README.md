@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/bmds-tue/nf-claw/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/bmds-tue/nf-claw/tests.yml?branch=main&amp;label=tests" alt="Tests status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="https://nextflow.io"><img src="https://img.shields.io/badge/Nextflow-DSL2-brightgreen.svg" alt="Nextflow DSL2"></a>
@@ -12,11 +13,24 @@
 
 # nf-claw
 
-A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline source is kept unchanged as a pinned git submodule accompanied by an auto-generated `skill.md` describing its declared inputs, parameters, and run commands. Documented runtime corrections are recorded in provenance configs; for the affected fastqrepair 1.1.1 commit they correct record splitting, quality-offset forwarding and publication without editing the pinned source tree. Exact pinned Bactmap, Createtaxdb and Funcscan releases use [recorded, independently copied workflow corrections](docs/source-corrections.md), with the actual corrected source bound to execution, resume and replay.
+A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline is an unmodified git submodule pinned to a release, with a generated `skill.md` (how to run it) and `reference.md` (every parameter); one runner, `nfclaw`, validates a run before it starts, records what it takes to replay it, chains pipelines and serves all of it to agents over MCP.
 
-**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive digital interface to the entire library (pipeline explorer, parameters, architecture documentation, and automation status captured at build time), rebuilt from the repository on deployment.
+**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive interface to the whole library (pipeline explorer, parameters, documentation and automation status captured at build time), rebuilt from the repository on deployment.
 
 ---
+
+## What It Does
+
+| Step | Command | What you get |
+|---|---|---|
+| **Find** | `nfclaw list <keywords>` | The pipelines matching a request, ranked, without reading the whole catalog. |
+| **Read** | `nfclaw show <name>` | The pinned release's inputs, required parameters and exact run command. |
+| **Run** | `nfclaw run <name> …` | A real run, checked first; `--check` validates and prints the command without launching tasks. |
+| **Follow** | `nfclaw status <outdir>` | How the run stands, how it ended, and any caveats the pipeline reported about its results. |
+| **Replay** | `<outdir>/provenance/commands.sh`, `nfclaw verify` | A guarded reproduction into a fresh directory, compared with the original by path, bytes and environment. |
+| **Assess** | `nfclaw assess` | Declared scientific outputs and sample coverage checked against an explicit contract. |
+| **Chain** | `nfclaw chain run` | Pipelines in sequence, each fed by the checksummed outputs of the one before. |
+| **Serve** | `nfclaw mcp` | All of the above as MCP tools, with long runs as detached jobs. |
 
 nfclaw checks a run before it starts and again before it reports success. It refuses unknown flags,
 invalid values, unsafe input filenames or sample identities and outputs that overlap their inputs
@@ -26,9 +40,14 @@ source changed while it ran. [AGENTS.md](AGENTS.md) states each rule in brief,
 [docs/architecture.md](docs/architecture.md) how it is enforced, and
 [docs/known-issues.md](docs/known-issues.md) where its checks stop.
 
+Pipeline source trees stay unchanged. A few exact releases need runtime corrections, and each is
+recorded with the run and replayed with it: recorded configs for fastqrepair 1.1.1 (record
+splitting, quality-offset forwarding, publication) and independently copied, source-bound working
+copies for Bactmap, Createtaxdb and Funcscan ([source corrections](docs/source-corrections.md)).
+
 ## Navigation
 
-[Repository Layout](#layout) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance & Adding Pipelines](#maintain) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
+[What It Does](#what-it-does) • [Repository Layout](#layout) • [Documentation](#documentation-guides) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance & Adding Pipelines](#maintain) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
 
 ---
 
@@ -43,30 +62,46 @@ The repository is structured into four functional zones, plus the catalogs, docu
 | `librarian/` | **Maintenance Automation** | Tools for building context files, auditing schema drift, bumping releases, and discovering new DSL2 pipelines (`make build`, `make check`). |
 | `handoffs/` | **Chaining Rules** | Declarative rules (`handoffs/<upstream>/<downstream>.json`) mapping outputs between sequential pipeline stages, statically verified by the drift gate. |
 | `catalog.md` / `.json` | **Pipeline Catalog** | Auto-compiled index detailing declared inputs, conditional outputs, upstream descriptions, and citations for all tracked pipelines. |
-| `sources.tsv` | **Release Manifest** | Registry mapping pipeline names to upstream remotes and version tracking policies (`latest-release`). |
-| `docs/` | **Documentation** | The guides listed below. |
+| `sources.tsv` | **Release Manifest** | Registry mapping pipeline names to upstream remotes and version tracking policies (`latest-release`, or `hold` to keep a pin). |
+| `docs/` | **Documentation** | The guides listed below, and the dated audit records with their evidence (`docs/audit/`). |
 | `website/` | **Live Portal** | Next.js static site and documentation hub, rebuilt from the repository data on every push to `main`. |
 
 ### Documentation Guides
 
+#### Running pipelines
+
 | Topic | Document | Scope & Contents |
 |---|---|---|
-| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | Architectural zones, schema preflight, sibling file locks, provenance structure, and scientific assessment. |
-| **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, Nextflow 25 vs 26 parser transition, and `--nxf-ver` controls. |
-| **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup/shutdown margins, background runs, and quick chain status. |
-| **Replay & Verification** | [`docs/replay.md`](docs/replay.md) | Bundle contents, the replay guard, dependency stability, resume of changed inputs, and what `nfclaw verify`/`assess` establish. |
-| **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec schemas, handoff transforms, and lineage verification. |
-| **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Host environment troubleshooting, benign Nextflow warnings, and upstream workarounds. |
-| **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, with the settings each needed. |
-| **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked/deferred/unsupported validations, the schema subset, and the 95-pipeline samplesheet generation matrix. |
-| **Scientific Output Contracts** | [`docs/scientific-output-contracts.md`](docs/scientific-output-contracts.md) | `nfclaw assess` specifications, parsed format comparisons (BAM, VCF, FASTA, TSV, H5AD), sample coverage, and tolerances. |
-| **Source Corrections** | [`docs/source-corrections.md`](docs/source-corrections.md) | Recorded, independently copied workflow corrections for Createtaxdb, Funcscan, and Bactmap, plus Fastqrepair runtime configs. |
-| **Maintenance Policy** | [`docs/maintenance.md`](docs/maintenance.md) | Automatic-publication evidence policy, immutable candidate verification, full matrix testing, and gated promotion. |
-| **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | GitHub Actions automation, tag discovery, and strict zero-drift enforcement. |
-| **DRAMP References** | [`docs/dramp-reference.md`](docs/dramp-reference.md) | Standardized DRAMP antimicrobial peptide reference preparation and pinned-image indexing for Funcscan. |
-| **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: tools, detached jobs, chains. |
-| **Agent Guidance** | [`AGENTS.md`](AGENTS.md) | Authoritative reference for autonomous coding assistants and LLM agents; [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
-| **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map and navigation index for external AI agents (llms.txt standard). |
+| **Agent Guide** | [`AGENTS.md`](AGENTS.md) | The operating manual for agents and people: find, run, follow, replay and chain. [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
+| **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked, deferred and unsupported validations, the schema subset, the per-pipeline samplesheet generation matrix, and what is refused before launch. |
+| **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec format, handoff rules and transformations, resume and lineage verification. |
+| **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: setup, tools, detached jobs and protocol. |
+| **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup and shutdown margins, background runs and quick chain status. |
+| **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, the Nextflow 25 to 26 parser transition, `--nxf-ver` controls, CI validation scope and host requirements. |
+| **DRAMP References** | [`docs/dramp-reference.md`](docs/dramp-reference.md) | Preparing a recorded DRAMP antimicrobial peptide reference and its pinned-image index for Funcscan. |
+| **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Symptom-to-fix index: host environment, runs and resume, replay, chains, benign warnings and upstream defects. |
+
+#### Trusting results
+
+| Topic | Document | Scope & Contents |
+|---|---|---|
+| **Replay & Verification** | [`docs/replay.md`](docs/replay.md) | Bundle contents, the replay guard, dependency stability, resume of changed inputs, and what `nfclaw verify` and `nfclaw assess` establish. |
+| **Scientific Output Contracts** | [`docs/scientific-output-contracts.md`](docs/scientific-output-contracts.md) | `nfclaw assess` specifications, parsed format comparisons (BAM, VCF, FASTA, TSV, H5AD), sample coverage and tolerances. |
+| **Source Corrections** | [`docs/source-corrections.md`](docs/source-corrections.md) | Recorded workflow corrections for Createtaxdb, Funcscan and Bactmap, and Fastqrepair's runtime configs. |
+| **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, the settings each needed, and the limits of that evidence. |
+
+#### Maintaining nf-claw
+
+| Topic | Document | Scope & Contents |
+|---|---|---|
+| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | The four zones, the runner's modules, preflight, locking, provenance structure, verification and assessment. |
+| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Workflow, coding standards, adding a pipeline or handoff rule, tests and writing documentation. |
+| **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | The daily and weekly maintenance workflows, tag discovery and strict zero-drift enforcement. |
+| **Maintenance Policy** | [`docs/maintenance.md`](docs/maintenance.md) | Automatic-publication evidence policy, immutable candidate verification, full matrix testing and gated promotion. |
+| **Audit Records** | [`docs/audit/`](docs/audit/README.md) | Dated audits and remediations, with the evidence behind each change. |
+| **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) | User-visible changes, newest first, by pull request. |
+| **Security Policy** | [`SECURITY.md`](SECURITY.md) | How to report a suspected vulnerability privately, and what is in scope. |
+| **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map for external AI agents (llms.txt standard). |
 
 ---
 
@@ -124,9 +159,10 @@ nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
 ```
 
 `--check` leaves `--outdir` untouched; conditional and complex schema rules remain subject to
-upstream runtime validation.
+upstream runtime validation. It does need the run's tools on the host: Git, Nextflow, Java and the
+profile's container engine, and a Docker profile needs a responding daemon.
 
-### Samplesheet from Data Files
+### 3. Samplesheet from Data Files
 
 ```bash
 # Pass the data files instead of a samplesheet: a directory (searched recursively), a quoted glob,
@@ -148,7 +184,7 @@ complete read synchronization or correct study metadata. Distinct SRA `accession
 values remain distinct molecules. Explicit mate labels that contradict an inferred pairing
 are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about contradictions.
 
-### 3. Provenance Replay & Verification
+### 4. Provenance Replay & Verification
 
 ```bash
 # Reproduce a completed run into a fresh target directory
@@ -170,7 +206,7 @@ What each mode checks, and what it cannot certify, is in
 [the verification engine](docs/architecture.md#27-verification-engine-nfclaw-verify) and
 [scientific output contracts](docs/scientific-output-contracts.md).
 
-### 4. Release Selection & Development Code
+### 5. Release Selection & Development Code
 
 ```bash
 # List available release tags (pinned latest flagged; dev branch listed last)
@@ -187,7 +223,7 @@ nfclaw show rnaseq --pipeline-version dev
 nfclaw run rnaseq --pipeline-version dev --input samplesheet.csv --outdir results -profile docker
 ```
 
-### 5. Engine Pinning & Runtime Environment
+### 6. Engine Pinning & Runtime Environment
 
 ```bash
 # Pin a specific Nextflow engine version (records NXF_VER in provenance)
@@ -197,7 +233,7 @@ nfclaw run rnaseq --nxf-ver 25.10.4 --input ss.csv --outdir results -profile doc
 nfclaw run rnaseq --nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true --input ss.csv --outdir results -profile docker
 ```
 
-### 6. Pipeline Chaining
+### 7. Pipeline Chaining
 
 ```bash
 # Discover supported downstream handoffs for a pipeline
@@ -216,7 +252,7 @@ nfclaw chain run spec.json --outdir /abs/chain --resume
 nfclaw chain status /abs/chain
 ```
 
-### 7. Workstation Resource Caps
+### 8. Workstation Resource Caps
 
 ```bash
 # Apply a resource ceiling to prevent out-of-memory aborts on local workstations
@@ -228,7 +264,7 @@ Ceilings need Nextflow 24.04.0 or newer; [AGENTS.md](AGENTS.md) explains how the
 retries. Neither a task nor the analysis has a time limit by default: `--limit-time` caps each
 task and `--timeout` the whole analysis ([timeouts and long analyses](docs/timeouts.md)).
 
-### 8. AI Agents over MCP
+### 9. AI Agents over MCP
 
 ```bash
 # Serve nf-claw to an MCP client on stdio (Claude Code shown; Codex, Antigravity, Hermes: docs/mcp.md)
@@ -283,6 +319,7 @@ Automated GitHub Actions workflows keep the library, test suites, and website sy
                                 │  • tests.yml (matrix & run)     │
                                 │  • drift-check.yml (schemas)    │
                                 │  • demo-validation.yml (demo)   │
+                                │  • fastqrepair-validation.yml   │
                                 │  • pipeline-execution.yml (PR)  │
                                 └─────────────────────────────────┘
 ```

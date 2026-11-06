@@ -7,7 +7,7 @@ tested on the same host: replay, verification, resume, chains, sample-sheet gene
 versions and status reporting. This page records how the runs were done, what passed, and what each
 result does and does not show.
 
-The versions and observations below describe the 2026-10-14 to 2026-10-15 validation,
+The versions and observations below describe the 2026-10-14 to 2026-10-16 validation,
 not a fresh execution after every repository change. Releases bumped and pipelines added since then
 that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep);
 the automated updater itself gates a release on its preview, tests, drift checks and one bundled analysis
@@ -160,7 +160,6 @@ common on the test reads; FusionCatcher called all 14 of Arriba's.
 | viralintegration | 0.1.1 | 23.04.0 | success | 45 completed | 1 | host network |
 | viralmetagenome | 1.2.0 | 25.10.4 | success | 288 completed | 1 | host network |
 | viralrecon | 3.0.0 | 25.04.0 | success | 200 completed | 1 |  |
-
 
 ## Fresh single-attempt runs
 

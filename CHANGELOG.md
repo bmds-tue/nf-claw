@@ -1,10 +1,11 @@
 # Changelog
 
-User-visible changes to nf-claw, newest first. nf-claw has no tagged release yet; the draft release
-notes for 1.0.0 (2026-10-22) describe the library as it stood then, and this file starts there.
+User-visible changes to nf-claw, newest first, by pull request. nf-claw has no tagged release yet;
+the draft release notes for 1.0.0 (2026-10-22) describe the library as it stood then, and this file
+starts there.
 Pipeline releases the maintenance workflows pin, bump or add are recorded in `sources.tsv`, the
 generated `skill.md` files and the git history, not here. Audit records, with the evidence behind
-each change, are in [`docs/audit/`](docs/audit/).
+each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ## Unreleased
 
@@ -12,13 +13,13 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 - `nfclaw status --json` and `nfclaw chain status --json` print one machine-readable object (state,
   outcome, times, pids, logs, caveats, recorded error, last output, and the human report) with the
-  same exit codes; the MCP `run_status` tool returns it as `run`.
+  same exit codes; the MCP `run_status` tool returns it as `run` (#227).
 - [`docs/replay.md`](docs/replay.md): what a provenance bundle carries, the replay guard, dependency
   stability, resume of changed local inputs, and what `nfclaw verify` and `nfclaw assess`
-  establish.
+  establish (#227).
 - The website's search palette finds documentation sections by their headings, not only documents
   by title, and opens the page at the section; below the widest layout, a document opens with a
-  folded table of contents.
+  folded table of contents (#227).
 - `nfclaw --version`, `nfclaw list <keywords>`, run manifests that record which nfclaw ran them, and
   a security policy (`SECURITY.md`) (#218).
 - An accessibility check of every website page in the browser tests (#219).
@@ -30,14 +31,20 @@ each change, are in [`docs/audit/`](docs/audit/).
 
 ### Changed
 
+- The documentation was checked against the code and reorganized for release: the README leads with
+  what nf-claw does and groups its guides by purpose, `docs/known-issues.md` and `docs/mcp.md` are
+  arranged by topic, `docs/audit/` has an index, and contributors have documentation conventions.
+  Corrected: the verdict an unexpected preview timeout gets, releases still called pinned after a
+  bump, the validation dates, and the generation matrix's evidence for five bumped pins. Tests now
+  check every relative link and anchor, the guide listings and the MCP tool table (#258).
 - `AGENTS.md`, which every agent session loads, is half its size (45 KB → 24 KB): it keeps every
-  operating instruction and links the guarantees behind them to focused guides.
+  operating instruction and links the guarantees behind them to focused guides (#227).
 - Inputs and outputs are hashed several files at once (up to eight threads): one core hashed
-  314 MB/s on the validation server, eight threads 7.7× faster on cached data.
+  314 MB/s on the validation server, eight threads 7.7× faster on cached data (#227).
 - `nfclaw run` and `nfclaw chain run` refuse a Python without POSIX file locks (native Windows)
-  instead of running without their writer locks; use WSL 2 there.
+  instead of running without their writer locks; use WSL 2 there (#227).
 - Both maintenance bots hand their frozen candidate to one shared gate and publisher
-  (`maintenance-gate.yml`) instead of repeating its jobs.
+  (`maintenance-gate.yml`) instead of repeating its jobs (#235).
 - Generated parameter tables write patterns, defaults and allowed values as code spans, so they
   render as the values nf-schema enforces (#219).
 - Each CI test lane runs the complete suite on all of its runner's cores (`pytest -n auto
@@ -85,28 +92,30 @@ each change, are in [`docs/audit/`](docs/audit/).
   change, and symlink modes are recorded portably so a macOS bundle replays from its archive on
   Linux. A previous run whose live Nextflow, nfclaw or replay process cannot be identified is no
   longer moved aside by `--resume`. A slow process inventory no longer stops a foreground MCP
-  command; foreground output redacts inherited `NXF_*` secrets as job views do.
+  command; foreground output redacts inherited `NXF_*` secrets as job views do (#252).
+- A stop that arrives while a metadata probe is being launched no longer leaves its helpers running:
+  the probe's process group is cleaned up however early the signal lands (#256).
 - New ordinary runs authenticate source permissions, links, empty directories and untracked/ignored
   source files as well as bytes. Source archives preserve that identity. Resume preserves the old
   run and recomputes when complete source identity changed or was never recorded; unchanged source
-  keeps normal cache reuse. Legacy bundles retain their original evidence scope.
+  keeps normal cache reuse. Legacy bundles retain their original evidence scope (#249).
 - Redact sensitive environment values from shell/MCP job reports and keep execution records
   private. Stop foreground MCP descendants on timeout or cancellation; recover and safely cancel
   commands that survive a killed job supervisor. Reserve MCP control workers and bound slow-work
-  admission. Offline release listings retain and label the committed pipeline pin.
+  admission. Offline release listings retain and label the committed pipeline pin (#249).
 - Apply supported scalar, required-field, relationship and uniqueness checks to flat JSON/YAML
   samplesheets as well as CSV/TSV. Report unreadable process identities as unknown, and unreadable
-  task-container inventories as unconfirmed cleanup.
+  task-container inventories as unconfirmed cleanup (#249).
 - Distinguish macOS zombie-only process groups from genuine signal permission failures during
-  replay and metadata cleanup; retain failure when live members or unreadable inventory remain.
+  replay and metadata cleanup; retain failure when live members or unreadable inventory remain
+  (#249).
 - Foreground MCP work reports unconfirmed cleanup if process inspection becomes unreadable after
-  launch or an authenticated descendant survives; a successful command cannot hide that outcome.
-
+  launch or an authenticated descendant survives; a successful command cannot hide that outcome
+  (#249).
 - Resolve verified current-product audit findings in process cancellation, completion caveats,
   environment attribution/deadlines, scientific validity/reference handoffs, private frozen-stage
   identity, website navigation/guidance/static counts, manifest parsing and MCP/job error handling
   (#247). Evidence and limitations: [follow-through audit](docs/audit/2026-10-31-followthrough-audit.md).
-
 - A run whose pinned release Nextflow 26.04+'s strict parser rejects (methylseq 4.2.0, atacseq 2.1.2,
   viralrecon 3.0.0 among the pins) fails with the fix that works — the legacy parser,
   `--nxf-env NXF_SYNTAX_PARSER=v1`, or `--nxf-ver 25.10.4` — instead of "re-run the same command with
@@ -166,10 +175,10 @@ each change, are in [`docs/audit/`](docs/audit/).
 - A stopped run (Ctrl-C, `kill`, `--timeout`, MCP `cancel_job`) and a stopped replay remove the
   Docker/Podman task containers their processes started. Task wrappers killed while `docker stop`
   waited on a container's PID 1 had left every container behind, exited, and with a shorter shutdown
-  grace still running.
+  grace still running (#227).
 - `nfclaw verify` no longer fails every replay of a resumed run: the run metadata that a stopped or
   failed earlier attempt left in the original's `pipeline_info/` is listed as `earlier attempts`
-  instead of as missing results.
+  instead of as missing results (#227).
 - `nfclaw verify` pairs the random names `kraken2-build` gives library files when they contain `_`
   (createtaxdb's Kraken2 and Bracken databases): such a replay had been reported as missing them
   (#226).
@@ -185,7 +194,7 @@ each change, are in [`docs/audit/`](docs/audit/).
   30. ampliseq 3.1.0's test, still running at 30 minutes, had failed the update since
   2026-10-29 and held back every other release with it (variantbenchmarking 1.6.0). A release
   that cannot pass the gate can be set to the `hold` policy in `sources.tsv` so that the others
-  publish ([maintenance.md](docs/maintenance.md)).
+  publish ([maintenance.md](docs/maintenance.md)) (#228).
 - The acceptance gate and the maintenance publisher run their Python helpers on `$PYTHON` (default
   `python3`, as in the Makefile) and refuse an interpreter older than 3.11 with a message naming
   it. On macOS, whose `python3` is 3.9, every preview had failed with an `ImportError` reported as

@@ -83,10 +83,18 @@ npx playwright install chromium   # once
 npm run build && npm run test:browser
 ```
 
-The browser tests serve `out/` and drive it in Chromium: the operational checks in
-`tests/operations.spec.ts`, and `tests/accessibility.spec.ts`, which runs axe-core on every exported
-page (and on the layouts that change at phone width, the open search palette and a fully expanded
-parameter list) and fails on any violation.
+The browser tests serve `out/` and drive it in Chromium:
+
+| Spec | What it checks |
+|---|---|
+| `tests/operations.spec.ts` | The operational behaviour of the built pages. |
+| `tests/accessibility.spec.ts` | axe-core on every exported page, the layouts that change at phone width, the open search palette and a fully expanded parameter list; any violation fails. |
+| `tests/links.spec.ts` | Which link targets rendered text may use, and how repository links resolve. |
+| `tests/format.spec.ts` | The wording of workflow schedules and the release timeline's months. |
+| `tests/audit-regressions.spec.ts` | Regressions found by the repository audits. |
+
+CI also runs the site's Markdown parser tests over every generated `skill.md` from the repository root
+(`pytest tests/test_website_parsing.py`), and a skip there fails the job.
 
 The Tailwind 4 build targets Safari 16.4+, Chrome 111+ and Firefox 128+; see the
 [official browser requirements](https://tailwindcss.com/docs/upgrade-guide#browser-requirements).
