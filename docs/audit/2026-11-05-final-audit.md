@@ -52,15 +52,17 @@ Each finding was reproduced before it was fixed; each fix has a test that fails 
 
 ## Evidence
 
-Runs, stops, chains, MCP and the CLI cases ran on the server on the fixed tree. The static gates, the
-website and part of the packaging ran locally. The per-pin records are
+Runs, stops, chains, MCP and the CLI cases ran on the server on the fixed tree, and the last round of them on
+`366c203`. Only `environment_record.py` changed after that, in `feba432`, the last code change, which has its own
+suite and its own real run. The static gates, the website and part of the packaging ran locally. The per-pin records are
 [`evidence/2026-11-05-pin-runs.json`](evidence/2026-11-05-pin-runs.json), for the pins that had moved, and
 [`evidence/2026-11-05-pin-sweep.json`](evidence/2026-11-05-pin-sweep.json), for the sweep.
 
-- **Suites.** 4,175 tests, 0 failures, 4 skips, in two runs; `ruff` and the drift check clean. `main`
+- **Suites.** On `feba432`: 4,196 tests, 0 failures, 4 skips; `ruff` and the drift check clean. `main`
   before the fixes: 4,129 tests, 0 failures, 4 skips. The 4 skips are audited-commit fixtures that a
-  depth-1 clone lacks. GitHub CI on `4821d22`: all 10 pytest lanes (Ubuntu and macOS, Python
-  3.11–3.15), website, Nextflow integration, drift, native and Apptainer demos, CodeQL.
+  depth-1 clone lacks. GitHub CI on `feba432`: all 10 pytest lanes (Ubuntu and macOS, Python
+  3.11–3.15), website, Nextflow integration, drift, native and Apptainer demos, CodeQL. One macOS lane got
+  no runner and was rerun.
 - **Static gates and the repository.** `zizmor` (only the notes below), `actionlint`, `shellcheck`,
   an extended `ruff` selection read rule by rule, `pip-audit` with no known vulnerability. The
   ruleset is active; private vulnerability reporting, secret scanning and push protection are on;
@@ -84,23 +86,37 @@ website and part of the packaging ran locally. The per-pin records are
 - **Chains.** `demultiplex` → `seqinspector`: SIGTERM then `--resume`; SIGKILL in stage 2 after 56
   tasks, then `--resume`: exit 0, stage 2 cached, no archive, lineage verified by SHA-256.
   `chain --check`: 15 of 19 edges pass on Nextflow 26.04.3 unpinned, and the other 4 are refused
-  with the remedy named.
+  with the remedy named. All of this ran again on `366c203`, where the SIGKILL came after 5 of stage 2's
+  tasks and those 5 were cached. An MCP chain ran there too, with its lineage verified.
 - **Stops at the worst moment (G03).** Under load, with no wait, 6, 4 and 6 containers stayed `created`.
   With a wait of 15 s, 0, 6 and 0 did: containers appeared 2 to 15 s after the SIGTERM, and the slowest stop
   took 79.6 s, with `rm -f` at its 60 s bound. Hence one wait of 30 s, and a report of what still has not
-  appeared. With it, on `aea5fa4`, 3 trials left no container and took 7.7–15.9 s. An ordinary stop, whose
-  containers already run, listed nothing to wait for, and the 5 false "could not be removed" lines are gone.
+  appeared. An ordinary stop, whose containers already run, listed nothing to wait for, and the 5 false
+  "could not be removed" lines are gone. Then a real chain's SIGTERM on `85313d4` left one exited container,
+  whose client had started after nfclaw last looked. Stops timed as tasks start reproduced it: on that code, 2 of
+  12 trials left containers, 2 each. With the group looked through until it ends (`366c203`), the same 12 trials
+  and the battery's 3 more left none, in 5.0–37.9 s, and the same chain's stop left none. Four stops took
+  35–38 s, the wait for a container that never appeared. 12 trials are too few to show the rate by themselves;
+  the tests that fail without the fix show the mechanism.
 - **Odd input (G06, G08).** `--outdir /` is refused in 0.6 s, `/mnt/volume` (771 GB in use) in 0.9 s,
-  the same in a chain in 2.1 s, and `commands.sh /mnt/volume` in 0.2 s. Of the 115 cases on the final
-  tree, 114 end cleanly at once, with no traceback. The other, `NXF_HOME='~nosuchuser/h'`, is Nextflow
+  the same in a chain in 2.1 s, and `commands.sh /mnt/volume` in 0.2 s. Of the 115 cases on `366c203`,
+  114 end cleanly at once, with no traceback. The other, `NXF_HOME='~nosuchuser/h'`, is Nextflow
   downloading itself into a new home, which stalls on this IPv6-only host; `NFCLAW_CONFIG_TIMEOUT`
   bounds it, and with a 20 s bound it was refused with that cause and left no process behind.
-- **MCP, through the official SDK.** 14 tools; a refused job reports its cause; a real job succeeds and
-  `nfclaw jobs` agrees; path traversal is refused; replay and verify pass; `cancel_job` took 3 task
-  containers to 0.
-- **Every pin.** The maintenance smoke step exits 0: all 95 pins pass on the engine their `skill.md`
-  names. On Nextflow 26.04.3, 25 of them are refused without `--nxf-ver` or `NXF_SYNTAX_PARSER=v1`,
-  as documented.
+- **MCP, through the official SDK.** On `366c203`: 14 tools; a refused job reports its cause; a real job
+  succeeds and `nfclaw jobs` agrees; path traversal is refused; replay and verify pass; `cancel_job` took 5
+  task containers to 0. A job whose supervisor got SIGKILL reads `lost`, and `resume=true` succeeded with its 2
+  finished tasks cached and no archive.
+- **Provenance gaps on a real engine (G15, G16).** A demo with `cleanup = true` through MCP on `366c203`:
+  `get_job`, `run_status` and `nfclaw jobs status` each report the gap, and the run stays `success` with exit
+  code 0. `get_job` and `nfclaw jobs status --json` carry it in the status report's text, and `run_status`
+  also as `provenance_gaps`. A real chain with the same config: `nfclaw chain status` names it beside each
+  stage, with the lineage verified. mcmicro's demo on `feba432`: its `exec:` task `OMEVALIDATION` is named by
+  the run's warning, `nfclaw status`, `provenance_gaps` and `environment.json`. Its replay reports `unverified`,
+  and `nfclaw verify` exits 0 (18 identical, 13 changed, 0 missing, 0 extra), or 1 with `--require-environment`.
+- **Every pin.** The maintenance smoke step exits 0 on `366c203`: all 95 pins pass on the engine their
+  `skill.md` names. On Nextflow 26.04.3, 25 of them are refused without `--nxf-ver` or
+  `NXF_SYNTAX_PARSER=v1`, as documented.
 
 Pins moved since their last on-host validation, each on the engine its `skill.md` names. Sarek, sopa,
 bacass and variantbenchmarking first ran short of disk, so these rows are from the sweep below:
@@ -140,8 +156,8 @@ table and what did not come out clean. In short:
 
 The commits of all 91 jobs match the final pins, except variantbenchmarking, which the updater moved to 1.6.1 once the
 sweep had begun; 1.6.1 ran twice on `aea5fa4`, once in each session. No bundle recorded an issue at `a23a092`, although
-genomeqc's should have: that is G16. What else it found was recorded rather than fixed, because these are the
-pipelines' behaviour and the network's:
+genomeqc's should have (G16), and so should those of mcmicro, circdna and raredisease (G15). What else it found was
+recorded rather than fixed, because these are the pipelines' behaviour and the network's:
 
 - **Files on one side only.** rnafusion, nanostring, longraredisease, mag, spatialaxe, nanoseq and rnasplice have
   known causes, and [the guide lists them](../known-issues.md#pipeline-specific-run-notes). rnasplice's were
@@ -166,8 +182,8 @@ pipelines' behaviour and the network's:
 ## What this audit did not establish
 
 - **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` and `execution`
-  (G03), `config_probe` (G14), `environment_record` (G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli` and
-  `chain` (G15). Only the [runs on the final head](#evidence) cover those changes, and no second sweep did.
+  (G03), `config_probe` (G14), `environment_record` (G15, G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli`
+  and `chain` (G15). Only the [later runs](#evidence) cover those changes, and no second sweep did.
 - **marsseq has no result.** The sweep's memory guard stopped its reference build at 2.6 GB available, with STAR and
   Bowtie2 building side by side, and its analysis then failed on the missing references. That says nothing about the
   pipeline.
@@ -184,8 +200,8 @@ pipelines' behaviour and the network's:
   each `skill.md` names the engine; choosing an engine silently is what nfclaw refuses to do.
 - **A vanished nfclaw cannot remove its task containers.** On Linux Nextflow still gets SIGTERM and
   the wrappers clean up what they can; some can stay behind exited
-  (`docker ps -a --filter name=nxf-`). They hold no process, as `AGENTS.md` and
-  [`docs/mcp.md`](../mcp.md) say.
+  (`docker ps -a --filter name=nxf-`), as one did after the chain's SIGKILL on `366c203`. They hold no
+  process, as `AGENTS.md` and [`docs/mcp.md`](../mcp.md) say.
 - **A configuration probe outlives a nfclaw killed outright.** The fuzz harness killed nfclaw during
   the stalled download above, and that probe's `nextflow config` and `curl` stayed running until
   stopped by hand. A probe normally ends in seconds, and a nfclaw still alive stops it at its bound
