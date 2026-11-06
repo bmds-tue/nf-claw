@@ -151,6 +151,13 @@ pipelines' behaviour and the network's:
   progressing, and `--resume` took 11 minutes to finish it.
 - **reportho's live databases.** 3 of its 7 launches failed on Ensembl's answers, and its replay did not complete. One
   `DIAMOND_CLUSTER (HBB)` timeout is unexplained.
+- **The failures cutandrun, hicar and mag ignore.** The [remediation record](2026-11-01-report-remediation.md) asks to
+  reproduce and resolve them. All three reproduced, in separate demos that kept the failed tasks' files, on `aea5fa4`
+  with the later status changes. `PRESEQ_LCEXTRAP`, `CIRCOS_PREPARE` and `MAXBIN2` each stopped with a message saying
+  it had too little to work with, and the pipeline's own configuration tolerates the failure, so nfclaw reports a
+  caveat. [The guide quotes them](../known-issues.md#a-successful-run-is-missing-samples). That the demo data is the
+  reason is a reading of those messages: the data was not varied to prove it. So this is reproduced and explained,
+  not fixed: upstream still tolerates them, and those tasks' results are still missing.
 
 ## What this audit did not establish
 
@@ -162,10 +169,6 @@ pipelines' behaviour and the network's:
   pipeline.
 - **oncoanalyser did not run.** Its references were deleted on 2026-10-16 and no longer fit. Its last on-host run,
   in [`docs/validation.md`](../validation.md), is at the same commit.
-- **Why cutandrun, hicar and mag ignore a failure.** The
-  [remediation record](2026-11-01-report-remediation.md) asks to reproduce and resolve their ignored Preseq, CIRCOS_PREPARE and
-  MaxBin2 failures. All three reproduced: the pipelines' own configuration tolerates them and nfclaw reports them as
-  caveats. Why each one fails is not established, because the sweep deleted their work directories.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,
   schedulers such as SLURM, and analyses that need a GPU were not run. seqsubmit needs ENA Webin credentials.
   Apptainer and macOS ran only in CI's lanes.

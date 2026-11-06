@@ -336,7 +336,7 @@ Of the 91 jobs, 88 runs succeeded; the 3 others are seqsubmit and the two marsse
 
 What did not come out clean, by kind:
 
-- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result: the sweep's disk guard stopped its reference build, with no bearing on the pipeline, and its analysis then failed on the missing references. It is being run again.
+- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result: the sweep's disk guard stopped its reference build, with no bearing on the pipeline, and its analysis then failed on the missing references.
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
   [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes), and one
@@ -359,7 +359,7 @@ What did not come out clean, by kind:
   hgtseq, rerun with the references its contract needs, stopped once with `Pipeline completed with errors` and
   passed on `--resume`. No cause was read for that stop or for coproid's. reportho's run also needed its resume.
 - **Success with caveats.** proteinfold's test is a stub run, so it computes nothing. cutandrun, hicar and mag
-  succeeded with failures their own configuration ignores.
+  succeeded with failures their own configuration ignores. [The guide quotes the three failures](known-issues.md#a-successful-run-is-missing-samples): each tool stopped saying it had too little to work with.
 
 Tasks in pathogensurveillance (`DOWNLOAD_ASSEMBLIES`, exit 1) and proteinfamilies (exit 137) failed and passed on
 Nextflow's retry, so these runs carry no caveat.
