@@ -330,17 +330,17 @@ Runs that came after `a23a092` and what they cover are in the audit.
 
 The other five pins: ampliseq, bacmodel, detaxizer and pixelator ran separately for the same audit, as
 [listed above](#releases-bumped-or-added-after-the-sweep). oncoanalyser did not run: its references were deleted on
-2026-10-16 and no longer fit. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
+2026-10-16, and its `STAR_ALIGN` peaked just above the memory this host now has available. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
 
 Of the 91 jobs, 90 runs succeeded; the other is seqsubmit. Of their replays, 88 succeeded, and the environment of 84 was identical to the recording. `nfclaw verify` exited 0 for 81 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
 
 What did not come out clean, by kind:
 
 - **The run did not finish.** seqsubmit needs ENA Webin credentials.
-- **marsseq ran without STAR's index.** That index takes more memory than this host has: 51.4 GB before exit 137 under
-  a 48 GB cap and 46.2 GB on the retry that completed, in October, against about 32 GB available. The sweep's guards
+- **marsseq ran without STAR's index.** That index takes more memory than this host has: about 48 GiB before exit 137
+  under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The sweep's guards
   stopped the build at 2.6 GB of memory and then at 2.8 GB of disk, and with more room a 26 GB cap killed STAR with exit 137.
-  The bundled analysis reads that index only with `--velocity`, though it checks that the path exists, so
+  The bundled analysis reads that index only with `--velocity`, which its test profile leaves off, though it checks that the path exists, so
   [the build ran without `--velocity` and the analysis named an empty directory as `--star-index`](known-issues.md#upstream-pipeline-bugs-documented-not-patched).
   Both ran, replayed with an identical environment and exited 0 in `nfclaw verify`. The analysis has the 75 identical and
   67 changed files of [its earlier row](#provenance-bundles), where the index was real.

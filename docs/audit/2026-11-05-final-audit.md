@@ -191,19 +191,20 @@ recorded rather than fixed, because these are the pipelines' behaviour and the n
 - **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` and `execution`
   (G03), `config_probe` (G14), `environment_record` (G15, G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli`
   and `chain` (G15). Only the [later runs](#evidence) cover those changes, and no second sweep did.
-- **marsseq's STAR index and `VELOCITY` did not run on the final code.** STAR's index takes more memory than this host
-  has: 51.4 GB before exit 137 under a 48 GB cap and 46.2 GB on the retry that completed, in October, against about 32 GB
-  available. The sweep's memory guard stopped the build at 2.6 GB available. Rerun at a 26 GB cap, a disk guard stopped
-  it first at 2.8 GB free, and with more room that cap killed STAR with exit 137 and over 100 GB free. The bundled analysis
-  checks that the index's path exists and reads it only with `--velocity`. So the build ran without `--velocity`, and the
-  analysis named an empty directory as `--star-index`: both, on `ebc2a96`, ran, replayed with an identical environment and
-  verified with exit 0, and the analysis has the 75 identical and 67 changed files of its earlier row. `VELOCITY` has no
-  on-host execution in the traces read here, on any runner.
-- **oncoanalyser did not run.** Its references, 77 GB extracted, were deleted on 2026-10-16, and with images and two
-  runs' work on top they would barely fit. Its `STAR_ALIGN` also peaked at 29.7 GB, and this host now has about 30 GB
-  available, because of leftovers in `/dev/shm` that this audit did not create. Clearing those and downloading the
-  references is the maintainer's decision. Its last on-host run, in [`docs/validation.md`](../validation.md), is at the
-  same commit, on an older runner, so its result should not be read as checked on today's code.
+- **marsseq's STAR index was not built on the final code.** It takes more memory than this host has: about 48 GiB before
+  exit 137 under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The
+  sweep's memory guard stopped the build at 2.6 GB available. Rerun at a 26 GB cap, a disk guard stopped it first at 2.8 GB
+  free, and with more room that cap killed STAR with exit 137 and over 100 GB free. The bundled analysis checks that the
+  index's path exists and reads it only with `--velocity`, which the test profile leaves off. So the build ran without
+  `--velocity`, and the analysis named an empty directory as `--star-index`: both, on `ebc2a96`, ran, replayed with an
+  identical environment and verified with exit 0, and the analysis has the 75 identical and 67 changed files of its
+  earlier row. `VELOCITY` is outside the bundled test, and it has no on-host execution in the traces read here, on any
+  runner.
+- **oncoanalyser did not run, and cannot here without the maintainer's decision.** Its `STAR_ALIGN` peaked at 29.7 GiB,
+  just above the 29.4 GiB this host has available, because `/dev/shm` holds about 25 GB of leftovers that this audit did
+  not create. Its references, 77 GB extracted, were also deleted on 2026-10-16, and with images and two runs' work on top
+  they would barely fit. Its last on-host run, in [`docs/validation.md`](../validation.md), is at the same commit, on an
+  older runner, so its result should not be read as checked on today's code.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,
   schedulers such as SLURM, and analyses that need a GPU were not run. seqsubmit needs ENA Webin credentials.
   Apptainer and macOS ran only in CI's lanes.
