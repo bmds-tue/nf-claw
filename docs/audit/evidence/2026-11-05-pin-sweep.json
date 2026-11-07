@@ -7,10 +7,8 @@
  "summary": {
   "jobs": 91,
   "finished": 91,
-  "runs_succeeded": 88,
+  "runs_succeeded": 90,
   "runs_failed": [
-   "marsseq",
-   "marsseq",
    "seqsubmit"
   ],
   "runs_with_caveats": [
@@ -19,18 +17,18 @@
    "mag",
    "proteinfold"
   ],
-  "replays_succeeded": 86,
+  "replays_succeeded": 88,
   "replays_failed": [
    "reportho",
    "sopa"
   ],
   "environment": {
-   "identical": 82,
+   "identical": 84,
    "differs": 1,
-   "none": 4,
+   "none": 2,
    "unverified": 4
   },
-  "verify_exit_0": 79,
+  "verify_exit_0": 81,
   "verify_exit_1": [
    "longraredisease",
    "mag",
@@ -41,16 +39,12 @@
    "spatialaxe"
   ],
   "containers_left": {},
-  "tasks": 6997,
-  "images": 1093,
-  "pinned": 2375,
-  "processes": 2380,
-  "remote_inputs": 687,
-  "bundle_issues": {
-   "marsseq": [
-    "Nextflow holds no task records for this run, so no container image was identified or pinned for its replay; `cleanup = true` in a config removes them when a run succeeds"
-   ]
-  },
+  "tasks": 7031,
+  "images": 1102,
+  "pinned": 2389,
+  "processes": 2394,
+  "remote_inputs": 693,
+  "bundle_issues": {},
   "not_in_this_sweep": {
    "ampliseq": "already run, replayed and verified on this code",
    "bacmodel": "already run, replayed and verified on this code",
@@ -1822,31 +1816,42 @@
    "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
    "nextflow": "23.04.0",
    "run": {
-    "exit": 1,
-    "attempts": 2,
-    "first_attempt_exit": 1,
-    "seconds": 55,
-    "status": "status: failed (exit status 1)",
-    "tasks": {},
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 321,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 34
+    },
     "caveats": null
    },
    "bundle": {
-    "processes": 0,
-    "images": 0,
-    "pinned": 0,
-    "remote_inputs": 0,
-    "issues": [
-     "Nextflow holds no task records for this run, so no container image was identified or pinned for its replay; `cleanup = true` in a config removes them when a run succeeds"
-    ]
+    "processes": 14,
+    "images": 9,
+    "pinned": 14,
+    "remote_inputs": 6,
+    "issues": []
    },
    "replay": {
-    "exit": null,
-    "seconds": null,
-    "environment": null,
-    "mismatches": null,
-    "unverified": null
+    "exit": 0,
+    "seconds": 286,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
    },
-   "verify": null,
+   "verify": {
+    "exit": 0,
+    "identical": 75,
+    "changed": 67,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
    "containers_left": 0,
    "superseded": [
     {
@@ -1854,9 +1859,16 @@
      "replay_exit": null,
      "verify": null,
      "containers_left": 0
+    },
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
     }
    ],
-   "tree": "85313d4"
+   "tree": "ebc2a96",
+   "options": "--genomes-base <the build's references> --star-index <an empty directory> --max-memory 26.GB --max-cpus 16"
   },
   "marsseq-refs": {
    "name": "marsseq",
@@ -1864,14 +1876,13 @@
    "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
    "nextflow": "23.04.0",
    "run": {
-    "exit": 143,
+    "exit": 0,
     "attempts": 1,
     "first_attempt_exit": null,
-    "seconds": 4019,
-    "status": "status: terminated by SIGTERM",
+    "seconds": 2829,
+    "status": "status: success",
     "tasks": {
-     "COMPLETED": 7,
-     "ABORTED": 1
+     "COMPLETED": 8
     },
     "caveats": null
    },
@@ -1883,13 +1894,24 @@
     "issues": []
    },
    "replay": {
-    "exit": null,
-    "seconds": null,
-    "environment": null,
-    "mismatches": null,
-    "unverified": null
+    "exit": 0,
+    "seconds": 3250,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
    },
-   "verify": null,
+   "verify": {
+    "exit": 0,
+    "identical": 11,
+    "changed": 3,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
    "containers_left": 0,
    "superseded": [
     {
@@ -1897,9 +1919,16 @@
      "replay_exit": null,
      "verify": null,
      "containers_left": 0
+    },
+    {
+     "run_exit": 143,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
     }
    ],
-   "tree": "85313d4"
+   "tree": "ebc2a96",
+   "options": "--build-references true --max-memory 26.GB --max-cpus 16, without --velocity"
   },
   "mcmicro": {
    "name": "mcmicro",

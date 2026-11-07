@@ -319,7 +319,7 @@ identical execution environment and again matched all of those checksums.
 
 For the [final audit](audit/2026-11-05-final-audit.md), 90 of the 95 pins ran again from 2026-11-05 to
 2026-11-06, at one commit of the runner (`a23a092`): the bundled test, its replay from
-`provenance/commands.sh`, then `nfclaw verify`. The last reruns of coproid and marsseq ran on `85313d4`, and their rows say so. Three jobs ran at a time, each on the engine its `skill.md`
+`provenance/commands.sh`, then `nfclaw verify`. coproid's last rerun ran on `85313d4` and marsseq's on `ebc2a96`, which has the runner of the last code change, and their rows say so. Three jobs ran at a time, each on the engine its `skill.md`
 names and the host network, with `--limit-cpus 8 --limit-memory 20.GB` on every engine that applies them (77 of
 the 91 jobs: marsseq has one job to build its references and one to analyse). funcscan and marsseq ran alone at
 the end. The per-job record is [`audit/evidence/2026-11-05-pin-sweep.json`](audit/evidence/2026-11-05-pin-sweep.json).
@@ -332,11 +332,18 @@ The other five pins: ampliseq, bacmodel, detaxizer and pixelator ran separately 
 [listed above](#releases-bumped-or-added-after-the-sweep). oncoanalyser did not run: its references were deleted on
 2026-10-16 and no longer fit. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
 
-Of the 91 jobs, 88 runs succeeded; the 3 others are seqsubmit and the two marsseq jobs. Of their replays, 86 succeeded, and the environment of 82 was identical to the recording. `nfclaw verify` exited 0 for 79 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
+Of the 91 jobs, 90 runs succeeded; the other is seqsubmit. Of their replays, 88 succeeded, and the environment of 84 was identical to the recording. `nfclaw verify` exited 0 for 81 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
 
 What did not come out clean, by kind:
 
-- **The run did not finish.** seqsubmit needs ENA Webin credentials. marsseq has no result, and neither stop says anything about the pipeline. The sweep's memory guard stopped its reference build at 2.6 GB available. A rerun on `85313d4`, one task at a time, ran out of room: it started with 56 GB free, and a disk guard stopped it at 2.8 GB, 64 minutes and 7 tasks in, in `STAR_GENOMEGENERATE`. Its analysis failed on the missing references both times. Its [earlier run and replay](#provenance-bundles) are at this same pin.
+- **The run did not finish.** seqsubmit needs ENA Webin credentials.
+- **marsseq ran without STAR's index.** That index takes more memory than this host has: 51.4 GB before exit 137 under
+  a 48 GB cap and 46.2 GB on the retry that completed, in October, against about 32 GB available. The sweep's guards
+  stopped the build at 2.6 GB of memory and then at 2.8 GB of disk, and with more room a 26 GB cap killed STAR with exit 137.
+  The bundled analysis reads that index only with `--velocity`, though it checks that the path exists, so
+  [the build ran without `--velocity` and the analysis named an empty directory as `--star-index`](known-issues.md#upstream-pipeline-bugs-documented-not-patched).
+  Both ran, replayed with an identical environment and exited 0 in `nfclaw verify`. The analysis has the 75 identical and
+  67 changed files of [its earlier row](#provenance-bundles), where the index was real.
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
   [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes). Two replays failed, one of
@@ -408,8 +415,8 @@ Nextflow's retry, so these runs carry no caveat.
 | lsmquant 1.0.3 | 25.10.4 | success | 14 | 5 | 7/7 | 2 | success | identical | 223 identical, 33 changed |
 | mag 5.5.0 | 26.04.0 | success, with caveats | 188 | 25 | 41/41 | 8 | success | identical | 857 identical, 507 changed, 15 missing, 15 extra |
 | magmap 1.3.1 | 26.04.0 | success | 59 | 16 | 29/29 | 11 | success | identical | 82 identical, 55 changed |
-| marsseq 1.0.3, on `85313d4` | 23.04.0 | failed | 0 | 0 | 0/0 | 0 | not run | — | — |
-| marsseq-refs 1.0.3, on `85313d4` | 23.04.0 | failed | 8 | 6 | 8/8 | 0 | not run | — | — |
+| marsseq 1.0.3, on `ebc2a96` | 23.04.0 | success | 34 | 9 | 14/14 | 6 | success | identical | 75 identical, 67 changed |
+| marsseq-refs 1.0.3, on `ebc2a96` | 23.04.0 | success | 8 | 6 | 8/8 | 0 | success | identical | 11 identical, 3 changed |
 | mcmicro 2.0.0 | 25.04.0 | success | 11 | 6 | 10/11 | 1 | success | unverified | 18 identical, 13 changed |
 | metaboigniter 2.0.1 | 23.04.0 | success | 13 | 3 | 7/7 | 3 | success | identical | 20 identical, 21 changed, 27 links changed |
 | metapep 1.0.0 | 24.04.2 | success | 27 | 9 | 18/18 | 4 | success | identical | 25 identical, 21 changed |
