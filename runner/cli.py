@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 
 from runner import (chain, discovery, execution, handoff, nextflow_command, orchestration,
-                    exact_json, job_reports, jobs, preflight, resources, runlog, sheetgen,
-                    verify, versions)
+                    exact_json, job_reports, jobs, preflight, provenance, resources, runlog,
+                    sheetgen, verify, versions)
 from runner.errors import ErrorCode, NfclawError
 
 
@@ -229,6 +229,9 @@ def _status_report(st: runlog.RunState) -> str:
         if st.caveats:
             lines += ["caveats (as reported; results may be incomplete):",
                       *(f"  {caveat}" for caveat in st.caveats)]
+        if st.provenance_gaps:
+            lines += ["provenance gaps (the results stand; a replay can check less):",
+                      *(f"  {gap}" for gap in st.provenance_gaps)]
     elif st.state == "ended":
         lines.append(f"status: {st.outcome}")
     elif st.state == "running":
@@ -264,8 +267,21 @@ def _status_report(st: runlog.RunState) -> str:
             quoted = runlog.error_excerpt(st.console)
             lines += ["last output:", *(f"  {line}" if line else "" for line in quoted)]
         if st.state == "dead":
-            lines.append("Re-run the same command with --resume to continue where it stopped.")
+            lines.append(_after_dead_run(st))
     return "\n".join(lines) + "\n"
+
+
+def _after_dead_run(st: runlog.RunState) -> str:
+    """What to do about a launch whose nfclaw vanished without recording an outcome."""
+    if st.kind == "replay":
+        return ("A replay cannot continue in place: run commands.sh again into a new empty "
+                "directory.")
+    bundle = st.log.parent.parent
+    if st.kind == "run" and not ((bundle / "run_manifest.json").exists()
+                                 or (bundle / provenance.LAUNCH_RECORD).exists()):
+        return ("--resume recomputes every task: this launch recorded nothing to compare its "
+                "inputs against (--no-provenance).")
+    return "Re-run the same command with --resume to continue where it stopped."
 
 
 # The `--json` reports keep their keys; a change that removes or redefines one bumps this.
@@ -279,7 +295,8 @@ def _status_record(st: runlog.RunState, report: str, code: int) -> dict:
             "finished": st.finished, "log": str(st.log), "nextflow_log": st.nextflow_log,
             "host": st.host, "pid": st.pid, "nextflow_pid": st.nextflow_pid,
             "nextflow_alive": st.nextflow_alive, "supervisor_pid": st.supervisor_pid,
-            "supervisor_alive": st.supervisor_alive, "caveats": st.caveats, "error": st.error,
+            "supervisor_alive": st.supervisor_alive, "caveats": st.caveats,
+            "provenance_gaps": st.provenance_gaps, "error": st.error,
             "inspection_issues": st.inspection_issues,
             "last_output": st.last_output, "report": report}
 
@@ -350,6 +367,9 @@ def main(argv: list[str] | None = None) -> int:
     rather than with a BrokenPipeError traceback. SIGPIPE itself stays ignored (Python's default): a
     run whose terminal goes away must keep tearing down Nextflow and writing its provenance,
     not die."""
+    # Reports hold `—` and `≥`: one a Latin-1 terminal or an ASCII pipe cannot show is not a crash.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     try:
         code = _main(argv)
         sys.stdout.flush()                    # surface a closed pipe here, not at interpreter exit
@@ -364,6 +384,15 @@ def main(argv: list[str] | None = None) -> int:
         # A path nfclaw could not reach (before Python 3.14, even `Path.exists` raises under a
         # directory that cannot be searched): name it, as for any other refusal.
         print(str(_os_error(exc)), file=sys.stderr)
+        return 1
+    except RuntimeError as exc:
+        # What pathlib raises for `~nosuchuser/x`, and before Python 3.13 for a symlink loop. Any
+        # other RuntimeError (RecursionError among them) is a bug, not a path: it stays visible.
+        if not str(exc).startswith(("Could not determine home directory", "Symlink loop")):
+            raise
+        print(str(NfclawError(ErrorCode.ENVIRONMENT, f"cannot resolve a path: {exc}",
+                              fix="Check the paths given: a leading `~` must name an existing "
+                                  "user, and links must not form a loop.")), file=sys.stderr)
         return 1
 
 
@@ -435,7 +464,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_status.add_argument("outdir", help="--outdir of the run (or replay target) to report on")
     p_status.add_argument("--json", action="store_true",
                           help="print one JSON object instead: the state, outcome, times, pids, "
-                               "logs, caveats, recorded error and last output, and this report")
+                               "logs, caveats, provenance gaps, recorded error and last output, "
+                               "and this report")
     # Compare a replay against the run it reproduces. Keyed on path, because comparing the raw
     # `outputs.sha256` lines counts one changed file as both a missing and an extra one.
     p_verify = sub.add_parser("verify", help="compare a replay with the run it reproduces")
@@ -592,7 +622,8 @@ def _main(argv: list[str] | None = None) -> int:
                          if name == "-config" else
                          "nfclaw sets Nextflow's own single-dash options itself; pass a config "
                          "file with `--config PATH` (or `-c PATH`) and pipeline parameters as "
-                         "--param value.")), file=sys.stderr)
+                         "--param value. A parameter value that starts with `-` goes after `=`: "
+                         f"--param={shlex.quote(tok)}.")), file=sys.stderr)
                 return 1
     args, extras = parser.parse_known_args(argv)
     # Only `run` forwards unrecognised flags (to the pipeline). Anywhere else an unknown flag is a

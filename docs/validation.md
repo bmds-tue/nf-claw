@@ -9,7 +9,8 @@ result does and does not show.
 
 The versions and observations below describe the 2026-10-14 to 2026-10-16 validation,
 not a fresh execution after every repository change. Releases bumped and pipelines added since then
-that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep);
+that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep),
+and the [final pin sweep](#final-pin-sweep) of 2026-11-05 to 2026-11-06 ran the pins again with their replays;
 the automated updater itself gates a release on its preview, tests, drift checks and one bundled analysis
 on a hosted runner ([publication evidence policy](maintenance.md)).
 For the current pin and its requirements, read `pipelines/<name>/skill.md`.
@@ -18,7 +19,7 @@ For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ## Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [Final pin sweep](#final-pin-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -207,7 +208,7 @@ pull ([known issue](known-issues.md#a-run-aborts-with-process-hasnt-exited)).
 
 Each release below was validated separately on the same host, in one uninterrupted `nfclaw run <name> --demo`
 on the engine its `skill.md` names: before its pin was updated or its pipeline was added, or, for a release the
-automated updater published itself (rnastructurome 1.1.0 and genomeassembler 2.0.1), right after. This execution evidence is additional to
+automated updater published itself (rnastructurome 1.1.0, genomeassembler 2.0.1 and those dated 2026-11-05), after it. This execution evidence is additional to
 the automated updater's gates.
 
 | Pipeline | Version | Nextflow | Outcome | Tasks | Notes |
@@ -222,6 +223,15 @@ the automated updater's gates.
 | genomeassembler | 2.0.1 | 25.10.4 | success | 88 completed | 2026-10-23, bump from 2.0.0 published by the updater, host network |
 | stableexpression | 1.1.0 | 26.04.4 | success | 246 completed | 2026-10-25, added, host network |
 | createpanelrefs | 1.1.0 | 26.04.3 | success | 2 completed | 2026-11-03, bump from 1.0.0, default bridge network |
+| ampliseq | 3.1.0 | 26.04.0 | success | 130 completed | 2026-11-05, bump from 3.0.0 published by the updater, host network |
+| bacmodel | 1.0.1 | 25.10.4 | success | 2 completed | 2026-11-05, bump from 1.0.0 published by the updater, host network |
+| detaxizer | 1.4.0 | 26.04.0 | success | 54 completed | 2026-11-05, bump from 1.3.0 published by the updater, host network |
+| pixelator | 6.0.0 | 25.10.4 | success | 27 completed | 2026-11-05, bump from 5.0.3 published by the updater, host network |
+| sarek | 3.11.0 | 25.10.4 | success | 22 completed | 2026-11-05, bump from 3.10.0 published by the updater, host network; replayed in the [final pin sweep](#final-pin-sweep) |
+| sopa | 1.0.2 | 25.10.4 | success | 9 completed | 2026-11-05, bump from 1.0.1 published by the updater, host network; its replay in the [final pin sweep](#final-pin-sweep) is refused, as documented |
+| bacass | 2.7.0 | 25.10.4 | success | 17 completed | 2026-11-05, bump from 2.6.1 published by the updater, host network; in the [final pin sweep](#final-pin-sweep) |
+| variantbenchmarking | 1.6.0 | 25.10.4 | success | 68 completed | 2026-11-05, bump from 1.5.0 published by the updater, host network; in the [final pin sweep](#final-pin-sweep) |
+| variantbenchmarking | 1.6.1 | 25.10.4 | success | 68 completed | 2026-11-05, bump from 1.6.0 published by the updater, host network; on a later head, in the [final pin sweep](#final-pin-sweep) |
 
 epitopeprediction 3.2.0 replaced 3.1.1's epytope and Ensembl BioMart variant path with `bcftools`, Ensembl VEP and
 pVACtools, and its test annotates with a bundled VEP cache subset, so the BioMart failures above no longer apply
@@ -297,6 +307,168 @@ identical execution environment and again matched all of those checksums.
   `provenance/commands.sh` succeeded with an identical environment: `nfclaw verify` reported 13 identical, 9
   changed, 0 missing, 0 extra, and the panel of normals, both target coverage tables and the reference BEDs were
   byte-identical. The changed files were run metadata and MultiQC reports.
+- **The six releases of 2026-11-05** ran for the [final audit](audit/2026-11-05-final-audit.md), with
+  `--limit-cpus 8 --limit-memory 24.GB`, and were not compared with their nf-test snapshots. The replays of
+  ampliseq, bacmodel, detaxizer and pixelator succeeded with an identical execution environment, and `nfclaw verify`
+  reported 0 missing and 0 extra: 1,288 identical and 322 changed, 15 and 5, 80 and 42, 21 and 97. The volume was too
+  full to replay sarek and sopa then, and to finish bacass 2.7.0 and variantbenchmarking 1.6.0, which a disk
+  watchdog stopped after 9 and 53 tasks. With room made, all four ran with their replays in the
+  [final pin sweep](#final-pin-sweep).
+
+## Final pin sweep
+
+For the [final audit](audit/2026-11-05-final-audit.md), 90 of the 95 pins ran again from 2026-11-05 to
+2026-11-06, at one commit of the runner (`a23a092`): the bundled test, its replay from
+`provenance/commands.sh`, then `nfclaw verify`. coproid's last rerun ran on `85313d4` and marsseq's on `ebc2a96`, which has the runner of the last code change, and their rows say so. Three jobs ran at a time, each on the engine its `skill.md`
+names and the host network, with `--limit-cpus 8 --limit-memory 20.GB` on every engine that applies them (77 of
+the 91 jobs: marsseq has one job to build its references and one to analyse). funcscan and marsseq ran alone at
+the end. The per-job record is [`audit/evidence/2026-11-05-pin-sweep.json`](audit/evidence/2026-11-05-pin-sweep.json).
+
+This repeats execution and replay. It does not compare outputs with nf-test snapshots or assess their science,
+except that the tumourevo and hgtseq demos also passed their [output contracts](scientific-output-contracts.md).
+Runs that came after `a23a092` and what they cover are in the audit.
+
+The other five pins: ampliseq, bacmodel, detaxizer and pixelator ran separately for the same audit, as
+[listed above](#releases-bumped-or-added-after-the-sweep). oncoanalyser did not run: its references were deleted on
+2026-10-16, and its `STAR_ALIGN` peaked just above the memory this host now has available. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
+
+Of the 91 jobs, 90 runs succeeded; the other is seqsubmit. Of their replays, 88 succeeded, and the environment of 84 was identical to the recording. `nfclaw verify` exited 0 for 81 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
+
+What did not come out clean, by kind:
+
+- **The run did not finish.** seqsubmit needs ENA Webin credentials.
+- **marsseq ran without STAR's index.** That index takes more memory than this host has: about 48 GiB before exit 137
+  under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The sweep's guards
+  stopped the build at 2.6 GB of memory and then at 2.8 GB of disk, and with more room a 26 GB cap killed STAR with exit 137.
+  The bundled analysis reads that index only with `--velocity`, which its test profile leaves off, though it checks that the path exists, so
+  [the build ran without `--velocity` and the analysis named an empty directory as `--star-index`](known-issues.md#upstream-pipeline-bugs-documented-not-patched).
+  Both ran, replayed with an identical environment and exited 0 in `nfclaw verify`. The analysis has the 75 identical and
+  67 changed files of [its earlier row](#provenance-bundles), where the index was real.
+- **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
+  [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
+  [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes). Two replays failed, one of
+  them because two `DIAMOND_CLUSTER` tasks hit upstream's 3-minute limit. The traces suggest a first image download
+  slowing the shared volume, but one pull on an idle host did not reproduce that, so the link is unproven. A third,
+  from the kept bundle, passed: environment identical, 30 identical and 26 changed.
+- **The environment check stays `unverified`.** mcmicro, circdna and raredisease run
+  [tasks with no container](known-issues.md#a-process-cannot-be-pinned-to-an-image-digest),
+  and genomeqc's test profile [leaves no task records](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run).
+  Their replays succeeded and `nfclaw verify` exits 0. The [table of 2026-10-16](#provenance-bundles) shows `identical`
+  for all four. That fits runs from before these checks existed, inferred from the code rather than from
+  running the old code again.
+- **`nfclaw verify` exits 1: a file exists on one side only.** All of these replays have an identical environment.
+  [Their differences are listed](known-issues.md#pipeline-specific-run-notes): rnafusion, nanostring, longraredisease,
+  mag, spatialaxe (9 and 10 cells), nanoseq and rnasplice. rnasplice's 20 missing and 20 extra files were not read,
+  since the run directory was gone; the count matches 2.0.0's earlier row.
+- **A first attempt failed and a rerun passed.** seqinspector, metatdenovo and drop stopped on a
+  [remote file reported as missing](known-issues.md#a-samplesheets-remote-file-is-reported-as-missing-but-it-exists),
+  and drop's left one container behind. coproid's failed downloading NCBI's taxonomy, and its rerun's replay, under
+  load, lost 25 plot exports. A further rerun on an idle host, on `85313d4`, kept them all and `nfclaw verify` exited 0.
+  That fits [MultiQC's 30-second limit on exports](known-issues.md#pipeline-specific-run-notes): the whole task took
+  27.4 s there. The link is inferred, because the logs of the replay that lost them were not kept. funcscan's
+  `RUNDBCAN_DATABASE` hit the test profile's one-hour limit on a slow download and took 11 minutes on `--resume`.
+  hgtseq, rerun with the references its contract needs, stopped once with `Pipeline completed with errors` and
+  passed on `--resume`. No cause was read for that stop or for coproid's. reportho's run also needed its resume.
+- **Success with caveats.** proteinfold's test is a stub run, so it computes nothing. cutandrun, hicar and mag
+  succeeded with failures their own configuration ignores. [The guide quotes the three failures](known-issues.md#a-successful-run-is-missing-samples): each tool stopped saying it had too little to work with.
+
+Tasks in pathogensurveillance (`DOWNLOAD_ASSEMBLIES`, exit 1) and proteinfamilies (exit 137) failed and passed on
+Nextflow's retry, so these runs carry no caveat.
+
+| Run | Nextflow | Run outcome | Tasks | Images | Pinned / recorded processes | Remote inputs | Replay | Environment | `nfclaw verify` |
+|---|---|---|---|---|---|---|---|---|---|
+| airrflow 5.1.2 | 26.04.1 | success | 170 | 10 | 38/38 | 23 | success | identical | 175 identical, 355 changed |
+| atacseq 2.1.2 | 23.04.0 | success | 265 | 26 | 75/75 | 11 | success | identical | 396 identical, 337 changed |
+| bacass 2.7.0 | 25.10.4 | success | 17 | 8 | 10/10 | 7 | success | identical | 130 identical, 114 changed |
+| bactmap 1.0.0 | 24.10.5 | success | 47 | 17 | 23/23 | 7 | success | identical | 53 identical, 60 changed |
+| bamtofastq 2.2.1 | 25.10.4 | success | 32 | 5 | 17/17 | 6 | success | identical | 23 identical, 15 changed |
+| callingcards 1.0.0 | 23.04.0 | success | 122 | 12 | 19/19 | 5 | success | identical | 273 identical, 180 changed |
+| chipseq 2.1.0 | 23.04.0 | success | 215 | 26 | 50/50 | 15 | success | identical | 288 identical, 363 changed |
+| circdna 1.1.0 | 23.04.0 | success | 89 | 15 | 31/33 | 8 | success | unverified | 106 identical, 75 changed |
+| coproid 2.0.1, on `85313d4` | 25.04.0 | success | 47 | 15 | 25/25 | 13 | success | identical | 184 identical, 178 changed, 11 links changed |
+| createpanelrefs 1.1.0 | 26.04.0 | success | 2 | 2 | 2/2 | 3 | success | identical | 13 identical, 9 changed |
+| createtaxdb 3.1.0 | 25.10.4 | success | 28 | 16 | 22/22 | 17 | success | identical | 61 identical, 19 changed |
+| crisprseq 2.3.0 | 24.04.2 | success | 44 | 15 | 17/17 | 6 | success | identical | 108 identical, 83 changed |
+| cutandrun 3.2.2 | 23.04.0 | success, with caveats | 135 | 21 | 95/95 | 11 | success | identical | 160 identical, 116 changed |
+| datasync 1.0.2 | 25.10.4 | success | 7 | 2 | 4/4 | 4 | success | identical | 22 identical, 11 changed |
+| demo 1.2.0 | 25.10.4 | success | 8 | 4 | 4/4 | 5 | success | identical | 42 identical, 34 changed |
+| demultiplex 1.8.0 | 25.10.4 | success | 7 | 6 | 7/7 | 2 | success | identical | 95 identical, 81 changed |
+| denovotranscript 1.2.1 | 24.04.2 | success | 19 | 13 | 15/15 | 6 | success | identical | 118 identical, 2223 changed |
+| differentialabundance 2.0.0 | 25.10.4 | success | 25 | 11 | 17/17 | 6 | success | identical | 65 identical, 15 changed |
+| drop 1.0.0 | 25.10.0 | success | 134 | 18 | 52/52 | 34 | success | identical | 237 identical, 79 changed |
+| drugresponseeval 1.3.0 | 26.04.0 | success | 34 | 2 | 16/16 | 3 | success | identical | 196 identical, 13 changed |
+| epitopeprediction 3.2.0 | 25.10.4 | success | 21 | 9 | 17/17 | 4 | success | identical | 36 identical, 39 changed |
+| fastqrepair 1.1.1 | 25.10.4 | success | 9 | 4 | 7/7 | 3 | success | identical | 33 identical, 38 changed |
+| fastquorum 2.0.0 | 25.10.4 | success | 12 | 7 | 12/12 | 4 | success | identical | 29 identical, 18 changed |
+| fetchngs 1.13.0 | 25.10.4 | success | 26 | 2 | 4/4 | 0 | success | identical | 45 identical, 5 changed |
+| funcprofiler 1.0.0 | 25.10.4 | success | 13 | 7 | 8/8 | 11 | success | identical | 39 identical, 10 changed |
+| funcscan 4.0.0 | 25.10.4 | success after `--resume` | 68 | 15 | 37/37 | 5 | success | identical | 81 identical, 33 changed |
+| genomeassembler 2.0.1 | 25.10.4 | success | 88 | 14 | 30/30 | 7 | success | identical | 234 identical, 87 changed |
+| genomeqc 1.0.1 | 25.10.4 | success | 88 | 0 | 0/0 | 10 | success | unverified | 687 identical, 330 changed |
+| hadge 1.0.0 | 25.10.4 | success | 103 | 25 | 34/34 | 7 | success | identical | 461 identical, 58 changed |
+| hgtseq 1.1.0 | 22.10.1 | success after `--resume` | 63 | 13 | 27/27 | 10 | success | identical | 210 identical, 94 changed |
+| hic 2.1.0 | 22.10.1 | success | 38 | 14 | 26/26 | 3 | success | identical | 61 identical, 51 changed |
+| hicar 1.0.0 | 21.10.3 | success, with caveats | 95 | 33 | 73/73 | 9 | success | identical | 86 identical, 53 changed |
+| hlatyping 2.2.0 | 25.04.2 | success | 7 | 7 | 7/7 | 2 | success | identical | 49 identical, 37 changed |
+| isoseq 3.0.1 | 25.10.4 | success | 45 | 10 | 13/13 | 6 | success | identical | 166 identical, 77 changed |
+| longraredisease 1.0.0 | 25.04.0 | success | 46 | 22 | 46/46 | 7 | success | identical | 62 identical, 41 changed, 7 missing, 7 extra, 1/1 directories missing/extra |
+| lsmquant 1.0.3 | 25.10.4 | success | 14 | 5 | 7/7 | 2 | success | identical | 223 identical, 33 changed |
+| mag 5.5.0 | 26.04.0 | success, with caveats | 188 | 25 | 41/41 | 8 | success | identical | 857 identical, 507 changed, 15 missing, 15 extra |
+| magmap 1.3.1 | 26.04.0 | success | 59 | 16 | 29/29 | 11 | success | identical | 82 identical, 55 changed |
+| marsseq 1.0.3, on `ebc2a96` | 23.04.0 | success | 34 | 9 | 14/14 | 6 | success | identical | 75 identical, 67 changed |
+| marsseq-refs 1.0.3, on `ebc2a96` | 23.04.0 | success | 8 | 6 | 8/8 | 0 | success | identical | 11 identical, 3 changed |
+| mcmicro 2.0.0 | 25.04.0 | success | 11 | 6 | 10/11 | 1 | success | unverified | 18 identical, 13 changed |
+| metaboigniter 2.0.1 | 23.04.0 | success | 13 | 3 | 7/7 | 3 | success | identical | 20 identical, 21 changed, 27 links changed |
+| metapep 1.0.0 | 24.04.2 | success | 27 | 9 | 18/18 | 4 | success | identical | 25 identical, 21 changed |
+| metatdenovo 2.0.0 | 25.10.4 | success | 86 | 24 | 41/41 | 14 | success | identical | 66 identical, 125 changed |
+| methylong 2.0.0 | 25.04.0 | success | 25 | 15 | 25/25 | 3 | success | identical | 22 identical, 29 changed |
+| methylseq 4.2.0 | 25.04.0 | success | 36 | 6 | 12/12 | 6 | success | identical | 104 identical, 112 changed |
+| mhcquant 3.3.0 | 25.10.4 | success | 21 | 6 | 13/13 | 5 | success | identical | 23 identical, 44 changed |
+| molkart 1.2.0 | 25.04.0 | success | 22 | 6 | 12/12 | 4 | success | identical | 28 identical, 14 changed, 8 links changed |
+| multiplesequencealign 1.1.1 | 25.04.2 | success | 78 | 13 | 35/35 | 7 | success | identical | 41 identical, 25 changed |
+| nanoseq 3.1.0 | 22.10.1 | success | 26 | 10 | 16/16 | 3 | success | identical | 27 identical, 39 changed, 1 missing, 45 extra |
+| nanostring 1.3.3 | 25.10.2 | success | 7 | 4 | 5/5 | 5 | success | identical | 33 identical, 26 changed, 2 missing, 1 extra |
+| nascent 2.3.0 | 24.04.2 | success | 149 | 19 | 37/37 | 8 | success | identical | 226 identical, 121 changed |
+| pacvar 1.1.0 | 25.10.4 | success | 10 | 5 | 10/10 | 5 | success | identical | 15 identical, 10 changed |
+| pairgenomealign 3.0.4 | 26.04.0 | success | 20 | 5 | 12/12 | 4 | success | identical | 37 identical, 19 changed |
+| pangenome 1.1.3 | 24.04.2 | success | 22 | 7 | 20/20 | 1 | success | identical | 8 identical, 61 changed |
+| pathogensurveillance 1.1.0 | 25.04.6 | success | 47 | 13 | 17/17 | 0 | success | identical | 758 identical, 146 changed, 326 links changed |
+| phaseimpute 1.1.0 | 25.04.0 | success | 40 | 7 | 18/18 | 11 | success | identical | 13 identical, 55 changed |
+| phyloplace 2.3.0 | 26.04.0 | success | 8 | 5 | 8/8 | 4 | success | identical | 22 identical, 11 changed |
+| plasmodiumdrugres 1.0.0 | 25.10.4 | success | 6 | 3 | 6/6 | 4 | success | identical | 11 identical, 4 changed |
+| proteinannotator 1.1.0 | 25.10.4 | success | 40 | 8 | 18/18 | 4 | success | identical | 65 identical, 33 changed |
+| proteinfamilies 2.6.0 | 26.04.0 | success | 93 | 12 | 34/34 | 2 | success | identical | 68 identical, 33 changed |
+| proteinfold 2.0.0 | 25.10.2 | success, with caveats | 5 | 3 | 3/3 | 1 | success | identical | 16 identical, 4 changed |
+| provenancereport 1.0.0 | 25.10.4 | success | 5 | 3 | 5/5 | 2 | success | identical | 18 identical, 17 changed |
+| rangeland 1.0.0 | 24.04.2 | success | 280 | 3 | 12/12 | 6 | success | identical | 1177 identical, 42 changed, 861 links changed |
+| raredisease 3.1.2 | 25.10.4 | success | 876 | 43 | 186/188 | 42 | success | unverified | 217 identical, 182 changed |
+| readsimulator 1.0.1 | 23.04.0 | success | 1 | 1 | 1/1 | 0 | success | identical | 5 identical, 7 changed |
+| reportho 1.1.0 | 25.04.0 | success after `--resume` | 70 | 12 | 35/35 | 1 | failed twice, then success | identical | 30 identical, 26 changed |
+| ribomsqc v1.0.0 | 25.04.0 | success | 4 | 3 | 4/4 | 3 | success | identical | 7 identical, 10 changed |
+| riboseq 2.0.0 | 25.10.4 | success | 356 | 25 | 50/50 | 22 | success | identical | 504 identical, 597 changed |
+| rnadnavar 1.0.0 | 25.10.4 | success | 120 | 17 | 34/34 | 9 | success | identical | 158 identical, 158 changed |
+| rnafusion 4.1.3 | 25.10.4 | success | 23 | 16 | 23/23 | 7 | success | identical | 190 identical, 115 changed, 1 missing, 1 extra |
+| rnaseq 3.27.0 | 25.10.4 | success | 234 | 26 | 65/65 | 19 | success | identical | 710 identical, 346 changed |
+| rnasplice 2.0.0 | 26.04.0 | success | 139 | 28 | 62/62 | 12 | success | identical | 2702 identical, 1537 changed, 20 missing, 20 extra |
+| rnastructurome 1.1.0 | 25.10.4 | success | 52 | 15 | 38/38 | 5 | success | identical | 73 identical, 15 changed |
+| rnavar 1.3.0 | 25.10.4 | success | 43 | 11 | 35/35 | 10 | success | identical | 49 identical, 51 changed |
+| sarek 3.11.0 | 25.10.4 | success | 22 | 12 | 20/20 | 10 | success | identical | 86 identical, 97 changed |
+| scnanoseq 1.3.0 | 25.04.2 | success | 85 | 18 | 46/46 | 5 | success | identical | 94 identical, 95 changed |
+| scrnaseq 4.2.0 | 25.10.4 | success | 19 | 7 | 8/8 | 9 | success | identical | 83 identical, 50 changed |
+| seqinspector 1.1.2 | 25.10.4 | success | 48 | 11 | 13/13 | 11 | success | identical | 555 identical, 523 changed |
+| seqsubmit 1.0.0 | 25.10.4 | failed | 16 | 11 | 12/12 | 6 | not run | — | — |
+| smrnaseq 2.4.1 | 25.04.2 | success | 244 | 16 | 41/41 | 14 | success | identical | 222 identical, 147 changed |
+| sopa 1.0.2 | 25.10.4 | success | 9 | 2 | 9/9 | 1 | failed | differs | — |
+| spatialaxe 1.0.1 | 25.04.0 | success | 10 | 5 | 10/10 | 1 | success | identical | 490 identical, 140 changed, 1 missing, 26 extra, 0/26 directories missing/extra |
+| stableexpression 1.1.0 | 26.04.4 | success | 246 | 13 | 31/31 | 1 | success | identical | 45 identical, 5 changed |
+| taxprofiler 2.0.1 | 25.10.4 | success | 179 | 27 | 51/51 | 26 | success | identical | 341 identical, 381 changed |
+| tumourevo 1.0.0 | 25.10.4 | success | 66 | 11 | 18/18 | 15 | success | identical | 133 identical, 83 changed |
+| variantbenchmarking 1.6.0 | 25.10.4 | success | 68 | 7 | 24/24 | 7 | success | identical | 47 identical, 47 changed |
+| variantprioritization 1.0.0 | 25.10.0 | success | 19 | 7 | 11/11 | 8 | success | identical | 476 identical, 32 changed |
+| viralintegration 0.1.1 | 23.04.0 | success | 45 | 9 | 23/23 | 9 | success | identical | 157 identical, 74 changed |
+| viralmetagenome 1.2.0 | 25.10.4 | success | 288 | 35 | 86/86 | 16 | success | identical | 391 identical, 184 changed |
+| viralrecon 3.0.0 | 25.04.0 | success | 200 | 32 | 80/80 | 10 | success | identical | 453 identical, 238 changed |
+| variantbenchmarking 1.6.1, on `aea5fa4` | 25.10.4 | success | 68 | 7 | 24/24 | 7 | success | identical | 45 identical, 49 changed |
 
 ## nfclaw features
 
@@ -490,9 +662,11 @@ files are reports, logs and plots that embed timestamps or paths. Notes on the r
   launch-stamped reports ([known issue](known-issues.md#pipeline-specific-run-notes)).
 - **Reruns**: the table shows each pipeline's last run. The shared host's full disk and image
   removals stopped some first attempts, and pipelines whose bundles came from an nfclaw version with a
-  defect listed below were run again. genomeqc's first replay was reported unverified: the Nextflow
-  cache of that replay returned no task records, although its tasks had run. A fresh run and its
-  replay were identical.
+  defect listed below were run again.
+- **genomeqc**: the table's `0`, `0/0` and `identical` mean no images were compared. Its `test` profile sets
+  `cleanup = true`, which removes a successful run's task records ([known issue](known-issues.md#a-run-has-no-task-records-nextflow-holds-no-task-records-for-this-run)).
+  The check now reports this as `unverified`. An earlier version of this page blamed one replay's
+  Nextflow cache.
 
 The nfclaw feature paths were replayed the same way:
 

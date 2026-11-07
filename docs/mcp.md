@@ -194,7 +194,9 @@ nfclaw jobs cancel <job-id> --json
 ```
 
 These commands manage jobs created by MCP; foreground runs and runs started with `nohup` have no
-job ID. Use `nfclaw status <outdir>` for those. Job commands do not require pipeline files, Nextflow
+job ID. Use `nfclaw status <outdir>` for those. Nothing prunes the job store: a finished job's
+directory under `$NFCLAW_STATE_DIR/jobs/` can be deleted once its report is no longer needed, and
+the run's own results and log stay in its `--outdir`. Job commands do not require pipeline files, Nextflow
 or a connected MCP client. `list` skips malformed records, filters before applying its positive
 `--limit`, and returns an empty list when there are no jobs. `status` defaults to 20 output lines;
 `--log-lines 0` hides them. Output tails remain bounded to the supervisor's last 64 KiB of output.

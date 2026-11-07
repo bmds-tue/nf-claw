@@ -237,7 +237,7 @@ def resume_source(outdir: Path, planned: SourcePlan | None) -> WorkingSource | N
     try:
         if record_path.is_symlink() or not record_path.is_file():
             raise ValueError('the earlier correction record is missing or is a symlink')
-        record = json.loads(record_path.read_text())
+        record = json.loads(record_path.read_text(encoding="utf-8"))
         if planned is None:
             raise ValueError('the earlier correction recipe no longer applies')
         path = Path(record['path'])

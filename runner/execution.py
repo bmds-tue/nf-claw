@@ -463,8 +463,8 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
     or is still handling SIGTERM would otherwise be left running in the background.
 
     A task container is not in the group: the engine runs it, and only its client is. The
-    containers the group's clients started are noted before each signal and removed once the group
-    is gone, whichever of them the task wrappers did not remove in time (see
+    containers the group's clients started are noted before each signal and while the group stops,
+    and removed once it is gone, whichever of them the task wrappers did not remove in time (see
     `replay_guard.task_containers`).
     """
     if not hasattr(os, "killpg"):                     # Windows: no process groups to signal
@@ -480,23 +480,29 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
         os.killpg(pgid, signal.SIGTERM)
     except OSError:
         pass
+    creating: set[str] = set()
     try:
-        try:
-            proc.wait(timeout=grace)
-        except subprocess.TimeoutExpired:
-            pass
-        while _group_alive(pgid) and time.monotonic() < deadline:
-            time.sleep(0.1)
+        creating = replay_guard.unlisted_containers(containers)
+        while time.monotonic() < deadline and (proc.returncode is None or _group_alive(pgid)):
+            replay_guard.note_task_containers(replay_guard.task_containers(pgid), containers,
+                                              creating)
+            if proc.returncode is None:
+                try:
+                    proc.wait(timeout=replay_guard.STOP_LOOK_SECONDS)
+                except subprocess.TimeoutExpired:
+                    pass
+            else:
+                time.sleep(replay_guard.STOP_LOOK_SECONDS)
     finally:
         # Also on a second Ctrl-C during the grace period: that asks to stop now, not to leave the
         # group running — skip the rest of the wait, but still kill it. An unreaped leader keeps
         # its pid, and a live member the group's number; once both are gone the number is free for
         # another group, so it is neither searched nor signalled.
         held = proc.returncode is None or _group_alive(pgid)
+        latest: dict[tuple[str, ...], set[str]] = {}
         try:
             if held:
-                for engine, names in _observe_task_containers(pgid, run_log).items():
-                    containers.setdefault(engine, set()).update(names)
+                latest = _observe_task_containers(pgid, run_log)
         finally:
             if held:
                 try:
@@ -504,8 +510,9 @@ def _terminate(proc: subprocess.Popen, grace: float = _GRACE_SECONDS,
                 except OSError:
                     pass                              # the group is already gone
             proc.wait()
+        replay_guard.note_task_containers(latest, containers, creating)
         if containers:                                # a second Ctrl-C still stops them too
-            _remove_task_containers(containers, run_log)
+            _remove_task_containers(containers, run_log, creating)
 
 
 def _observe_task_containers(pgid: int, run_log: runlog.RunLog | None) -> dict:
@@ -519,9 +526,9 @@ def _observe_task_containers(pgid: int, run_log: runlog.RunLog | None) -> dict:
 
 
 def _remove_task_containers(containers: dict[tuple[str, ...], set[str]],
-                            run_log: runlog.RunLog | None) -> None:
+                            run_log: runlog.RunLog | None, creating: set[str]) -> None:
     """Remove the task containers a stopped run left behind, and say so."""
-    removed, problems = replay_guard.remove_task_containers(containers)
+    removed, problems = replay_guard.remove_task_containers(containers, creating=creating)
     messages = ([f"nfclaw: removed {len(removed)} task container(s) the stopped run left behind: "
                  f"{', '.join(removed)}"] if removed else []) + \
         [f"nfclaw: a task container of the stopped run could not be removed: {problem}"

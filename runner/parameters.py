@@ -64,7 +64,10 @@ def validate_params(cli_overrides: dict[str, Any], schema: ParamSchema, *,
             continue
         flag = f"--{key.replace('_', '-')}"
         if key not in known:
-            errors.append(f"unknown parameter '{flag}' (not in the pipeline schema)")
+            # `--multiqc-title` is a spelling of the command line; a params file holds the name.
+            errors.append(f"parameter '{key}' is spelled '{key.replace('-', '_')}' in a params file"
+                          if "-" in key and key.replace("-", "_") in known else
+                          f"unknown parameter '{flag}' (not in the pipeline schema)")
         elif not _finite(value):
             # NaN/Infinity (a YAML `.nan`/`.inf`) has no JSON form: the params file Nextflow reads
             # would be invalid, whatever type the schema declares.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from runner import chain, cli, input_safety, locking, orchestration, runlog
+from runner import chain, cli, input_safety, locking, orchestration, replay_guard, runlog
 from runner.errors import NfclawError
 
 
@@ -511,3 +511,58 @@ def test_cli_boundary_refusal_preserves_an_existing_log_and_input_inventory(tmp_
     assert cli.main(["run", "fixture", "--input", str(data), "--outdir", str(out), "--resume"]) == 1
     assert log.read_text() == "historical analysis record\n"
     assert not (data / ".out.nfclaw.lock").exists()
+
+
+def test_a_refused_outdir_is_not_walked(tmp_path, monkeypatch):
+    # `--check --outdir /` never returned: a non-empty --outdir takes no run without --resume, yet
+    # every entry under it was inspected for links into the inputs before anything refused it.
+    data = tmp_path / "data.txt"
+    data.write_text("input")
+    outdir = tmp_path / "big"
+    outdir.mkdir()
+    (outdir / "existing").mkdir()
+    (outdir / "existing" / "alias.txt").hardlink_to(data)
+    writes = [("--outdir", outdir, True)]
+    with pytest.raises(NfclawError, match="overlaps"):      # --resume would publish over its input
+        input_safety.check_write_boundaries(
+            [data], writes, input_safety.refused_outdir(outdir, resume=True))
+    input_safety.check_write_boundaries([data], writes,
+                                        input_safety.refused_outdir(outdir, resume=False))
+    walked = []
+    scandir = replay_guard.os.scandir
+    monkeypatch.setattr(replay_guard.os, "scandir",
+                        lambda path: walked.append(str(path)) or scandir(path))
+    input_safety.check_write_boundaries([data], writes,
+                                        input_safety.refused_outdir(outdir, resume=False))
+    assert str(outdir / "existing") not in walked
+
+
+def test_a_missing_outdir_is_nothing_to_skip(tmp_path):
+    assert input_safety.refused_outdir(tmp_path / "missing", resume=False) == ()
+
+
+def test_a_chain_outdir_holding_only_its_record_is_still_walked(tmp_path):
+    # A chain refuses a non-empty --outdir only when something beside its record is there, so one
+    # that holds just the record can still be written to: its links must be looked for.
+    outdir = tmp_path / "chain-out"
+    (outdir / "chain").mkdir(parents=True)
+    assert input_safety.refused_outdir(outdir, resume=False, own="chain") == ()
+    (outdir / "other").mkdir()
+    assert input_safety.refused_outdir(outdir, resume=False, own="chain") == (outdir,)
+
+
+def test_a_replay_target_that_holds_files_is_not_walked(tmp_path, monkeypatch):
+    # `commands.sh` refuses it right after this check, which used to walk all of it first.
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "run_manifest.json").write_text('{"command": "nextflow run x"}')
+    for name in ("inputs", "configs"):
+        (bundle / f"{name}.inventory.json").write_text("{}")
+    target = tmp_path / "big"
+    (target / "existing").mkdir(parents=True)
+    walked = []
+    scandir = replay_guard.os.scandir
+    monkeypatch.setattr(replay_guard.os, "scandir",
+                        lambda path: walked.append(str(path)) or scandir(path))
+    replay_guard.check_replay_destination(bundle, target)
+    assert str(target / "existing") not in walked

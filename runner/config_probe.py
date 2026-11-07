@@ -26,6 +26,22 @@ _STRICT_PARSER_DEFAULT = (26, 4)
 # What the Nextflow launcher prints when it cannot set an engine up at all (no jars, no Java).
 _ENGINE_DOWN = re.compile(r"Unable to initialize nextflow environment|CAPSULE EXCEPTION|"
                           r"Cannot download nextflow|Unable to download")
+_UNKNOWN_PROFILE = re.compile(r"Unknown configuration profile: ")
+_REMOTE_INCLUDE = re.compile(r"Cannot read config file include: (https?://\S+)")
+
+
+def _parses_offline(cmd: list[str], overlay: dict[str, str], timeout: float) -> bool:
+    """Whether the configuration parses once remote includes are skipped. For an include it cannot
+    fetch, Nextflow 26.04 prints only `Unable to parse config file`, as for a real parse failure."""
+    env = {**os.environ, **overlay}
+    if env.get("NXF_OFFLINE") == "true":
+        return False
+    with tempfile.TemporaryDirectory(prefix="nfclaw-probe-") as scratch:
+        try:
+            return capture(cmd, cwd=scratch, env={**env, "NXF_OFFLINE": "true"},
+                           timeout=budget.remaining(timeout)).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
 
 
 def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], label: str,
@@ -64,7 +80,22 @@ def probe(*, pipeline: Path, profile: str, configs, overlay: dict[str, str], lab
         # the run could not start either, but not because of its configuration.
         return [f"{label}: {engine} could not be started — Nextflow downloads a pinned engine on "
                 "first use; check this host can:\n" + "\n".join(f"      {line}" for line in report)]
+    if any(_UNKNOWN_PROFILE.search(line) for line in report):
+        # The configuration parsed; it just has no such profile, and no engine would change that.
+        return [f"{label}: the release defines no such profile ({profile}):\n"
+                + "\n".join(f"      {line}" for line in report)]
     chain = spelling == "chain"
+    include = _REMOTE_INCLUDE.search((r.stdout or "") + (r.stderr or ""))
+    if include or _parses_offline(cmd, overlay, probe_timeout):
+        ipv6, offline = (('"nxf_env": {"NXF_JVM_ARGS": "-Djava.net.preferIPv6Addresses=true"}',
+                          '"nxf_env": {"NXF_OFFLINE": "true"}') if chain else
+                         ("--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true",
+                          "--nxf-env NXF_OFFLINE=true"))
+        what = (f"could not fetch {include[1]}" if include else
+                "could not use a remote configuration it includes (it parses without them)")
+        return [f"{label}: {engine} {what} — check this host's network; on an IPv6-only host: "
+                f"{ipv6}; to skip remote configs: {offline}:\n"
+                + "\n".join(f"      {line}" for line in report)]
     # The engine the release was written for is the one it declares (docs/compatibility.md).
     declared = engine_version.minimum_version(
         engine_version.required_spec(pipeline / "nextflow.config"))

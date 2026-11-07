@@ -1,0 +1,4282 @@
+{
+ "version": 1,
+ "scope": "Each pin's bundled test, its replay from commands.sh, and nfclaw verify; not a scientific comparison.",
+ "host": "denbi_instance",
+ "tree": "a23a092 (claude/final-audit-v1)",
+ "options": "--demo --limit-cpus 8 --limit-memory 20.GB on the engine each skill.md names; a config with --network host, executor cpus 9, memory 20 GB; NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true",
+ "summary": {
+  "jobs": 91,
+  "finished": 91,
+  "runs_succeeded": 90,
+  "runs_failed": [
+   "seqsubmit"
+  ],
+  "runs_with_caveats": [
+   "cutandrun",
+   "hicar",
+   "mag",
+   "proteinfold"
+  ],
+  "replays_succeeded": 88,
+  "replays_failed": [
+   "reportho",
+   "sopa"
+  ],
+  "environment": {
+   "identical": 84,
+   "differs": 1,
+   "none": 2,
+   "unverified": 4
+  },
+  "verify_exit_0": 81,
+  "verify_exit_1": [
+   "longraredisease",
+   "mag",
+   "nanoseq",
+   "nanostring",
+   "rnafusion",
+   "rnasplice",
+   "spatialaxe"
+  ],
+  "containers_left": {},
+  "tasks": 7031,
+  "images": 1102,
+  "pinned": 2389,
+  "processes": 2394,
+  "remote_inputs": 693,
+  "bundle_issues": {},
+  "not_in_this_sweep": {
+   "ampliseq": "already run, replayed and verified on this code",
+   "bacmodel": "already run, replayed and verified on this code",
+   "detaxizer": "already run, replayed and verified on this code",
+   "oncoanalyser": "its 75 GB of references were deleted on 2026-10-16 and do not fit",
+   "pixelator": "already run, replayed and verified on this code"
+  }
+ },
+ "pins": {
+  "airrflow": {
+   "name": "airrflow",
+   "version": "5.1.2",
+   "commit": "601bbe64a4a035b531b70626eeacca9770100e6e",
+   "nextflow": "26.04.1",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2983,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 170
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 38,
+    "images": 10,
+    "pinned": 38,
+    "remote_inputs": 23,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 2237,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 175,
+    "changed": 355,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "atacseq": {
+   "name": "atacseq",
+   "version": "2.1.2",
+   "commit": "1a1dbe52ffbd82256c941a032b0e22abbd925b8a",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1353,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 265
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 75,
+    "images": 26,
+    "pinned": 75,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1028,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 396,
+    "changed": 337,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "bacass": {
+   "name": "bacass",
+   "version": "2.7.0",
+   "commit": "ce30c3a857adad365856e5565455c4cdae60ef3f",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 3107,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 17
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 10,
+    "images": 8,
+    "pinned": 10,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 2119,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 130,
+    "changed": 114,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "bactmap": {
+   "name": "bactmap",
+   "version": "1.0.0",
+   "commit": "834642d8ac150ca10d705833223e7bcf15efc210",
+   "nextflow": "24.10.5",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 274,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 47
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 23,
+    "images": 17,
+    "pinned": 23,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 251,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 53,
+    "changed": 60,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "bamtofastq": {
+   "name": "bamtofastq",
+   "version": "2.2.1",
+   "commit": "8a295860c0c9221337dec7f2620709a47cea254d",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 831,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 32
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 17,
+    "images": 5,
+    "pinned": 17,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 125,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 23,
+    "changed": 15,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "callingcards": {
+   "name": "callingcards",
+   "version": "1.0.0",
+   "commit": "20b66e785a822028eaa125583aad0747d55bba61",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 743,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 122
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 19,
+    "images": 12,
+    "pinned": 19,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 552,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 273,
+    "changed": 180,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "chipseq": {
+   "name": "chipseq",
+   "version": "2.1.0",
+   "commit": "76e2382b6d443db4dc2396e6831d1243256d80b0",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1686,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 215
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 50,
+    "images": 26,
+    "pinned": 50,
+    "remote_inputs": 15,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1423,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 288,
+    "changed": 363,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "circdna": {
+   "name": "circdna",
+   "version": "1.1.0",
+   "commit": "8e0e14c84f90c94d975c2bac6bde8e5a1d5bc8ab",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1991,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 89
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 33,
+    "images": 15,
+    "pinned": 31,
+    "remote_inputs": 8,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1470,
+    "environment": "unverified",
+    "mismatches": [],
+    "unverified": [
+     "NFCORE_CIRCDNA:CIRCDNA:CIRCLEFINDER: incomplete or containerless process evidence",
+     "NFCORE_CIRCDNA:CIRCDNA:GETCIRCULARREADS: incomplete or containerless process evidence"
+    ]
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 106,
+    "changed": 75,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "unverified"
+   },
+   "containers_left": 0
+  },
+  "coproid": {
+   "name": "coproid",
+   "version": "2.0.1",
+   "commit": "045d569d5b01b2d1572220718e64a6d054ad57eb",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 670,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 47
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 25,
+    "images": 15,
+    "pinned": 25,
+    "remote_inputs": 13,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 384,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 184,
+    "changed": 178,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 11,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    },
+    {
+     "run_exit": 0,
+     "replay_exit": 0,
+     "verify": {
+      "exit": 1,
+      "identical": 182,
+      "changed": 155,
+      "missing": 25,
+      "extra": 0,
+      "renamed": 1,
+      "missing_directories": 0,
+      "extra_directories": 0,
+      "changed_links": 11,
+      "environment": "identical"
+     },
+     "containers_left": 0
+    }
+   ],
+   "tree": "85313d4"
+  },
+  "createpanelrefs": {
+   "name": "createpanelrefs",
+   "version": "1.1.0",
+   "commit": "b9d0e44a41543c9c37441de97684f8e1efde3901",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 175,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 2
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 2,
+    "images": 2,
+    "pinned": 2,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 72,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 13,
+    "changed": 9,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "createtaxdb": {
+   "name": "createtaxdb",
+   "version": "3.1.0",
+   "commit": "b01a0f8ed96a5990d15470828dfa92a22cf08bba",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 977,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 28
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 22,
+    "images": 16,
+    "pinned": 22,
+    "remote_inputs": 17,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 400,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 61,
+    "changed": 19,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 7,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "crisprseq": {
+   "name": "crisprseq",
+   "version": "2.3.0",
+   "commit": "0e9f915c4a3c89d02a66ec58e2decbc832323c8b",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1729,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 44
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 17,
+    "images": 15,
+    "pinned": 17,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1113,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 108,
+    "changed": 83,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "cutandrun": {
+   "name": "cutandrun",
+   "version": "3.2.2",
+   "commit": "6e1125d4fee4ea7c8b70ed836bb0e92a89e3305f",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 794,
+    "status": "status: success \u2014 with caveats the pipeline reported about its results",
+    "tasks": {
+     "COMPLETED": 133,
+     "FAILED": 2
+    },
+    "caveats": [
+     "[nf-core/cutandrun] Pipeline completed successfully, but with errored process(es)",
+     "Nextflow ignored 2 failed task(s) (errorStrategy 'ignore'); their results are missing"
+    ]
+   },
+   "bundle": {
+    "processes": 95,
+    "images": 21,
+    "pinned": 95,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 439,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 160,
+    "changed": 116,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "datasync": {
+   "name": "datasync",
+   "version": "1.0.2",
+   "commit": "c48b5103cc568d275c7d65a9609771cfb3471931",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 55,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 7
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 4,
+    "images": 2,
+    "pinned": 4,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 43,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 22,
+    "changed": 11,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "demo": {
+   "name": "demo",
+   "version": "1.2.0",
+   "commit": "32893afef8076a03a2767a020b3f0cab2e0b40b2",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 159,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 8
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 4,
+    "images": 4,
+    "pinned": 4,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 90,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 42,
+    "changed": 34,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "demultiplex": {
+   "name": "demultiplex",
+   "version": "1.8.0",
+   "commit": "daade37c4a75a4c1709ccf12434deb3424141319",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 193,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 7
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 7,
+    "images": 6,
+    "pinned": 7,
+    "remote_inputs": 2,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 175,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 95,
+    "changed": 81,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "denovotranscript": {
+   "name": "denovotranscript",
+   "version": "1.2.1",
+   "commit": "9ab0f57785c37f77e05a03c8c327e35c63c8432b",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1070,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 19
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 15,
+    "images": 13,
+    "pinned": 15,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 448,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 118,
+    "changed": 2223,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "differentialabundance": {
+   "name": "differentialabundance",
+   "version": "2.0.0",
+   "commit": "30ed7741fc392127156c2fb10cfa3d69d216b54b",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 892,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 25
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 17,
+    "images": 11,
+    "pinned": 17,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 434,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 65,
+    "changed": 15,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "drop": {
+   "name": "drop",
+   "version": "1.0.0",
+   "commit": "20388350d242746f8e799b28c3ae80421627b077",
+   "nextflow": "25.10.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 4669,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 134
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 52,
+    "images": 18,
+    "pinned": 52,
+    "remote_inputs": 34,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 4077,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 237,
+    "changed": 79,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 1
+    }
+   ]
+  },
+  "drugresponseeval": {
+   "name": "drugresponseeval",
+   "version": "1.3.0",
+   "commit": "6e420c1cc2f1be2907627d9b2b3aca77bf622603",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1053,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 34
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 16,
+    "images": 2,
+    "pinned": 16,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 745,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 196,
+    "changed": 13,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "epitopeprediction": {
+   "name": "epitopeprediction",
+   "version": "3.2.0",
+   "commit": "e637bc7c49e6e05a09f5207501a142ec68d8570b",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 450,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 21
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 17,
+    "images": 9,
+    "pinned": 17,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 156,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 36,
+    "changed": 39,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "fastqrepair": {
+   "name": "fastqrepair",
+   "version": "1.1.1",
+   "commit": "70a38209407b9367a9ff7ab8b26d84cb1983ea18",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 61,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 9
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 7,
+    "images": 4,
+    "pinned": 7,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 58,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 33,
+    "changed": 38,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "fastquorum": {
+   "name": "fastquorum",
+   "version": "2.0.0",
+   "commit": "074b201d8ca6a38717da7dca58921a2cae9e21f0",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 313,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 12
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 7,
+    "pinned": 12,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 250,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 29,
+    "changed": 18,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "fetchngs": {
+   "name": "fetchngs",
+   "version": "1.13.0",
+   "commit": "955c892d80927cee633765e6e390f9cc6b7235c9",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 636,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 26
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 4,
+    "images": 2,
+    "pinned": 4,
+    "remote_inputs": 0,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 500,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 45,
+    "changed": 5,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "funcprofiler": {
+   "name": "funcprofiler",
+   "version": "1.0.0",
+   "commit": "805e23e866b90142e176d1ae85da6f6a365bf056",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 604,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 13
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 8,
+    "images": 7,
+    "pinned": 8,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 276,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 39,
+    "changed": 10,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "funcscan": {
+   "name": "funcscan",
+   "version": "4.0.0",
+   "commit": "aee3dc965eb0c77267435544dda30da858763913",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 2,
+    "first_attempt_exit": 1,
+    "seconds": 4986,
+    "status": "status: success",
+    "tasks": {
+     "CACHED": 56,
+     "COMPLETED": 12
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 37,
+    "images": 15,
+    "pinned": 37,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1546,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 81,
+    "changed": 33,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 0,
+     "replay_exit": 143,
+     "verify": null,
+     "containers_left": 0
+    }
+   ]
+  },
+  "genomeassembler": {
+   "name": "genomeassembler",
+   "version": "2.0.1",
+   "commit": "c608622876dc627020e6627a5ea8cffd0d2e3f3d",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1743,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 88
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 30,
+    "images": 14,
+    "pinned": 30,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1973,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 234,
+    "changed": 87,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "genomeqc": {
+   "name": "genomeqc",
+   "version": "1.0.1",
+   "commit": "bce44e5b558e21b38d4dd2b6521302246b4dae6d",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2917,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 88
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 0,
+    "images": 0,
+    "pinned": 0,
+    "remote_inputs": 10,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1165,
+    "environment": "unverified",
+    "mismatches": [],
+    "unverified": [
+     "the replay holds no task records to compare containers with",
+     "the recording holds no task records to compare containers with"
+    ]
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 687,
+    "changed": 330,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "unverified"
+   },
+   "containers_left": 0
+  },
+  "hadge": {
+   "name": "hadge",
+   "version": "1.0.0",
+   "commit": "921d3780498d0d6f4da0d3ea8c8416d214a3ff42",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 4204,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 103
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 34,
+    "images": 25,
+    "pinned": 34,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 3479,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 461,
+    "changed": 58,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "hgtseq": {
+   "name": "hgtseq",
+   "version": "1.1.0",
+   "commit": "683daaf41bb396839445e603152b45daa141ced4",
+   "nextflow": "22.10.1",
+   "run": {
+    "exit": 0,
+    "attempts": 2,
+    "first_attempt_exit": 1,
+    "seconds": 701,
+    "status": "status: success",
+    "tasks": {
+     "CACHED": 28,
+     "COMPLETED": 35
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 27,
+    "images": 13,
+    "pinned": 27,
+    "remote_inputs": 10,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 501,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 210,
+    "changed": 94,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "assess": {
+    "hgtseq-1.1.0-historical-demo.json": 0
+   },
+   "superseded": [
+    {
+     "run_exit": 0,
+     "replay_exit": 0,
+     "verify": {
+      "exit": 0,
+      "identical": 233,
+      "changed": 71,
+      "missing": 0,
+      "extra": 0,
+      "renamed": 4,
+      "missing_directories": 0,
+      "extra_directories": 0,
+      "changed_links": 0,
+      "environment": "identical"
+     },
+     "containers_left": 0
+    }
+   ]
+  },
+  "hic": {
+   "name": "hic",
+   "version": "2.1.0",
+   "commit": "fe4ac656317d24c37e81e7940a526ed9ea812f8e",
+   "nextflow": "22.10.1",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 295,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 38
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 26,
+    "images": 14,
+    "pinned": 26,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 222,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 61,
+    "changed": 51,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "hicar": {
+   "name": "hicar",
+   "version": "1.0.0",
+   "commit": "429087d2b13e59c3edd2e71b8005c1adc5bbb7bb",
+   "nextflow": "21.10.3",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1767,
+    "status": "status: success \u2014 with caveats the pipeline reported about its results",
+    "tasks": {
+     "COMPLETED": 94,
+     "FAILED": 1
+    },
+    "caveats": [
+     "[nf-core/hicar] Pipeline completed successfully, but with errored process(es)",
+     "Nextflow ignored 1 failed task(s) (errorStrategy 'ignore'); their results are missing"
+    ]
+   },
+   "bundle": {
+    "processes": 73,
+    "images": 33,
+    "pinned": 73,
+    "remote_inputs": 9,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 549,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 86,
+    "changed": 53,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "hlatyping": {
+   "name": "hlatyping",
+   "version": "2.2.0",
+   "commit": "3237d20e7e611d8bbf8c37e637202dfe8a23e996",
+   "nextflow": "25.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 584,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 7
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 7,
+    "images": 7,
+    "pinned": 7,
+    "remote_inputs": 2,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 666,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 49,
+    "changed": 37,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "isoseq": {
+   "name": "isoseq",
+   "version": "3.0.1",
+   "commit": "6c944831289d4d6e33497026f6b18e8c671705bd",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1695,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 45
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 13,
+    "images": 10,
+    "pinned": 13,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1972,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 166,
+    "changed": 77,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "longraredisease": {
+   "name": "longraredisease",
+   "version": "1.0.0",
+   "commit": "f40870fcbcf2e9fc29b623b848487789d487ed4a",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1602,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 46
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 46,
+    "images": 22,
+    "pinned": 46,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1178,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 62,
+    "changed": 41,
+    "missing": 7,
+    "extra": 7,
+    "renamed": 1,
+    "missing_directories": 1,
+    "extra_directories": 1,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "lsmquant": {
+   "name": "lsmquant",
+   "version": "1.0.3",
+   "commit": "b39ec6e1fb267ab3d2d3b16d05b921aaa679cd1f",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1295,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 14
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 7,
+    "images": 5,
+    "pinned": 7,
+    "remote_inputs": 2,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 982,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 223,
+    "changed": 33,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "mag": {
+   "name": "mag",
+   "version": "5.5.0",
+   "commit": "56abab5b023ce953c9c43fe21090d156ad0e18af",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 4814,
+    "status": "status: success \u2014 with caveats the pipeline reported about its results",
+    "tasks": {
+     "COMPLETED": 187,
+     "FAILED": 1
+    },
+    "caveats": [
+     "[nf-core/mag] Pipeline completed successfully, but with errored process(es)",
+     "Nextflow ignored 1 failed task(s) (errorStrategy 'ignore'); their results are missing"
+    ]
+   },
+   "bundle": {
+    "processes": 41,
+    "images": 25,
+    "pinned": 41,
+    "remote_inputs": 8,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 2519,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 857,
+    "changed": 507,
+    "missing": 15,
+    "extra": 15,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "magmap": {
+   "name": "magmap",
+   "version": "1.3.1",
+   "commit": "839660084e48d682f70bed4e535f2a11a756638a",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 809,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 59
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 29,
+    "images": 16,
+    "pinned": 29,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 239,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 82,
+    "changed": 55,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "marsseq": {
+   "name": "marsseq",
+   "version": "1.0.3",
+   "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 321,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 34
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 14,
+    "images": 9,
+    "pinned": 14,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 286,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 75,
+    "changed": 67,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    },
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ],
+   "tree": "ebc2a96",
+   "options": "--genomes-base <the build's references> --star-index <an empty directory> --max-memory 26.GB --max-cpus 16"
+  },
+  "marsseq-refs": {
+   "name": "marsseq",
+   "version": "1.0.3",
+   "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2829,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 8
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 8,
+    "images": 6,
+    "pinned": 8,
+    "remote_inputs": 0,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 3250,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 11,
+    "changed": 3,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 143,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    },
+    {
+     "run_exit": 143,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ],
+   "tree": "ebc2a96",
+   "options": "--build-references true --max-memory 26.GB --max-cpus 16, without --velocity"
+  },
+  "mcmicro": {
+   "name": "mcmicro",
+   "version": "2.0.0",
+   "commit": "f4400001578642e370a72668966c6602fe172ef6",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1342,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 11
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 11,
+    "images": 6,
+    "pinned": 10,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 764,
+    "environment": "unverified",
+    "mismatches": [],
+    "unverified": [
+     "NFCORE_MCMICRO:MCMICRO:UPDATE_FROM_OME:OMEVALIDATION: incomplete or containerless process evidence"
+    ]
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 18,
+    "changed": 13,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "unverified"
+   },
+   "containers_left": 0
+  },
+  "metaboigniter": {
+   "name": "metaboigniter",
+   "version": "2.0.1",
+   "commit": "55d82547604fcae3b6557fe7a3c442b623184f34",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 347,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 13
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 7,
+    "images": 3,
+    "pinned": 7,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 544,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 20,
+    "changed": 21,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 27,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "metapep": {
+   "name": "metapep",
+   "version": "1.0.0",
+   "commit": "84feafc9476978c2a1b84849871a553cffd9762a",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 9755,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 27
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 18,
+    "images": 9,
+    "pinned": 18,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 9040,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 25,
+    "changed": 21,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "metatdenovo": {
+   "name": "metatdenovo",
+   "version": "2.0.0",
+   "commit": "e9f8311e9a24278fdaed0f8717eb819532aef55e",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1064,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 86
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 41,
+    "images": 24,
+    "pinned": 41,
+    "remote_inputs": 14,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 674,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 66,
+    "changed": 125,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ]
+  },
+  "methylong": {
+   "name": "methylong",
+   "version": "2.0.0",
+   "commit": "3513e80df682ad20f42d6429a2ee142b606949b5",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 466,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 25
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 25,
+    "images": 15,
+    "pinned": 25,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 274,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 22,
+    "changed": 29,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "methylseq": {
+   "name": "methylseq",
+   "version": "4.2.0",
+   "commit": "5aa56467a85a5e2d6795ea72dfa5a5f0c9babc23",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 858,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 36
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 6,
+    "pinned": 12,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 373,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 104,
+    "changed": 112,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "mhcquant": {
+   "name": "mhcquant",
+   "version": "3.3.0",
+   "commit": "a4b6d51803af0fbde5acd8e9802df76280ba8306",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 890,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 21
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 13,
+    "images": 6,
+    "pinned": 13,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 380,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 23,
+    "changed": 44,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "molkart": {
+   "name": "molkart",
+   "version": "1.2.0",
+   "commit": "4ec0790d80cf77f2428d33b1a8571ccb498e2170",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1025,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 22
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 6,
+    "pinned": 12,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 496,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 28,
+    "changed": 14,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 8,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "multiplesequencealign": {
+   "name": "multiplesequencealign",
+   "version": "1.1.1",
+   "commit": "79724dac3d240b9bb7684532d3fe238b42f6a4b4",
+   "nextflow": "25.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 543,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 78
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 35,
+    "images": 13,
+    "pinned": 35,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 277,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 41,
+    "changed": 25,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "nanoseq": {
+   "name": "nanoseq",
+   "version": "3.1.0",
+   "commit": "6e563e54362cddb8e48d15c156251708c22d0e8d",
+   "nextflow": "22.10.1",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 193,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 26
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 16,
+    "images": 10,
+    "pinned": 16,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 166,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 27,
+    "changed": 39,
+    "missing": 1,
+    "extra": 45,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 0,
+     "replay_exit": 0,
+     "verify": {
+      "exit": 1,
+      "identical": 26,
+      "changed": 84,
+      "missing": 1,
+      "extra": 1,
+      "renamed": 4,
+      "missing_directories": 0,
+      "extra_directories": 0,
+      "changed_links": 0,
+      "environment": "identical"
+     },
+     "containers_left": 0
+    }
+   ]
+  },
+  "nanostring": {
+   "name": "nanostring",
+   "version": "1.3.3",
+   "commit": "6f0b2d537a1f06e8fe1d6c63d7c409009141aa62",
+   "nextflow": "25.10.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 305,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 7
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 5,
+    "images": 4,
+    "pinned": 5,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 114,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 33,
+    "changed": 26,
+    "missing": 2,
+    "extra": 1,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "nascent": {
+   "name": "nascent",
+   "version": "2.3.0",
+   "commit": "7d4fe61975015f652c271886e661764b05cfd3bf",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1589,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 149
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 37,
+    "images": 19,
+    "pinned": 37,
+    "remote_inputs": 8,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1220,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 226,
+    "changed": 121,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "pacvar": {
+   "name": "pacvar",
+   "version": "1.1.0",
+   "commit": "20364830237171928c79e59651142460379d1459",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 115,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 10
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 10,
+    "images": 5,
+    "pinned": 10,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 97,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 15,
+    "changed": 10,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "pairgenomealign": {
+   "name": "pairgenomealign",
+   "version": "3.0.4",
+   "commit": "8ee09a1cdc920fc90cd62358952045e5019e1fe0",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 144,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 20
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 5,
+    "pinned": 12,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 77,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 37,
+    "changed": 19,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "pangenome": {
+   "name": "pangenome",
+   "version": "1.1.3",
+   "commit": "3d02bd1df79f48b4bfdb4ad95d4ca0d7f6aeb337",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 269,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 22
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 20,
+    "images": 7,
+    "pinned": 20,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 291,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 8,
+    "changed": 61,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "pathogensurveillance": {
+   "name": "pathogensurveillance",
+   "version": "1.1.0",
+   "commit": "13547eaa7345dab4ac97db49775ae8284af4113d",
+   "nextflow": "25.04.6",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1451,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 46,
+     "FAILED": 1
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 17,
+    "images": 13,
+    "pinned": 17,
+    "remote_inputs": 0,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 980,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 758,
+    "changed": 146,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 326,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "phaseimpute": {
+   "name": "phaseimpute",
+   "version": "1.1.0",
+   "commit": "452783d960ebd2b4d337a649e9c8eb3859611916",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 451,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 40
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 18,
+    "images": 7,
+    "pinned": 18,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 387,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 13,
+    "changed": 55,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "phyloplace": {
+   "name": "phyloplace",
+   "version": "2.3.0",
+   "commit": "68db179c0f034bd0a6133b62a8a9fa37f8a3c517",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 76,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 8
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 8,
+    "images": 5,
+    "pinned": 8,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 49,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 22,
+    "changed": 11,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "plasmodiumdrugres": {
+   "name": "plasmodiumdrugres",
+   "version": "1.0.0",
+   "commit": "a333327a245ccb3c0f1a37167a7afe670c35894e",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 153,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 6
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 6,
+    "images": 3,
+    "pinned": 6,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 45,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 11,
+    "changed": 4,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "proteinannotator": {
+   "name": "proteinannotator",
+   "version": "1.1.0",
+   "commit": "cbf78d471f62d91af666e8c77bcd580b4743c6be",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 752,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 40
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 18,
+    "images": 8,
+    "pinned": 18,
+    "remote_inputs": 4,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 524,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 65,
+    "changed": 33,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "proteinfamilies": {
+   "name": "proteinfamilies",
+   "version": "2.6.0",
+   "commit": "318acd54eb9c679553338b2db46313bb469d03d1",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 388,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 90,
+     "FAILED": 3
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 34,
+    "images": 12,
+    "pinned": 34,
+    "remote_inputs": 2,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 459,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 68,
+    "changed": 33,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "proteinfold": {
+   "name": "proteinfold",
+   "version": "2.0.0",
+   "commit": "5338c24b2af62cc4c02dcd34bcc49912eebffb3a",
+   "nextflow": "25.10.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 140,
+    "status": "status: success \u2014 with caveats the pipeline reported about its results",
+    "tasks": {
+     "COMPLETED": 5
+    },
+    "caveats": [
+     "stub run: the `test` profile sets `stubRun = true`, so every task ran its stub block and wrote placeholder files instead of running its tool; the outputs hold no analysis results"
+    ]
+   },
+   "bundle": {
+    "processes": 3,
+    "images": 3,
+    "pinned": 3,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 49,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 16,
+    "changed": 4,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "provenancereport": {
+   "name": "provenancereport",
+   "version": "1.0.0",
+   "commit": "89ed44de8da1788e5f00a6dd95bd72c51ff36dff",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 142,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 5
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 5,
+    "images": 3,
+    "pinned": 5,
+    "remote_inputs": 2,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 64,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 18,
+    "changed": 17,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rangeland": {
+   "name": "rangeland",
+   "version": "1.0.0",
+   "commit": "7c5cb9593b80d2a3cdc8bcb14137722351644435",
+   "nextflow": "24.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2182,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 280
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 3,
+    "pinned": 12,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1494,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 1177,
+    "changed": 42,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 861,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "raredisease": {
+   "name": "raredisease",
+   "version": "3.1.2",
+   "commit": "83f2699d28bc957e1d3b875da3d96004a818c2c3",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 7470,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 876
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 188,
+    "images": 43,
+    "pinned": 186,
+    "remote_inputs": 42,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 6461,
+    "environment": "unverified",
+    "mismatches": [],
+    "unverified": [
+     "NFCORE_RAREDISEASE:RAREDISEASE:CALL_STRUCTURAL_VARIANTS:CALL_SV_MT:PREP_MITOSALT: incomplete or containerless process evidence",
+     "NFCORE_RAREDISEASE:RAREDISEASE:CALL_STRUCTURAL_VARIANTS:CALL_SV_MT:SALTSHAKER_TO_HTML: incomplete or containerless process evidence"
+    ]
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 217,
+    "changed": 182,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "unverified"
+   },
+   "containers_left": 0
+  },
+  "readsimulator": {
+   "name": "readsimulator",
+   "version": "1.0.1",
+   "commit": "0e8805ddbcd0e0fdcdc62105d59c3f29dd985a64",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 91,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 1
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 1,
+    "images": 1,
+    "pinned": 1,
+    "remote_inputs": 0,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 114,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 5,
+    "changed": 7,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 5,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "reportho": {
+   "name": "reportho",
+   "version": "1.1.0",
+   "commit": "9e8ae5a07ddb5ccd34bb01c72e70e390d97d1cb7",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 2,
+    "first_attempt_exit": 1,
+    "seconds": 729,
+    "status": "status: success",
+    "tasks": {
+     "CACHED": 25,
+     "COMPLETED": 45
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 35,
+    "images": 12,
+    "pinned": 35,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 1,
+    "seconds": 216,
+    "environment": null,
+    "mismatches": null,
+    "unverified": null
+   },
+   "verify": null,
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 0,
+     "replay_exit": 1,
+     "verify": null,
+     "containers_left": 0
+    }
+   ],
+   "further_replay": {
+    "exit": 0,
+    "environment": "identical",
+    "verify": {
+     "exit": 0,
+     "identical": 30,
+     "changed": 26,
+     "missing": 0,
+     "extra": 0,
+     "renamed": 1
+    }
+   }
+  },
+  "ribomsqc": {
+   "name": "ribomsqc",
+   "version": "v1.0.0",
+   "commit": "3654357ea417c0a52ede22721f584885271fc0e7",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 192,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 4
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 4,
+    "images": 3,
+    "pinned": 4,
+    "remote_inputs": 3,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 49,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 7,
+    "changed": 10,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "riboseq": {
+   "name": "riboseq",
+   "version": "2.0.0",
+   "commit": "11d66a3b8ae1f41f9c385af36bd431c35bf015ab",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 6609,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 356
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 50,
+    "images": 25,
+    "pinned": 50,
+    "remote_inputs": 22,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 4384,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 504,
+    "changed": 597,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnadnavar": {
+   "name": "rnadnavar",
+   "version": "1.0.0",
+   "commit": "8e8debdb0e7208218a4a2f852de7c741a69ca448",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 3605,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 120
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 34,
+    "images": 17,
+    "pinned": 34,
+    "remote_inputs": 9,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 3369,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 158,
+    "changed": 158,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnafusion": {
+   "name": "rnafusion",
+   "version": "4.1.3",
+   "commit": "76ad76e7c39b2ba9edc35aa3602e3dc454d842ec",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1523,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 23
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 23,
+    "images": 16,
+    "pinned": 23,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 560,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 190,
+    "changed": 115,
+    "missing": 1,
+    "extra": 1,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnaseq": {
+   "name": "rnaseq",
+   "version": "3.27.0",
+   "commit": "a1fcdddd3b826fe46eb46f0479f2ff8a7815af05",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2992,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 234
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 65,
+    "images": 26,
+    "pinned": 65,
+    "remote_inputs": 19,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 3256,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 710,
+    "changed": 346,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnasplice": {
+   "name": "rnasplice",
+   "version": "2.0.0",
+   "commit": "aceb47ab77cf0edfb290a44035328ed5b7eb0be8",
+   "nextflow": "26.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 3875,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 139
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 62,
+    "images": 28,
+    "pinned": 62,
+    "remote_inputs": 12,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 4466,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 2702,
+    "changed": 1537,
+    "missing": 20,
+    "extra": 20,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnastructurome": {
+   "name": "rnastructurome",
+   "version": "1.1.0",
+   "commit": "633ab1d0d12103f9002fe6e781ae1251df2d2656",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 570,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 52
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 38,
+    "images": 15,
+    "pinned": 38,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 531,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 73,
+    "changed": 15,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "rnavar": {
+   "name": "rnavar",
+   "version": "1.3.0",
+   "commit": "a0e4641409eb7aed4b325e543d20577f9c08e437",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 682,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 43
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 35,
+    "images": 11,
+    "pinned": 35,
+    "remote_inputs": 10,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 457,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 49,
+    "changed": 51,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "sarek": {
+   "name": "sarek",
+   "version": "3.11.0",
+   "commit": "6e9b164daa2a54c98f7dda538645d340c561ac24",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 411,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 22
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 20,
+    "images": 12,
+    "pinned": 20,
+    "remote_inputs": 10,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 377,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 86,
+    "changed": 97,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "scnanoseq": {
+   "name": "scnanoseq",
+   "version": "1.3.0",
+   "commit": "83d55ea87eb625a3564d40124fb1fa54c4c63f9e",
+   "nextflow": "25.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2612,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 85
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 46,
+    "images": 18,
+    "pinned": 46,
+    "remote_inputs": 5,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1510,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 94,
+    "changed": 95,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "scrnaseq": {
+   "name": "scrnaseq",
+   "version": "4.2.0",
+   "commit": "3fc17b4f971a89e47c88337de71d0e777ffad8cc",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1191,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 19
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 8,
+    "images": 7,
+    "pinned": 8,
+    "remote_inputs": 9,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1253,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 83,
+    "changed": 50,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "seqinspector": {
+   "name": "seqinspector",
+   "version": "1.1.2",
+   "commit": "6aa08aabb00cdbb0f5b62adf2749b472e794ba04",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 555,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 48
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 13,
+    "images": 11,
+    "pinned": 13,
+    "remote_inputs": 11,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 721,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 555,
+    "changed": 523,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 1,
+     "replay_exit": null,
+     "verify": null,
+     "containers_left": 0
+    }
+   ]
+  },
+  "seqsubmit": {
+   "name": "seqsubmit",
+   "version": "1.0.0",
+   "commit": "717fd19e7a40099fbe5362ec48ab8ec21f62d3f8",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 1,
+    "attempts": 2,
+    "first_attempt_exit": 1,
+    "seconds": 393,
+    "status": "status: failed (exit status 1)",
+    "tasks": {
+     "CACHED": 15,
+     "FAILED": 1
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 12,
+    "images": 11,
+    "pinned": 12,
+    "remote_inputs": 6,
+    "issues": []
+   },
+   "replay": {
+    "exit": null,
+    "seconds": null,
+    "environment": null,
+    "mismatches": null,
+    "unverified": null
+   },
+   "verify": null,
+   "containers_left": 0
+  },
+  "smrnaseq": {
+   "name": "smrnaseq",
+   "version": "2.4.1",
+   "commit": "cb0af579b24cb8d5a3accd87b2f14ea93fe04832",
+   "nextflow": "25.04.2",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 4858,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 244
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 41,
+    "images": 16,
+    "pinned": 41,
+    "remote_inputs": 14,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 2638,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 222,
+    "changed": 147,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "sopa": {
+   "name": "sopa",
+   "version": "1.0.2",
+   "commit": "64a9f6bce616cbe7dc94d06f5719dee394d303a7",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 524,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 9
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 9,
+    "images": 2,
+    "pinned": 9,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 1,
+    "seconds": 282,
+    "environment": "differs",
+    "mismatches": [
+     "remote input https://github.com/nf-core/sopa/blob/dev/tests/samplesheet.csv changed: recorded sha256 b01f0d94abc3ada6059f827fbb9b93c73069cb9a2377e9eb934c39e05366f1b4, replay staged 6ae8148c95c1e87f4a1e873a5d827d45707198a2c2c6b5767481a161b84b4d07"
+    ],
+    "unverified": []
+   },
+   "verify": null,
+   "containers_left": 0
+  },
+  "spatialaxe": {
+   "name": "spatialaxe",
+   "version": "1.0.1",
+   "commit": "748d310ac01943c97a15bdbc27ec2525a3ee0a96",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1215,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 10
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 10,
+    "images": 5,
+    "pinned": 10,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 517,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 1,
+    "identical": 490,
+    "changed": 140,
+    "missing": 1,
+    "extra": 26,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 26,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "superseded": [
+    {
+     "run_exit": 0,
+     "replay_exit": 0,
+     "verify": {
+      "exit": 1,
+      "identical": 495,
+      "changed": 135,
+      "missing": 1,
+      "extra": 26,
+      "renamed": 1,
+      "missing_directories": 0,
+      "extra_directories": 26,
+      "changed_links": 0,
+      "environment": "identical"
+     },
+     "containers_left": 0
+    }
+   ]
+  },
+  "stableexpression": {
+   "name": "stableexpression",
+   "version": "1.1.0",
+   "commit": "c4cbf82471391990cae257c0212be86f6b4fb18b",
+   "nextflow": "26.04.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1285,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 246
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 31,
+    "images": 13,
+    "pinned": 31,
+    "remote_inputs": 1,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1450,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 45,
+    "changed": 5,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "taxprofiler": {
+   "name": "taxprofiler",
+   "version": "2.0.1",
+   "commit": "70ecc15e49b4f1fcf79d876643b5d14b65c66178",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2629,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 179
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 51,
+    "images": 27,
+    "pinned": 51,
+    "remote_inputs": 26,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 2830,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 341,
+    "changed": 381,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "tumourevo": {
+   "name": "tumourevo",
+   "version": "1.0.0",
+   "commit": "180ae5447d0eb0214f650b6fcf7dabed0c77b5a2",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 2846,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 66
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 18,
+    "images": 11,
+    "pinned": 18,
+    "remote_inputs": 15,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1944,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 133,
+    "changed": 83,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 0,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "assess": {
+    "tumourevo-1.0.0-demo.json": 0
+   }
+  },
+  "variantbenchmarking": {
+   "name": "variantbenchmarking",
+   "version": "1.6.0",
+   "commit": "de4e43900039edd09106198d83c2559ea6a61b1a",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 821,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 68
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 24,
+    "images": 7,
+    "pinned": 24,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 597,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 47,
+    "changed": 47,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "variantprioritization": {
+   "name": "variantprioritization",
+   "version": "1.0.0",
+   "commit": "8ba629c53dbdb65057c85a3b0a76a7eb2e8688ef",
+   "nextflow": "25.10.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 656,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 19
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 11,
+    "images": 7,
+    "pinned": 11,
+    "remote_inputs": 8,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 360,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 476,
+    "changed": 32,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "viralintegration": {
+   "name": "viralintegration",
+   "version": "0.1.1",
+   "commit": "70e558aaff836d43f5d662bf9c28414f4e6db642",
+   "nextflow": "23.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 871,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 45
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 23,
+    "images": 9,
+    "pinned": 23,
+    "remote_inputs": 9,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 786,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 157,
+    "changed": 74,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 4,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "viralmetagenome": {
+   "name": "viralmetagenome",
+   "version": "1.2.0",
+   "commit": "74064a43f4b00c163c22bcfc9cf1d84a2a69e988",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1315,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 288
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 86,
+    "images": 35,
+    "pinned": 86,
+    "remote_inputs": 16,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 721,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 391,
+    "changed": 184,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  },
+  "viralrecon": {
+   "name": "viralrecon",
+   "version": "3.0.0",
+   "commit": "395079f1d24dce731ac22e03d7a5e71f110103fc",
+   "nextflow": "25.04.0",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 3389,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 200
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 80,
+    "images": 32,
+    "pinned": 80,
+    "remote_inputs": 10,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 3676,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 453,
+    "changed": 238,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0
+  }
+ },
+ "later_head": {
+  "variantbenchmarking": {
+   "name": "variantbenchmarking",
+   "version": "1.6.1",
+   "commit": "c4c9440bfb6e6bc0a7787ff9ecfad4838308f3a1",
+   "nextflow": "25.10.4",
+   "run": {
+    "exit": 0,
+    "attempts": 1,
+    "first_attempt_exit": null,
+    "seconds": 1122,
+    "status": "status: success",
+    "tasks": {
+     "COMPLETED": 68
+    },
+    "caveats": null
+   },
+   "bundle": {
+    "processes": 24,
+    "images": 7,
+    "pinned": 24,
+    "remote_inputs": 7,
+    "issues": []
+   },
+   "replay": {
+    "exit": 0,
+    "seconds": 1074,
+    "environment": "identical",
+    "mismatches": [],
+    "unverified": []
+   },
+   "verify": {
+    "exit": 0,
+    "identical": 45,
+    "changed": 49,
+    "missing": 0,
+    "extra": 0,
+    "renamed": 1,
+    "missing_directories": 0,
+    "extra_directories": 0,
+    "changed_links": 0,
+    "environment": "identical"
+   },
+   "containers_left": 0,
+   "tree": "aea5fa4"
+  }
+ }
+}

@@ -554,6 +554,10 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
     except CaptureError as exc:
         record["issues"].append(f"task records could not be read: {exc}")
         return record
+    if not task_records:
+        record["issues"].append("Nextflow holds no task records for this run, so no container "
+                                "image was identified or pinned for its replay; `cleanup = true` "
+                                "in a config removes them when a run succeeds")
     processes: dict[str, dict] = {}
     for task in task_records:
         entry = processes.setdefault(task["process"], {"containers": set(), "tasks": 0,
@@ -601,6 +605,11 @@ def _capture(launch_dir: Path, *, log_path: Path, env: dict[str, str] | None = N
     if unpinned:
         record["issues"].append(f"{len(unpinned)} process(es) are not pinned to an image digest "
                                 "for replay: " + ", ".join(unpinned))
+    containerless = sorted(name for name, entry in record["processes"].items()
+                           if entry["without_container"])
+    if containerless:
+        record["issues"].append(f"{len(containerless)} process(es) ran tasks with no container, "
+                                "whose tools a replay cannot compare: " + ", ".join(containerless))
     return record
 
 

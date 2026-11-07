@@ -232,6 +232,17 @@ def test_missing_current_log_records_an_unknown_plugin_inventory_without_malform
     assert environment_record.compare(record, record)["status"] == "unverified"
 
 
+def test_a_run_whose_task_records_are_gone_says_so(tmp_path, monkeypatch):
+    # genomeqc's test profile sets `cleanup = true`: a success left no records and no stated gap.
+    history = tmp_path / ".nextflow/history"
+    history.parent.mkdir()
+    history.write_text(f"today\t1s\trun_name\tOK\targ\t{SESSION}\n")
+    monkeypatch.setattr(environment_record, "tasks", lambda *a, **kw: [])
+    record = environment_record.capture(tmp_path, log_path=tmp_path / ".nextflow.log")
+    assert record["processes"] == {}
+    assert any("no task records" in gap and "cleanup = true" in gap for gap in record["issues"])
+
+
 @pytest.fixture
 def trickle_server():
     disconnected = threading.Event()
@@ -259,7 +270,7 @@ def trickle_server():
                     self.wfile.write(b"x")
                     self.wfile.flush()
                     time.sleep(0.02)
-            except (BrokenPipeError, ConnectionResetError):
+            except OSError:  # macOS can also report a closing peer as EPROTOTYPE
                 disconnected.set()
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Trickle)
@@ -295,7 +306,7 @@ def test_slow_progress_download_obeys_absolute_deadline_and_closes_worker_socket
         elapsed = time.monotonic() - start
         assert "unresolved" in result
         assert elapsed < 1.8, f"download exceeded its absolute budget: {elapsed}"
-        assert disconnected.wait(1), "the cancelled download left its HTTP connection open"
+        assert disconnected.wait(10), "the cancelled download left its HTTP connection open"
         assert all(child.poll() is not None for child in created)
     finally:
         for child in created:

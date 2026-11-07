@@ -60,6 +60,34 @@ each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ### Fixed
 
+- `--resume` after a nfclaw that vanished (SIGKILL, out of memory, a host restart) or could not write
+  its bundle (a full disk) reuses the finished tasks. A launch now records what it consumes before
+  Nextflow starts; it used to recompute every task, while `nfclaw status` and the full-disk error
+  promised otherwise. A killed replay is no longer told to `--resume`. (#257)
+- A documented `--outdir results` run leaves the checkout clean: its writer lock, replay and the
+  previous run `--resume` preserves are ignored by Git. (#257)
+- `--check`, or a run, with a large existing directory as `--outdir` no longer walks all of it looking
+  for links into the inputs (`--outdir /` never finished): a run refuses a non-empty directory without
+  `--resume` anyway. (#257)
+- `--check` names a profile the release does not define, instead of suggesting another engine. (#257)
+- A run whose task records are gone, because a config set `cleanup = true`, now warns that no container
+  was identified or pinned for its replay, instead of recording no gap. (#257)
+- `--check` on a host that cannot fetch a release's remote configuration says so and names the network
+  remedies, instead of suggesting another engine and parser. (#257)
+- A Fast5 directory in a bacass 2.7.0 samplesheet is part of the run's input identity again: the bump
+  had changed the schema its audited roles are keyed by. (#257)
+- `python3 -m runner` on a Python older than 3.11 names the Python it needs instead of an
+  `ImportError`; a `~` naming no user, or a report a terminal's encoding cannot show, is no
+  traceback. (#257)
+- `provenance:` warnings about gaps in a run's recorded environment reached only stderr, which a
+  background run usually loses. They are now also in the run log, and `nfclaw status` lists them under
+  `provenance gaps` (`provenance_gaps` with `--json`), and `nfclaw chain status` beside each stage.
+  A task that ran with no container now counts as such a gap. (#257)
+- A stop while the container engine is still creating a task container removes it once it appears,
+  instead of leaving it behind, never started. nfclaw waits up to 30 s; one that takes longer is
+  named on stderr and in the run log, with how to find and remove it. The group is looked through
+  throughout the stop, so a client that started as the stop began is covered too. A container its
+  task wrapper is already removing is no longer reported as one that could not be removed. (#257)
 - Python bytecode caches that tasks write into the pipeline source (`bin/__pycache__` in circdna,
   reportho and viralmetagenome) no longer fail a successful run or its archived replay as a source
   change, and symlink modes are recorded portably so a macOS bundle replays from its archive on

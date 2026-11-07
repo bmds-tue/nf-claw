@@ -634,6 +634,21 @@ def test_an_official_docker_hub_image_named_with_its_registry_gets_its_digest(mo
     assert env_record.pins(record) == {"P:CAT": f"docker.io/library/ubuntu@{DIGEST_A}"}
 
 
+def test_a_task_with_no_container_is_a_recorded_gap(tmp_path, fake_tools, monkeypatch):
+    # circdna, raredisease and mcmicro ran such tasks with `issues` empty, so nothing said so until
+    # a replay's check came back `unverified`.
+    out = tmp_path / "out"
+    out.mkdir()
+    st = _git_pipeline(tmp_path)
+    subprocess.run(["nextflow", "run", str(st.path)], cwd=out, check=True, capture_output=True)
+    monkeypatch.setattr(env_record, "tasks", lambda *a, **k: [
+        {"process": "P:HOST", "container": ""}, {"process": "P:HOST", "container": ""}])
+    record = env_record.capture(out, log_path=out / ".nextflow.log", profile="docker")
+    assert record["processes"]["P:HOST"]["without_container"] == 2
+    assert any("1 process(es) ran tasks with no container" in issue and "P:HOST" in issue
+               for issue in record["issues"])
+
+
 def test_a_spent_deadline_leaves_the_gap_recorded_instead_of_probing(tmp_path, fake_tools):
     out = tmp_path / "out"
     out.mkdir()

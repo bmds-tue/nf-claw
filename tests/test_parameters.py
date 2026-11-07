@@ -419,3 +419,13 @@ def test_explicit_remote_path_parameters_have_staged_name_guards(tmp_path, param
     assert any("unsafe remote input filename" in issue for issue in issues)
     assert parameters.validate_params(
         {parameter: "https://example.org/ref.fa?token=a+b/c=&signature=$signed"}, ps) == []
+
+
+def test_a_hyphenated_params_file_key_names_its_spelling():
+    schema = ParamSchema(title="t", description="d", params={"multiqc_title": Param(
+        name="multiqc_title", type="string", default=None, enum=None, description="", fmt=None,
+        required=False, group="g")})
+    [error] = parameters.validate_params({"multiqc-title": "x"}, schema)
+    assert error == "parameter 'multiqc-title' is spelled 'multiqc_title' in a params file"
+    [error] = parameters.validate_params({"not-a-param": "x"}, schema)
+    assert error == "unknown parameter '--not-a-param' (not in the pipeline schema)"

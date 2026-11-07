@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "captured_at": "2026-11-05T05:40:00+00:00",
+  "scope": "Demo, replay and verify of the pins moved since their last on-host validation; not a scientific comparison.",
+  "host": "denbi_instance",
+  "options": "--demo --limit-cpus 8 --limit-memory 24.GB, host-network config, NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true",
+  "tree": "3e95b00 (the content of 4b03905 on claude/final-audit-v1); detaxizer on 8f0f6de",
+  "disk_watchdog": "A run was stopped below 3 GB free on the volume, and a replay was skipped below 6 GB free.",
+  "stopped_by_the_watchdog": [
+    "bacass",
+    "variantbenchmarking"
+  ],
+  "replay_skipped_for_disk": [
+    "sarek",
+    "sopa"
+  ],
+  "hosted_gate_runs": {
+    "bacass": "https://github.com/bmds-tue/nf-claw/actions/runs/41837654947",
+    "variantbenchmarking": "https://github.com/bmds-tue/nf-claw/actions/runs/41176597064"
+  },
+  "pins": {
+    "ampliseq": {
+      "engine": "26.04.0",
+      "tasks": {
+        "COMPLETED": 130
+      },
+      "verify": {
+        "changed": 322,
+        "environment": "identical",
+        "extra": 0,
+        "identical": 1288,
+        "missing": 0,
+        "renamed": 1
+      },
+      "version": "3.1.0"
+    },
+    "bacass": {
+      "engine": "25.10.4",
+      "tasks": {
+        "ABORTED": 3,
+        "COMPLETED": 9
+      },
+      "verify": null,
+      "version": "2.7.0"
+    },
+    "bacmodel": {
+      "engine": "25.10.4",
+      "tasks": {
+        "COMPLETED": 2
+      },
+      "verify": {
+        "changed": 5,
+        "environment": "identical",
+        "extra": 0,
+        "identical": 15,
+        "missing": 0,
+        "renamed": 1
+      },
+      "version": "1.0.1"
+    },
+    "detaxizer": {
+      "engine": "26.04.0",
+      "tasks": {
+        "COMPLETED": 54
+      },
+      "verify": {
+        "changed": 42,
+        "environment": "identical",
+        "extra": 0,
+        "identical": 80,
+        "missing": 0,
+        "renamed": 1
+      },
+      "version": "1.4.0"
+    },
+    "pixelator": {
+      "engine": "25.10.4",
+      "tasks": {
+        "COMPLETED": 27
+      },
+      "verify": {
+        "changed": 97,
+        "environment": "identical",
+        "extra": 0,
+        "identical": 21,
+        "missing": 0,
+        "renamed": 1
+      },
+      "version": "6.0.0"
+    },
+    "sarek": {
+      "engine": "25.10.4",
+      "tasks": {
+        "COMPLETED": 22
+      },
+      "verify": null,
+      "version": "3.11.0"
+    },
+    "sopa": {
+      "engine": "25.10.4",
+      "tasks": {
+        "COMPLETED": 9
+      },
+      "verify": null,
+      "version": "1.0.2"
+    },
+    "variantbenchmarking": {
+      "engine": "25.10.4",
+      "tasks": {
+        "ABORTED": 7,
+        "COMPLETED": 53
+      },
+      "verify": null,
+      "version": "1.6.0"
+    }
+  }
+}

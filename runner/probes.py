@@ -29,7 +29,8 @@ def capture(command: list[str], *, timeout: float,
             # assigned: raised inside Popen, it lost the group, and the probe's helpers ran on.
             with execution._defer_stop_signals():
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                        text=text, env=env, cwd=cwd, start_new_session=grouped)
+                                        text=text, errors="replace" if text else None,
+                                        env=env, cwd=cwd, start_new_session=grouped)
             stdout, stderr = proc.communicate(timeout=budget.remaining(timeout))
             budget.check()
         except BaseException as exc:

@@ -24,6 +24,11 @@ venv/
 .nextflow.log*
 work/
 results/
+# What a documented `--outdir results` run leaves beside it: its replay, a previous run preserved by
+# --resume, and the writer locks.
+results.replay/
+results.previous-*/
+.*.nfclaw.lock
 
 # The Nextflow launcher, if installed into the repo root (`curl -s https://get.nextflow.io | bash`).
 # It is a local tool, never part of the library — anchored so pipeline sources are unaffected.

@@ -1,5 +1,6 @@
 import json
 import os
+import runpy
 import signal
 import socket
 import subprocess
@@ -977,3 +978,55 @@ def test_an_os_error_without_a_path_is_named_as_such(tmp_path, monkeypatch, caps
     assert cli.main(["run", "x", "--outdir", str(tmp_path / "out")]) == 1
     assert "[environment] operating-system error: No space left on device" in \
         capsys.readouterr().err
+
+
+def test_a_value_that_looks_like_a_short_option_is_told_to_attach_it(capsys):
+    # argparse would read `-c 3` as `-c` with the value ` 3`: refused, naming what works.
+    assert cli.main(["run", "demo", "--outdir", "x", "--multiqc-title", "-c 3"]) == 1
+    assert "--param='-c 3'" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("argv", [["status", "~nfclaw-no-such-user/x"],
+                                  ["chain", "status", "~nfclaw-no-such-user/x"],
+                                  ["verify", "~nfclaw-no-such-user/x", "--against", "/x"],
+                                  ["run", "demo", "--outdir", "~nfclaw-no-such-user/x"]])
+def test_a_tilde_naming_no_user_is_an_error_not_a_traceback(argv, capsys):
+    assert cli.main(argv) == 1
+    assert "cannot resolve a path" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("bug", [RuntimeError("dictionary changed size during iteration"),
+                                 RecursionError("maximum recursion depth exceeded"),
+                                 NotImplementedError("not here")])
+def test_only_pathlib_s_runtime_errors_read_as_path_problems(monkeypatch, bug):
+    def broken(_argv):
+        raise bug
+    monkeypatch.setattr(cli, "_main", broken)
+    with pytest.raises(type(bug)):
+        cli.main([])
+
+
+@pytest.mark.parametrize("message", ["Could not determine home directory.",
+                                     "Symlink loop from '/a/b'"])
+def test_pathlib_s_runtime_errors_are_refusals(monkeypatch, capsys, message):
+    def broken(_argv):
+        raise RuntimeError(message)
+    monkeypatch.setattr(cli, "_main", broken)
+    assert cli.main([]) == 1
+    assert "cannot resolve a path" in capsys.readouterr().err
+
+
+def test_the_no_install_form_names_the_python_it_needs(monkeypatch):
+    monkeypatch.setattr(sys, "version_info", (3, 9, 6, "final", 0))
+    with pytest.raises(SystemExit) as stopped:
+        runpy.run_module("runner", run_name="__main__")
+    assert "needs Python 3.11 or newer" in str(stopped.value)
+
+
+def test_output_a_terminal_cannot_show_is_no_traceback(tmp_path):
+    env = {**os.environ, "PYTHONIOENCODING": "ascii"}
+    result = subprocess.run([sys.executable, "-m", "runner", "status", str(tmp_path / "none")],
+                            capture_output=True, text=True, env=env,
+                            cwd=Path(__file__).resolve().parent.parent)
+    assert result.returncode == 1 and "Traceback" not in result.stderr
+    assert "status: no run log \\u2014" in result.stdout

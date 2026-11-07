@@ -8,6 +8,7 @@ left its task containers behind exited, and with a shorter grace still running.
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -24,12 +25,14 @@ FAKE_ENGINE = """#!/bin/bash
 echo "$*" >> "$ENGINE_LOG"
 case "$1" in
   run)
-    for arg; do case "$arg" in
+    [ -n "$ENGINE_CREATES_LATER" ] || for arg; do case "$arg" in
       nxf-*) touch "$ENGINE_STATE/$arg" ;;
       --name=nxf-*) touch "$ENGINE_STATE/${arg#--name=}" ;;
     esac; done
     trap '' TERM
     while :; do sleep 0.1; done ;;
+  ps)
+    ls "$ENGINE_STATE" ;;
   rm)
     shift; [ "$1" = -f ] && shift
     for name; do
@@ -172,6 +175,16 @@ def test_removal_reports_what_it_removed_and_what_it_could_not(engine):
 
     removed, problems = replay_guard.remove_task_containers({("/nonexistent/docker",): {"nxf-x"}})
     assert removed == [] and "could not run" in problems[0]
+
+
+def test_a_removal_its_wrapper_already_started_is_not_a_problem(engine):
+    # Seen on every ordinary stop of a real run: the wrappers and nfclaw remove at the same time.
+    docker, _, _ = engine
+    busy = docker.with_name("podman")
+    busy.write_text("#!/bin/bash\necho 'Error response from daemon: removal of container nxf-x is "
+                    "already in progress' >&2\nexit 1\n")
+    busy.chmod(0o755)
+    assert replay_guard.remove_task_containers({(str(busy),): {"nxf-x"}}) == ([], [])
 
 
 def test_removal_through_sudo_never_waits_for_a_password(engine, tmp_path):
@@ -325,3 +338,141 @@ def test_a_group_that_outlives_its_reaped_leader_is_still_stopped(engine, tmp_pa
         _kill(proc)
     assert not list(state.iterdir())
     assert "rm -f nxf-Orphan1" in log.read_text().splitlines()
+
+
+def test_a_container_still_being_created_is_waited_for_and_removed(engine, tmp_path, monkeypatch):
+    # A stop while the daemon creates a container: `rm` finds nothing, the daemon then finishes it,
+    # and a container that never started stays behind for good.
+    docker, state, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 10)
+    containers = {(str(docker),): {"nxf-late"}}
+    assert replay_guard.unlisted_containers(containers) == {"nxf-late"}
+    timer = threading.Timer(1.5, (state / "nxf-late").touch)
+    timer.start()
+    try:
+        removed, problems = replay_guard.remove_task_containers(containers, creating={"nxf-late"})
+    finally:
+        timer.join()
+    assert removed == ["nxf-late"] and problems == []
+    assert not (state / "nxf-late").exists()
+
+
+def _late_task(tmp_path: Path, docker: Path, name: str) -> Path:
+    """A wrapper that goes on through the signal and starts its client only then, which ends by
+    itself soon after: seen on a real chain, whose client started its container 5 s after the stop
+    and was gone, the container left behind, long before the grace period ended."""
+    task = tmp_path / "late-task.sh"
+    task.write_text(f"#!/bin/bash\ntrap '' TERM\ntouch {tmp_path}/armed\nsleep 0.5\n"
+                    f"{docker} run -i --name {name} img &\nclient=$!\nsleep 1\nkill -9 $client\n")
+    task.chmod(0o755)
+    return task
+
+
+def test_a_client_that_starts_after_the_signal_has_its_container_removed(engine, tmp_path):
+    docker, state, log = engine
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    try:
+        _wait_for(tmp_path, "armed")                   # the task is running, its client is not yet
+        execution._terminate(proc, grace=20)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Late" in log.read_text().splitlines()
+
+
+def test_a_replay_s_client_that_starts_after_the_signal_has_its_container_removed(engine, tmp_path):
+    docker, state, _ = engine
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    try:
+        _wait_for(tmp_path, "armed")
+        report = replay_guard._stop_replay_group(proc, grace=20)
+    finally:
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert any("removed 1 task container(s)" in line and "nxf-Late" in line for line in report)
+
+
+def test_a_late_client_killed_while_its_container_is_being_created_still_has_it_removed(
+        engine, tmp_path, monkeypatch):
+    docker, state, log = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 15)
+    monkeypatch.setenv("ENGINE_CREATES_LATER", "1")
+    proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
+    timer = threading.Timer(3, (state / "nxf-Late").touch)     # after its client is gone
+    timer.start()
+    try:
+        _wait_for(tmp_path, "armed")
+        execution._terminate(proc, grace=20)
+    finally:
+        timer.join()
+        _kill(proc)
+    assert not list(state.iterdir())
+    assert "rm -f nxf-Late" in log.read_text().splitlines()
+
+
+def test_a_look_at_a_stopping_group_asks_the_engine_only_about_new_names(engine):
+    docker, state, log = engine
+    (state / "nxf-Listed").touch()
+    client = (str(docker),)
+    containers: dict[tuple[str, ...], set[str]] = {}
+    creating: set[str] = set()
+    replay_guard.note_task_containers({client: {"nxf-Listed", "nxf-Late"}}, containers, creating)
+    assert containers == {client: {"nxf-Listed", "nxf-Late"}}
+    assert creating == {"nxf-Late"}                   # one already listed is not waited for
+    asked = log.read_text().count("ps -a")
+    replay_guard.note_task_containers({client: {"nxf-Late"}}, containers, creating)
+    assert log.read_text().count("ps -a") == asked
+
+
+def test_a_container_its_wrapper_removed_is_not_waited_for(engine, monkeypatch):
+    docker, state, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 60)
+    (state / "nxf-seen").touch()
+    containers = {(str(docker),): {"nxf-seen"}}
+    assert replay_guard.unlisted_containers(containers) == set()
+    (state / "nxf-seen").unlink()                # the wrapper removed it when it was signalled
+    started = time.monotonic()
+    assert replay_guard.remove_task_containers(containers) == ([], [])
+    assert time.monotonic() - started < 30
+
+
+def test_a_creating_container_that_never_appears_ends_the_wait(engine, monkeypatch):
+    docker, _, _ = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    containers = {(str(docker),): {"nxf-never"}}
+    removed, problems = replay_guard.remove_task_containers(containers, creating={"nxf-never"})
+    assert removed == []
+    assert len(problems) == 1 and "nxf-never had not appeared 1 s after the stop" in problems[0]
+
+
+def test_a_late_container_is_named_with_the_engine_that_started_it(engine, tmp_path, monkeypatch):
+    # A Podman or `docker.sudo` run has nothing to find with a bare `docker ps`.
+    docker, _, _ = engine
+    podman = tmp_path / "podman"
+    podman.symlink_to(docker)
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    containers = {(str(docker),): {"nxf-a"}, (str(podman),): {"nxf-b", "nxf-c"}}
+    _, problems = replay_guard.remove_task_containers(containers,
+                                                      creating={"nxf-a", "nxf-b", "nxf-c"})
+    assert len(problems) == 2
+    by_docker, by_podman = sorted(problems, key=lambda problem: "nxf-a" not in problem)
+    assert by_docker.startswith("nxf-a had not appeared")
+    assert f"`{docker} ps -a --filter name=nxf-`" in by_docker and f"`{docker} rm`" in by_docker
+    assert by_podman.startswith("nxf-b, nxf-c had not appeared")
+    assert f"`{podman} ps -a --filter name=nxf-`" in by_podman and f"`{podman} rm`" in by_podman
+
+
+def test_one_wait_covers_every_container_being_created(engine, monkeypatch):
+    # Removal runs 16 at a time: a wait per container would make a stop take several of them.
+    docker, _, log = engine
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    names = {f"nxf-{number:02}" for number in range(20)}
+    removed, problems = replay_guard.remove_task_containers({(str(docker),): names}, creating=names)
+    assert removed == [] and len(problems) == 1 and all(name in problems[0] for name in names)
+    asked = log.read_text().splitlines()
+    assert asked.count("rm -f nxf-00") > 1       # asked again while it could still appear
+    assert asked.count("rm -f nxf-19") == 1      # its turn came when the wait was over
+
+
+def test_an_engine_that_cannot_list_waits_for_nothing(tmp_path):
+    assert replay_guard.unlisted_containers({(str(tmp_path / "no-engine"),): {"nxf-a"}}) == set()

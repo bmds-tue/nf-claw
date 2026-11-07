@@ -36,6 +36,7 @@ from runner.replay_guard import host_identity, quote_console, log_cursor_path, w
 
 RUN_LOG_NAME = "run.log"
 ERROR_MARK = "==> nfclaw error:"          # precedes the error nfclaw records, up to the last line
+PROVENANCE_GAP = "    provenance: "       # a gap in the environment a successful run recorded
 
 # The tail of a launch's console kept in memory for quoting its error. Nextflow ends a failed run
 # with its error report, so the tail always holds it; a bound keeps a days-long run cheap.
@@ -524,6 +525,8 @@ class RunState:
     last_output: list[str] = field(default_factory=list)
     # A successful launch's own report of what its results lack (`completion_caveats`).
     caveats: list[str] = field(default_factory=list)
+    # What its recorded environment lacks: the results stand, but its replay can check less.
+    provenance_gaps: list[str] = field(default_factory=list)
 
 
 def _argv(pid: int) -> list[str] | None:
@@ -700,6 +703,10 @@ def read_state(log: Path, *, replay_engine_log: Path | None = None) -> RunState:
         at = len(body) - 1 - body[::-1].index(ERROR_MARK)
         st.error, body = body[at + 1:], body[:at]
     if prefixed_console:
+        # Before the quoting comes off: console text cannot pose as one of nfclaw's own lines.
+        st.provenance_gaps = [line[len(PROVENANCE_GAP):] for line in body
+                              if line.startswith(PROVENANCE_GAP)]
+        body = [line for line in body if not line.startswith(PROVENANCE_GAP)]
         body = [line[2:] if line.startswith("| ") else line for line in body]
         st.error = [line[2:] if line.startswith("| ") else line for line in st.error]
     st.console = "\n".join(body)

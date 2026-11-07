@@ -155,7 +155,8 @@ def start_replay_log(log: Path, original: str, pid: str) -> None:
     """Write trusted replay controls independently of arbitrary path text."""
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     stub_profiles, stub_configs = _recorded_stub_sources(original)  # a replay runs the same stubs
-    manifest = json.loads((Path(original) / "provenance/run_manifest.json").read_text())
+    manifest = json.loads((Path(original) / "provenance/run_manifest.json")
+                          .read_text(encoding="utf-8"))
     engine_log = _replay_engine_log(manifest, log.parent.parent.parent,
                                     _effective_replay_env(manifest))
     engine_path = str(engine_log).replace("\r", "\\r").replace("\n", "\\n")
@@ -417,7 +418,12 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
             obj[key] = value
         return obj
 
-    data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique)
+    return check_input_inventory(json.loads(path.read_text(encoding="utf-8"),
+                                            object_pairs_hook=unique), path)
+
+
+def check_input_inventory(data, path) -> dict[str, dict[str, str]]:
+    """`data` when it is a well-formed namespace record, read from `path`; else ValueError."""
     if not isinstance(data, dict):
         raise ValueError(f"invalid input inventory in {path}")
 
@@ -438,13 +444,15 @@ def read_input_inventory(path: Path) -> dict[str, dict[str, str]]:
 
 
 def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
-                           writes: list[tuple[str, Path, bool]]) -> None:
+                           writes: list[tuple[str, Path, bool]],
+                           unwalked: tuple[Path, ...] = ()) -> None:
     """Refuse writes beneath any consumed directory, including nested directory aliases.
 
     The boolean also refuses dependencies inside a destination that can publish arbitrary
     results. Work/cache trees use False: previously computed files there are legitimate
     inputs for a later task, but a whole consumed directory must never acquire new work.
     Inspect metadata only; prelaunch content snapshots remain the source of byte evidence.
+    Destinations in `unwalked` will not be written, so the links inside them are not looked for.
     """
     if not sources:
         return
@@ -496,7 +504,7 @@ def check_write_boundaries(sources: list[Path] | tuple[Path, ...],
 
     try:
         for label, path, contains in writes:
-            inspect_writer(label, path.expanduser(), contains)
+            inspect_writer(label, path.expanduser(), contains and path not in unwalked)
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"Cannot inspect execution destination boundaries: {exc}") from exc
 
@@ -590,7 +598,12 @@ def check_replay_destination(bundle: Path, target: Path) -> None:
                                  env.get("TMPDIR", "") if name == "NXF_TEMP" else "")
         if value:
             writes.append((f"Nextflow {name}", local(value), False))
-    check_write_boundaries(sources, writes)
+    # `commands.sh` refuses a target that holds files: walking one only delays saying so.
+    try:
+        occupied = (target,) if any(target.iterdir()) else ()
+    except OSError:
+        occupied = ()
+    check_write_boundaries(sources, writes, occupied)
 
 
 def pipeline_head(repo: Path) -> str | None:
@@ -746,7 +759,7 @@ def pipeline_source_record(bundle: Path, manifest: dict) -> dict | None:
     if (type(manifest.get('pipeline_identity_version')) is not int
             or manifest['pipeline_identity_version'] != source_identity.VERSION):
         raise ValueError('pipeline source identity record and manifest versions differ')
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding='utf-8'))
     if source_identity.files(record) != read_checksums(bundle / 'pipeline.sha256'):
         raise ValueError('pipeline source identity differs from the source checksums')
     if manifest.get('source_corrections') is not None:
@@ -869,7 +882,7 @@ def corrected_source_record(bundle: Path, manifest: dict) -> dict | None:
     path = _recorded_file(bundle, manifest, 'source_corrections', 'source-corrections.json')
     if path is None:
         return None
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding='utf-8'))
     files, _, _ = corrected_source_inventory(record)
     if (files != read_checksums(bundle / 'pipeline.sha256')
             or record.get('pipeline') != manifest.get('pipeline')
@@ -1228,31 +1241,93 @@ def task_containers(pgid: int) -> dict[tuple[str, ...], set[str]]:
     return found
 
 
-def remove_task_containers(containers: dict[tuple[str, ...], set[str]],
-                           timeout: float = 60) -> tuple[list[str], list[str]]:
+def _engine_command(engine: tuple[str, ...], *args: str) -> list[str]:
+    command = [*engine, *args]
+    if os.path.basename(command[0]) == "sudo":       # `docker.sudo`: never wait on a password
+        command.insert(1, "-n")
+    return command
+
+
+def unlisted_containers(containers: dict[tuple[str, ...], set[str]]) -> set[str]:
+    """The task containers the engine does not list yet, asked the moment a run is stopped.
+
+    Their clients are running, so the daemon is still creating them (seconds on a busy host). See
+    `remove_task_containers`. Unknown when the engine cannot answer: nothing is waited for then."""
+    unlisted: set[str] = set()
+    for engine, names in containers.items():
+        try:
+            listing = subprocess.run(
+                _engine_command(engine, "ps", "-a", "--filter", "name=nxf-", "--format",
+                                "{{.Names}}"),
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace",
+                timeout=5, check=False)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if listing.returncode == 0:
+            unlisted |= names - set(listing.stdout.split())
+    return unlisted
+
+
+def note_task_containers(found: dict[tuple[str, ...], set[str]],
+                         containers: dict[tuple[str, ...], set[str]], creating: set[str]) -> None:
+    """Add the names in `found`, a later look at a stopping group, to those of the stop.
+
+    A client can outlive the signal or start after it, and create its container seconds later, with
+    its wrapper's `docker stop` and `docker rm` already over: nothing else would remove that one.
+    Only new names cost a question to the engine, and one it already lists is not waited for."""
+    new = {engine: fresh for engine, names in found.items()
+           if (fresh := names - containers.get(engine, set()))}
+    if new:
+        creating |= unlisted_containers(new)
+        for engine, names in new.items():
+            containers.setdefault(engine, set()).update(names)
+
+
+# How long containers still being created when their run stopped are waited for. Measured on a
+# loaded host: they appeared 2-15 s after the stop, and once not within 15 s.
+_CREATION_SETTLE = 30
+# How often a stopping group is looked through. On a real chain, a client that started as the stop
+# began lived 6 s: one that starts and ends between two looks can still leave its container behind.
+STOP_LOOK_SECONDS = 0.25
+
+
+def remove_task_containers(containers: dict[tuple[str, ...], set[str]], timeout: float = 60,
+                           creating: set[str] | frozenset[str] = frozenset()
+                           ) -> tuple[list[str], list[str]]:
     """Force-remove the given task containers once their run is stopped, all at once: a busy
     daemon takes seconds for each, and a run can stop with dozens running.
 
     Returns the names removed and any problem the engine reported. A container the task wrapper
-    already removed is not a problem."""
+    already removed is not a problem. One in `creating` (`unlisted_containers`) is looked for until
+    it appears, for `_CREATION_SETTLE` seconds however many there are: the daemon finishes creating
+    it after its client is gone, and nothing else would ever remove a container that never started.
+    One that has not appeared by then is reported: it may never have been created, or may still be.
+    """
     from concurrent.futures import ThreadPoolExecutor
 
-    def remove(engine: tuple[str, ...], name: str) -> tuple[bool, list[str]]:
-        command = [*engine, "rm", "-f", name]
-        if os.path.basename(command[0]) == "sudo":   # `docker.sudo`: never wait on a password
-            command.insert(1, "-n")
-        try:
-            result = subprocess.run(command, stdin=subprocess.DEVNULL,
-                                    capture_output=True, text=True, errors="replace",
-                                    timeout=timeout, check=False)
-        except subprocess.TimeoutExpired:
-            return False, [f"`{' '.join(engine)} rm -f {name}` did not finish within "
-                           f"{timeout:g} s"]
-        except OSError as exc:
-            return False, [f"`{' '.join(engine)} rm -f` could not run: {exc}"]
-        return (name in (line.strip() for line in result.stdout.splitlines()),
-                [line.strip() for line in result.stderr.splitlines()
-                 if line.strip() and "no such container" not in line.lower()])
+    give_up = time.monotonic() + _CREATION_SETTLE
+
+    def remove(engine: tuple[str, ...], name: str) -> tuple[bool, list[str], bool]:
+        command = _engine_command(engine, "rm", "-f", name)
+        while True:
+            try:
+                result = subprocess.run(command, stdin=subprocess.DEVNULL,
+                                        capture_output=True, text=True, errors="replace",
+                                        timeout=timeout, check=False)
+            except subprocess.TimeoutExpired:
+                return False, [f"`{' '.join(engine)} rm -f {name}` did not finish within "
+                               f"{timeout:g} s"], False
+            except OSError as exc:
+                return False, [f"`{' '.join(engine)} rm -f` could not run: {exc}"], False
+            problems = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+            absent = [line for line in problems if "no such container" in line.lower()]
+            if not absent or name not in creating or time.monotonic() >= give_up:
+                return (name in (line.strip() for line in result.stdout.splitlines()),
+                        # "already in progress": its wrapper got there first, nothing is left.
+                        [line for line in problems if line not in absent
+                         and "already in progress" not in line],
+                        bool(absent) and name in creating)
+            time.sleep(1)
 
     work = [(engine, name) for engine, names in sorted(containers.items())
             for name in sorted(names)]
@@ -1262,10 +1337,21 @@ def remove_task_containers(containers: dict[tuple[str, ...], set[str]],
         return removed, problems
     with ThreadPoolExecutor(max_workers=min(16, len(work))) as pool:
         outcomes = list(pool.map(lambda job: remove(*job), work))
-    for index, (gone, found) in enumerate(outcomes):
+    for index, (gone, found, _) in enumerate(outcomes):
         if gone:
             removed.append(work[index][1])
         problems += [problem for problem in found if problem not in problems]
+    late: dict[tuple[str, ...], list[str]] = {}
+    for index, outcome in enumerate(outcomes):
+        if outcome[2]:
+            late.setdefault(work[index][0], []).append(work[index][1])
+    for engine, names in late.items():
+        command = " ".join(engine)
+        problems.append(f"{', '.join(names)} had not appeared {_CREATION_SETTLE:g} s after the "
+                        "stop: its client may have ended before the engine created anything. One "
+                        "the engine was still creating stays behind, never started: "
+                        f"`{command} ps -a --filter name=nxf-` lists them, and "
+                        f"`{command} rm` removes them")
     return sorted(removed), problems
 
 
@@ -1317,26 +1403,29 @@ def _stop_replay_group(proc: subprocess.Popen, grace: float = 10) -> list[str]:
         return inspection
     deadline = time.monotonic() + grace
     gone = False
+    creating: set[str] = set()
     try:
+        creating = unlisted_containers(containers)
         while time.monotonic() < deadline:
             proc.poll()  # Reap the leader without assuming its tasks have also exited.
             if not signal_process_group(proc.pid, 0):
                 gone = True
                 break
-            time.sleep(0.05)
+            note_task_containers(task_containers(proc.pid), containers, creating)
+            time.sleep(STOP_LOOK_SECONDS)
     finally:
         # A reaped leader with no member left frees the group's number for another group: it is
         # neither searched nor signalled then.
+        latest: dict[tuple[str, ...], set[str]] = {}
         if not (gone and proc.returncode is not None):
             latest = task_containers(proc.pid)
             inspection.extend(getattr(latest, "issues", []))
-            for engine, names in latest.items():
-                containers.setdefault(engine, set()).update(names)
             signal_process_group(proc.pid, signal.SIGKILL)
         proc.wait(timeout=2)
+    note_task_containers(latest, containers, creating)
     if not containers:
         return sorted(set(inspection))
-    removed, problems = remove_task_containers(containers)
+    removed, problems = remove_task_containers(containers, creating=creating)
     return sorted(set(inspection)) + ([
              f"nfclaw replay: removed {len(removed)} task container(s) the stopped replay left "
              f"behind: {', '.join(removed)}"] if removed else []) + \

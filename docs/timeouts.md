@@ -63,7 +63,11 @@ limits. Shutdown grace is captured at launch, recorded in `run_manifest.json`, a
 embedded into new standalone replay scripts. Historical replay scripts keep their
 ten-second default. After the grace period, nfclaw (and a replay's supervisor) force-removes
 every Docker/Podman task container that the run's own processes started and that is still there:
-a task wrapper killed while `docker stop` waited on a container's PID 1 never removes it. Nextflow
+a task wrapper killed while `docker stop` waited on a container's PID 1 never removes it. The engine
+can still be creating a container when its client is stopped, so one it does not list yet is looked
+for until it appears, for up to 30 seconds in all. One that has not appeared by then is named on
+stderr and in the run log, with how to find and remove it: on a heavily loaded host the engine can
+take longer, and such a container stays behind, never started. Nextflow
 remains responsible for scheduler jobs and other executors' remote work; process-group signaling
 cannot cover escaped processes.
 

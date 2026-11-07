@@ -407,6 +407,21 @@ def test_unreadable_process_identity_is_unknown_without_signal_advice(tmp_path, 
     assert record["inspection_issues"] == st.inspection_issues
 
 
+def test_status_lists_the_gaps_in_a_run_s_recorded_environment(tmp_path):
+    # A background run's stderr is usually gone. Console text is quoted in the log, so it cannot
+    # pose as one of these lines.
+    body = ("    console format: prefixed\n|     provenance: said by a task\n| done\n"
+            f"{runlog.PROVENANCE_GAP}no task records")
+    st = runlog.read_state(_log(tmp_path, _block(pid=1, body=body, end="success")))
+    assert st.state == "success" and st.provenance_gaps == ["no task records"]
+    assert st.last_output == ["    provenance: said by a task", "done"]
+    report = cli._status_report(st)
+    assert report.splitlines()[0] == "status: success"
+    assert "  no task records" in report.splitlines()
+    assert "said by a task" not in report
+    assert cli._status_record(st, report, 0)["provenance_gaps"] == ["no task records"]
+
+
 def test_a_run_whose_nfclaw_is_gone_stopped_without_an_outcome(tmp_path, named_process):
     # kill -9, out of memory, a restart: nfclaw never wrote the last line and is not running.
     proc = named_process("nfclaw")
