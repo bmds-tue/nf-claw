@@ -1,7 +1,7 @@
 ---
 name: drugresponseeval
-version: 1.3.0
-commit: 6e420c1cc2f1be2907627d9b2b3aca77bf622603
+version: 1.4.0
+commit: f16f63aa8d6deb85dc3b81a3698df5c5b797f5c4
 ---
 
 # drugresponseeval — full parameter reference
@@ -30,7 +30,7 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 | `--cross-study-datasets` | string |  |  |  | matches `^(?:\|(?:GDSC[12]\|CCLE\|CTRPv[12]\|TOYv[12]\|PDX_Bruna\|BeatAML2)(,(?:GDSC[12]\|CCLE\|CTRPv[12]\|TOYv[12]\|PDX_Bruna\|BeatAML2))*)$` |  | Datasets for cross-study prediction. |
 | `--measure` | string |  |  | `LN_IC50`, `pEC50`, `AUC`, `response`, `EC50`, `IC50` |  | `LN_IC50` | The name of the drug response measure to use. |
 | `--path-data` | string (directory path) |  |  |  |  | `data` | Path to the data directory. |
-| `--zenodo-link` | string |  |  |  | matches `(^https://zenodo.org/records/[0-9]+/files/$)\|(https://github.com/nf-core/test-datasets/raw/refs/heads/drugresponseeval/test_data/)` | `https://zenodo.org/records/23159774/files/` | Link to the latest Zenodo version of the dataset. |
+| `--zenodo-link` | string |  |  |  | matches `(^https://zenodo.org/records/[0-9]+/files/$)\|(https://raw.githubusercontent.com/nf-core/test-datasets/refs/heads/drugresponseeval/test_data/)` | `https://zenodo.org/records/23916090/files/` | Link to the latest Zenodo version of the dataset. |
 
 ## generic_options
 
@@ -94,4 +94,4 @@ nf-core/drugresponseeval pipeline parameters. Every parameter from the pinned `n
 |---|---|---|---|---|---|---|---|
 | `--n-trials-robustness` | integer |  |  |  | ≥ 0 | `0` | Number of trials to run for the robustness test |
 
-<!-- Generated from nf-core/drugresponseeval@6e420c1cc2f1be2907627d9b2b3aca77bf622603. Do not edit by hand. -->
+<!-- Generated from nf-core/drugresponseeval@f16f63aa8d6deb85dc3b81a3698df5c5b797f5c4. Do not edit by hand. -->

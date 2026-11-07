@@ -1,14 +1,14 @@
 ---
 name: drugresponseeval
 pipeline: nf-core/drugresponseeval
-version: 1.3.0
-commit: 6e420c1cc2f1be2907627d9b2b3aca77bf622603
+version: 1.4.0
+commit: f16f63aa8d6deb85dc3b81a3698df5c5b797f5c4
 description: This pipeline evaluates drug response models in various settings on a variety of datasets.
 summary: DrEval is a bioinformatics framework that includes a PyPI package (drevalpy) and a Nextflow pipeline (this repo). DrEval ensures that evaluations are statistically sound, biologically meaningful, and reproducible. DrEval simplifies the implementation of drug response prediction models, allowing researchers to focus on advancing their modeling innovations by automating standardized evaluation protocols and preprocessing workflows. With DrEval, hyperparameter tuning is fair and consistent. With its flexible model interface, DrEval supports any model type, ranging from statistical models to complex neural networks. By contributing your model to the DrEval catalog, you can increase your work's exposure, reusability, and transferability.
 has_samplesheet: false
 input: parameters (no samplesheet)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled)
-tools: ["DrEvalPy", "CurveCurator", "DIPK", "MOLI", "SRMF", "SuperFELT"]
+tools: ["DrEvalPy", "CurveCurator", "DIPK", "MOLI", "MORGOTH", "SRMF", "SuperFELT"]
 ---
 # drugresponseeval
 
@@ -49,7 +49,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Randomization options** (`randomization_options`) — 2 parameters
 - **Robustness options** (`robustness_options`) — 1 parameter
 
-Upstream usage: https://github.com/nf-core/drugresponseeval/blob/1.3.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/drugresponseeval/blob/1.4.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -73,18 +73,18 @@ nfclaw run drugresponseeval ... --nxf-ver 26.04.0
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/drugresponseeval/blob/1.3.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/drugresponseeval/blob/1.4.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: DrEvalPy, CurveCurator, DIPK, MOLI, SRMF, SuperFELT.
+The tools/methods this pipeline runs, per the authors' own list: DrEvalPy, CurveCurator, DIPK, MOLI, MORGOTH, SRMF, SuperFELT.
 
-Full list with references: https://github.com/nf-core/drugresponseeval/blob/1.3.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/drugresponseeval/blob/1.4.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run drugresponseeval --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/drugresponseeval@6e420c1cc2f1be2907627d9b2b3aca77bf622603. Do not edit by hand. -->
+<!-- Generated from nf-core/drugresponseeval@f16f63aa8d6deb85dc3b81a3698df5c5b797f5c4. Do not edit by hand. -->

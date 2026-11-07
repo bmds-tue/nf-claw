@@ -612,10 +612,11 @@
       "CurveCurator",
       "DIPK",
       "MOLI",
+      "MORGOTH",
       "SRMF",
       "SuperFELT"
     ],
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   {
     "description": "A fully reproducible and state of the art epitope prediction pipeline.",
