@@ -65,6 +65,8 @@ whole; the entries below are what changed after those notes were first drafted, 
 
 ### Fixed
 
+- A built wheel lists `runner.output_contracts` as a package, so it keeps the two output contracts
+  without relying on a setuptools fallback that warned they "would be ignored" (#260).
 - A failed run's error, and `nfclaw status`, quote an exception Nextflow printed without `ERROR ~`
   (hgtseq 1.1.0's intermittent `Cannot invoke "java.util.Map.get(Object)" because "self" is null`);
   they used to quote only nf-core's `Pipeline completed with errors` banner below it. (#259)
