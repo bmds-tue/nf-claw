@@ -483,9 +483,11 @@ def test_a_late_container_is_named_with_the_engine_that_started_it(engine, tmp_p
 
 
 def test_one_wait_covers_every_container_being_created(engine, monkeypatch):
-    # Removal runs 16 at a time: a wait per container would make a stop take several of them.
+    # Removal runs 16 at a time: a wait per container would make a stop take several of them. The
+    # wait outlasts the first look: with 16 clients started at once under a parallel suite, one
+    # `rm -f` of the fake engine took over the 1 s this used to allow, and nxf-00 was asked once.
     docker, _, log = engine
-    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 1)
+    monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 5)
     names = {f"nxf-{number:02}" for number in range(20)}
     removed, problems = replay_guard.remove_task_containers({(str(docker),): names}, creating=names)
     assert removed == [] and len(problems) == 1 and all(name in problems[0] for name in names)
