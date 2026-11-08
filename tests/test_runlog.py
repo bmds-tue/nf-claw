@@ -316,6 +316,16 @@ def test_without_a_report_the_console_tail_is_optional():
     assert runlog.error_excerpt(console)[-1] == "pipeline-level failure: missing --fasta"
 
 
+def test_without_a_report_the_completion_banner_comes_with_the_paragraph_above_it():
+    # Real nf-core/hgtseq 1.1.0 on Nextflow 22.10.1: a Groovy exception printed without `ERROR ~`,
+    # then nf-core's banner and a warning. The banner alone does not say why the run failed.
+    excerpt = runlog.error_excerpt(_console("hgtseq_groovy_error.stdout.txt"))
+    assert excerpt[-4:] == [
+        'Cannot invoke "java.util.Map.get(Object)" because "self" is null', "",
+        "-[nf-core/hgtseq] Pipeline completed with errors-", "WARN: Killing running tasks (3)"]
+    assert len(excerpt) <= 9                              # at most six lines of context above
+
+
 def test_without_a_report_the_quote_is_the_last_paragraph_not_the_parameter_summary():
     # Real nf-core/sarek 3.10.0: the pipeline's own `error(...)` prints its message — no `ERROR ~`
     # prefix — right after nf-core's parameter summary and citations, which are not the error.
