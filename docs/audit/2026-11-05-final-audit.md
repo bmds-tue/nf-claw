@@ -234,6 +234,9 @@ which its replay had, 25 files: reportho drops a query this way, as recorded on 
 
 ## What this audit did not establish
 
+- **The final-code sweep ran on `8d8c8b8`.** After it, `main` changed in drugresponseeval's pin, run on `8289263`
+  above, and in [#259](https://github.com/bmds-tue/nf-claw/pull/259), which changes only what a failed run's error
+  quotes.
 - **marsseq's STAR index was not built on the final code.** It takes more memory than this host has: about 48 GiB before
   exit 137 under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The
   sweep's memory guard stopped the build at 2.6 GB available. Rerun at a 26 GB cap, a disk guard stopped it first at 2.8 GB
