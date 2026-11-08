@@ -6,7 +6,7 @@ Welcome! nf-claw provides AI agents and bioinformaticians with a token-minimal, 
 
 ## Navigation
 
-[Core Tenets](#core-development-tenets) • [Repository Structure](#repository-structure) • [Reporting Bugs](#reporting-bugs) • [Proposing New Features](#proposing-new-features) • [Fixing Inconsistencies](#fixing-inconsistencies--schema-drift) • [Contribution Workflow](#contribution-workflow) • [Coding Standards](#coding-standards--implementation-guidelines) • [Adding Pipelines](#adding-a-new-pipeline) • [Chaining Handoff Rules](#adding-a-chaining-handoff-rule) • [Testing & Quality](#testing-requirements--quality-assurance) • [Writing Documentation](#writing-documentation)
+[Core Tenets](#core-development-tenets) • [Repository Structure](#repository-structure) • [Reporting Bugs](#reporting-bugs) • [Proposing New Features](#proposing-new-features) • [Fixing Inconsistencies](#fixing-inconsistencies--schema-drift) • [Contribution Workflow](#contribution-workflow) • [Coding Standards](#coding-standards--implementation-guidelines) • [Adding Pipelines](#adding-a-new-pipeline) • [Chaining Handoff Rules](#adding-a-chaining-handoff-rule) • [Testing & Quality](#testing-requirements--quality-assurance) • [Cutting a Release](#cutting-a-release) • [Writing Documentation](#writing-documentation)
 
 ---
 
@@ -278,6 +278,25 @@ pytest -k "test_verify"           # Run tests matching an expression
 | `make update`| `update_pipelines && make build` | Discover newest release tags, bump submodules, and rebuild context. |
 | `make check` | `check_drift && pytest` | Run schema drift verification followed by the complete pytest suite. |
 | `make test`  | `pytest` | Execute all unit, regression, and integration tests. |
+
+---
+
+## Cutting a Release
+
+A release is an annotated tag `vX.Y.Z` on `main`: it fixes the runner and every pipeline pin at that
+commit, while `main` keeps moving as the maintenance workflows bump pins. Between releases `main`
+keeps the last release's version, and `nfclaw --version` adds the commit that identifies the code.
+
+1. In one pull request, rename **Unreleased** in [`CHANGELOG.md`](CHANGELOG.md) to
+   `## [X.Y.Z] — YYYY-MM-DD` under a new, empty **Unreleased**, and set `version` in
+   `pyproject.toml` and `version` and `date-released` in [`CITATION.cff`](CITATION.cff) to match.
+   `tests/test_version.py` checks that the three agree.
+2. Merge it once every check is green, the macOS pytest lanes included: the `main` ruleset requires
+   only some of them.
+3. Tag the merge commit (`git tag -a vX.Y.Z -m "nf-claw X.Y.Z" <commit>`) and push the tag.
+4. Publish the GitHub release for that tag: what it contains, how it was validated (link the audit
+   record and [`docs/validation.md`](docs/validation.md)), its known limitations, and its
+   `CHANGELOG.md` section.
 
 ---
 

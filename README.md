@@ -113,7 +113,8 @@ Clone into a space-free path (on macOS, avoid iCloud folders), use Python 3.11+,
 and install Git, Nextflow, Java 17+ and the selected container runtime separately.
 
 ```bash
-# Clone the library and its pinned pipeline sources
+# Clone the library and its pinned pipeline sources (`main` moves daily as pins are bumped;
+# add `--branch v1.0.0` for exactly the 1.0.0 release)
 git clone --recurse-submodules https://github.com/bmds-tue/nf-claw.git
 cd nf-claw
 python3 -m venv .venv

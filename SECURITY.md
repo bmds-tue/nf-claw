@@ -2,8 +2,11 @@
 
 ## Supported versions
 
-nf-claw has no tagged release yet. Security fixes land on `main`, and only the current `main` is
-supported.
+| Version | Supported |
+|---|---|
+| `main` | Yes. Every fix lands here first. |
+| The latest release (`v1.0.0`) | Yes. A security fix for it is released as a patch version (`v1.0.1`). |
+| Earlier releases and other commits | No. |
 
 ## Reporting a vulnerability
 
