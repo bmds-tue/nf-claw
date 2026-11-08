@@ -60,6 +60,9 @@ each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ### Fixed
 
+- A failed run's error, and `nfclaw status`, quote an exception Nextflow printed without `ERROR ~`
+  (hgtseq 1.1.0's intermittent `Cannot invoke "java.util.Map.get(Object)" because "self" is null`);
+  they used to quote only nf-core's `Pipeline completed with errors` banner below it. (#259)
 - `--resume` after a nfclaw that vanished (SIGKILL, out of memory, a host restart) or could not write
   its bundle (a full disk) reuses the finished tasks. A launch now records what it consumes before
   Nextflow starts; it used to recompute every task, while `nfclaw status` and the full-disk error

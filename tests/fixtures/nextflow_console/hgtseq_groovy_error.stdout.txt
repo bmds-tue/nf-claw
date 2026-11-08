@@ -1,0 +1,16 @@
+[2a/c80499] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:QUALIMAP_BAMQC (testsample01)
+[30/8be39b] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:SAMTOOLS_FLAGSTAT (testsample02)
+[96/83e396] Submitted process > NFCORE_HGTSEQ:HGTSEQ:CLASSIFY_UNMAPPED:SAMTOOLS_VIEW_SINGLE (testsample02)
+[a1/8bc3cb] Submitted process > NFCORE_HGTSEQ:HGTSEQ:CLASSIFY_UNMAPPED:SAMTOOLS_VIEW_BOTH (testsample02)
+[d6/31b3f2] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:SAMTOOLS_IDXSTATS (testsample02)
+[e6/ffbce2] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:SAMTOOLS_STATS (testsample02)
+[5f/68def9] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:BAMTOOLS_STATS (testsample03)
+[b1/18c6b0] Submitted process > NFCORE_HGTSEQ:HGTSEQ:SORTBAM:SAMTOOLS_INDEX (testsample03)
+[35/1c13bb] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:QUALIMAP_BAMQC (testsample03)
+[2b/fd04b9] Submitted process > NFCORE_HGTSEQ:HGTSEQ:CLASSIFY_UNMAPPED:SAMTOOLS_VIEW_BOTH (testsample01)
+[78/9e29d1] Submitted process > NFCORE_HGTSEQ:HGTSEQ:BAM_QC:SAMTOOLS_FLAGSTAT (testsample01)
+Cannot invoke "java.util.Map.get(Object)" because "self" is null
+
+
+-[0;35m[nf-core/hgtseq][0;31m Pipeline completed with errors[0m-
+WARN: Killing running tasks (3)

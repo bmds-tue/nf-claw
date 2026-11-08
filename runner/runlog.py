@@ -153,8 +153,8 @@ def error_excerpt(console: str, *, tail_if_no_report: bool = True) -> list[str]:
     the paragraph printed just above the last rendering of the first: the failed step's progress
     lines, or a config/script syntax error described above `ERROR ~ Config parsing failed`. Without
     an `ERROR ~` line (an `error "…"` raised by a pipeline prints only its message) it is the
-    console's last paragraph, unless `tail_if_no_report` is off. A long excerpt keeps its head and
-    its tail."""
+    console's last paragraph, and the paragraph above it when that is nf-core's completion banner,
+    unless `tail_if_no_report` is off. A long excerpt keeps its head and its tail."""
     lines = _clean(console)
     distinct: dict[tuple[str, ...], int] = {}             # report → start of its last rendering
     for at, report in _reports(lines):
@@ -171,6 +171,10 @@ def error_excerpt(console: str, *, tail_if_no_report: bool = True) -> list[str]:
         if len(block) == 1 and _REPORT_END.match(block[0]):
             # A message closed by Nextflow's "-- Check script …" line: the message is just above.
             block = _squeeze(_last_paragraph(lines, end - 1) + [""] + block)
+        elif block and _SUMMARY_LINE.match(block[0]):
+            # nf-core's "Pipeline completed with errors" (and the warnings after it) says only that
+            # the run failed; an exception printed without `ERROR ~` is the paragraph above.
+            block = _squeeze(_paragraph_above(lines, end - len(block)) + [""] + block)
     else:
         block = []
     return _cap(block)
