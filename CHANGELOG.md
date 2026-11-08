@@ -1,13 +1,18 @@
 # Changelog
 
-User-visible changes to nf-claw, newest first, by pull request. nf-claw has no tagged release yet;
-the draft release notes for 1.0.0 (2026-10-22) describe the library as it stood then, and this file
-starts there.
+User-visible changes to nf-claw, newest first, by pull request. Each release is a tag `vX.Y.Z` on
+`main` with [release notes](https://github.com/bmds-tue/nf-claw/releases).
 Pipeline releases the maintenance workflows pin, bump or add are recorded in `sources.tsv`, the
 generated `skill.md` files and the git history, not here. Audit records, with the evidence behind
 each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ## Unreleased
+
+## [1.0.0] — 2026-11-08
+
+The first release: the runner and the 95 pipeline pins at tag `v1.0.0`. Its
+[release notes](https://github.com/bmds-tue/nf-claw/releases/tag/v1.0.0) describe the library as a
+whole; the entries below are what changed after those notes were first drafted, on 2026-10-22.
 
 ### Added
 
@@ -60,6 +65,8 @@ each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ### Fixed
 
+- A built wheel lists `runner.output_contracts` as a package, so it keeps the two output contracts
+  without relying on a setuptools fallback that warned they "would be ignored" (#260).
 - A failed run's error, and `nfclaw status`, quote an exception Nextflow printed without `ERROR ~`
   (hgtseq 1.1.0's intermittent `Cannot invoke "java.util.Map.get(Object)" because "self" is null`);
   they used to quote only nf-core's `Pipeline completed with errors` banner below it. (#259)
@@ -239,7 +246,7 @@ each change, are in [`docs/audit/`](docs/audit/README.md).
 - On the website, arrow keys in the skills list move from the row that has focus, not from the
   selected one (#229).
 
-### Since the 1.0.0 draft notes
+### Earlier pull requests, in brief
 
 - #217 Post-merge fixes: palette race, kraken2 verify pairing, sarek 3.11.0 re-audit, docker probe
   limit.
