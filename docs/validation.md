@@ -10,7 +10,8 @@ result does and does not show.
 The versions and observations below describe the 2026-10-14 to 2026-10-16 validation,
 not a fresh execution after every repository change. Releases bumped and pipelines added since then
 that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep),
-and the [final pin sweep](#final-pin-sweep) of 2026-11-05 to 2026-11-06 ran the pins again with their replays;
+the [final pin sweep](#final-pin-sweep) of 2026-11-05 to 2026-11-06 ran the pins again with their replays, and the
+[final-code sweep](#final-code-sweep) of 2026-11-07 to 2026-11-08 ran them once more on the audited code;
 the automated updater itself gates a release on its preview, tests, drift checks and one bundled analysis
 on a hosted runner ([publication evidence policy](maintenance.md)).
 For the current pin and its requirements, read `pipelines/<name>/skill.md`.
@@ -19,7 +20,7 @@ For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ## Navigation
 
-[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [Final pin sweep](#final-pin-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
+[Environment](#environment) • [Method](#method) • [Pipelines](#pipelines) • [Fresh single-attempt runs](#fresh-single-attempt-runs) • [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep) • [Final pin sweep](#final-pin-sweep) • [Final-code sweep](#final-code-sweep) • [nfclaw features](#nfclaw-features) • [Chains](#chains) • [Provenance bundles](#provenance-bundles) • [Defects found and fixed](#defects-found-and-fixed) • [Test suites and CI](#test-suites-and-ci) • [Limits](#limits)
 
 ---
 
@@ -469,6 +470,66 @@ Nextflow's retry, so these runs carry no caveat.
 | viralmetagenome 1.2.0 | 25.10.4 | success | 288 | 35 | 86/86 | 16 | success | identical | 391 identical, 184 changed |
 | viralrecon 3.0.0 | 25.04.0 | success | 200 | 32 | 80/80 | 10 | success | identical | 453 identical, 238 changed |
 | variantbenchmarking 1.6.1, on `aea5fa4` | 25.10.4 | success | 68 | 7 | 24/24 | 7 | success | identical | 45 identical, 49 changed |
+
+## Final-code sweep
+
+The final pin sweep ran on `a23a092`, before the audit's last runner changes. So the same harness ran every pin
+but oncoanalyser again, from 2026-11-07 01:59 to 2026-11-08 01:40 UTC, on `8d8c8b8`, whose tree `main` has at
+`bec857d`: 95 jobs, with marsseq's two. Engines, limits and host configuration were those above, with
+`--limit-cpus 8 --limit-memory 20.GB` on the 81 jobs whose engine applies them. The per-job record is
+[`audit/evidence/2026-11-07-final-code-sweep.json`](audit/evidence/2026-11-07-final-code-sweep.json). Every row's
+version and commit match the pins at `8d8c8b8`.
+
+- **Runs.** 93 of 95 succeeded. seqsubmit needs ENA Webin credentials. reportho's run and its `--resume` both
+  failed in `FETCH_ENSEMBL_IDMAP` on an [answer from Ensembl that is not JSON](known-issues.md#pipeline-specific-run-notes).
+  hgtseq and stableexpression passed on their `--resume`: hgtseq after its
+  [intermittent Groovy exception](known-issues.md#intermittent-no-signature-of-method-javautillinkedhashmapsubmap-is-applicable),
+  stableexpression after EBI's FTP server refused a connection.
+- **Replays.** 91 of 93 succeeded. sopa's is refused, as before. funcscan's failed when the download of dbCAN's
+  database from S3 timed out.
+- **Environment.** Identical in 87, differs in sopa, and `unverified` in mcmicro, circdna, raredisease and genomeqc.
+  Their bundles now record why, a process with no container or no task records, where at `a23a092` none did.
+- **`nfclaw verify`.** It exited 0 for 82 replays and 1 for 9: the seven of the final pin sweep, hicar and hlatyping.
+- **First attempts.** 73 jobs ended with success, an identical environment, `nfclaw verify` 0 and no container left at
+  their first attempt; 2 of those carry caveats (cutandrun, proteinfold).
+- **The disk guard** stopped five jobs when the volume fell below 4 GB free, and reran each alone at the end:
+  hadge, differentialabundance and lsmquant then came out clean, genomeqc and mcmicro `unverified` as above.
+- **No job left a container behind**, and tumourevo's and hgtseq's demos passed their
+  [output contracts](scientific-output-contracts.md).
+- **marsseq** built its references without `--velocity` in 3,395 s (8 tasks), and its analysis, with an empty
+  `--star-index`, took 332 s (34 tasks). Both replayed with an identical environment and `nfclaw verify` 0, with the
+  11 identical and 3 changed, and the 75 identical and 67 changed files of their rows on `ebc2a96`.
+
+What came out differently from the final pin sweep:
+
+| Job | `a23a092` | `8d8c8b8` | Why |
+|---|---|---|---|
+| funcscan 4.0.0 | run passed on `--resume`; replay identical, verify 0 | run passed; replay failed | `RUNDBCAN_DATABASE`: `Read timed out` from `dbcan.s3.us-west-2.amazonaws.com` |
+| hicar 1.0.0 | verify 0 | verify 1: 8 missing, 1 extra | [MultiQC receives one of samtools' `stats`, `flagstat` and `idxstats`](known-issues.md#pipeline-specific-run-notes) |
+| hlatyping 2.2.0 | verify 0 | verify 1: 8 missing | the replay's MultiQC exported 22 of 30 plots before its [30-second limit](known-issues.md#pipeline-specific-run-notes) |
+| mag 5.5.0 | 15 missing, 15 extra | 9 missing, 9 extra | Prokka's temporary files are named by process ID |
+| nanostring 1.3.3 | 2 missing, 1 extra | 5 extra | MultiQC exported 8 of 15 plots in the run and 13 in the replay |
+| reportho 1.1.0 | run passed on `--resume`; replays failed twice | run failed on `--resume` too | `FETCH_ENSEMBL_IDMAP`, above |
+| spatialaxe 1.0.1 | 1 missing, 26 extra | 26 missing, 1 extra | Proseg segmented 10 cells in the run and 9 in the replay this time |
+| stableexpression 1.1.0 | passed at the first attempt | passed on `--resume` | EBI's FTP server refused a connection |
+
+Logs of every MultiQC and failed task were kept this time. The plot-export timeout appears in three pipelines'
+logs: hlatyping's replay, nanostring's run and replay, and stableexpression's run and replay, which exported 64 and
+60 of 93 plots and still verified with exit 0, so its published files hold none of them. coproid's run and replay
+logged none and verified with exit 0.
+
+After the sweep, on 2026-11-08, three more jobs ran the same way on `8289263`, which differs from `8d8c8b8` only
+in drugresponseeval's pin. They are under `later_head` and `retries` in the record; the sweep's rows stand.
+
+| Run | Nextflow | Run outcome | Tasks | Replay | Environment | `nfclaw verify` |
+|---|---|---|---|---|---|---|
+| drugresponseeval 1.4.0, the updater's bump | 26.04.0 | success | 30 | success | identical | 196 identical, 13 changed |
+| funcscan 4.0.0, again | 25.10.4 | success | 68 | success | identical | 84 identical, 30 changed |
+| reportho 1.1.0, again | 25.04.0 | success after `--resume` | 2 cached + 67 completed | success | identical | 24 identical, 32 changed, 25 extra |
+
+reportho's first attempt failed again in `FETCH_ENSEMBL_IDMAP` on a reply that was not JSON. The 25 extra files are BicD2's
+`merge/`, `score/` and `report/` results: the run, though successful, had none,
+[as reportho can drop a query](known-issues.md#pipeline-specific-run-notes).
 
 ## nfclaw features
 
