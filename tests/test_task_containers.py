@@ -360,10 +360,19 @@ def test_a_container_still_being_created_is_waited_for_and_removed(engine, tmp_p
 def _late_task(tmp_path: Path, docker: Path, name: str) -> Path:
     """A wrapper that goes on through the signal and starts its client only then, which ends by
     itself soon after: seen on a real chain, whose client started its container 5 s after the stop
-    and was gone, the container left behind, long before the grace period ended."""
+    and was gone, the container left behind, long before the grace period ended.
+
+    The client ends once the stop has looked at it (asked the engine about its new name) and, unless
+    the engine creates containers later, once its container exists: at most 10 s, not after a
+    fixed second. On a loaded macOS host one look at the group took over 2 s, and a client that
+    starts and ends between two looks is never seen, as documented."""
     task = tmp_path / "late-task.sh"
     task.write_text(f"#!/bin/bash\ntrap '' TERM\ntouch {tmp_path}/armed\nsleep 0.5\n"
-                    f"{docker} run -i --name {name} img &\nclient=$!\nsleep 1\nkill -9 $client\n")
+                    f"{docker} run -i --name {name} img &\nclient=$!\n"
+                    "for _ in $(seq 100); do grep -q '^ps -a' \"$ENGINE_LOG\" && "
+                    f"{{ [ -n \"$ENGINE_CREATES_LATER\" ] || [ -e \"$ENGINE_STATE/{name}\" ]; }} "
+                    "&& break; sleep 0.1; done\n"
+                    f"kill -9 $client\ntouch {tmp_path}/killed\n")
     task.chmod(0o755)
     return task
 
@@ -398,14 +407,25 @@ def test_a_late_client_killed_while_its_container_is_being_created_still_has_it_
     monkeypatch.setattr(replay_guard, "_CREATION_SETTLE", 15)
     monkeypatch.setenv("ENGINE_CREATES_LATER", "1")
     proc = _group(tmp_path, str(_late_task(tmp_path, docker, "nxf-Late")))
-    timer = threading.Timer(3, (state / "nxf-Late").touch)     # after its client is gone
-    timer.start()
+    appeared = threading.Event()
+
+    def create_after_the_client_is_gone():
+        deadline = time.monotonic() + 30
+        while not (tmp_path / "killed").exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        time.sleep(1)
+        (state / "nxf-Late").touch()
+        appeared.set()
+
+    creator = threading.Thread(target=create_after_the_client_is_gone)
+    creator.start()
     try:
         _wait_for(tmp_path, "armed")
         execution._terminate(proc, grace=20)
     finally:
-        timer.join()
+        creator.join()
         _kill(proc)
+    assert appeared.is_set()
     assert not list(state.iterdir())
     assert "rm -f nxf-Late" in log.read_text().splitlines()
 
