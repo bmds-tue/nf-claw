@@ -23,10 +23,11 @@ scientific = ["pysam>=0.24.1,<0.25", "h5py>=3.16,<4"]
 nfclaw = "runner.cli:main"
 
 [tool.setuptools]
-packages = ["runner", "librarian"]
+packages = ["runner", "runner.output_contracts", "librarian"]
 
 [tool.setuptools.package-data]
-runner = ["path_roles.json", "input_roles.json", "param_roles.json", "output_contracts/*.json"]
+runner = ["path_roles.json", "input_roles.json", "param_roles.json"]
+"runner.output_contracts" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
