@@ -20,7 +20,8 @@ the static gates beside it, and then went after what those audits had no reason 
   directory, invalid `NFCLAW_*` values, a POSIX locale. A Python traceback or a timeout counts as a
   finding (G06, G08).
 - **Pins moved since their last on-host validation.** Each one's demo, replay and verification,
-  and what each bump did to the audited input roles (G07). Then a [sweep of every pin](#the-pin-sweep).
+  and what each bump did to the audited input roles (G07). Then a [sweep of every pin](#the-pin-sweep), and
+  [another on the final code](#the-final-code-sweep).
 - **Every documented command.** All 304 `nfclaw` command lines in the guides, the README and the
   website, parsed against the real argument parser; every internal link and anchor; every
   `NFCLAW_*` variable against its documentation. No mismatch then. #258 reorganized the guides
@@ -186,19 +187,61 @@ recorded rather than fixed, because these are the pipelines' behaviour and the n
   reason is a reading of those messages: the data was not varied to prove it. So this is reproduced and explained,
   not fixed: upstream still tolerates them, and those tasks' results are still missing.
 
+## The final-code sweep
+
+After `a23a092`, the runner changed in `replay_guard` and `execution` (G03), `config_probe` (G14),
+`environment_record` (G15, G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli` and `chain` (G15). So the
+same harness ran every pin but oncoanalyser again, from 2026-11-07 01:59 to 2026-11-08 01:40 UTC, on `8d8c8b8`,
+whose tree `main` has at `bec857d`: 95 jobs, with marsseq's two.
+[`docs/validation.md`](../validation.md#final-code-sweep) has the outcomes and what differed from the sweep above,
+and [`evidence/2026-11-07-final-code-sweep.json`](evidence/2026-11-07-final-code-sweep.json) the per-job record. In
+short:
+
+- **Runs.** 93 of 95 succeeded: seqsubmit needs credentials, and reportho's run and its resume both failed on a reply
+  from Ensembl that was not JSON. Ensembl answered one of three later requests to the same address with an HTTP 503
+  HTML page, and the script parses whatever comes back as JSON.
+- **Replays.** 91 succeeded: sopa's is refused as before, and funcscan's timed out downloading dbCAN's database.
+- **Environment.** Identical in 87, differs in sopa, `unverified` in mcmicro, circdna, raredisease and genomeqc. Their
+  bundles now say why (G15, G16).
+- **`nfclaw verify`.** It exited 0 for 82 and 1 for 9: the seven above, hicar and hlatyping.
+- **First attempts.** 73 jobs ended with success, an identical environment and `nfclaw verify` 0 at the first attempt,
+  2 of them with caveats. The disk guard stopped five jobs below 4 GB free; rerun alone, three came out clean and two
+  `unverified` as above. No job left a container, and both output contracts passed.
+- **marsseq** built its references without `--velocity` and ran its analysis with an empty `--star-index` on this
+  code too: both replayed with an identical environment and `nfclaw verify` 0.
+
+It found one defect of nfclaw's. A failed run whose console holds an exception printed without `ERROR ~` used to
+quote only nf-core's `Pipeline completed with errors` banner beneath it: hgtseq's intermittent
+`Cannot invoke "java.util.Map.get(Object)" because "self" is null` reached the error and `nfclaw status` without its
+message. [#259](https://github.com/bmds-tue/nf-claw/pull/259) quotes the paragraph above the banner.
+
+The rest is the pipelines' behaviour and the network's, now recorded with its cause where one was found, because
+the task logs of every MultiQC and failed task were kept:
+
+- **MultiQC's 30-second limit on exporting plots** is observed, not inferred. hlatyping's replay logged
+  `Only 22 of 30 plots were exported` and lacks 8 files; nanostring's run and replay exported 8 and 13 of 15, and the
+  replay has 5 files more. coproid's run and replay logged no timeout and verified with exit 0.
+- **hicar's MultiQC report** gets one of samtools' `stats`, `flagstat` and `idxstats`: its workflow keeps one input per
+  file base name, and the three share one.
+- **stableexpression and hgtseq** met a refused EBI FTP connection and hgtseq's intermittent exception, and passed
+  on their `--resume`. funcscan's replay met a dbCAN read timeout.
+
+Afterwards, on `8289263`, which differs only in drugresponseeval's pin, three more jobs ran the same way, recorded
+apart from the sweep's rows. drugresponseeval 1.4.0, the updater's bump during the sweep, and funcscan, again, each
+ran, replayed with an identical environment and verified with exit 0. reportho, again, met a reply that was not JSON
+and passed on its `--resume`, and its replay also had an identical environment. That run had no results for BicD2,
+which its replay had, 25 files: reportho drops a query this way, as recorded on 2026-11-04.
+
 ## What this audit did not establish
 
-- **The sweep did not run on the final code.** After `a23a092`, the runner changed in `replay_guard` and `execution`
-  (G03), `config_probe` (G14), `environment_record` (G15, G16), `input_safety` (G14), and `orchestration`, `runlog`, `cli`
-  and `chain` (G15). Only the [later runs](#evidence) cover those changes, and no second sweep did.
 - **marsseq's STAR index was not built on the final code.** It takes more memory than this host has: about 48 GiB before
   exit 137 under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The
   sweep's memory guard stopped the build at 2.6 GB available. Rerun at a 26 GB cap, a disk guard stopped it first at 2.8 GB
   free, and with more room that cap killed STAR with exit 137 and over 100 GB free. The bundled analysis checks that the
   index's path exists and reads it only with `--velocity`, which the test profile leaves off. So the build ran without
-  `--velocity`, and the analysis named an empty directory as `--star-index`: both, on `ebc2a96`, ran, replayed with an
-  identical environment and verified with exit 0, and the analysis has the 75 identical and 67 changed files of its
-  earlier row. `VELOCITY` is outside the bundled test, and it has no on-host execution in the traces read here, on any
+  `--velocity`, and the analysis named an empty directory as `--star-index`: both, on `ebc2a96` and again on `8d8c8b8`,
+  ran, replayed with an identical environment and verified with exit 0, and the analysis has the 75 identical and 67
+  changed files of its earlier row. `VELOCITY` is outside the bundled test, and it has no on-host execution in the traces read here, on any
   runner.
 - **oncoanalyser did not run, and cannot here without the maintainer's decision.** Its `STAR_ALIGN` peaked at 29.7 GiB,
   just above the 29.4 GiB this host has available, because `/dev/shm` holds about 25 GB of leftovers that this audit did
