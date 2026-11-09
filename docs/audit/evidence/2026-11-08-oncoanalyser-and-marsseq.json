@@ -1,0 +1,693 @@
+{
+ "version": 1,
+ "scope": "The two jobs the final-code sweep left out, run once this host had the memory: oncoanalyser 3.0.0's bundled test, and marsseq 1.0.3's reference build with --velocity (so it builds STAR's index) and its bundled analysis with --velocity on those references. Each with its replay from commands.sh and nfclaw verify. Not a scientific comparison. Trace memory is in binary units.",
+ "host": "denbi_instance: 28 CPUs, 62 GB RAM; about 31 GB available until /dev/shm was cleared on 2026-11-08 at about 16:30 UTC, about 63 GB after",
+ "oncoanalyser": {
+  "version": "3.0.0",
+  "commit": "7c74c87a43749952b38c9a18915947570f0595a0",
+  "nextflow": "nextflow version 25.10.4",
+  "nfclaw": {
+   "commit": "5d14ed4fb910319d30b2b9d485a820d5b15d43b1",
+   "version": "1.0.0"
+  },
+  "command": "nextflow run <deployed checkout>/pipelines/oncoanalyser/upstream -profile test,docker -params-file <workspace>/runs/onco/provenance/params.json -work-dir <workspace>/work/onco -c <workspace>/host-net.config -c <deployed checkout>/pipelines/oncoanalyser/upstream/tests/cached_refs.config",
+  "references": "extracted once and passed through upstream's tests/cached_refs.config and NXF_REF_* variables, as docs/known-issues.md describes (75 GB)",
+  "run": {
+   "exit": 0,
+   "seconds": 2398,
+   "outcome": "success",
+   "tasks": {
+    "COMPLETED": 42
+   }
+  },
+  "replay": {
+   "exit": 0,
+   "seconds": 1602,
+   "status": "identical"
+  },
+  "verify": {
+   "exit": 0,
+   "identical": 253,
+   "changed": 177,
+   "missing": 0,
+   "extra": 0,
+   "renamed": 1,
+   "environment": "identical"
+  },
+  "verify_strict": {
+   "exit": 1,
+   "identical": 253,
+   "changed": 177,
+   "missing": 0,
+   "extra": 0,
+   "renamed": 1,
+   "environment": "identical"
+  },
+  "verify_require_environment": {
+   "exit": 1,
+   "unverified": [
+    "original: remote input https://raw.githubusercontent.com/nf-core/test-datasets/oncoanalyser/samplesheet/fastq_eval.subject_a.wgts.tndna_trna.minimal.csv: refetched bytes do not establish the bytes originally consumed",
+    "replay: remote input https://raw.githubusercontent.com/nf-core/test-datasets/oncoanalyser/samplesheet/fastq_eval.subject_a.wgts.tndna_trna.minimal.csv: refetched bytes do not establish the bytes originally consumed"
+   ]
+  },
+  "tasks_of_interest": [
+   {
+    "name": "NFCORE_ONCOANALYSER:WGTS:READ_ALIGNMENT_DNA:BWAMEM2_ALIGN (subject_a_subject_a.normal_library_1_001)",
+    "status": "COMPLETED",
+    "exit": "0",
+    "submit": "2026-11-08 17:21:17.112",
+    "realtime": "4m 49s",
+    "peak_rss": "17.4 GB"
+   },
+   {
+    "name": "NFCORE_ONCOANALYSER:WGTS:READ_ALIGNMENT_DNA:BWAMEM2_ALIGN (subject_a_subject_a.tumor_library_1_001)",
+    "status": "COMPLETED",
+    "exit": "0",
+    "submit": "2026-11-08 17:21:17.100",
+    "realtime": "4m 49s",
+    "peak_rss": "17.4 GB"
+   },
+   {
+    "name": "NFCORE_ONCOANALYSER:WGTS:READ_ALIGNMENT_RNA:STAR_ALIGN (subject_a_subject_a.tumor_rna)",
+    "status": "COMPLETED",
+    "exit": "0",
+    "submit": "2026-11-08 17:26:30.882",
+    "realtime": "7m 48s",
+    "peak_rss": "29.7 GB"
+   }
+  ]
+ },
+ "marsseq": {
+  "tree": "the sparse attempts on main dbd598d, the full-index one on main 453d68e; the runner is v1.0.0's in both",
+  "options": "nfclaw run marsseq --demo --nxf-ver 23.04.0, NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true, a config with docker --network host; build: --build-references true --velocity true; analysis: --genomes-base <build>/references --velocity true",
+  "configs": {
+   "star-sparse.config": "// marsseq 1.0.3's STAR index for mm10 needs about 48 GiB to build, and this host has about 30 GiB available.\n// A sparse suffix array (every third suffix) shrinks the index's largest part to about a third; alignment is\n// slower but reads the same genome. The pipeline's own ext.args (conf/modules.config) is kept as it is.\nprocess {\n    withName: 'STAR_GENOMEGENERATE' {\n        ext.args = { \"--sjdbOverhang ${params.read_length - 1} --genomeSAsparseD 3\" }\n    }\n}\n",
+   "host-memory.config": "// This host has 62 GB of RAM, but about 31 GB is available: /dev/shm holds leftovers of other work. Nextflow's\n// local executor assumes all 62 GB, so it ran STAR_GENOMEGENERATE (26 GB) beside BOWTIE2_BUILD (26 GB) and the\n// kernel killed STAR (global OOM). With the memory that is really there, the two run one after the other.\nexecutor {\n    memory = 28.GB\n}\n"
+  },
+  "attempts": [
+   {
+    "name": "velocity",
+    "what": "sparse STAR index; Nextflow assumes the host's 62 GB",
+    "options": [
+     "--max-memory 26.GB --max-cpus 16",
+     "star-sparse.config (build)",
+     "--publish-dir-mode link (build)"
+    ],
+    "jobs": {
+     "marsseq-velrefs": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 3640,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 9
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 9,
+       "images": 7,
+       "pinned": 9,
+       "remote_inputs": 0,
+       "issues": []
+      },
+      "replay": {
+       "exit": 1,
+       "seconds": 741,
+       "status": null,
+       "mismatches": null,
+       "unverified": null
+      },
+      "verify": {
+       "exit": null,
+       "identical": null,
+       "changed": null,
+       "missing": null,
+       "extra": null,
+       "renamed": null,
+       "environment": null
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 11:21:24.756",
+         "realtime": "14m 31s",
+         "peak_rss": "24.1 GB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 11:21:24.751",
+         "realtime": "55m 12s",
+         "peak_rss": "5.4 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "FAILED",
+         "exit": "137",
+         "submit": "2026-11-08 12:21:51.223",
+         "realtime": "4m 44s",
+         "peak_rss": "-"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "FAILED",
+         "exit": "137",
+         "submit": "2026-11-08 12:26:35.205",
+         "realtime": "4m 34s",
+         "peak_rss": "-"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "ABORTED",
+         "exit": "-",
+         "submit": "2026-11-08 12:21:51.216",
+         "realtime": "-",
+         "peak_rss": "-"
+        }
+       ]
+      }
+     },
+     "marsseq-velocity": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 462,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 38
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 18,
+       "images": 11,
+       "pinned": 18,
+       "remote_inputs": 6,
+       "issues": []
+      },
+      "replay": {
+       "exit": 0,
+       "seconds": 431,
+       "status": "identical",
+       "mismatches": [],
+       "unverified": []
+      },
+      "verify": {
+       "exit": 0,
+       "identical": 113,
+       "changed": 84,
+       "missing": 0,
+       "extra": 0,
+       "renamed": 4,
+       "environment": "identical"
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:33:44.758",
+         "realtime": "5s",
+         "peak_rss": "71.7 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:33:44.672",
+         "realtime": "24s",
+         "peak_rss": "730.4 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:34:25.075",
+         "realtime": "6s",
+         "peak_rss": "468.1 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:35:10.960",
+         "realtime": "39s",
+         "peak_rss": "13 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:40:11.073",
+         "realtime": "2s",
+         "peak_rss": "68.3 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:40:11.053",
+         "realtime": "22s",
+         "peak_rss": "730.9 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:40:51.448",
+         "realtime": "5s",
+         "peak_rss": "477.7 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 12:41:11.254",
+         "realtime": "40s",
+         "peak_rss": "13 GB"
+        }
+       ]
+      }
+     }
+    },
+    "kernel": [
+     "[Sun Nov  8 12:26:27 2026] oom-kill:constraint=CONSTRAINT_NONE ... global_oom ... Out of memory: Killed process 1770573 (STAR) total-vm:31853516kB, anon-rss:26646400kB",
+     "[Sun Nov  8 12:30:52 2026] oom-kill:constraint=CONSTRAINT_NONE ... global_oom ... Out of memory: Killed process 1780203 (STAR) total-vm:31853516kB, anon-rss:24208160kB"
+    ]
+   },
+   {
+    "name": "velocity2",
+    "what": "sparse STAR index; executor.memory = 28.GB, the memory really available",
+    "options": [
+     "--max-memory 26.GB --max-cpus 16",
+     "star-sparse.config (build)",
+     "host-memory.config",
+     "--publish-dir-mode link (build)"
+    ],
+    "jobs": {
+     "marsseq-velrefs": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 3623,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 9
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 9,
+       "images": 7,
+       "pinned": 9,
+       "remote_inputs": 0,
+       "issues": []
+      },
+      "replay": {
+       "exit": 0,
+       "seconds": 3598,
+       "status": "identical",
+       "mismatches": [],
+       "unverified": []
+      },
+      "verify": {
+       "exit": 0,
+       "identical": 26,
+       "changed": 4,
+       "missing": 0,
+       "extra": 0,
+       "renamed": 4,
+       "environment": "identical"
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 14:28:26.775",
+         "realtime": "43m 4s",
+         "peak_rss": "5.3 GB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 15:11:32.509",
+         "realtime": "12m 37s",
+         "peak_rss": "25.2 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 15:28:51.386",
+         "realtime": "42m 40s",
+         "peak_rss": "5.3 GB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:11:31.973",
+         "realtime": "13m 36s",
+         "peak_rss": "25.7 GB"
+        }
+       ]
+      }
+     },
+     "marsseq-velocity": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 572,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 38
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 18,
+       "images": 11,
+       "pinned": 18,
+       "remote_inputs": 6,
+       "issues": []
+      },
+      "replay": {
+       "exit": 0,
+       "seconds": 566,
+       "status": "identical",
+       "mismatches": [],
+       "unverified": []
+      },
+      "verify": {
+       "exit": 0,
+       "identical": 113,
+       "changed": 84,
+       "missing": 0,
+       "extra": 0,
+       "renamed": 4,
+       "environment": "identical"
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:29:49.136",
+         "realtime": "2s",
+         "peak_rss": "63.1 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:29:49.129",
+         "realtime": "22s",
+         "peak_rss": "731.9 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:30:42.315",
+         "realtime": "7s",
+         "peak_rss": "561.7 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:31:38.230",
+         "realtime": "39s",
+         "peak_rss": "13 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:38:26.930",
+         "realtime": "3s",
+         "peak_rss": "62.8 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:38:26.925",
+         "realtime": "22s",
+         "peak_rss": "731.4 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:39:27.123",
+         "realtime": "5s",
+         "peak_rss": "468.2 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 16:39:46.687",
+         "realtime": "39s",
+         "peak_rss": "13 GB"
+        }
+       ]
+      }
+     }
+    }
+   },
+   {
+    "name": "velocity3",
+    "what": "the release's own, full STAR index, after /dev/shm was cleared",
+    "options": [
+     "--max-memory 48.GB --max-cpus 16",
+     "--publish-dir-mode link (build)"
+    ],
+    "jobs": {
+     "marsseq-velrefs": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 5100,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 9
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 9,
+       "images": 7,
+       "pinned": 9,
+       "remote_inputs": 0,
+       "issues": []
+      },
+      "replay": {
+       "exit": 0,
+       "seconds": 5124,
+       "status": "identical",
+       "mismatches": [],
+       "unverified": []
+      },
+      "verify": {
+       "exit": 0,
+       "identical": 26,
+       "changed": 4,
+       "missing": 0,
+       "extra": 0,
+       "renamed": 4,
+       "environment": "identical"
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 20:52:15.423",
+         "realtime": "52m 17s",
+         "peak_rss": "5.3 GB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 21:44:34.998",
+         "realtime": "26m 42s",
+         "peak_rss": "47.9 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:BOWTIE2_BUILD (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 22:19:48.312",
+         "realtime": "52m 29s",
+         "peak_rss": "5.4 GB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:BUILD_REFERENCES:STAR_GENOMEGENERATE (GRCm39.fa)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:12:22.016",
+         "realtime": "26m 23s",
+         "peak_rss": "44.1 GB"
+        }
+       ]
+      }
+     },
+     "marsseq-velocity": {
+      "version": "1.0.3",
+      "commit": "b02ede773092f8a8a5999400acda6894d51b4d26",
+      "nextflow": "nextflow version 23.04.0",
+      "run": {
+       "exit": 0,
+       "attempts": 1,
+       "seconds": 753,
+       "status": "status: success",
+       "tasks": {
+        "COMPLETED": 38
+       },
+       "caveats": null
+      },
+      "bundle": {
+       "processes": 18,
+       "images": 11,
+       "pinned": 18,
+       "remote_inputs": 6,
+       "issues": []
+      },
+      "replay": {
+       "exit": 0,
+       "seconds": 559,
+       "status": "identical",
+       "mismatches": [],
+       "unverified": []
+      },
+      "verify": {
+       "exit": 0,
+       "identical": 112,
+       "changed": 85,
+       "missing": 0,
+       "extra": 0,
+       "renamed": 4,
+       "environment": "identical"
+      },
+      "containers_left": 0,
+      "tasks_of_interest": {
+       "run": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:46:32.990",
+         "realtime": "1s",
+         "peak_rss": "64 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:46:31.983",
+         "realtime": "22s",
+         "peak_rss": "732.7 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:47:53.668",
+         "realtime": "6s",
+         "peak_rss": "457.9 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:48:09.716",
+         "realtime": "42s",
+         "peak_rss": "26.5 GB"
+        }
+       ],
+       "replay": [
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_WHITELIST (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:56:05.781",
+         "realtime": "1s",
+         "peak_rss": "62 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_CONVERT (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:56:04.772",
+         "realtime": "21s",
+         "peak_rss": "730.9 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_TRIM (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:56:58.264",
+         "realtime": "4s",
+         "peak_rss": "536.9 MB"
+        },
+        {
+         "name": "NFCORE_MARSSEQ:MARSSEQ:VELOCITY:VELOCITY_STARSOLO (SB26_AB339)",
+         "status": "COMPLETED",
+         "exit": "0",
+         "submit": "2026-11-08 23:57:17.895",
+         "realtime": "42s",
+         "peak_rss": "26.5 GB"
+        }
+       ]
+      }
+     }
+    }
+   }
+  ]
+ }
+}
