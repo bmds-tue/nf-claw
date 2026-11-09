@@ -331,7 +331,8 @@ Runs that came after `a23a092` and what they cover are in the audit.
 
 The other five pins: ampliseq, bacmodel, detaxizer and pixelator ran separately for the same audit, as
 [listed above](#releases-bumped-or-added-after-the-sweep). oncoanalyser did not run: its references were deleted on
-2026-10-16, and its `STAR_ALIGN` peaked just above the memory this host now has available. variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
+2026-10-16, and its `STAR_ALIGN` peaked just above the memory this host had available then. It ran on 2026-11-08,
+[after the final-code sweep](#final-code-sweep). variantbenchmarking moved to 1.6.1 after the sweep began, so both versions have a row.
 
 Of the 91 jobs, 90 runs succeeded; the other is seqsubmit. Of their replays, 88 succeeded, and the environment of 84 was identical to the recording. `nfclaw verify` exited 0 for 81 and 1 for 7. On their first attempt with no retry or rerun, 69 jobs ended with success, an identical environment and `nfclaw verify` 0, and 3 of those carry caveats. No job's final attempt left a container behind.
 
@@ -344,7 +345,8 @@ What did not come out clean, by kind:
   The bundled analysis reads that index only with `--velocity`, which its test profile leaves off, though it checks that the path exists, so
   [the build ran without `--velocity` and the analysis named an empty directory as `--star-index`](known-issues.md#upstream-pipeline-bugs-documented-not-patched).
   Both ran, replayed with an identical environment and exited 0 in `nfclaw verify`. The analysis has the 75 identical and
-  67 changed files of [its earlier row](#provenance-bundles), where the index was real.
+  67 changed files of [its earlier row](#provenance-bundles), where the index was real. The build with STAR's index,
+  and the analysis with `--velocity`, ran on 2026-11-08, [after the final-code sweep](#final-code-sweep).
 - **The replay did not complete.** sopa's test names a GitHub HTML page as its data, so the environment check
   [refuses the replay](known-issues.md#pipeline-specific-run-notes). reportho's tasks query live databases:
   [3 of 7 launches failed on Ensembl's answers](known-issues.md#pipeline-specific-run-notes). Two replays failed, one of
@@ -530,6 +532,34 @@ in drugresponseeval's pin. They are under `later_head` and `retries` in the reco
 reportho's first attempt failed again in `FETCH_ENSEMBL_IDMAP` on a reply that was not JSON. The 25 extra files are BicD2's
 `merge/`, `score/` and `report/` results: the run, though successful, had none,
 [as reportho can drop a query](known-issues.md#pipeline-specific-run-notes).
+
+Later on 2026-11-08, `/dev/shm` was cleared of leftovers from other work, and about 63 GB of the host's memory was
+available instead of about 31 GB. The two jobs this sweep had left out then ran the same way: oncoanalyser through
+the deployed nfclaw 1.0.0 (`5d14ed4`), and marsseq's reference build with `--velocity`, which builds STAR's index,
+then its analysis with `--velocity`, on `453d68e`, whose runner is 1.0.0's. The per-job record is
+[`audit/evidence/2026-11-08-oncoanalyser-and-marsseq.json`](audit/evidence/2026-11-08-oncoanalyser-and-marsseq.json).
+
+| Run | Nextflow | Run outcome | Tasks | Replay | Environment | `nfclaw verify` |
+|---|---|---|---|---|---|---|
+| oncoanalyser 3.0.0 | 25.10.4 | success | 42 | success | identical | 253 identical, 177 changed |
+| marsseq 1.0.3 reference build, `--velocity` | 23.04.0 | success | 9 | success | identical | 26 identical, 4 changed |
+| marsseq 1.0.3 analysis, `--velocity` | 23.04.0 | success | 38 | success | identical | 112 identical, 85 changed |
+
+- **oncoanalyser** ran its bundled test with references extracted once and passed through upstream's
+  `tests/cached_refs.config`, [as its run note describes](known-issues.md#pipeline-specific-run-notes), in 40 minutes.
+  Its `STAR_ALIGN` peaked at 29.7 GiB and each `BWAMEM2_ALIGN` at 17.4 GiB. `nfclaw verify --require-environment`
+  exited 1 only because its samplesheet is a remote validation input, whose refetched bytes
+  [do not establish the bytes the run read](replay.md#checking-a-replay-nfclaw-verify).
+- **marsseq's build** ran with `--max-memory 48.GB --max-cpus 16`, [as its row documents](known-issues.md#upstream-pipeline-bugs-documented-not-patched).
+  STAR peaked at 47.9 GiB in 27 minutes at its first attempt, and at 44.1 GiB in the replay. The run and its replay
+  published the same bytes but for STAR's `Log.out` and nf-core's run metadata. The analysis ran the four tasks of
+  `VELOCITY`; `VELOCITY_STARSOLO` peaked at 26.5 GiB.
+- **Before `/dev/shm` was cleared,** the same pair ran on `dbd598d` with a sparse STAR index, every third suffix
+  (`--genomeSAsparseD 3`), under a 26 GB cap. The analysis ran, replayed with an identical environment and verified
+  with exit 0, but the build's replay was killed twice by the kernel: Nextflow counted the host's 62 GB and ran
+  `STAR_GENOMEGENERATE` beside `BOWTIE2_BUILD`. With `executor.memory = 28.GB` the two ran in turn, and both jobs ran,
+  replayed with an identical environment and verified with exit 0 (STAR 25.2 GiB, `VELOCITY_STARSOLO` 13 GiB). These
+  rows are in the same record.
 
 ## nfclaw features
 

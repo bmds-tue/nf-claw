@@ -232,27 +232,33 @@ ran, replayed with an identical environment and verified with exit 0. reportho, 
 and passed on its `--resume`, and its replay also had an identical environment. That run had no results for BicD2,
 which its replay had, 25 files: reportho drops a query this way, as recorded on 2026-11-04.
 
+## oncoanalyser and marsseq's STAR index
+
+Both needed more memory than this host had: about 31 GB was available while `/dev/shm` held 27.6 GiB of other
+work's leftovers. The maintainer had them removed on 2026-11-08, and about 63 GB became available. The two jobs then ran
+the same way, after the release; [`docs/validation.md`](../validation.md#final-code-sweep) has their rows and
+[`evidence/2026-11-08-oncoanalyser-and-marsseq.json`](evidence/2026-11-08-oncoanalyser-and-marsseq.json) the record.
+
+- **oncoanalyser 3.0.0,** through the deployed nfclaw 1.0.0, ran its bundled test in 42 tasks with references extracted
+  once, as upstream's CI prepares them. It replayed with an identical environment and verified with exit 0;
+  `--require-environment` refused it only for the refetched remote samplesheet.
+- **marsseq 1.0.3's** reference build ran with `--velocity`, so it built STAR's index (47.9 GiB at its peak), and its
+  analysis ran `VELOCITY` on it. Each replayed with an identical environment and verified with exit 0.
+- **Before that,** the same pair ran with a sparse STAR index under a 26 GB cap. It replayed and verified the same way
+  once Nextflow was told the memory really available, `executor.memory = 28.GB`: assuming the host's 62 GB, Nextflow ran
+  STAR beside Bowtie2's build, and the kernel killed STAR. [`docs/known-issues.md`](../known-issues.md#upstream-pipeline-bugs-documented-not-patched)
+  gives both routes.
+
 ## What this audit did not establish
 
 - **The final-code sweep ran on `8d8c8b8`.** After it, `main` changed in drugresponseeval's pin, run on `8289263`
   above, in [#259](https://github.com/bmds-tue/nf-claw/pull/259), which changes only what a failed run's error
   quotes, and in [#260](https://github.com/bmds-tue/nf-claw/pull/260), which lists the wheel's output contracts as a
   package and makes three stop tests wait until the stop has seen their client. Neither of those two changes what a
-  run does.
-- **marsseq's STAR index was not built on the final code.** It takes more memory than this host has: about 48 GiB before
-  exit 137 under a `48.GB` cap and 46.2 GiB on the retry that completed, in October, against about 30 GiB available. The
-  sweep's memory guard stopped the build at 2.6 GB available. Rerun at a 26 GB cap, a disk guard stopped it first at 2.8 GB
-  free, and with more room that cap killed STAR with exit 137 and over 100 GB free. The bundled analysis checks that the
-  index's path exists and reads it only with `--velocity`, which the test profile leaves off. So the build ran without
-  `--velocity`, and the analysis named an empty directory as `--star-index`: both, on `ebc2a96` and again on `8d8c8b8`,
-  ran, replayed with an identical environment and verified with exit 0, and the analysis has the 75 identical and 67
-  changed files of its earlier row. `VELOCITY` is outside the bundled test, and it has no on-host execution in the traces read here, on any
-  runner.
-- **oncoanalyser did not run, and cannot here without the maintainer's decision.** Its `STAR_ALIGN` peaked at 29.7 GiB,
-  just above the 29.4 GiB this host has available, because `/dev/shm` holds about 25 GB of leftovers that this audit did
-  not create. Its references, 77 GB extracted, were also deleted on 2026-10-16, and with images and two runs' work on top
-  they would barely fit. Its last on-host run, in [`docs/validation.md`](../validation.md), is at the same commit, on an
-  older runner, so its result should not be read as checked on today's code.
+  run does. oncoanalyser and marsseq's STAR index, which the sweep left out for want of memory, [ran afterwards](#oncoanalyser-and-marsseqs-star-index).
+- **marsseq's counts were not checked.** Its `VELOCITY` output, from either index, was not compared with an expected
+  result, nor the sparse index's counts with the full one's: [a sparse index](../known-issues.md#upstream-pipeline-bugs-documented-not-patched)
+  departs from the release's configuration.
 - **A demo is small.** These are bundled test profiles under Docker on one host. Real-scale data,
   schedulers such as SLURM, and analyses that need a GPU were not run. seqsubmit needs ENA Webin credentials.
   Apptainer and macOS ran only in CI's lanes.
@@ -296,6 +302,6 @@ and LS, through a resume and through multi-line output, and found no fault.
 
 ## For the release
 
-These are decisions for the maintainer rather than defects: publishing the draft `v1.0.0` release
-(its notes date from 2026-10-22 and should gain the bumps and this audit), turning `CHANGELOG.md`'s
-**Unreleased** into `1.0.0`, and adding a `date-released` to `CITATION.cff`.
+The maintainer released 1.0.0 on 2026-11-08: [#260](https://github.com/bmds-tue/nf-claw/pull/260) turned
+`CHANGELOG.md`'s **Unreleased** into `1.0.0` and added `date-released` to `CITATION.cff`, and the tag `v1.0.0` is on
+its merge commit, `5d14ed4`, with [its release notes](https://github.com/bmds-tue/nf-claw/releases/tag/v1.0.0).
