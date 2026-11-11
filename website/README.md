@@ -1,61 +1,62 @@
 # nf-claw website
 
-A **living digital interface** for the nf-claw repository — futuristic, dark, and
-fully data-driven. Pipeline metadata, versions, skills, parameters and documentation
-are read from the repository at build time.
+The static website at [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/). It is built
+from the repository: pipeline metadata, versions, skills, parameters and documentation are read at
+build time, and no page is maintained by hand.
 
 ## Stack
 
-- **Next.js 16** (App Router, React Server Components) · **TypeScript**
-- **Tailwind CSS 4** (custom design system derived from the brand logo)
-- **Framer Motion** (scroll storytelling, micro-interactions)
-- **react-markdown** (documentation hub)
+- Next.js 16 (App Router, React Server Components) and TypeScript
+- Tailwind CSS 4, with colours taken from the logo
+- Framer Motion for animation
+- react-markdown for the documentation pages
 
-Shared UI components live in `src/components/ui`.
+Shared UI components are in `src/components/ui`.
 
-## The repository is the CMS
+## Where the content comes from
 
-The data layer (`src/lib/data`) is the single source of truth and reads, at build time:
+The data layer in `src/lib/data` reads these files at build time:
 
-| Source in the repo | Powers |
+| Source | Used for |
 |---|---|
-| `catalog.json` | the pipeline list |
-| `pipelines/<name>/skill.md` (frontmatter + body) | run commands, samplesheet, required params, outputs |
-| `pipelines/<name>/reference.md` | the full parameter explorer (every group + parameter) |
-| `sources.tsv`, `.gitmodules` | upstream URLs and version policy |
-| `pipelines/<name>/upstream/` (submodule) | pinned release date + nf-core module count |
-| `.github/workflows/*.yml` | the CI/CD / automation panel |
-| `README.md`, `docs/*.md`, `CONTRIBUTING.md`, … | the documentation hub |
-| local `git log` / `git tag` | the update history + release timeline |
+| `catalog.json` | The pipeline list. |
+| `pipelines/<name>/skill.md` (front matter and body) | Run commands, samplesheet, required parameters, outputs. |
+| `pipelines/<name>/reference.md` | The parameter explorer (every group and parameter). |
+| `sources.tsv`, `.gitmodules` | Upstream URLs and update policy. |
+| `pipelines/<name>/upstream/` (submodule) | The pinned release's date and its number of nf-core modules. |
+| `.github/workflows/*.yml` | The automation panel. |
+| `README.md`, `docs/*.md`, `CONTRIBUTING.md` and the other root guides | The documentation pages. The README's first paragraph is also the home page's lead. |
+| local `git log` and `git tag` | The update history and the release timeline. |
 
-**Add a pipeline, push a release, edit a doc → the site reflects it on the next build.**
-No page is maintained by hand. The design scales from 5 to 500 pipelines: the constellation
-gives each research domain a wedge sized to its pipeline count and tightens its rings until
-every node fits, and the explorers page, group and search rather than render everything.
+Adding a pipeline, releasing or editing a guide changes the site on its next build. The layout does
+not depend on the number of pipelines: the home page's domain chart gives each research domain a
+wedge sized by its pipeline count and tightens its rings until every pipeline fits, and the
+explorers page, group and search their content instead of rendering everything at once.
 
-## Navigating it
+## Using the site
 
-- **⌘K / Ctrl K or `/`** opens a command palette over every pipeline, doc and home section; with
-  an empty query it offers the pipelines this browser opened last.
-- **How it works** types out the agent's three steps with real repository content — the
-  `catalog.md` lines a grep returns, an excerpt of a `skill.md`, its run and demo commands
+- `⌘K`, `Ctrl K` or `/` opens a search over every pipeline, document, documentation section and
+  home page section. With an empty query it lists the pipelines this browser opened most recently.
+- "How it works" shows an agent's three steps with real repository content: the `catalog.md` lines
+  a grep returns, an excerpt of a `skill.md`, and its run and demo commands
   (`src/lib/data/quickstart.ts`).
-- The header marks the section being read (scroll-spy on the home page, the route elsewhere)
-  and shows reading progress; pipeline pages add a sticky "on this page" bar, docs a
-  table of contents, and both have previous/next links.
-- Filters are shareable: `/pipelines/?domain=Epigenomics&q=chip`, and a skills search hands
-  its query to the pipeline's parameter explorer (`/pipelines/rnaseq/?q=aligner#parameters`).
-- Research domains (`src/lib/derive.ts`) are matched from each pipeline's name and
-  description — no per-pipeline list to maintain; anything unmatched lands in "Other".
+- The header marks the section being read (by scrolling on the home page, by route elsewhere) and
+  shows reading progress. Pipeline pages have an "on this page" bar, documents a table of contents,
+  and both link to the previous and next page.
+- Filters are kept in the URL, so they can be shared: `/pipelines/?domain=Epigenomics&q=chip`. A
+  search in the skills explorer opens the pipeline's parameter list with the same query
+  (`/pipelines/rnaseq/?q=aligner#parameters`).
+- Research domains (`src/lib/derive.ts`) are matched from each pipeline's name and description, so
+  there is no per-pipeline list to maintain; pipelines that match no domain are under "Other".
 
 ## Develop
 
-Use the current patch release of Node.js 24 LTS, matching CI and deployment builds.
-[Node.js 20 is end-of-life](https://nodejs.org/en/about/eol) and receives no security fixes.
+Use the current patch release of Node.js 24 LTS, as CI and deployment do. Node.js 20 is
+[end-of-life](https://nodejs.org/en/about/eol) and receives no security fixes.
 
-Build from a repository checkout with Git; initialize pinned submodules with
-`git submodule update --init` for release dates and module counts, and retain full
-Git history for the activity timeline.
+Build from a Git checkout of the repository. Initialise the pinned submodules
+(`git submodule update --init`) for release dates and module counts, and keep the full Git history
+for the activity timeline.
 
 ```bash
 cd website
@@ -65,16 +66,15 @@ npm run dev        # http://localhost:3000
 
 ## Build
 
-The site is exported as a fully static bundle (`output: "export"`) into `out/` — no
-server runtime is required.
+The site is exported as static files (`output: "export"`) into `out/`; no server is needed.
 
 ```bash
 npm run build          # writes ./out
-npx serve out          # preview the static bundle
+npx serve out          # preview the static files
 ```
 
-`npm run typecheck` checks TypeScript without building. There is no `npm start`: `next start`
-cannot serve a static export, so preview the generated `out/` directory instead.
+`npm run typecheck` checks the TypeScript without building. There is no `npm start`: `next start`
+cannot serve a static export, so preview `out/` instead.
 
 ## Test
 
@@ -87,19 +87,19 @@ The browser tests serve `out/` and drive it in Chromium:
 
 | Spec | What it checks |
 |---|---|
-| `tests/operations.spec.ts` | The operational behaviour of the built pages. |
-| `tests/accessibility.spec.ts` | axe-core on every exported page, the layouts that change at phone width, the open search palette and a fully expanded parameter list; any violation fails. |
+| `tests/operations.spec.ts` | How the built pages behave. |
+| `tests/accessibility.spec.ts` | axe-core on every exported page, on the layouts that change at phone width, on the open search and on a fully expanded parameter list; any violation fails. |
 | `tests/links.spec.ts` | Which link targets rendered text may use, and how repository links resolve. |
-| `tests/format.spec.ts` | The wording of workflow schedules and the release timeline's months. |
+| `tests/format.spec.ts` | The wording of workflow schedules and of the release timeline's months. |
 | `tests/audit-regressions.spec.ts` | Regressions found by the repository audits. |
 
-CI also runs the site's Markdown parser tests over every generated `skill.md` from the repository root
-(`pytest tests/test_website_parsing.py`), and a skip there fails the job.
+CI also runs the site's Markdown parser tests over every generated `skill.md` from the repository
+root (`pytest tests/test_website_parsing.py`); a skipped test fails the job.
 
-The Tailwind 4 build targets Safari 16.4+, Chrome 111+ and Firefox 128+; see the
-[official browser requirements](https://tailwindcss.com/docs/upgrade-guide#browser-requirements).
+The Tailwind 4 build targets Safari 16.4+, Chrome 111+ and Firefox 128+ (Tailwind's
+[browser requirements](https://tailwindcss.com/docs/upgrade-guide#browser-requirements)).
 
-For project-site hosting under a sub-path, set the base path at build time:
+To host the site under a sub-path, set the base path at build time:
 
 ```bash
 NEXT_PUBLIC_BASE_PATH=/nf-claw NEXT_PUBLIC_SITE_URL=https://<user>.github.io npm run build
@@ -107,36 +107,35 @@ NEXT_PUBLIC_BASE_PATH=/nf-claw NEXT_PUBLIC_SITE_URL=https://<user>.github.io npm
 
 ## Deployment
 
-1. **GitHub Pages (default).** `.github/workflows/deploy-pages.yml` builds the static
-   bundle on every push to `main` and publishes it to Pages. It checks out the pinned
-   submodules and full git history so the data layer can read release dates, module
-   counts, tags and the commit log, and it derives the base path/origin from the Pages
-   configuration. Every push to `main` rebuilds the site from the current repository state.
-   A bot merge (`auto-update`, `discover-pipelines`) is made with `GITHUB_TOKEN` and triggers
-   no push workflow, so those jobs dispatch the deploy after merging. Deployment uses the workflow's built-in
-   `GITHUB_TOKEN` and Pages OIDC permissions; no personal access token is required.
-2. **Live GitHub augmentation (optional).** If a `GITHUB_TOKEN` (or `GH_TOKEN`) is present
-   at build time, `src/lib/data/github.ts` augments the Activity section with live Actions
-   runs via the REST API. Release information comes from local pins and git tags.
-   Without a token, the site shows local git history
-   and workflow definitions. The token is only ever read at build time and is never shipped
-   to the client. Actions data is a snapshot captured during the build;
-   the deployed static site does not poll GitHub and updates on the next deployment.
+1. **GitHub Pages.** `.github/workflows/deploy-pages.yml` builds the site on every push to `main` and
+   publishes it to Pages. It checks out the pinned submodules and the full Git history, so the data
+   layer can read release dates, module counts, tags and the commit log, and it takes the base path
+   and origin from the Pages configuration. The maintenance bots (`auto-update`,
+   `discover-pipelines`) update `main` with `GITHUB_TOKEN`, which triggers no push workflow, so they
+   start the deployment themselves after publishing. Deployment uses the workflow's `GITHUB_TOKEN`
+   and Pages OIDC permissions; no personal access token is needed.
+2. **Live GitHub data (optional).** If `GITHUB_TOKEN` or `GH_TOKEN` is set at build time,
+   `src/lib/data/github.ts` adds recent Actions runs to the activity section through the REST API.
+   Without a token, the site shows the local Git history and the workflow definitions. Release
+   information always comes from the local pins and Git tags. The token is read only at build time
+   and never reaches the browser. The Actions data is a snapshot from the build; the site does not
+   poll GitHub and changes only when it is deployed again.
 
-Override the data root with `NFCLAW_REPO_ROOT` if the website is built outside the repo.
+Set `NFCLAW_REPO_ROOT` to build the website from outside the repository.
 
-## Design system
+## Design tokens
 
-Defined in `tailwind.config.ts` and `src/app/globals.css`, derived from the logo
-(white line-art T-rex + green apple on black):
+Defined in `tailwind.config.ts` and `src/app/globals.css`, with colours taken from the logo (a white
+line-art T-rex and a green apple on black):
 
-- **Surfaces** — a near-black `ink` scale with subtle elevation
-- **Primary** — apple-green `claw` scale
-- **Secondary** — warm `cream` (the apple's bite)
-- **Text** — `fog` scale; body text uses the default, muted and dim steps, while the
-  darker `faint` step is reserved for decoration
-- **Domains** — eight categorical colors validated for the dark surface (lightness band,
-  ≥ 3:1 contrast, adjacent pairs distinct under protan/deutan simulation, in wedge order);
-  reordering them re-pairs neighbours, so re-validate before changing `CATEGORIES`
-- Consistent spacing, `glass` cards with a pointer spotlight, ambient glows, film grain,
-  keyboard focus rings, and reduced-motion support throughout
+- `ink`: near-black surfaces with slight elevation steps
+- `claw`: apple green, the primary colour
+- `cream`: a warm secondary colour (the apple's bite)
+- `fog`: text. Body text uses the default, muted and dim steps; the darker `faint` step is only for
+  decoration.
+- Domain colours: eight categorical colours checked against the dark surface (a lightness band,
+  contrast of at least 3:1, and neighbours that stay distinct under protan and deutan simulation, in
+  wedge order). Reordering them changes which colours sit next to each other, so check them again
+  before changing `CATEGORIES`.
+- Cards use a translucent `glass` style with a highlight that follows the pointer. Focus rings are
+  visible for keyboard users, and animation respects reduced-motion settings.

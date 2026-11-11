@@ -1,57 +1,56 @@
-# nf-claw Architecture
+# nf-claw architecture
 
-nf-claw derives its parameter documentation and general input validation from each pipeline's own `nextflow_schema.json` and, where present, its input schema (`assets/schema_input.json`). Curated handoff rules and documented compatibility adjustments supplement those schemas. The pinned upstream pipeline remains the authority for its analysis and complete runtime validation.
+How the repository and the `nfclaw` runner are put together. nf-claw takes its parameter
+documentation and its general input validation from each pipeline's own `nextflow_schema.json` and,
+where there is one, its input schema (`assets/schema_input.json`). Handoff rules and documented
+compatibility adjustments add to those schemas. The pinned pipeline remains the authority for its
+analysis and for the complete validation it runs at launch.
 
 ---
 
 ## Navigation
 
-[System Overview](#system-overview) • [1. pipelines/ Library](#1-pipelines--the-library-content) • [2. runner/ Engine](#2-runner--the-runtime-engine-nfclaw) • [Module Map](#module-map) • [Preflight](#21-schema-preflight--fast-fail-parameter-validation) • [Provenance](#25-provenance-bundles--dependency-hashing) • [Replay](#26-replay--replay-guard) • [Verification](#27-verification-engine-nfclaw-verify) • [Assessment](#28-scientific-output-assessment-nfclaw-assess) • [Chaining](#210-chaining-engine-runnerchainpy) • [3. handoffs/ Rules](#3-handoffs--chaining-rules) • [4. librarian/ Maintenance](#4-librarian--maintenance--code-generation)
+[Overview](#overview) • [pipelines/](#1-pipelines-the-library) • [runner/](#2-runner-the-nfclaw-command) • [Module map](#module-map) • [Preflight](#21-preflight) • [Provenance](#25-provenance-bundles) • [Replay](#26-replay-and-the-replay-guard) • [Verification](#27-verification-nfclaw-verify) • [Assessment](#28-scientific-assessment-nfclaw-assess) • [Chains](#210-chains) • [handoffs/](#3-handoffs-chaining-rules) • [librarian/](#4-librarian-maintenance)
 
 ---
 
-## System Overview
+## Overview
 
-The repository is structured into four distinct, decoupled functional zones:
+The repository has four parts:
 
-```
-                        ┌─────────────────────────────────┐
-                        │           nf-claw Core          │
-                        └─────────────────────────────────┘
-                                         │
-        ┌─────────────────────┬──────────┴──────────┬─────────────────────┐
-        ▼                     ▼                     ▼                     ▼
-┌───────────────┐     ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
-│   pipelines/  │     │   handoffs/   │     │    runner/    │     │   librarian/  │
-│  (Submodules  │     │   (Chaining   │     │  (CLI, Engine │     │  (Drift Gate, │
-│   & Skills)   │     │     Rules)    │     │   & Runtime)  │     │  Generators)  │
-└───────────────┘     └───────────────┘     └───────────────┘     └───────────────┘
-```
+- `pipelines/`: the pinned pipelines (git submodules) and their generated skills;
+- `runner/`: the `nfclaw` command, which validates, launches, records, replays and chains runs;
+- `handoffs/`: the rules that turn one pipeline's outputs into the next one's inputs;
+- `librarian/`: the maintenance code that generates the skills and catalogs and tracks releases.
 
 Around them, `scripts/` holds the acceptance gate and the validation helpers CI runs, `.github/` the
-[workflows](compatibility.md#3-automated-continuous-validation), and `website/` the
-[portal](../website/README.md) built from all of it.
+[workflows](compatibility.md#continuous-validation), and `website/` the
+[website](../website/README.md) built from all of it.
 
 ---
 
-## 1. `pipelines/` — The Library Content
+## 1. `pipelines/`: the library
 
 Each pipeline lives in `pipelines/<name>/`:
 
-| Artifact | Type | Role & Guarantee |
-|---|---|---|
-| **`upstream/`** | Git submodule | Pinned to the commit resolved from an nf-core release tag. Upstream code unmodified. |
-| **`skill.md`** | Agent definition | Concise agent instructions generated deterministically from `nextflow_schema.json`. Includes identity, description, tool inventory (from `CITATIONS.md`), run commands, allowed parameters, parameter groups from the upstream schema, and chaining relationships. |
-| **`reference.md`** | Complete catalog | Comprehensive parameter manual documenting every parameter, type, required/hidden status, regex constraints, and defaults. |
-| **`.versions/`** | Git worktrees *(git-ignored)* | Commit-anchored worktrees materialized on demand when executing other releases or unreleased `dev` branch heads. |
+| Path | What it is |
+|---|---|
+| `upstream/` | A git submodule at the commit of an nf-core release tag. Never edited. |
+| `skill.md` | Short instructions for an agent, generated from `nextflow_schema.json`: description, tools (from `CITATIONS.md`), run commands, required parameters, the schema's parameter groups and chaining. |
+| `reference.md` | Every parameter with its type, whether it is required or hidden, its pattern, allowed values and default. |
+| `.versions/` | Git worktrees for other releases and `dev` commits, created on demand and ignored by Git. |
 
-The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas and checks them against the committed files. This detects stale generated context; it does not prove that an upstream schema describes every behavior of its analysis code correctly.
+The drift gate regenerates `skill.md` and `reference.md` from the pinned schemas and compares them
+with the committed files. That catches stale generated files; it does not show that a schema
+describes everything the pipeline's code does.
 
 ---
 
-## 2. `runner/` — The Runtime Engine (`nfclaw`)
+## 2. `runner/`: the `nfclaw` command
 
-The runner executes pipelines, validates inputs before launch, enforces runtime isolation, records provenance, and manages multi-stage pipeline chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) serves the same commands to MCP clients, running runs and chains as detached jobs ([mcp.md](mcp.md)).
+The runner validates inputs before launch, runs pipelines in isolation, records provenance and runs
+chains. `nfclaw mcp` (`runner/mcp_server.py`, `runner/mcp_tools.py`, `runner/jobs.py`) offers the same
+commands to MCP clients and runs runs and chains as detached jobs ([mcp.md](mcp.md)).
 
 ### Module map
 
@@ -71,203 +70,342 @@ The runner executes pipelines, validates inputs before launch, enforces runtime 
 provenance bundle, so a replay's checks need neither nfclaw nor any Python package
 ([what a replay still needs](replay.md#what-the-bundle-carries)).
 
-### 2.1 Schema Preflight & Fast-Fail Parameter Validation
-`nfclaw run --check` lists completed, deferred and unsupported checks; real runs record the detailed
-`validation_scope` in their manifest. The [preflight scope guide](preflight.md) documents the schema
-subset and the generation support matrix, including differences between handwritten and generated
-tables and JSON/YAML inputs.
+### 2.1 Preflight
 
-Before invoking Nextflow, `nfclaw run` executes fast, deterministic preflight checks (`runner/preflight.py`, `runner/schema.py`, `runner/parameters.py`, `runner/inputs.py`):
-- **Syntactic Validation:** Rejects unknown flags, typos, and syntax errors prior to Nextflow process initialization.
-- **Type & Range Checking:** Validates scalar types, boolean flags, numeric bounds, and enum choices.
-- **Samplesheet Generation (`runner/sheetgen.py`):** When `--input` names data files (a directory, a glob, or files given with `--input` once each) where the pipeline takes a samplesheet, the first stage of the run uses the pinned input contract, including declared alternative formats and exact-schema source annotations in `runner/input_roles.json`. Typed columns take files matching their patterns, FastQ mates pair by `_R1`/`_R2` names, or by `_1`/`_2` when their read names identify one molecule, sample names come unaltered from file names, and values no file determines come from `--sheet-set` or schema defaults. Gaps and ambiguities are refused; source-audited stale HGTseq and Nanoseq contracts require explicit sheets. The result then passes the same preflight as a hand-written sheet; it is staged beside `params.json`, named on the command line so a moved bundle replays its own copy, recorded with the configs, and its data files are recorded as inputs.
-- **Samplesheet Preflight:** Verifies samplesheet existence, column headers, required fields, and path formats.
-- **Path Resolution:** Resolves the `--input` samplesheet path against the caller's working directory. Local data paths inside a samplesheet must already be absolute; relative entries are rejected.
-- **Type Coercion Safeguards:** Translates `--input false` to an unset `input` parameter in `params.json` for pipelines that support running without a samplesheet (e.g. sarek), preventing nf-schema type validation crashes.
-- **Pipeline Code Integrity:** Refuses a pinned `upstream/` that is not at the commit its `skill.md` documents, and any tree (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names code that did not run.
-- **Resource Ceiling Floor:** Refuses `--limit-*` when the run's engine predates Nextflow 24.04.0 or cannot be identified; older engines ignore `process.resourceLimits` silently.
-- **Reproducibility Advisories:** `runner/reproducibility.py` scans pinned task scripts before launch to detect known sources of run-to-run variability (such as dada2 `assignTaxonomy` tie-breaking or unseeded QIIME2 rarefaction) and announces prelaunch advisories unless those steps are explicitly skipped. It also announces pinned workflow code that reorders, in place, a list Nextflow hands to several processes at once (createtaxdb 3.1.0's sourmash step) when that step runs.
-- **Configuration Probe (`runner/config_probe.py`, `--check` only):** Asks the run's engine — its `--nxf-ver`, `--nxf-env` and every `-c`, generated ones included — to resolve the pipeline's configuration and selected profiles with `nextflow config`, from a scratch directory. A release that engine cannot parse (an older one under Nextflow 26.04's strict parser) is refused with the declared engine or the legacy parser to use, and `profile_config` is reported checked.
-- **Diagnostics:** Emits clean, actionable diagnostics with `ErrorCode` and suggested fixes. The pinned pipeline's runtime validation remains authoritative for conditional and complex constraints; releases use different validation plugins.
+`nfclaw run --check` lists the checks it completed, those deferred to launch and those it does not
+support; a real run records the detailed `validation_scope` in its manifest. The
+[preflight guide](preflight.md) describes the supported schema subset and which pipelines the
+samplesheet generator supports, including how generated and hand-written tables and JSON/YAML inputs
+differ.
+
+Before it starts Nextflow, `nfclaw run` runs these checks (`runner/preflight.py`, `runner/schema.py`,
+`runner/parameters.py`, `runner/inputs.py`):
+
+- Unknown and misspelt flags are refused.
+- Scalar types, booleans, numeric bounds and allowed values are checked.
+- When `--input` names data files (a directory, a glob, or files given with `--input` once each)
+  where the pipeline expects a samplesheet, `runner/sheetgen.py` writes the sheet from the pinned
+  input schema, including declared alternative formats and the source annotations in
+  `runner/input_roles.json`. Typed columns take the files that match their patterns. FastQ mates
+  pair by `_R1`/`_R2`, or by `_1`/`_2` when their read names show they come from one molecule.
+  Sample names are the file names, unaltered, and values no file determines come from `--sheet-set`
+  or the schema's defaults. Gaps and ambiguities are refused, and the stale HGTseq and Nanoseq
+  contracts need a sheet written by hand. The generated sheet then goes through the same checks as a
+  hand-written one. It is staged beside `params.json` and named on the command line (so a moved
+  bundle replays its own copy), recorded with the configs, and its data files are recorded as inputs.
+- A samplesheet must exist and have the expected header, required fields and path formats.
+- `--input` is resolved against the caller's working directory. Local data paths inside a
+  samplesheet must already be absolute; relative ones are refused.
+- `--input false` becomes an unset `input` in `params.json` for pipelines that can run without a
+  samplesheet (such as sarek), so nf-schema's type check does not fail on it.
+- A pinned `upstream/` that is not at the commit its `skill.md` names is refused, and so is any tree
+  (pin, release cache or `dev` commit) with local edits to tracked files, so provenance never names
+  code that did not run.
+- `--limit-*` is refused when the run's engine is older than Nextflow 24.04.0 or cannot be
+  identified, because older engines ignore `process.resourceLimits` without a warning.
+- `runner/reproducibility.py` scans the pinned task scripts for known sources of run-to-run
+  variation (dada2 `assignTaxonomy` tie-breaking, unseeded QIIME2 rarefaction) and announces them
+  before launch unless those steps are skipped. It also announces workflow code that reorders, in
+  place, a list Nextflow hands to several processes at once (createtaxdb 3.1.0's sourmash step) when
+  that step runs.
+- With `--check` only, `runner/config_probe.py` asks the run's engine, with its `--nxf-ver`,
+  `--nxf-env` and every `-c` (generated ones included), to resolve the pipeline's configuration and
+  selected profiles with `nextflow config`, from a scratch directory. A release that engine cannot
+  parse (an older one under Nextflow 26.04's strict parser) is refused with the engine or parser to
+  use instead, and `profile_config` is reported as checked.
+- Errors carry an `ErrorCode` and a suggested fix. The pinned pipeline's own validation stays
+  authoritative for conditional and complex constraints; releases use different validation plugins.
 
 #### What is left to Nextflow and the pinned release
-Every pinned release checks itself at launch, before any task runs. Nextflow enforces the manifest's `nextflowVersion`, and every pinned release uses the strict `!>=` form. The release's validation code checks every parameter and samplesheet against its schemas: nf-schema, nf-validation in older releases, or the `NfcoreSchema` library of the oldest template. nfclaw does not repeat a check whose result Nextflow or the release produces just as early:
-- **Engine version:** a launch does not probe for it. When Nextflow refuses an older engine, nfclaw's error names the `--nxf-ver` to pass, and `skill.md` states the declared engine. `--check` warns about it, because `nextflow config` does not enforce it.
-- **Java:** nfclaw looks for it where the Nextflow launcher does (`NXF_JAVA_HOME`, `JAVA_HOME`, then `PATH`). The launcher checks the version.
-- **Profile values, conditional and nested schema constraints, remote files:** Nextflow and the plugin judge them at launch; `--check` has the engine parse the configuration first.
-- **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo validation compares its runs with that snapshot instead of re-deriving the tools' output.
+
+Every pinned release checks itself at launch, before any task runs. Nextflow enforces the manifest's
+`nextflowVersion`, which every pinned release states in the strict `!>=` form. The release's
+validation code checks every parameter and samplesheet against its schemas: nf-schema, nf-validation
+in older releases, or the `NfcoreSchema` library of the oldest template. nfclaw does not repeat a
+check whose result Nextflow or the release produces just as early:
+
+- **Engine version:** a launch does not probe for it. When Nextflow refuses an older engine, nfclaw's
+  error names the `--nxf-ver` to pass, and `skill.md` states the declared engine. `--check` warns
+  about it, because `nextflow config` does not enforce it.
+- **Java:** nfclaw looks for it where the Nextflow launcher does (`NXF_JAVA_HOME`, `JAVA_HOME`, then
+  `PATH`). The launcher checks the version.
+- **Profile values, conditional and nested schema constraints, remote files:** Nextflow and the
+  plugin judge them at launch; `--check` has the engine parse the configuration first.
+- **Analysis results:** each release's nf-test snapshot is what nf-core's CI checks. nf-claw's demo
+  validation compares its runs with that snapshot instead of re-deriving the tools' output.
 
 nfclaw keeps its own schema checks where they act before Nextflow could:
-- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never launch pipeline tasks: Nextflow runs only to report its version (`nextflow -version`) and resolve the configuration (`nextflow config`).
-- A chain validates every stage before the first one launches. Otherwise a later stage's own validation would run only after the stages before it have finished.
-- Unknown parameters are refused. nf-schema only warns about them by default, because institutional profiles may set extra parameters, so a mistyped flag would run with its default.
-- Declared local samplesheet paths must be absolute and identifiers shell-safe. A real run hashes its discovered local dependencies before launching Nextflow from `--outdir`; `--check` inspects paths without establishing every data file's byte readability. Implicit, transitive and remote dependencies retain the limits in [preflight scope](preflight.md).
 
-### 2.2 Run Execution & Sibling Directory Locking
-- **Launch Isolation:** Nextflow is launched from `--outdir`, isolating its `.nextflow/` history and session databases. Task work files default to the shared `<repo>/work/` directory; `NXF_WORK` selects another location and is resolved against the caller's working directory before launch.
-- **Sibling File Locking:** On POSIX systems, `runner/locking.py` acquires an exclusive, non-blocking sibling flock (`.{outdir.name}.nfclaw.lock`) before creating or modifying `--outdir`. Overlapping or concurrent runs into the same directory fail fast with `ErrorCode.ENVIRONMENT`, preventing corrupted session states or interleaved logs.
-- **Docker Daemon Preflight:** For runs selecting the Docker profile, `runner/preflight.py` probes daemon responsiveness (`docker info`) with a configurable timeout (`NFCLAW_DOCKER_TIMEOUT`, default 60 seconds; bounded by `--timeout`), preventing premature aborts on busy CI or cloud runners.
-- **Check Safety:** `--check` stages parameters in temporary directories and never writes into
-  `--outdir`. Resolving a requested pipeline version may fetch tags or populate its version cache.
+- `--check`, a chain's `--check` and the MCP `run_pipeline(check=true)` never launch pipeline tasks:
+  Nextflow runs only to report its version (`nextflow -version`) and resolve the configuration
+  (`nextflow config`).
+- A chain validates every stage before the first one launches. Otherwise a later stage's own
+  validation would run only after the stages before it have finished.
+- Unknown parameters are refused. nf-schema only warns about them by default, because institutional
+  profiles may set extra parameters, so a mistyped flag would run with its default.
+- Declared local samplesheet paths must be absolute and identifiers shell-safe. A real run hashes its
+  local dependencies before launching Nextflow from `--outdir`; `--check` inspects paths without
+  confirming that every data file can be read. Implicit, transitive and remote dependencies keep the
+  limits described in the [preflight guide](preflight.md).
 
-### 2.3 Process Lifecycle & Signal Trapping
-- `runner/execution.py` traps `SIGTERM`, `SIGHUP`, and `SIGINT` (Ctrl-C).
-- On receiving a stop signal, nfclaw signals Nextflow's process group, captures its final output,
-  and attempts to record the termination outcome and provenance before exiting.
-- Shutdown grace defaults to 10 seconds and is configurable with `NFCLAW_SHUTDOWN_GRACE`.
-  Runs have no overall deadline unless `--timeout SECONDS` is supplied; see [timeouts](timeouts.md).
-- A task container belongs to the engine, not to the process group: before each signal nfclaw
-  notes the `nxf-…` containers the group's `docker run`/`podman run` clients started, and once the
-  group is gone force-removes those still present, recording it in the run log
+### 2.2 Launch and output locking
+
+- Nextflow is launched from `--outdir`, so its `.nextflow/` history and session databases belong to
+  that run. Task work files go to the shared `<repo>/work/` by default; `NXF_WORK` chooses another
+  location and is resolved against the caller's working directory before launch.
+- On POSIX systems, `runner/locking.py` takes an exclusive, non-blocking lock on a file beside the
+  output directory (`.{outdir.name}.nfclaw.lock`) before it creates or changes `--outdir`. A second
+  run into the same directory fails at once with `ErrorCode.ENVIRONMENT` instead of corrupting the
+  first run's session or interleaving its logs.
+- For the Docker profile, `runner/preflight.py` checks that the daemon answers `docker info`, waiting
+  up to `NFCLAW_DOCKER_TIMEOUT` seconds (default 60, and never past `--timeout`) so a busy runner is
+  not mistaken for a missing daemon.
+- `--check` stages parameters in temporary directories and never writes into `--outdir`. Resolving a
+  requested pipeline version may fetch tags or fill its version cache.
+
+### 2.3 Stopping a run
+
+- `runner/execution.py` traps `SIGTERM`, `SIGHUP` and `SIGINT` (Ctrl-C).
+- On a stop signal, nfclaw signals Nextflow's process group, captures its last output, and tries to
+  record the outcome and the provenance before it exits.
+- Nextflow gets 10 seconds to shut down (`NFCLAW_SHUTDOWN_GRACE` changes this). A run has no overall
+  deadline unless `--timeout SECONDS` is given; see [timeouts](timeouts.md).
+- Task containers belong to the container engine, not to the process group. Before each signal,
+  nfclaw notes the `nxf-…` containers that the group's `docker run`/`podman run` clients started;
+  once the group is gone it force-removes those still present and says so in the run log
   (`replay_guard.task_containers`; a replay's supervisor does the same).
-- On Linux, `PR_SET_PDEATHSIG` signals the direct Nextflow child if nfclaw dies abruptly. It does
-  not by itself guarantee cleanup of detached processes or remote tasks.
+- On Linux, `PR_SET_PDEATHSIG` signals the direct Nextflow child if nfclaw dies abruptly. That alone
+  does not clean up detached processes or remote tasks.
 
-### 2.4 Structured Logging & Status Inspection
-- **`<outdir>/provenance/logs/run.log`**: Authoritative execution log containing nfclaw launch metadata (command, PID, host, advisories), followed by Nextflow's console stream.
-- **Outcome Line:** The log terminates with a machine-verifiable trailer line:  
-  `==> nfclaw run finished <timestamp>: <outcome>`
-- **Stream Separation:** `stdout.txt` and `stderr.txt` are maintained alongside `run.log`.
-- **`nfclaw status <outdir>`**: Reads `run.log` and, for an unfinished run on the same host,
-  checks the recorded process identity. Reports `success`, `running`, `failed`, `terminated`, or
-  `stopped without an outcome`. Remote unfinished runs cannot be inspected locally, and a log
-  that exists but cannot be read is reported as `unknown` with the reason (exit status 1).
-- **Completion caveats:** A pipeline can exit 0 without some samples or tasks. `runner/runlog.py`
-  quotes what it reported (nf-core's "…, but with errored process(es)", rnaseq's skipped samples)
-  and Nextflow's count of ignored task failures; `nfclaw run` prints them, `nfclaw status` reports
+### 2.4 Logs and status
+
+- `<outdir>/provenance/logs/run.log` is the authoritative log: nfclaw's launch details (command,
+  pid, host, advisories), then Nextflow's console output.
+- Its last line, written when nfclaw is done, is `==> nfclaw run finished <timestamp>: <outcome>`.
+- `stdout.txt` and `stderr.txt` beside it keep Nextflow's two raw streams.
+- `nfclaw status <outdir>` reads `run.log` and, for an unfinished run on the same host, checks the
+  recorded process identity. It reports `success`, `running`, `failed`, `terminated` or
+  `stopped without an outcome`. An unfinished run on another host cannot be inspected locally, and
+  a log that exists but cannot be read is reported as `unknown` with the reason (exit status 1).
+- A pipeline can exit 0 without some samples or tasks. `runner/runlog.py` quotes what it reported
+  (nf-core's "…, but with errored process(es)", rnaseq's skipped samples) and Nextflow's count of
+  ignored task failures. `nfclaw run` prints them, `nfclaw status` reports
   `success — with caveats …`, and the manifest records them as `completion_caveats`.
 
-### 2.5 Provenance Bundles & Dependency Hashing
-Executions attempt to record a provenance bundle in `<outdir>/provenance/`, including failed runs. Individual records are replaced atomically and the manifest is published last. Recording errors prevent a successful outcome; the replay guard refuses an incomplete bundle.
+### 2.5 Provenance bundles
 
-| Manifest / File | Description & Verification Function |
+Every run, failed ones included, tries to record a provenance bundle in `<outdir>/provenance/`. Each
+record is replaced atomically and the manifest is written last. A run that cannot record its bundle
+does not report success, and the replay guard refuses an incomplete bundle.
+
+| File | What it records |
 |---|---|
-| `logs/run.log` | The whole launch in order, ending with its outcome line (§2.4); `stdout.txt` and `stderr.txt` beside it keep Nextflow's raw streams. |
-| `run_manifest.json` | Captures pipeline name, version, commit, command, recording time, outcome, observed engine, operating system, the nfclaw that wrote the bundle (`nfclaw`: package version and checkout commit, as `nfclaw --version` prints them), and active `NXF_*` variables (with sensitive values redacted). Host/process identity is recorded in `logs/run.log`. `pipeline_archive`, `bundled_configs`, `container_pins` and `execution_environment.issues` show the evidence actually captured. |
-| `params.json` | Resolved wrapper parameters passed to Nextflow, including the pinned `trace_report_suffix` where the upstream schema supports it and the nf-core/configs commit (`custom_config_version`) when automatic pinning applies. The upstream pipeline can record further defaults or profile values itself, and other independently timestamped metadata can still change filenames. |
-| `commands.sh`, `replay_guard.py`, `environment_record.py` | The replay script and its two zero-dependency helpers (§2.6). |
-| `inputs.sha256` | Prelaunch digests of declared local input files, schema path parameters, existing absolute local files supplied to parameters without a path format, and local data paths inside CSV/TSV or flat JSON/YAML records, including auxiliary tables. |
-| `outputs.sha256` | Snapshot of published result files, excluding provenance and Nextflow state. |
-| `pipeline.sha256` | Prelaunch digest snapshot of tracked pipeline source files. |
-| `pipeline-source.tar.gz` | Deterministic archive of exactly those source files (fixed owner, time and mode, sorted, untimestamped gzip). A replay runs the recorded checkout while it holds exactly this source, otherwise it extracts and checks the archive and runs that copy (`<target>/provenance/pipeline-source.json` records which). |
-| `configs/` | Copies of external `-c` configuration files, recorded in the manifest's `bundled_configs`. A replay passes the copies; a config that uses `includeConfig` replays from its original path. |
-| `environment.json` | Available execution evidence: process/container records, image identities (Docker/Podman registry digest, image ID and platform, or Singularity/Apptainer file SHA-256), Nextflow build, container engine version, plugins, Java runtime and remote-input hashes recovered from logs. Missing evidence is recorded as unresolved entries or `issues`. Its digest is in the manifest (`environment_record`), with a summary under `execution_environment`. |
-| `containers.config` | Optional Nextflow config pinning eligible Docker/Podman processes (fully qualified `withName`) to recorded registry digests. `commands.sh` passes it last when present. File-image engines, unresolved or multiple images, mixed containerless tasks and ephemeral Wave references do not receive these pins. |
-| `configs.sha256` | Digests of the resolved params file, generated configs and explicit external Nextflow configuration files passed via `-c`. |
-| `inputs.inventory.json` / `configs.inventory.json` | Prelaunch dependency namespaces, empty directories, entry types and link identities, checked alongside file bytes. |
-| `outputs.inventory.json` | Published output namespace used by replay verification and handoff checks. |
-| `launch-record.json` | Written before Nextflow starts and removed when the manifest is published: the pipeline source identity and the input bytes and namespace of this launch, which `--resume` compares against when a vanished nfclaw left no manifest. |
-| `resource_limits.config` | Generated resource ceiling configuration when `--limit-*` flags are used. |
-| `nf_schema_compat.config` / `fastqrepair_compat.config` | Conditional plugin adjustments and recorded task corrections. |
+| `logs/run.log` | The whole launch in order, ending with its outcome line ([2.4](#24-logs-and-status)); `stdout.txt` and `stderr.txt` beside it keep Nextflow's raw streams. |
+| `run_manifest.json` | Pipeline name, version, commit, command, recording time, outcome, the engine observed, operating system, the nfclaw that wrote the bundle (`nfclaw`: package version and checkout commit, as `nfclaw --version` prints them), and the active `NXF_*` variables with secrets redacted. Host and process identity are in `logs/run.log`. `pipeline_archive`, `bundled_configs`, `container_pins` and `execution_environment.issues` show what evidence was actually captured. |
+| `params.json` | The parameters passed to Nextflow, including the pinned `trace_report_suffix` where the schema supports it and the nf-core/configs commit (`custom_config_version`) when it is pinned automatically. The pipeline can record further defaults or profile values itself, and other timestamped metadata can still change file names. |
+| `commands.sh`, `replay_guard.py`, `environment_record.py` | The replay script and its two dependency-free helpers ([2.6](#26-replay-and-the-replay-guard)). |
+| `inputs.sha256` | Digests, taken before launch, of declared local input files, schema path parameters, existing absolute local files given to parameters without a path format, and local data paths inside CSV/TSV or flat JSON/YAML records, auxiliary tables included. |
+| `outputs.sha256` | Digests of the published result files, without provenance and Nextflow state. |
+| `pipeline.sha256` | Digests, taken before launch, of the tracked pipeline source files. |
+| `pipeline-source.tar.gz` | A reproducible archive of exactly those source files (fixed owner, time and mode, sorted, gzip without a timestamp). A replay runs the recorded checkout while it still holds exactly this source; otherwise it extracts and checks the archive and runs that copy (`<target>/provenance/pipeline-source.json` says which). |
+| `configs/` | Copies of the external `-c` configuration files, listed in the manifest's `bundled_configs`. A replay passes the copies; a config that uses `includeConfig` replays from its original path. |
+| `environment.json` | The execution evidence available: process and container records, image identities (Docker/Podman registry digest, image ID and platform, or a Singularity/Apptainer file's SHA-256), Nextflow build, container engine version, plugins, Java runtime and the hashes of remote inputs found in the logs. Missing evidence is recorded as unresolved entries or `issues`. Its digest is in the manifest (`environment_record`), with a summary under `execution_environment`. |
+| `containers.config` | When possible, a Nextflow config that pins eligible Docker/Podman processes (by fully qualified `withName`) to their recorded registry digests. `commands.sh` passes it last. File-based images, unresolved or multiple images, a mix of tasks with and without containers, and temporary Wave references get no pin. |
+| `configs.sha256` | Digests of the params file, the generated configs and the external configuration files passed with `-c`. |
+| `inputs.inventory.json`, `configs.inventory.json` | The dependencies' directory listings, empty directories, entry types and link identities, taken before launch and checked along with the file bytes. |
+| `outputs.inventory.json` | The published outputs' directory listing, used by replay verification and handoff checks. |
+| `launch-record.json` | Written before Nextflow starts and removed when the manifest is written: the pipeline source identity and the input bytes and listing of this launch, which `--resume` compares against when nfclaw vanished without writing a manifest. |
+| `resource_limits.config` | The resource ceilings, when `--limit-*` is used. |
+| `nf_schema_compat.config`, `fastqrepair_compat.config` | Plugin adjustments and recorded task corrections, when they apply. |
 
-Checksum manifests escape filenames using GNU conventions, preserving backslashes and Unicode
-separators without losing file identities.
+The checksum files escape file names the way GNU tools do, so backslashes and Unicode separators keep
+their identity.
 
-Missing local path parameters without an upstream `exists: true` constraint are delegated to Nextflow: they may be output/cache destinations. They produce a warning and an `unverified_local_paths` manifest entry rather than a false input checksum. Required missing inputs are refused. Remote data recovered from Nextflow's staging logs is hashed after the run and compared after a replay; files tasks download themselves, profile-only references, a user config's own `includeConfig` targets, Conda environments and data referenced by non-tabular input formats are not comprehensively frozen. Supported validation-only table URLs are fetched again after the run, up to 100 MiB; that hash describes the refetched bytes, not an immutable copy of what validation originally read. Unavailable identities remain unresolved.
+A missing local path parameter without an `exists: true` constraint is left to Nextflow, because it
+may be an output or cache destination. It produces a warning and an `unverified_local_paths` entry in
+the manifest instead of a misleading input checksum; a required input that is missing is refused.
+Remote data found in Nextflow's staging logs is hashed after the run and compared after a replay.
+Files that tasks download themselves, references set only by a profile, the `includeConfig` targets
+of a user config, Conda environments and data referenced by non-tabular input formats are not all
+frozen. Supported table URLs that are only used for validation are fetched again after the run (up
+to 100 MiB); that hash describes the refetched bytes, not the bytes validation read. Identities that
+cannot be established stay unresolved.
 
-`runner/institutional.py` pins the release's default nf-core/configs branch when its schema declares `custom_config_version` and its config uses the recognized nf-core URL. Explicit `custom_config_version` or `custom_config_base` values and a nonempty `NXF_OFFLINE` bypass automatic resolution. A resumed run reuses its prior recorded commit when applicable. Successful resolution is passed in `params.json` and recorded under `institutional_configs`; failure emits an advisory and retains the release default. This does not resolve arbitrary config includes.
+`runner/institutional.py` pins the release's default nf-core/configs branch to a commit when the
+schema declares `custom_config_version` and the config uses the usual nf-core URL. An explicit
+`custom_config_version` or `custom_config_base`, or a non-empty `NXF_OFFLINE`, turns this off, and a
+resumed run reuses the commit it recorded. The resolved commit is passed in `params.json` and
+recorded under `institutional_configs`; if resolution fails, an advisory says so and the release's
+default stays. Other config includes are not resolved.
 
-`runner/path_roles.json` records output-only directory roles proven from exact upstream commits.
-The generic consumer requires the expected pipeline identity, an unchanged directory schema and
-a clean matching source checkout. These destinations keep their filename checks and parameter
-checksums, while unrelated existing children are excluded from input inspection and snapshots.
-Unlisted paths, changed releases and reused `storeDir` caches retain their input guards. Audited
-whole-path shell arguments also check parent folders and resolved symlink paths.
+`runner/path_roles.json` lists directory parameters shown, at exact upstream commits, to be output
+only. They are used only when the pipeline identity matches, the directory schema is unchanged and
+the source checkout is clean and matching. Such destinations keep their file name checks and
+parameter checksums, but unrelated files already inside them are left out of input inspection and
+snapshots. Unlisted paths, other releases and reused `storeDir` caches keep their input checks.
+Audited parameters passed whole to a shell also have their parent folders and resolved symlinks
+checked.
 
-Before `--resume`, declared local inputs are compared with the prior byte and namespace
-snapshots (the manifest's, or the launch record's when no manifest was published). Unchanged inputs
-retain caching; changed data or an unavailable inventory
-archives the complete prior run in `<outdir>.previous-<id>` and starts a fresh cache
-session. Prior logs are copied forward. This also applies with `--no-provenance`.
+Before `--resume`, the declared local inputs are compared with the previous run's byte and listing
+snapshots (from the manifest, or from the launch record when no manifest was written). If nothing
+changed, the cache is reused. If data changed or the previous listing is unavailable, the whole
+previous run is archived in `<outdir>.previous-<id>` and a fresh cache session starts; the earlier
+logs are copied forward. This also applies with `--no-provenance`.
 
-Before success, declared local inputs, configurations and tracked source are checked
-against their launch snapshots. Changed or unreadable dependencies fail the run and
-are reported in the manifest's `dependency_stability` record. These checkpoint checks
-also run with `--no-provenance`; transient changes restored between checkpoints and
-remote or indirectly configured dependencies remain outside their scope.
+Before reporting success, nfclaw checks the declared local inputs, configurations and tracked source
+against their launch snapshots. A dependency that changed or cannot be read fails the run and is
+reported in the manifest's `dependency_stability` record. These checks also run with
+`--no-provenance`. A change that is undone between two checks, and remote or indirectly configured
+dependencies, are outside their scope.
 
-Archive operations prepare replacements before moving the run, retain ordinary relative links,
-rebase links through outdir aliases and external publications, and roll back recoverable failures
-and cancellation. A verified result inventory is rebased with its publication links, preserving
-the archive's file checksums and logical namespace.
+Archiving prepares the replacements before it moves the run, keeps ordinary relative links, rebases
+links that go through output directory aliases and external publications, and rolls back failures
+and cancellations it can recover from. A verified result inventory is rebased together with its
+publication links, so the archive keeps its file checksums and its logical listing.
 
-### 2.6 Replay & Replay Guard
-- **`provenance/commands.sh`**: Standalone reproduction script that re-runs the recorded execution — same pinned code, local inputs, parameters, configs and observed engine — into a fresh output directory (default `<outdir>.replay`). Replaying in place is rejected to avoid output collisions with existing published artifacts. Outputs are reproduced only as far as the pipeline's tools are deterministic: a multithreaded or unseeded stochastic step can produce different results from identical inputs (measured for ampliseq 3.0.0 in [known-issues](known-issues.md#pipeline-specific-run-notes)). Compare replays with `nfclaw verify` and a format-aware inspection of changed files.
-- **Self-contained replay:** `commands.sh` runs the recorded checkout while its git revision and tracked bytes still match `pipeline.sha256` (keeping `${projectDir}`-derived paths), otherwise extracts `pipeline-source.tar.gz` into `<target>/provenance/pipeline` (each file checked) and runs that. It passes replayable config copies and, when present, `containers.config` for eligible process pins. Extracting changes `${projectDir}`; absolute paths already stored in params are not rewritten. Local input data and configs using `includeConfig` retain their external dependencies.
-- **`provenance/environment_record.py`**: A zero-dependency script that records the execution environment (`runner/environment_record.py`, copied into the bundle). After a replay's Nextflow succeeds, `commands.sh` runs it to write `<target>/provenance/environment.json` and `environment_check.json`; a different image digest, plugin set, container engine or staged remote file fails the replay after Nextflow, and undecidable entries are reported as unverified.
-- **`provenance/replay_guard.py`**: A zero-dependency script executed by `commands.sh` prior to launching Nextflow. Verifies that local inputs, referenced samplesheets, configs (bundled copies where recorded), the archived pipeline source (or, for bundles that predate the archive, the checkout's git commit and tracked bytes) and the recorded `environment.json` / `containers.config` match the digests in the bundle. If anything has drifted or disappeared, replay halts immediately.
-- **Dynamic Relocation:** `commands.sh` discovers its current bundle directory and rebases
-  bundle-owned params, configs, config copies, pins and source archive. External input data retain their recorded paths.
+### 2.6 Replay and the replay guard
 
-The archive is verified before and after execution. When the replay uses the original
-checkout, its revision and tracked bytes are also rechecked at completion. The extracted
-working tree is checked on creation and rehashed against the source manifest after execution.
-Replay targets receive logs and source/environment records; the original bundle remains
-the replay entry point and the reference for dependency and output checks.
+- `provenance/commands.sh` re-runs the recorded run (same pinned code, local inputs, parameters,
+  configs and engine) into a fresh output directory, `<outdir>.replay` by default. Replaying into the
+  original directory is refused, because published files would collide. A replay reproduces outputs
+  only as far as the tools are deterministic: a multithreaded or unseeded step can give different
+  results from identical inputs (measured for ampliseq 3.0.0, see
+  [known issues](known-issues.md#pipeline-specific-run-notes)). Compare replays with `nfclaw verify`
+  and inspect changed files with tools that understand their format.
+- `commands.sh` runs the recorded checkout while its git revision and tracked bytes still match
+  `pipeline.sha256`, which keeps paths derived from `${projectDir}`. Otherwise it extracts
+  `pipeline-source.tar.gz` into `<target>/provenance/pipeline`, checking each file, and runs that
+  copy. It passes the replayable config copies and, when present, `containers.config`. Extracting
+  the archive changes `${projectDir}`; absolute paths already stored in the parameters are not
+  rewritten. Local input data and configs that use `includeConfig` still depend on files outside the
+  bundle.
+- `provenance/environment_record.py` is a copy of `runner/environment_record.py` with no
+  dependencies. After a replay's Nextflow succeeds, `commands.sh` runs it to write
+  `<target>/provenance/environment.json` and `environment_check.json`. A different image digest,
+  plugin set, container engine or staged remote file then fails the replay; entries that cannot be
+  decided are reported as unverified.
+- `provenance/replay_guard.py`, also dependency-free, runs before Nextflow. It checks that the local
+  inputs, referenced samplesheets, configs (the bundled copies where recorded), the archived pipeline
+  source (or, for bundles older than the archive, the checkout's commit and tracked bytes) and the
+  recorded `environment.json` and `containers.config` still match the bundle's digests. If anything
+  changed or disappeared, the replay stops.
+- `commands.sh` finds the bundle directory it is in and rebases the bundle's own parameters,
+  configs, config copies, pins and source archive, so a moved bundle still works. External input
+  data keeps its recorded paths.
 
-### 2.7 Verification Engine (`nfclaw verify`)
-- `runner/verify.py` compares replayed output files against the original run by path.
-- **Structural Equivalence:** Separates file inventory from byte equality. Pairs timestamped
-  metadata paths in `pipeline_info/` while preserving file multiplicity and reporting byte changes.
-  Also compares directory inventories; a historical file-only manifest cannot certify structure.
-- **Random Library Name Pairing:** For tools like `kraken2-build --add-to-library` in createtaxdb that generate random temporary filenames (e.g. `XXXXXXXXXX.fna`, `.fna.masked`, `prelim_map_XXXXXXXXXX.txt`), `runner/verify.py` pairs exactly these names one to one within their directory, lists them under `renamed`, and compares their bytes without reporting false inventory discrepancies.
-- **Strict Mode (`--strict`):** Requires byte-for-byte identity for every paired result, including metadata, and agreement of recorded link identities. When both `environment.json` records are readable JSON objects, the environment comparison must also report `identical`; `differs` and `unverified` fail strict mode. Otherwise the report says `not recorded by both runs` and no environment condition is enforced.
-- **Environment Comparison:** Compares the container engine name, loaded plugin list, comparable images for processes present in both records, and the recorded remote-input URLs and hashes. Java runtime changes and processes present on only one side are notes. Nextflow build, container engine version, host platform and task counts are recorded but not equality gates. Default verification reports these findings without changing its structural exit criterion; standalone replay fails detected mismatches, but permits `unverified` results.
-- **Recording Scope:** An `identical` verdict covers the evidence compared. Inspect `issues`, `unverified` and `notes` as well; missing task or staging records are not comprehensively detected, and the verdict does not certify that every execution dependency was captured.
-- **Complete Environment (`--require-environment`):** Requires complete matching recorded environment evidence even if output structure alone agrees. It refuses missing records, unknown engine builds/runtimes/platforms/container engine versions, absent process or image identities, containerless tasks, missing plugin/remote inventories, recording issues and refetched validation inputs. Engine build/runtime, host platform and process inventories must agree as well as the container/plugin/remote comparisons. Combine it with `--strict` to also require output byte identity. This checks declared recorded evidence; it does not discover undeclared task downloads or prove continuous input immutability. The default and `--strict` modes keep their behavior.
-- **Scientific Scope:** Inventory agreement alone establishes no analytical agreement. Matching
-  bytes demonstrate agreement of the observed artifacts, not biological accuracy or universal reproducibility.
+The archive is checked before and after the run. When the replay uses the original checkout, its
+revision and tracked bytes are checked again at the end. An extracted source tree is checked when it
+is created and hashed again against the source manifest afterwards. The replay target gets its own
+logs and source and environment records; the original bundle stays the entry point and the reference
+for dependency and output checks.
 
-### 2.8 Scientific Output Assessment (`nfclaw assess`)
-- `runner/scientific.py`, `runner/scientific_hts.py`, and `runner/scientific_h5ad.py` evaluate run outputs against explicit declarative contracts (`runner/output_contracts/*.json`).
-- **Format Parsers & Comparative Evaluation:**
-  - `table`: exact unique header, unique row-key column(s), finite decimal rational arithmetic comparisons, sample columns or expected sample membership, and documented column exclusions (`ignore_columns`).
-  - `fasta`: unique identifiers, exact case-preserved sequences/descriptions, sequence counts, lengths, and N50 summary.
-  - `bam`: 0-based half-open coordinates, alignments, unmapped/duplicate reads, flags, CIGAR, positions, mate fields, quality, tags, read-group sample labels, and canonical header digest comparisons.
-  - `vcf`: 1-based closed coordinates, HTSlib-decoded variants, INFO/FORMAT fields, genotype phase, sample columns, and GATK strand count encodings (`INFO/AS_SB_TABLE`).
-  - `h5ad_matrix`: dense/CSR/CSC matrix comparison by cell/gene identity with integer/nonnegative invariants.
-- **Assessment Modes:**
-  - Single-run assessment: checks that output artifacts exist, match expected schemas, record bounds, and meet coordinate requirements.
-  - Comparative assessment (`--against ORIGINAL`): parses candidate and verified original files, requiring that original outputs match their recorded `provenance/outputs.sha256` before serving as truth, and applies exact rational tolerances.
-- **Actionable Reporting:** Returns JSON detailing evaluation verdicts, parsed record counts, tolerance reasons, and unassessed file tallies; exits nonzero on any unmet expectation. See [`docs/scientific-output-contracts.md`](scientific-output-contracts.md).
+### 2.7 Verification (`nfclaw verify`)
 
-### 2.9 Dynamic Version Selection & Dev Tracking
-- `nfclaw run <name> --pipeline-version X.Y.Z`: Materializes the requested release tag as a git worktree in `pipelines/<name>/.versions/<tag>/`. Skill documentation is generated dynamically on demand.
-- `nfclaw run <name> --pipeline-version dev`: Resolves nf-core's `dev` branch to its current remote head commit and materializes an immutable worktree in `.versions/dev-<commit12>/`. Caches heads locally for offline fallback.
+- `runner/verify.py` compares the replay's output files with the original run's, by path.
+- It separates the file inventory from byte equality. Timestamped metadata files in `pipeline_info/`
+  are paired by name pattern, keeping their number and reporting byte changes. Directory inventories
+  are compared too; an older file-only manifest cannot confirm directory structure.
+- Some tools write files with random names, such as `kraken2-build --add-to-library` in createtaxdb
+  (`XXXXXXXXXX.fna`, `.fna.masked`, `prelim_map_XXXXXXXXXX.txt`). `runner/verify.py` pairs exactly
+  these names one to one within their directory, lists them under `renamed` and compares their
+  bytes, instead of reporting them as missing and extra.
+- `--strict` requires every paired file, metadata included, to be byte-identical, and the recorded
+  link identities to agree. When both `environment.json` records are readable JSON objects, the
+  environment comparison must also be `identical`; `differs` and `unverified` fail. Otherwise the
+  report says `not recorded by both runs` and no environment condition applies.
+- The environment comparison covers the container engine, the loaded plugins, the images of
+  processes present in both records, and the recorded remote-input URLs and hashes. A different Java
+  runtime, or processes present on only one side, are reported as notes. The Nextflow build,
+  container engine version, host platform and task counts are recorded but not compared for
+  equality. Without `--strict`, these findings are reported but do not change the result; a
+  standalone replay fails on a detected mismatch but accepts `unverified`.
+- An `identical` verdict covers only the evidence compared. Read `issues`, `unverified` and `notes`
+  too: missing task or staging records are not always detected, and the verdict does not show that
+  every dependency was captured.
+- `--require-environment` requires complete, matching environment evidence even when the outputs
+  agree. It refuses missing records, an unknown engine build, Java runtime, platform or container
+  engine version, missing process or image identities, tasks without a container, missing plugin or
+  remote-input inventories, recording issues and refetched validation inputs. The engine build, Java
+  runtime, host platform and process inventories must agree, in addition to the container, plugin and
+  remote-input comparisons. Add `--strict` to also require identical bytes. This checks the evidence
+  that was recorded; it does not find downloads a task made on its own or prove that inputs never
+  changed. The default and `--strict` modes are unchanged by it.
+- Matching inventories say nothing about analytical agreement, and matching bytes show only that
+  these files agree, not that they are biologically correct or reproducible elsewhere.
 
-### 2.10 Chaining Engine (`runner/chain.py`)
-- Runs multi-pipeline workflows sequentially, passing outputs from stage $k$ to inputs of stage $k+1$.
-- **Chain Locking:** Locks `<outdir>/chain/.lock` against concurrent chain execution.
-- **Preflight Configuration Probe:** Runs `nextflow config` under each stage's engine before
-  launching stage 1 (`runner/config_probe.py`, shared with `nfclaw run --check`). Parser failures, unavailable engines and inconclusive probes stop the chain.
-- **Handoff Output Verification:** Validates upstream output bytes and complete recorded namespaces before constructing downstream inputs; inherited local references also require producer input evidence.
-- **Lineage Verification:** `nfclaw chain status` checks recorded stage identities, live stage
-  outputs, and handoff files/references against upstream and downstream checksum inventories.
-  This checks the recorded links; it does not independently revalidate every original input,
-  configuration or algorithm, or authenticate a bundle against deliberate rewriting.
-  `--quick` reports execution state without hashing data and explicitly leaves lineage unchecked.
+### 2.8 Scientific assessment (`nfclaw assess`)
+
+`runner/scientific.py`, `runner/scientific_hts.py` and `runner/scientific_h5ad.py` check a run's
+outputs against an explicit contract (`runner/output_contracts/*.json`). Supported formats:
+
+- `table`: an exact, unique header; unique row keys; numeric comparison in exact decimal arithmetic;
+  sample columns or expected sample membership; and declared column exclusions (`ignore_columns`).
+- `fasta`: unique identifiers, exact sequences and descriptions (case kept), sequence counts,
+  lengths and N50.
+- `bam`: 0-based half-open coordinates, alignments, unmapped and duplicate reads, flags, CIGAR,
+  positions, mate fields, qualities, tags, read-group sample labels and a canonical header digest.
+- `vcf`: 1-based closed coordinates, variants decoded with HTSlib, INFO and FORMAT fields, genotype
+  phase, sample columns, and GATK's strand count encoding (`INFO/AS_SB_TABLE`).
+- `h5ad_matrix`: dense, CSR or CSC matrices compared by cell and gene identity, with integer and
+  non-negative checks.
+
+On its own, `nfclaw assess` checks that the declared outputs exist and meet the contract's
+expectations. With `--against ORIGINAL`, it also compares them with the original run's files, which
+must first match their recorded `provenance/outputs.sha256`, using the contract's exact tolerances.
+It prints a JSON report (verdicts, parsed record counts, the reason for each tolerance, files not
+assessed) and exits non-zero if any expectation is not met. See the
+[output contract guide](scientific-output-contracts.md).
+
+### 2.9 Other releases and `dev`
+
+- `nfclaw run <name> --pipeline-version X.Y.Z` checks out that release tag as a git worktree in
+  `pipelines/<name>/.versions/<tag>/` and generates its skill documentation on demand.
+- `nfclaw run <name> --pipeline-version dev` resolves nf-core's `dev` branch to its current commit and
+  checks it out in `.versions/dev-<commit12>/`. The last head fetched is kept for offline use.
+
+### 2.10 Chains
+
+`runner/chain.py` runs pipelines one after another, building each stage's inputs from the outputs of
+the stage before.
+
+- `<outdir>/chain/.lock` prevents two chains from running in the same directory.
+- Before stage 1 starts, `nextflow config` runs under each stage's engine (`runner/config_probe.py`,
+  shared with `nfclaw run --check`). A parser failure, a missing engine or an inconclusive probe
+  stops the chain.
+- Before it builds the next stage's inputs, the chain checks the previous stage's output bytes and
+  its complete recorded listing. References inherited from an earlier stage also need that stage's
+  input evidence.
+- `nfclaw chain status` checks the recorded stage identities, the stage outputs as they are now, and
+  the handoff files and references against the upstream and downstream checksum inventories. This
+  checks the recorded links; it does not revalidate every original input, configuration or
+  algorithm, and it cannot detect a bundle rewritten on purpose. `--quick` reports progress without
+  hashing data and says that lineage was not checked.
 
 ---
 
-## 3. `handoffs/` — Chaining Rules
+## 3. `handoffs/`: chaining rules
 
-Chaining rules live in `handoffs/<upstream>/<downstream>.json`. They describe how to transform an upstream stage's outputs into a downstream stage's parameter inputs:
-- **Declarative Mappings:** Source types include `samplesheet`, `build`, `file`, and `upstream_param`.
-- **Transformations:** Row- and column-level adaptations including `rename`, `set`, `add_empty`, `drop_rows_not_allowed`, `allowed_values`, and `require_values`.
-- **Metagenomic Safety:** Rules for assembly pipelines (e.g. `mag`) explicitly isolate individual samples (`group: {sample}`) to avoid unintended multi-sample co-assembly pooling.
-- **Drift Gate Static Validation:** The drift gate statically validates every handoff rule against the pinned schemas of both participating pipelines.
+A chaining rule, `handoffs/<upstream>/<downstream>.json`, describes how to turn an upstream stage's
+outputs into a downstream stage's parameters:
+
+- Sources can be `samplesheet`, `build`, `file` or `upstream_param`.
+- Row and column transformations include `rename`, `set`, `add_empty`, `drop_rows_not_allowed`,
+  `allowed_values` and `require_values`.
+- Rules for assembly pipelines such as `mag` give every sample its own group (`group: {sample}`) so
+  that samples are not co-assembled by accident.
+- The drift gate checks every rule against the pinned schemas of both pipelines.
+
+The format is specified in [chaining](chaining.md).
 
 ---
 
-## 4. `librarian/` — Maintenance & Code Generation
+## 4. `librarian/`: maintenance
 
-Invoked via `make`, the librarian automates generation and release tracking for the curated library:
-
-| Librarian Tool | Invocations | Purpose |
+| Module | Run by | What it does |
 |---|---|---|
 | `write_skill.py` | `make build` | Generates `skill.md` and `reference.md` from `nextflow_schema.json` and `assets/schema_input.json`. |
-| `write_catalog.py` | `make build` | Compiles `catalog.json` and `catalog.md` across all tracked pipelines. |
+| `write_catalog.py` | `make build` | Builds `catalog.json` and `catalog.md` from all pipelines. |
 | `add_pipeline.py` | `make add` | Prints the `.gitmodules` entries and `git submodule add` commands for every pipeline in `sources.tsv`; changes nothing itself. |
-| `check_drift.py` | `make check` | Enforces bidirectional synchronization across `sources.tsv`, `.gitmodules`, disk directories, skills, references, and handoff rules. |
-| `update_pipelines.py` | `make update` | Scans upstream remotes for newly published release tags and bumps submodules. |
-| `discover_pipelines.py` | `discover-pipelines.yml` | Discovers newly published DSL2 nf-core pipelines and scaffolds initial submodules. |
+| `check_drift.py` | `make check` | Checks that `sources.tsv`, `.gitmodules`, the `pipelines/` directories, the skills, the references and the handoff rules all agree. |
+| `update_pipelines.py` | `make update` | Finds newly published release tags and bumps the submodules. |
+| `discover_pipelines.py` | `discover-pipelines.yml` | Finds newly published DSL2 nf-core pipelines and adds their submodules. |

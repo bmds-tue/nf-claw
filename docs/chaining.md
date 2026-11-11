@@ -1,31 +1,32 @@
-# Chaining Pipelines
+# Chaining pipelines
 
-`nfclaw chain run` executes multiple nf-core pipelines in sequence (e.g. `fetchngs` → `rnaseq` → `differentialabundance`), initiating each subsequent stage only after the preceding stage has **succeeded**, and automatically preparing downstream inputs from upstream outputs.
-
-It functions as a linear orchestrator:
-- **No Complex Daemons:** No complex DAG syntax, no daemon processes, and no external scheduler dependencies.
-- **Stage Isolation:** Every stage executes as a full, standard `nfclaw run` inside `<outdir>/NN-<stage>/`, with its own preflight parameter validation, sibling directory locking, run log, and provenance bundle.
-- **Durable Orchestration:** Durable chain state, handoff snapshots, and unified logs are maintained in `<outdir>/chain/`.
+`nfclaw chain run` runs several nf-core pipelines in sequence, for example `fetchngs` → `rnaseq` →
+`differentialabundance`. Each stage starts only after the one before it succeeded, and its inputs
+are prepared from that stage's outputs. There is no DAG syntax, daemon or scheduler: every stage is
+an ordinary `nfclaw run` in `<outdir>/NN-<stage>/`, with its own preflight, lock, run log and
+provenance bundle, and the chain keeps its state, handoff snapshots and log in `<outdir>/chain/`.
 
 ```bash
-nfclaw chain edges                                       # list all registered pipeline handoffs
-nfclaw chain edges fetchngs                              # list handoffs originating from or feeding fetchngs
-nfclaw chain run spec.json --outdir /abs/chain --check   # validate all stages and handoffs; run nothing
-nfclaw chain run spec.json --outdir /abs/chain           # execute the full workflow
-nfclaw chain status /abs/chain                           # inspect stage outcomes and verify cryptographic lineage
+nfclaw chain edges                                       # every registered handoff
+nfclaw chain edges fetchngs                              # handoffs from or into fetchngs
+nfclaw chain run spec.json --outdir /abs/chain --check   # validate every stage and handoff; run nothing
+nfclaw chain run spec.json --outdir /abs/chain           # run the chain
+nfclaw chain status /abs/chain                           # stage outcomes, and which outputs became which inputs
 ```
 
 ---
 
 ## Navigation
 
-[Specification Format](#1-the-specification-file-specjson) • [Execution Lifecycle](#2-execution-lifecycle) • [Handoff Rules](#3-handoff-rules-and-transformations) • [Failure & Resume](#4-failure-recovery-and-resume) • [Cryptographic Lineage](#5-provenance-and-cryptographic-lineage) • [Sensitive Environment Values](#sensitive-environment-values-in-chain-records)
+[The spec file](#the-spec-file) • [How a chain runs](#how-a-chain-runs) • [Handoff rules](#handoff-rules) • [Failures and resume](#failures-and-resume) • [Lineage](#lineage) • [Sensitive environment values](#sensitive-environment-values-in-chain-records)
 
 ---
 
-## 1. The Specification File (`spec.json`)
+## The spec file
 
-The chain spec is authored in JSON (or YAML with `pip install -e ".[yaml]"`). Relative file paths in the spec resolve against the caller's working directory. The specification recorded in `<outdir>/chain/chain.json` is normalized to absolute paths.
+A chain is described in JSON (or YAML, with `pip install -e ".[yaml]"`). Relative paths in the spec
+are resolved against the caller's working directory; the copy recorded in `<outdir>/chain/chain.json`
+has absolute paths.
 
 ```json
 {
@@ -47,98 +48,86 @@ The chain spec is authored in JSON (or YAML with `pip install -e ".[yaml]"`). Re
 }
 ```
 
-### Chain-Level Options
-These settings apply globally to all stages. Individual stages can override the
-execution options below; `allow_spaces` is a chain-only setting:
+### Chain options
 
-| Option | Type | Default | Description |
+These apply to every stage. A stage can override all of them except `allow_spaces`, which is set
+for the whole chain.
+
+| Option | Type | Default | Meaning |
 |---|---|---|---|
-| `profile` | string | `"docker"` | Nextflow execution profile. |
-| `nxf_ver` | string | `null` | Pin Nextflow engine version (`NXF_VER`) across all stages. |
-| `nxf_env` | object | `{}` | `NXF_*` variables with string values passed to Nextflow (e.g. `{"NXF_OFFLINE": "true"}`). |
-| `config` | array | `[]` | Additional Nextflow configuration files passed via `-c`. |
-| `limits` | object | `null` | Global resource ceiling: `{"cpus": N, "memory": "SIZE", "time": "DURATION"}` (`process.resourceLimits`, Nextflow ≥ 24.04.0). `time` caps every task's run time, retries included: set it only as a deliberate ceiling. |
-| `allow_spaces` | boolean | `false` | Allow filesystem paths containing spaces. |
+| `profile` | string | `"docker"` | Nextflow profile. |
+| `nxf_ver` | string | `null` | Nextflow version (`NXF_VER`) for every stage. |
+| `nxf_env` | object | `{}` | `NXF_*` variables with string values, e.g. `{"NXF_OFFLINE": "true"}`. |
+| `config` | array | `[]` | Extra Nextflow config files, passed with `-c`. |
+| `limits` | object | `null` | Resource ceilings: `{"cpus": N, "memory": "SIZE", "time": "DURATION"}` (`process.resourceLimits`, Nextflow 24.04.0 or newer). `time` caps every task and every retry, so set it only as a deliberate ceiling. |
+| `allow_spaces` | boolean | `false` | Allow paths that contain spaces. |
 
-### Stage-Level Keys
-Options set on a stage override or merge with chain-level options:
+### Stage keys
 
-| Key | Type | Required | Description |
+| Key | Type | Required | Meaning |
 |---|---|---|---|
-| `pipeline` | string | Yes | Name of a tracked pipeline in the library. |
-| `id` | string | No | Unique stage identifier (default: pipeline name; must match `^[a-z0-9][a-z0-9_-]*$`). |
-| `input` | string/array/boolean | No | Explicit `--input` for the stage (typically stage 1); overrides a handoff's input if provided. A directory, glob or list of data files makes nfclaw generate the stage's samplesheet, as `nfclaw run` does. Use `false` only for an analysis mode that supports running without input. |
-| `sheet_set` | object | No | Columns of that generated samplesheet no file name determines (`--sheet-set`), e.g. `{"strandedness": "auto", "patient": "{sample}"}`. Only for a stage whose `input` names data files. On `--resume`, a succeeded stage whose data now holds files it never analysed is refused — a resume would otherwise skip them without a word; data removed after it succeeded is not needed again. |
-| `params` | object | No | Pipeline-specific parameters (e.g. `{"genome": "GRCh38", "aligner": "star_salmon"}`). Look up allowed flags in the pipeline's `reference.md`. |
-| `params_file` | string | No | Path to an external parameter JSON or YAML file. |
-| `pipeline_version` | string | No | Pinned release tag (e.g. `3.14.0`) or unreleased `dev`. |
-| `demo` | boolean | No | Adds the pipeline's bundled `test` profile before the selected profiles. |
-| `retries` | integer | No | Maximum automatic retries (using Nextflow `-resume`) upon task or pipeline failure (default: `0`). Never retries on schema errors. |
-| `handoff` | object/string | No | Custom inline handoff rule object or path to a custom rule JSON file, replacing the library registry rule. |
-| `nxf_ver` | string | No | Overrides engine version for this specific stage (essential when chaining an older pipeline release with a modern one). |
-| `nxf_env` | object | No | Merges stage-specific `NXF_*` environment variables over chain-level variables. |
-| `config` | array | No | Replaces the chain-level config list; include shared configs here too if needed. |
-| `limits` | object | No | Replaces the entire chain-level limits object; `null` or `{}` disables inherited ceilings. |
+| `pipeline` | string | yes | A pipeline in the library. |
+| `id` | string | no | The stage's name; defaults to the pipeline name and must match `^[a-z0-9][a-z0-9_-]*$`. |
+| `input` | string, array or boolean | no | The stage's `--input`, usually for stage 1. It replaces the input a handoff would supply. A directory, glob or list of data files makes nfclaw generate the samplesheet, as `nfclaw run` does. Use `false` only for an analysis mode that runs without input. |
+| `sheet_set` | object | no | Values for the generated samplesheet's columns that no file name determines (`--sheet-set`), e.g. `{"strandedness": "auto", "patient": "{sample}"}`. Only for a stage whose `input` names data files. On `--resume`, a succeeded stage whose data directory now holds files it never analysed is refused, because the resume would skip them silently; data removed after the stage succeeded is not needed again. |
+| `params` | object | no | The pipeline's parameters, e.g. `{"genome": "GRCh38", "aligner": "star_salmon"}`; look them up in its `reference.md`. |
+| `params_file` | string | no | A JSON or YAML parameter file. |
+| `pipeline_version` | string | no | A release tag (e.g. `3.14.0`) or `dev`. |
+| `demo` | boolean | no | Adds the release's `test` profile before the selected profiles. |
+| `retries` | integer | no | How many times to relaunch the stage with Nextflow's `-resume` after a pipeline failure (default `0`). A validation error is never retried. |
+| `handoff` | object or string | no | An inline handoff rule, or the path to one, used instead of the registered rule. |
+| `nxf_ver` | string | no | This stage's Nextflow version, for example to run an older release after a newer one. |
+| `nxf_env` | object | no | `NXF_*` variables merged over the chain's. |
+| `config` | array | no | Replaces the chain's config list; repeat shared configs here if needed. |
+| `limits` | object | no | Replaces the chain's limits; `null` or `{}` removes them for this stage. |
 
 ---
 
-## 2. Execution Lifecycle
+## How a chain runs
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ Preflight Verification Phase                                           │
-│ 1. Spec Schema Validation: Verify syntax, stage IDs, and rule paths.  │
-│ 2. Static Handoff Audit: Validate handoff sources against schemas.     │
-│ 3. Parameter Check: Dry-run validate non-deferred stage parameters.    │
-│ 4. Engine Config Probe: Run 'nextflow config' with per-stage engines. │
-└────────────────────────────────────────────────────────────────────────┘
-                                    │ (All checks pass)
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ Stage Execution Phase                                                  │
-│ 1. Acquire Chain Lock: Non-blocking POSIX flock on chain/.lock.       │
-│ 2. Execute Stage 1: Standard nfclaw run in 01-<id>/                   │
-│ 3. Stage 1 Succeeded: Checksum outputs against outputs.sha256.         │
-│ 4. Materialize Handoff: Transform outputs into chain/handoffs/02-<id>/ │
-│ 5. Execute Stage 2: Standard nfclaw run in 02-<id>/                   │
-│ 6. Finalize: Write final outcome to chain.log and state.json.          │
-└────────────────────────────────────────────────────────────────────────┘
-```
+### Checks before the first stage
 
-### Preflight Probing Before Launch
-Before launching any pipeline, `nfclaw chain run` validates:
-1. Every stage's pipeline and requested version exists and resolves.
-2. Every handoff rule names valid parameters and provides columns compatible with the downstream input schema. Published paths are checked at handoff time; there is no general upstream output schema.
-3. Every stage's explicit parameters pass preflight validation (parameters supplied by upstream handoffs and complex schema rules are deferred).
-4. `nextflow config` resolves and parses configuration files under the exact Nextflow engine specified for each stage. A configuration syntax error in stage 3 fails immediately at minute 0, rather than crashing after stage 1 has executed for hours.
+Before any pipeline starts, `nfclaw chain run` checks that:
 
-The configuration probe checks parsing and resolution, not the complete runtime
-parameter contract or task execution. Handoff-derived values are validated when
-they become available to the consuming stage.
+1. every stage's pipeline and requested version exist and resolve;
+2. every handoff rule names valid parameters and provides columns the downstream input schema
+   accepts (published paths are checked when the handoff happens, since there is no general schema
+   for a pipeline's outputs);
+3. every stage's explicit parameters pass preflight (values a handoff will supply, and complex
+   schema rules, are checked later);
+4. `nextflow config` resolves each stage's configuration under that stage's Nextflow version, so a
+   config error in stage 3 fails at once instead of after stage 1 has run for hours.
 
-`--check` performs the same preflight and configuration probes, leaving `--outdir`
-untouched. It can fetch pipeline versions and populate engine caches. The probes' time
-limit and the optional deadline one `--timeout` gives the whole chain are described in
-[timeouts and long analyses](timeouts.md).
+The configuration probe checks parsing and resolution only, not the full parameter contract or the
+tasks. Values that come from a handoff are validated when the consuming stage receives them.
 
-### Concurrency Locking
-`runner/chain.py` locks `<outdir>/chain/.lock` via a non-blocking POSIX flock. If another chain process is active in the same directory, it terminates immediately with `ErrorCode.ENVIRONMENT`.
+`--check` runs the same checks and probes and leaves `--outdir` untouched. It can fetch pipeline
+versions and fill engine caches. The probes' time limit, and the deadline `--timeout` sets for the
+whole chain, are described in [timeouts](timeouts.md).
 
-### Unified Logging
-- The chain-wide execution log is written to `<outdir>/chain/logs/chain.log`.
-- Background monitoring: `tail -n 1 <outdir>/chain/logs/chain.log` displays the terminal outcome line:  
-  `==> nfclaw chain finished <timestamp>: <outcome>`
-- `nfclaw chain status <outdir> --quick` lists recorded execution state without hashing
-  outputs ([cheap progress versus verification](timeouts.md#cheap-progress-versus-verification)).
-- Stopping a chain: `kill <pid>` stops the running stage cleanly, flushes the log, and shuts down Nextflow.
+Then the chain takes its lock and runs the stages in order. After a stage succeeds, its outputs are
+checked against its `outputs.sha256`, the next stage's inputs are prepared in
+`chain/handoffs/NN-<id>/`, and that stage starts. The outcome is written to `chain.log` and
+`state.json`.
+
+### Locking, logs and stopping
+
+- `runner/chain.py` takes a non-blocking lock on `<outdir>/chain/.lock`. If another chain is
+  running in the same directory, it stops at once with `ErrorCode.ENVIRONMENT`.
+- The chain logs to `<outdir>/chain/logs/chain.log`. Its last line, once the chain is done, is
+  `==> nfclaw chain finished <timestamp>: <outcome>`, so `tail -n 1` shows whether it finished.
+- `nfclaw chain status <outdir> --quick` lists the recorded state without hashing outputs
+  ([progress versus verification](timeouts.md#cheap-progress-versus-verification)).
+- `kill <pid>` stops the running stage cleanly: Nextflow shuts down and the logs are completed.
 
 ---
 
-## 3. Handoff Rules and Transformations
+## Handoff rules
 
-Handoff rules describe how outputs published by an upstream pipeline are adapted into inputs for a downstream pipeline. Registered rules reside in `handoffs/<upstream>/<downstream>.json`.
+A handoff rule says how the outputs one pipeline publishes become the next pipeline's inputs.
+Registered rules are in `handoffs/<upstream>/<downstream>.json`. For example,
+`handoffs/fetchngs/rnaseq.json`:
 
-Example: `handoffs/fetchngs/rnaseq.json`:
 ```json
 {
   "description": "Feed fetched FASTQ samplesheet into rnaseq",
@@ -157,183 +146,196 @@ Example: `handoffs/fetchngs/rnaseq.json`:
 }
 ```
 
-### Parameter Source Types
+### Source types
 
-| Source Type | Description | Example |
+| Source | What it does | Example |
 |---|---|---|
-| `samplesheet` | Copies and adapts an upstream samplesheet. `provides` declares guaranteed columns checked during static drift checks. | `fetchngs` → `rnaseq`, `fetchngs` → `mag` |
-| `build` | Synthesizes a new samplesheet from matching output files. Uses `{placeholders}` for row grouping and column templating. | `bamtofastq` → `rnaseq` |
-| `file` | Maps a single published output file to a downstream parameter. Globs must match exactly one file. A list of patterns is tried in order; `"paired_with": "<param>"` instead takes the pattern at the position the named parameter's list chose, so two files come from the same producer step. | `rnaseq` → `differentialabundance` (`--matrix`, and `--feature-length-matrix` paired with it) |
-| `upstream_param` | Reuses a resolved parameter value from the upstream run's `params.json`. | `rnaseq` `--gtf` → `differentialabundance` `--gtf` |
+| `samplesheet` | Copies an upstream samplesheet and adapts it. `provides` lists the columns it is guaranteed to have, which the drift gate checks. | `fetchngs` → `rnaseq`, `fetchngs` → `mag` |
+| `build` | Builds a new samplesheet from matching output files, using `{placeholders}` to group rows and fill columns. | `bamtofastq` → `rnaseq` |
+| `file` | Passes one published file to a parameter. A glob must match exactly one file. A list of patterns is tried in order; `"paired_with": "<param>"` takes the pattern at the position that the named parameter's list chose, so both files come from the same step. | `rnaseq` → `differentialabundance` (`--matrix`, and `--feature-length-matrix` paired with it) |
+| `upstream_param` | Reuses a parameter value from the upstream run's `params.json`. | `rnaseq` `--gtf` → `differentialabundance` `--gtf` |
 
-Source paths are relative to the upstream output directory. A `file` source can be
-an ordered list of fallback patterns; the first matching pattern must select exactly
-one published file. Any source may set `"optional": true` to omit an unavailable
-value, but checksum, namespace and downstream validation failures remain errors.
-A `build` source supplies `rows` (a relative pattern with `{placeholders}`), `columns`
-(column-to-template mappings) and optional `format` (`csv` by default, or `tsv`).
-For a path column, a template ending in `?` leaves a missing companion file empty.
-An optional `exhaustive` glob names files that must all reach a row: a file it matches that no
-row uses, such as bamtofastq's single-end reads beside its paired ones, fails the handoff (even an
-optional one) instead of being left out.
+Source paths are relative to the upstream output directory. Any source can set `"optional": true`
+to leave out a value that is not available; checksum, listing and downstream validation failures
+are still errors. A `build` source has `rows` (a relative pattern with `{placeholders}`), `columns`
+(a template for each column) and, optionally, `format` (`csv` by default, or `tsv`). In a path
+column, a template ending in `?` leaves the cell empty when the companion file is missing. An
+optional `exhaustive` glob names files that must all end up in a row: a matching file that no row
+uses, such as bamtofastq's single-end reads beside its paired ones, fails the handoff (even an
+optional one) instead of being dropped.
 
-Explicit stage `input` and `params` values override mapped handoff parameters with an
-advisory; unused sources are not materialized. The rule must still pass static checks.
-A `params_file` supplies lower-priority values and does not suppress a mapped source.
+Explicit stage `input` and `params` values override the handoff's values, with an advisory, and
+unused sources are not prepared; the rule must still pass its static checks. A `params_file` has
+lower priority and does not override a mapped source.
 
-An `upstream_param` reference uses the downstream parameter's declared path format (`file-path`,
+An `upstream_param` reference uses the downstream parameter's path format (`file-path`,
 `directory-path`, `path` or `file-path-pattern`). Relative local references are anchored to the
-producer's launch directory, including references supplied by its profile. File patterns retain
-their selection and require historical byte and namespace evidence for every member. The
-consumer's prelaunch record must match that selection; a file added during consumption and
-removed later still breaks lineage. A pattern referring to external input data requires the
-producer's supported prelaunch input inventory, not only legacy file checksums.
+producer's launch directory, including references its profile set. A file pattern keeps its selected
+files, and every one of them needs recorded bytes and listing. The consumer's record from before its
+launch must match that selection, so a file added while the consumer ran and removed later still
+breaks lineage. A pattern that points to external input data needs the producer's input inventory,
+not only older file checksums.
 
-### Samplesheet Transformations
-When `samplesheet` is used, transformations are applied in a strict, predictable order:
-1. `rename`: Rename columns (`{"fastq_1": "short_reads_1"}`).
-2. `set`: Set values or template expressions for every row (`{"lane": "{run_accession}"}`).
-3. `add_empty`: Insert declared columns that the upstream sheet lacks.
-4. `drop_rows_not_allowed`: Filter out rows containing values rejected by the downstream schema.
-5. `allowed_values`: Refuse (never drop) the handoff when a column holds a value outside a list — rows the downstream must not analyse although its schema cannot tell, such as a long-read or colour-space run in fetchngs's sheet for a short-read pipeline (`{"instrument_platform": ["ILLUMINA", …]}`).
-6. `require_values`: Assert that specific columns must contain non-empty values before launch.
+### Samplesheet transformations
 
-`refuse_rows_in` lists other sheets the upstream writes for the same downstream that the handoff
-cannot take with this one, such as detaxizer's `mag-se.csv` for samples without a second short-read
-file beside `mag-pe.csv`: a row in any of them fails the handoff, naming the samples, instead of
-leaving them out. A pattern that also matches the handed-over sheet never refuses that sheet.
+A `samplesheet` source applies its transformations in this order:
 
-> [!IMPORTANT]
-> **Metagenomic Co-Assembly Safety:**
-> In metagenomic workflows (`fetchngs` → `mag`, `detaxizer` → `mag`), nf-core/mag treats identical sample `group` identifiers as an instruction to pool reads across samples for co-assembly. To preserve biological integrity:
-> - The default registered rules assign each sample its own independent group: `"group": "{sample}"`.
-> - Pooling samples requires an explicit custom inline handoff rule accompanied by domain justification.
+1. `rename` renames columns (`{"fastq_1": "short_reads_1"}`).
+2. `set` sets a value or template on every row (`{"lane": "{run_accession}"}`).
+3. `add_empty` adds declared columns the upstream sheet lacks.
+4. `drop_rows_not_allowed` drops rows with values the downstream schema rejects.
+5. `allowed_values` refuses the whole handoff (it never drops rows) when a column holds a value
+   outside a list. This catches rows the downstream pipeline must not analyse although its schema
+   cannot tell, such as a long-read or colour-space run in fetchngs's sheet for a short-read
+   pipeline (`{"instrument_platform": ["ILLUMINA", …]}`).
+6. `require_values` requires the listed columns to be non-empty.
 
-> [!IMPORTANT]
-> **Sequencing platforms and study design are not inferred:**
-> - nf-core/mag chooses its long-read preprocessing and assembler mode (e.g. Flye's ONT vs PacBio mode) by `long_reads_platform`. The `fetchngs` → `mag` rule takes each run's short-read platform from its ENA `instrument_platform` (fetchngs itself labels every run `ILLUMINA`), so a long-read run is refused instead of being analysed as Illumina short reads. detaxizer records no long-read platform: the `detaxizer` → `mag` rule refuses samples with long reads until an inline handoff names their platform, e.g. for PacBio HiFi data:
->   ```json
->   {"pipeline": "mag", "handoff": {
->     "upstream_params": {"generate_downstream_samplesheets": true, "generate_pipeline_samplesheets": "mag"},
->     "params": {"input": {"samplesheet": "downstream_samplesheets/mag-pe.csv",
->       "provides": ["sample", "run", "group", "short_reads_1", "short_reads_2", "long_reads"],
->       "set": {"group": "{sample}", "short_reads_platform": "ILLUMINA", "long_reads_platform": "PACBIO_HIFI"}}}}}
->   ```
-> - The `fetchngs` rules into short-read pipelines (`rnaseq`, `atacseq`, `sarek`, `metatdenovo`, `viralrecon`) refuse runs whose ENA `instrument_platform` is not a short-read platform: long-read, capillary and colour-space runs are not analysed as if they were Illumina reads. ampliseq needs `--pacbio`/`--iontorrent` set for such runs.
-> - `fetchngs` → `ampliseq` leaves `run` empty, so ampliseq learns one DADA2 error model for all samples; data from several sequencing runs needs `run` filled per sequencing run — an inline handoff whose `set` templates it from a column that identifies the run, or your own samplesheet.
-> - `fetchngs` → `sarek` and `demultiplex` → `sarek` write no `status` or `sex`: sarek treats every sample as normal tissue and runs germline analyses only. A tumour/normal design needs its own sarek samplesheet: a handoff's `set` gives every row the same value.
+`refuse_rows_in` lists other sheets the upstream writes for the same downstream pipeline that this
+handoff cannot take, such as detaxizer's `mag-se.csv` (samples without a second short-read file)
+beside `mag-pe.csv`. A row in any of them fails the handoff and names the samples, instead of
+leaving them out. A pattern that also matches the sheet being handed over never refuses that sheet.
+
+### What a rule does not infer
+
+- **Co-assembly in mag.** nf-core/mag pools the reads of samples that share a `group` and assembles
+  them together. The registered rules into mag (`fetchngs` → `mag`, `detaxizer` → `mag`) give every
+  sample its own group, `"group": "{sample}"`. To pool samples, write an inline handoff rule.
+- **Long-read platforms.** mag chooses its long-read preprocessing and assembler mode (for example
+  Flye's ONT or PacBio mode) from `long_reads_platform`. The `fetchngs` → `mag` rule takes each run's
+  short-read platform from its ENA `instrument_platform` (fetchngs itself labels every run
+  `ILLUMINA`), so a long-read run is refused rather than analysed as Illumina short reads. detaxizer
+  records no long-read platform, so the `detaxizer` → `mag` rule refuses samples with long reads
+  until an inline handoff names their platform, for example for PacBio HiFi:
+  ```json
+  {"pipeline": "mag", "handoff": {
+    "upstream_params": {"generate_downstream_samplesheets": true, "generate_pipeline_samplesheets": "mag"},
+    "params": {"input": {"samplesheet": "downstream_samplesheets/mag-pe.csv",
+      "provides": ["sample", "run", "group", "short_reads_1", "short_reads_2", "long_reads"],
+      "set": {"group": "{sample}", "short_reads_platform": "ILLUMINA", "long_reads_platform": "PACBIO_HIFI"}}}}}
+  ```
+- **Short-read pipelines.** The `fetchngs` rules into `rnaseq`, `atacseq`, `sarek`, `metatdenovo` and
+  `viralrecon` refuse runs whose ENA `instrument_platform` is not a short-read platform, so long-read,
+  capillary and colour-space runs are not analysed as Illumina reads. ampliseq needs
+  `--pacbio` or `--iontorrent` for such runs.
+- **Sequencing runs in ampliseq.** `fetchngs` → `ampliseq` leaves `run` empty, so ampliseq learns one
+  DADA2 error model for all samples. Data from several sequencing runs needs `run` filled per run:
+  use an inline handoff whose `set` fills it from a column that identifies the run, or your own
+  samplesheet.
+- **Tumour/normal design in sarek.** `fetchngs` → `sarek` and `demultiplex` → `sarek` write no
+  `status` or `sex`, so sarek treats every sample as normal tissue and runs germline analyses only.
+  A tumour/normal design needs its own samplesheet, because a handoff's `set` gives every row the
+  same value.
 
 ---
 
-## 4. Failure, Recovery and Resume
+## Failures and resume
 
-| Condition | Engine Behavior | Exit Code |
+| What happens | What the chain does | Exit code |
 |---|---|---|
-| **Preflight check failure** | No pipeline tasks launched; configuration probes may have run. Detailed diagnostic printed. | `1` |
-| **Pipeline failure with `retries > 0`** | The failed stage is automatically relaunched using Nextflow `-resume`. | — |
-| **Exhausted retries or non-retryable failure** | Chain execution halts immediately; downstream stages remain `pending`. | `1` |
-| **Handoff generation failure (`[handoff_failed]`)** | Upstream stage marked succeeded; downstream stage not launched. | `1` |
-| **Interrupt signal (`SIGINT`, `SIGTERM`, `SIGHUP`)** | Running stage shuts down Nextflow cleanly; logs finalized. | `128 + signal` / `130` |
+| A check before launch fails | No pipeline task starts (configuration probes may have run); the error is printed. | `1` |
+| A stage fails and `retries` is above 0 | The stage is relaunched with Nextflow's `-resume`. | — |
+| Retries are used up, or the failure cannot be retried | The chain stops; later stages stay `pending`. | `1` |
+| A handoff cannot be prepared (`[handoff_failed]`) | The upstream stage stays succeeded; the downstream stage does not start. | `1` |
+| `SIGINT`, `SIGTERM` or `SIGHUP` | The running stage shuts Nextflow down and the logs are completed. | `128 + signal` (`130` for Ctrl-C) |
 
-### Resuming a Failed Chain
-To continue a chain after fixing a parameter or environmental issue:
+To continue after fixing the cause:
+
 ```bash
 nfclaw chain run spec.json --outdir /abs/chain --resume
 ```
 
-Omit `spec.json` to reuse the recorded specification unchanged.
+Leave out `spec.json` to reuse the recorded spec. On resume:
 
-When resuming:
-1. **Succeeded Stages Frozen:** Succeeded stages are frozen and verified; modifying the spec for an already-succeeded stage is rejected.
-2. **Cached Retries:** The failed stage resumes using Nextflow's cache when declared local input bytes and namespaces are unchanged. A handoff prepared again from unchanged upstream outputs keeps the files its failed attempt ran on, at the same paths. Changed inputs or an unavailable previous snapshot archive that stage's prior run and recompute all its tasks.
-3. **Pipeline Extension:** New stages may be appended to the end of a completed chain to extend an existing analysis.
+1. Succeeded stages are verified and kept as they are; changing a succeeded stage in the spec is
+   refused.
+2. The failed stage reuses Nextflow's cache if its declared local inputs (bytes and listing) are
+   unchanged. A handoff prepared again from unchanged upstream outputs keeps the files the failed
+   attempt ran on, at the same paths. If inputs changed, or the previous snapshot is unavailable,
+   the stage's previous run is archived and all its tasks run again.
+3. New stages can be appended to a finished chain to extend the analysis.
 
 ---
 
-## 5. Provenance and Cryptographic Lineage
+## Lineage
 
-Chaining records checksum evidence for the links between stages:
-- Each stage's `run_manifest.json` contains a `chain` block recording chain ID, stage index, and upstream dependencies.
-- The handoff record stores its rule digest and dependency inventories. Downstream stages snapshot
-  the handed-over local files and samplesheet in `inputs.sha256`.
-- Upstream outputs are verified against `outputs.sha256` before ingestion by downstream handoffs.
+The chain records checksum evidence for every link between stages:
 
-Before feeding stage outputs into a downstream stage, the handoff engine verifies upstream file bytes against `outputs.sha256` and the complete published namespace against `outputs.inventory.json`, including empty directories, entry types and link identities. Local reference handoffs also require the producer's input namespace and byte records. Directory handoffs record their complete boundary inventory, and chain status compares it with the downstream prelaunch inventory after the schema-defined root canonicalization. A whole-run-directory handoff preserves every entry, including execution records; published results remain anchored to their original manifest, while the complete directory is recorded separately at the handoff boundary. Metagenomic assembly handoffs (fetchngs → mag, detaxizer → mag) isolate individual samples (`group: {sample}`) to avoid accidental multi-sample co-assembly pooling.
+- each stage's `run_manifest.json` has a `chain` block with the chain ID, the stage index and the
+  stages it depends on;
+- each handoff record stores the rule's digest and the inventories of what it handed over, and the
+  downstream stage records the handed-over files and samplesheet in its `inputs.sha256`;
+- before a handoff, the upstream stage's published files are checked against `outputs.sha256`, and
+  its complete published listing (empty directories, entry types and link identities included)
+  against `outputs.inventory.json`.
 
-### Chain Verification (`nfclaw chain status`)
+### Checking a chain
+
 ```bash
 nfclaw chain status /abs/chain
 ```
 
-The status command:
-1. Validates that every completed stage manifest matches the recorded chain state.
-2. Checks that live stage outputs on disk match their original `outputs.sha256` digests.
-3. Compares handoff files and reference inventories with upstream evidence and the input hashes
-   recorded by the downstream stage, including internal reference directories.
-4. Exits with code `0` if all links are verified and complete, code `3` if stages are currently executing, and code `1` if any failure or discrepancy is detected.
+`nfclaw chain status`:
 
-These checks verify the recorded links and live outputs. They do not independently verify every
-initial input or configuration, prove analytical accuracy, or authenticate evidence against someone
-who can rewrite the entire bundle. Static rule checks use parameter/input schemas and declared
-published paths; the repository has no general upstream output schema. File existence and historical
-identity are checked at runtime. A configuration probe that fails to execute or times out blocks
-both `--check` and execution, rather than being treated as a passing result.
+1. checks that every finished stage's manifest matches the recorded chain state;
+2. checks that each stage's outputs on disk still match their `outputs.sha256`;
+3. compares the handed-over files and reference inventories with the upstream evidence and with the
+   input hashes the downstream stage recorded, internal reference directories included;
+4. exits `0` when every link is verified and the chain is complete, `3` while a stage is running,
+   and `1` on any failure or mismatch.
 
-### Directory and reference lineage
+This verifies the recorded links and the current outputs. It does not re-verify every original input
+or configuration, show that the analysis is correct, or detect someone who rewrites the whole bundle.
+Static rule checks use the parameter and input schemas and the declared published paths, since there
+is no general schema for outputs; whether files exist, and their past identity, are checked when the
+chain runs. A configuration probe that fails or times out blocks both `--check` and the run.
 
-Resuming a failed stage creates a new handoff snapshot under
-`chain/handoffs/<stage>/attempts/<id>/`. Earlier handoff records and prepared inputs remain
-at the paths named by the old run manifests when the stage's definition changes.
+### Directories, references and samplesheets
 
-Published results are checked against both their file checksums and their complete
-`outputs.inventory.json` namespace before a handoff. Empty directories and aliases
-remain distinct entries. A local reference inherited from a producer also needs
-the recorded input namespace and bytes; a changed alias cannot pass merely because
-the new target contains identical data. Missing historical namespace records block
-a directory handoff rather than certifying an unknown structure. Older individual-file chains
-retain their historical checksum verification. New bundles explicitly declare their output
-inventory version, so missing or malformed declared records remain failures.
-
-Each directory handoff records its exact boundary namespace and file dependencies.
-Chain status verifies the current source and the consumer's prelaunch snapshot,
-accounting for the root canonicalization applied to path parameters while retaining
-nested aliases. Empty reference directories are permitted when their complete
-namespace is recorded; downstream schemas and tools decide whether they are valid
-analytical inputs.
-
-Samplesheet handoffs also record the local data named by schema-declared path columns,
-including directory and glob membership. Checking the generated sheet alone is insufficient:
-the consumer's recorded file hashes and namespace must agree with the producer's historical
-data and the handoff boundary. Glob comparison uses the recorded consumer membership, so
-additional files consumed and later removed remain detectable. Every completed stage undergoes
-these checks before the chain can launch another stage or report success. Older file-only
-records retain checksum checks; missing directory identity cannot be inferred retrospectively.
-
-When a rule passes an entire run directory, execution records and engine state are
-part of that directory too. They are recorded at the handoff boundary, separately
-from the published results whose original byte and namespace manifests remain
-authoritative. The directory is passed intact. Later changes to either part break
-that boundary's lineage. This observation does not claim that execution records
-were scientific products of the pipeline.
+- Resuming a failed stage creates a new handoff snapshot in `chain/handoffs/<stage>/attempts/<id>/`.
+  When the stage's definition changes, earlier handoff records and prepared inputs stay at the paths
+  the old run manifests name.
+- Published results are checked against both their checksums and their complete
+  `outputs.inventory.json` listing before a handoff, so empty directories and aliases count as
+  separate entries. A local reference inherited from a producer also needs the producer's recorded
+  input listing and bytes; a changed alias does not pass just because its new target holds identical
+  data. A directory handoff without a recorded listing is refused rather than trusted. Older chains
+  that handed over individual files keep their checksum checks. New bundles declare their inventory
+  version, so a missing or malformed record is an error.
+- A directory handoff records the exact listing and files at the handoff. Chain status compares the
+  current source and the consumer's record from before its launch, allowing for the root
+  normalisation applied to path parameters while keeping nested aliases. An empty reference
+  directory is accepted when its listing is recorded; the downstream schema and tools decide whether
+  it is a valid input.
+- A samplesheet handoff also records the local data named in the schema's path columns, including
+  directory and glob membership. Checking the generated sheet alone is not enough: the consumer's
+  recorded hashes and listing must agree with the producer's data and the handoff record. Glob
+  membership is compared with what the consumer recorded, so a file consumed and later removed is
+  still detected. Every finished stage passes these checks before the chain launches another stage
+  or reports success. Older file-only records keep their checksum checks; directory identity that
+  was never recorded cannot be reconstructed.
+- When a rule hands over a whole run directory, the execution records and engine state in it are
+  handed over too. They are recorded at the handoff, separately from the published results, whose
+  original byte and listing manifests stay authoritative. The directory is passed intact, and a
+  later change to either part breaks that link's lineage. This does not make the execution records
+  scientific results of the pipeline.
 
 ### Sensitive environment values in chain records
 
-Chain records apply the same environment redaction as run provenance. The private chain directory
-uses mode 0700 and its JSON records mode 0600. A recorded `<redacted>` value is never passed to
-Nextflow: resume requires its real value again, either exported in the environment or supplied
-in the original private spec. New sensitive-environment stages also record a versioned keyed
-identity of the complete effective `NXF_*` environment. Different private values, or changed
-ordinary JVM flags alongside a sensitive argument, refuse reuse of a succeeded stage.
+Chain records redact the environment the same way run provenance does. The chain directory has mode
+0700 and its JSON records mode 0600. A recorded `<redacted>` value is never passed to Nextflow: a
+resume needs the real value again, exported in the environment or written in the original private
+spec. Stages with sensitive environment values also record a keyed, versioned identity of the whole
+effective `NXF_*` environment. A different private value, or changed ordinary JVM flags next to a
+sensitive argument, prevents a succeeded stage from being reused.
 
-The identity key is created under the chain's writer lock in `chain/.environment-key`, with mode
-0600, beneath the mode-0700 chain directory. Keep this private binary file for resume; it is never
-copied into stage provenance, JSON records or logs. Do not include it when sharing chain records.
-A missing, replaced, symlinked or insufficiently protected key refuses resume. Restore the
-original private key or keep the results and start a fresh chain; replacing a lost key cannot
-recover the original identity.
+The key is created under the chain's writer lock as `chain/.environment-key` (mode 0600, in the
+mode-0700 chain directory). Keep this private binary file to be able to resume; it is never copied
+into stage provenance, JSON records or logs, and it should not be shared with the chain records. A
+missing, replaced, symlinked or insufficiently protected key prevents a resume. Restore the original
+key, or keep the results and start a new chain: a new key cannot reproduce the original identity.
 
-Older sensitive-environment chains recorded only `<redacted>` values and cannot establish their
-original effective identity. Resuming a succeeded legacy sensitive stage is refused even when
-the caller supplies the same value; nfclaw cannot prove that it is the same. Existing nonsensitive
-version-2 fingerprints remain compatible and need no key. Appending a new sensitive stage to a
-compatible nonsensitive chain creates its private key when execution takes the chain lock.
+Chains recorded before this identity existed stored only `<redacted>` values, so their original
+environment cannot be established. Resuming a succeeded stage of such a chain that had a sensitive
+value is refused, even with the same value supplied, because nfclaw cannot show it is the same.
+Version-2 fingerprints of chains without sensitive values stay compatible and need no key. Appending
+a stage with a sensitive value to such a chain creates the key when the chain takes its lock.

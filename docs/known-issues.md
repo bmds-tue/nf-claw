@@ -1,32 +1,38 @@
-# Known Issues & Troubleshooting
+# Known issues and troubleshooting
 
-A symptom-to-fix index. Most run-time failures are either **environment** problems (host, network or
-paths, fixable with `nfclaw run` flags or environment adjustments) or **upstream pipeline defects**
-(bugs in a specific nf-core release). nf-claw keeps pinned pipeline source trees **unmodified**;
-upstream defects, recorded runtime corrections and their validation limits are documented here.
-Entries name the version and date they were measured at; a pipeline's `skill.md` gives its current
-pin. Agents can search this page by section: `read_doc(guide="known-issues", search="…")`.
+Symptoms and their fixes. Most failures at run time are either **environment** problems (host,
+network or paths, fixed with `nfclaw run` flags or host settings) or **upstream pipeline defects**
+(bugs in a specific nf-core release). nf-claw never edits the pinned pipeline sources, so upstream
+defects, the recorded runtime corrections and their limits are documented here instead. Each entry
+names the version and date it was measured at; a pipeline's `skill.md` gives its current pin. Agents
+can search this page by section with `read_doc(guide="known-issues", search="…")`.
 
 ---
 
 ## Navigation
 
-[Reading a Failure](#reading-a-failure) • [Environment](#environment) • [Runs, Stops & Resume](#runs-stops-and-resume) • [Replay & Verification](#replay-and-verification) • [Inputs & Samplesheets](#inputs-and-samplesheets) • [Chains](#chains) • [Benign Warnings](#warnings-a-run-prints-that-are-not-faults) • [Upstream Pipeline Defects](#upstream-pipeline-bugs-documented-not-patched) • [Pipeline Run Notes](#pipeline-specific-run-notes)
+[Reading a failure](#reading-a-failure) • [Environment](#environment) • [Runs, stops and resume](#runs-stops-and-resume) • [Replay and verification](#replay-and-verification) • [Inputs and samplesheets](#inputs-and-samplesheets) • [Chains](#chains) • [Harmless warnings](#warnings-a-run-prints-that-are-not-faults) • [Upstream pipeline bugs](#upstream-pipeline-bugs-documented-not-patched) • [Pipeline run notes](#pipeline-specific-run-notes)
 
 ---
 
 ## Reading a failure
 
-> [!NOTE]
-> **Parameter Syntax & Normalization:**
-> `nfclaw run` normalizes dashes and underscores interchangeably (e.g. `--skip-busco` and `--skip_busco` are equivalent, whereas raw Nextflow requires the pipeline's exact spelling).
->
-> **Values Starting with a Dash:** When passing parameter values that begin with a hyphen (such as tool pass-through flags like rnaseq's `--extra_star_align_args`): use the `=` syntax `--extra_star_align_args='--outFilterMismatchNmax 5'` or pass them via `--params-file`. The two-token syntax `--extra_star_align_args '--outFilterMismatchNmax 5'` is rejected fast with an `unknown parameter` error to prevent unintended flag misinterpretation.
+When a run fails, nfclaw's error quotes Nextflow's own error report (with the full `Caused by:` chain
+from `.nextflow.log` when the console hides it) and gives the absolute paths of:
 
-When a run fails, nfclaw's error diagnostic quotes Nextflow's own error report (including the full `Caused by:` chain from `.nextflow.log` if hidden from the console) and references absolute paths to:
-1. The unified launch log (`<outdir>/provenance/logs/run.log`), ending with the terminal outcome line.
-2. Nextflow's internal engine log (`<outdir>/.nextflow.log`).
-3. The failing task's `.command.err` (accompanied by `.command.log` and `.command.sh`).
+1. the run log, `<outdir>/provenance/logs/run.log`, whose last line is the outcome;
+2. Nextflow's own log, `<outdir>/.nextflow.log`;
+3. the failing task's `.command.err`, next to its `.command.log` and `.command.sh`.
+
+> [!NOTE]
+> `nfclaw run` treats dashes and underscores in parameter names as the same (`--skip-busco` and
+> `--skip_busco` are equivalent; raw Nextflow needs the pipeline's exact spelling).
+>
+> A value that starts with a dash, such as a flag passed through to a tool (rnaseq's
+> `--extra_star_align_args`), must be written with `=`, as in
+> `--extra_star_align_args='--outFilterMismatchNmax 5'`, or put in a `--params-file`. Written as two
+> words, `--extra_star_align_args '--outFilterMismatchNmax 5'`, it is refused with an
+> `unknown parameter` error, because the value would otherwise be read as a flag.
 
 ---
 
@@ -242,7 +248,7 @@ before metadata probes, including inherited settings and relative paths.
 - **Fix:** `nfclaw status <outdir>` answers from the log alone: `running (nfclaw pid … on host …)` with the last output; the outcome it ended with and the recorded error; `refused before launch`; or `stopped without an outcome`. Re-run the command with `--resume`. Stop a background run cleanly with `kill <nfclaw pid>` — never `kill -9` — so logs and provenance are finalized.
 
 ### Launching several pipelines in parallel
-- **Status: Fixed.** Starting 2+ pipelines simultaneously whose submodules were uninitialised previously raced on `.git/config`. `nfclaw run` serializes submodule initialization with a per-repo file lock, ensuring concurrent first-time runs initialize submodules cleanly.
+- **Status: Fixed.** Starting 2+ pipelines simultaneously whose submodules were uninitialised previously raced on `.git/config`. `nfclaw run` takes a per-repository file lock while it initialises submodules, so concurrent first runs do not collide.
 
 ### Concurrency: `another nfclaw run is active in …`
 - **Symptom:** `nfclaw run` aborts immediately with `[environment] another nfclaw run is active in <outdir>`.
@@ -257,7 +263,7 @@ before metadata probes, including inherited settings and relative paths.
 - **Symptom:** `commands.sh` refuses its target directory, or a replay into the original `--outdir`
   fails on `pipeline_info/execution_trace_*.txt`.
 - **Fix:** Replay into a fresh directory: `commands.sh` defaults to `<outdir>.replay`, or takes a
-  target (`./results/provenance/commands.sh /tmp/check-it`); [replay](architecture.md#26-replay--replay-guard)
+  target (`./results/provenance/commands.sh /tmp/check-it`); [replay](architecture.md#26-replay-and-the-replay-guard)
   explains why a replay cannot publish over the original run.
 
   Stop it with `kill <replay pid>`. New bundles run the command in its own process
@@ -274,7 +280,7 @@ Some outputs embed dates or durations: execution reports, timelines, gzip header
 FastQC ZIP entries and MultiQC HTML can differ between runs. A changed checksum
 does not identify the cause; inspect scientific results with a format-aware comparison.
 Matching file inventories alone does not establish analytical agreement. Compare the two with
-`nfclaw verify results.replay --against results`; [the verification engine](architecture.md#27-verification-engine-nfclaw-verify)
+`nfclaw verify results.replay --against results`; [the verification engine](architecture.md#27-verification-nfclaw-verify)
 explains its default and `--strict` checks.
 
 nfclaw pins the schema's `trace_report_suffix` where available, but some upstream
@@ -645,7 +651,7 @@ These defects affect specific pinned releases. Workarounds and recorded runtime 
 - **`coproid`** — Requires **two** samplesheets: `--input` (FASTQ sheet) and a separate required `--genome_sheet`. Each row in `--genome_sheet` requires `genome_name,taxid,genome_size` plus **exactly one** of `igenome` or `fasta` (mutually exclusive `oneOf` schema). `--kraken2_db` is mandatory and must point to a valid Kraken2 database.
 - **`crisprseq`** — The samplesheet `reference` column expects a **raw DNA sequence string** (pattern `^[ACTGNactgn]+$`), not a FASTA file path.
 - **`circdna`** — Two parameters are **required by schema** for non-demo runs: `--input_format` (`FASTQ` or `BAM`) and `--circle_identifier` (one or more of `circle_map_realign`, `circle_map_repeats`, `circle_finder`, `circexplorer2`, `ampliconarchitect`).
-- **`metapep`** — The `--demo` profile runs `DOWNLOAD_PROTEINS`, which fetches sequences from **NCBI Entrez** (`download_proteins_entrez.py --email $NCBI_EMAIL`) reading a Nextflow secret named `NCBI_EMAIL`. Set the secret prior to execution: `nextflow secrets set NCBI_EMAIL you@example.com`.
+- **`metapep`** — The `--demo` profile runs `DOWNLOAD_PROTEINS`, which fetches sequences from **NCBI Entrez** (`download_proteins_entrez.py --email $NCBI_EMAIL`) reading a Nextflow secret named `NCBI_EMAIL`. Set the secret before the run: `nextflow secrets set NCBI_EMAIL you@example.com`.
 - **`seqsubmit` 1.0.0 `--demo` needs an ENA Webin account** — The bundled `test` profile sets `test_upload = true`, so `genome_upload` validates the submission without uploading it, but it still queries ENA for the study's run metadata with Webin credentials. `nextflow.config` passes the Nextflow secrets `ENA_WEBIN` and `ENA_WEBIN_PASSWORD` to every task through its `env` scope, so without them Nextflow only warns that both variables evaluate to an empty value: the FASTA validation, classification and coverage tasks complete, and `CREATE_MANIFESTS` then fails with `CredentialsNotSetError: Credentials for ENA are not set` (reproduced on Nextflow 25.10.4). Set both secrets for a Webin account (`nextflow secrets set ENA_WEBIN Webin-NNNNN`, then `nextflow secrets set ENA_WEBIN_PASSWORD …`) before any run, including `--demo`. Without an account, a stub run checks the rest of the workflow: pass `--config` a file containing `stubRun = true`, and every task runs its stub block, none contacting ENA (`nfclaw status` then reports a `stub run:` caveat). It stops before the submission step, whose stub inputs match no genome.
 - **`epitopeprediction` 3.1.1 queries Ensembl BioMart while it runs; the pinned 3.2.0 does not** — 3.2.0 replaced the epytope/BioMart variant path with `bcftools`, Ensembl VEP and pVACtools ([nf-core/epitopeprediction#362](https://github.com/nf-core/epitopeprediction/pull/362)). Its `test` profile annotates with a 15 MB GRCh38 VEP cache subset that it downloads with the test data. For your own VCFs, give `--vep_cache` and `--ref_fasta`, or set `--vep_download_cache`, which fetches about 20 GB from the Ensembl FTP site. In 3.1.1 (`--pipeline-version 3.1.1`), `EPYTOPE_VARIANT_PREDICTION` looks up the proteins of the variants' transcripts through epytope's `MartsAdapter`. When BioMart is overloaded it answers with its "Service unavailable" HTML page and HTTP status 200. epytope retries only error statuses, so the page reaches pandas and the task fails with `ValueError: Length mismatch: Expected axis has 1 elements, new values have 3 elements` in `MartsAdapter.get_dataset_attributes`. On 2026-10-15, 24 of 600 requests to `grch37.ensembl.org/biomart/martservice` over 50 minutes got that page, and two of the three 3.1.1 `--demo` runs that reached this step lost a task this way. Upstream tracked this as [nf-core/epitopeprediction#337](https://github.com/nf-core/epitopeprediction/issues/337). For 3.1.1, retry the task with `process { withName: 'EPYTOPE_VARIANT_PREDICTION' { errorStrategy = 'retry'; maxRetries = 3 } }` passed as `--config`, or re-run with `--resume`. A host that cannot reach Ensembl cannot run that step.
 - **`oncoanalyser` 3.0.0 `--demo` needs about 130 GB for references** — The bundled test downloads about 53 GB of reference tarballs (HMF pipeline resources, GRIDSS, STAR and BWA-MEM2 indexes) plus the 3.2 GB GRCh38 FASTA and a 5.6 GB BWA image, and it extracts the tarballs inside the work directory, so a run holds both copies. Upstream's CI extracts them once instead and passes them through `tests/cached_refs.config` and five `NXF_REF_*` variables. To run it that way, download the FASTA, its `.fai`, `.dict` and `.img`, and extract each tarball into its own directory without its top-level directory (`tar -xzf … --strip-components 1`, as the pipeline's `CUSTOM_EXTRACTTARBALL` does; 77 GB in all). Then run `nfclaw run oncoanalyser --demo --outdir results/oncoanalyser --config <repo>/pipelines/oncoanalyser/upstream/tests/cached_refs.config` with `--nxf-env NXF_REF_DATA_PATH=<dir>`, plus `NXF_REF_BWAMEM2_INDEX`, `NXF_REF_GRIDSS_INDEX`, `NXF_REF_STAR_INDEX` and `NXF_REF_HMF_DATA`, each set to its extracted directory. On Nextflow 25.10.4 this ran the 42 tasks upstream's test expects with cached references. It was resumed once, after the sweep's disk guard stopped it. All 473 output paths and all 151 stable-content checksums in the release's nf-test snapshot (`tests/profile_test.nf.test.snap`) matched. On 2026-11-08, through nfclaw 1.0.0, the same route ran the 42 tasks in 40 minutes at the first attempt, replayed with an identical environment and gave `nfclaw verify` exit 0. Its `STAR_ALIGN` peaked at 29.7 GiB, as in 2026-10, so leave it more than that free.

@@ -67,8 +67,8 @@ export default async function HomePage() {
       <section id="pipelines" data-progress="Pipelines" className="section container-site">
         <SectionHeading
           eyebrow="The collection"
-          title="Pipeline universe"
-          description="Every nf-core pipeline in the library, grouped by research domain. Search by name or tool, filter by domain, inspect any pipeline and compare up to four side by side — all driven by the repository."
+          title="Pipelines by domain"
+          description="Every nf-core pipeline in the library, grouped by research domain. Search by name or tool, filter by domain, inspect any pipeline and compare up to four side by side."
         />
         <PipelineUniverse pipelines={summaries} />
       </section>
@@ -77,7 +77,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="What an agent reads"
           title="Skills explorer"
-          description="Each pipeline ships one generated skill — the exact run command, inputs, required parameters and the complete reference. Search across skills and every parameter they expose, then drill in."
+          description="Each pipeline has one generated skill: the exact run command, inputs, required parameters and the complete parameter reference. Search the skills and every parameter they list."
         />
         <SkillsExplorer skills={skills} />
       </section>

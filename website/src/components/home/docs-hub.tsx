@@ -44,9 +44,9 @@ export function DocsHub({ docs, standalone = false }: { docs: DocPage[]; standal
     >
       <SectionHeading
         as={Heading}
-        eyebrow="Single source of truth"
+        eyebrow="From the repository"
         title="Documentation hub"
-        description="Every page here is rendered directly from the repository — README, architecture notes, contributor guides and more. Nothing is maintained by hand; update the markdown and this hub updates itself."
+        description="Every page here is rendered from the repository: the README, the agent guide, the guides in docs/ and the contributor notes. A change to one of those files appears here on the next build."
       />
 
       <StaggerGroup className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-5">

@@ -6,368 +6,210 @@
   <a href="https://github.com/bmds-tue/nf-claw/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/bmds-tue/nf-claw/tests.yml?branch=main&amp;label=tests" alt="Tests status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
-  <a href="https://nextflow.io"><img src="https://img.shields.io/badge/Nextflow-DSL2-brightgreen.svg" alt="Nextflow DSL2"></a>
-  <a href="https://nf-co.re"><img src="https://img.shields.io/badge/nf--core-compatible-green.svg" alt="nf-core compatible"></a>
-  <a href="https://bmds-tue.github.io/nf-claw/"><img src="https://img.shields.io/badge/portal-live%20site-00ffff.svg" alt="Live Portal"></a>
+  <a href="https://bmds-tue.github.io/nf-claw/"><img src="https://img.shields.io/badge/website-bmds--tue.github.io-00ffff.svg" alt="Website"></a>
 </p>
 
 # nf-claw
 
-A self-maintaining, token-minimal library of [nf-core](https://nf-co.re) pipelines curated for AI agents and bioinformaticians. Each pipeline is an unmodified git submodule pinned to a release, with a generated `skill.md` (how to run it) and `reference.md` (every parameter); one runner, `nfclaw`, validates a run before it starts, records what it takes to replay it, chains pipelines and serves all of it to agents over MCP.
+A self-maintaining library of [nf-core](https://nf-co.re) pipelines for AI agents and bioinformaticians. Each pipeline is an unmodified git submodule pinned to a release, with a generated `skill.md` that says how to run it and a `reference.md` that lists every parameter. The `nfclaw` command checks a run before it starts, records what a replay needs, chains pipelines and serves all of this to agents over MCP. Scheduled workflows move the pins to new releases once the tests and each changed pipeline's own test run pass.
 
-**🌐 Live Portal: [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/)** — an interactive interface to the whole library (pipeline explorer, parameters, documentation and automation status captured at build time), rebuilt from the repository on deployment.
+The website, [bmds-tue.github.io/nf-claw](https://bmds-tue.github.io/nf-claw/), shows the same
+content: the pipelines, their parameters, the documentation and the state of the automation when the
+site was last built.
 
----
+## What it does
 
-## What It Does
-
-| Step | Command | What you get |
+| Step | Command | Result |
 |---|---|---|
-| **Find** | `nfclaw list <keywords>` | The pipelines matching a request, ranked, without reading the whole catalog. |
-| **Read** | `nfclaw show <name>` | The pinned release's inputs, required parameters and exact run command. |
-| **Run** | `nfclaw run <name> …` | A real run, checked first; `--check` validates and prints the command without launching tasks. |
-| **Follow** | `nfclaw status <outdir>` | How the run stands, how it ended, and any caveats the pipeline reported about its results. |
-| **Replay** | `<outdir>/provenance/commands.sh`, `nfclaw verify` | A guarded reproduction into a fresh directory, compared with the original by path, bytes and environment. |
-| **Assess** | `nfclaw assess` | Declared scientific outputs and sample coverage checked against an explicit contract. |
-| **Chain** | `nfclaw chain run` | Pipelines in sequence, each fed by the checksummed outputs of the one before. |
-| **Serve** | `nfclaw mcp` | All of the above as MCP tools, with long runs as detached jobs. |
+| Find | `nfclaw list <keywords>` | The pipelines that match a request, ranked, without reading the whole catalog. |
+| Read | `nfclaw show <name>` | The pinned release's inputs, required parameters and run command. |
+| Run | `nfclaw run <name> …` | A real run, checked first. `--check` validates and prints the command without starting it. |
+| Follow | `nfclaw status <outdir>` | Whether the run is still going, how it ended, and any caveats the pipeline reported about its results. |
+| Replay | `<outdir>/provenance/commands.sh`, `nfclaw verify` | A guarded re-run into a fresh directory, compared with the original by path, bytes and environment. |
+| Assess | `nfclaw assess` | The declared scientific outputs and sample coverage, checked against an explicit contract. |
+| Chain | `nfclaw chain run` | Pipelines in sequence, each fed by the checksummed outputs of the one before. |
+| Serve | `nfclaw mcp` | All of the above as MCP tools. Long runs become detached jobs. |
 
 nfclaw checks a run before it starts and again before it reports success. It refuses unknown flags,
-invalid values, unsafe input filenames or sample identities and outputs that overlap their inputs
-rather than silently correcting them, and it fails a run whose declared inputs, configs or pipeline
-source changed while it ran. [AGENTS.md](AGENTS.md) states each rule in brief,
-[docs/preflight.md](docs/preflight.md#inputs-refused-before-launch) in full,
-[docs/architecture.md](docs/architecture.md) how it is enforced, and
-[docs/known-issues.md](docs/known-issues.md) where its checks stop.
+invalid values, unsafe file names or sample identifiers, and output directories that overlap the
+inputs, instead of correcting them silently. It fails a run whose inputs, configs or pipeline source
+changed while it ran. [AGENTS.md](AGENTS.md) states these rules briefly and
+[docs/preflight.md](docs/preflight.md#inputs-refused-before-launch) in full;
+[docs/architecture.md](docs/architecture.md) explains how they are enforced, and
+[docs/known-issues.md](docs/known-issues.md) where the checks stop.
 
-Pipeline source trees stay unchanged. A few exact releases need runtime corrections, and each is
-recorded with the run and replayed with it: recorded configs for fastqrepair 1.1.1 (record
-splitting, quality-offset forwarding, publication) and independently copied, source-bound working
-copies for Bactmap, Createtaxdb and Funcscan ([source corrections](docs/source-corrections.md)).
-
-## Navigation
-
-[What It Does](#what-it-does) • [Repository Layout](#layout) • [Documentation](#documentation-guides) • [Quickstart](#quickstart) • [Provenance, Replay & Verification](#provenance-replay--verification) • [Maintenance & Adding Pipelines](#maintain) • [Continuous Automation](#how-it-stays-current) • [Scientific Validation](#scientific-validation--limitations) • [Citations](#citation--attribution)
-
----
+The pipeline source trees are never edited. A few exact releases need corrections at run time, and
+each correction is recorded with the run and replayed with it: configs for fastqrepair 1.1.1, and
+patched working copies of Bactmap, Createtaxdb and Funcscan
+([source corrections](docs/source-corrections.md)).
 
 ## Layout
 
-The repository is structured into four functional zones, plus the catalogs, documentation and portal built from them:
+| Path | Contents |
+|---|---|
+| `pipelines/<name>/` | `upstream/`, the pipeline pinned to a release (a git submodule), and the generated `skill.md` (how to run it) and `reference.md` (every parameter). |
+| `runner/` | The `nfclaw` command: preflight, launch, logs, provenance, replay, verification, chaining and the MCP server. |
+| `librarian/` | Maintenance code. It generates the skills and catalogs, checks for drift, bumps releases and finds new pipelines. |
+| `handoffs/` | Chaining rules, one file per pipeline pair (`handoffs/<upstream>/<downstream>.json`), checked by the drift gate. |
+| `catalog.md`, `catalog.json` | The generated index of all pipelines: pinned version, input, outputs and description, plus tools and downstream pipelines in the JSON. Search it rather than reading it whole. |
+| `sources.tsv` | Each pipeline's upstream repository and update policy: `latest-release`, or `hold` to keep the current pin. |
+| `docs/` | The guides listed below, and dated audit records with their evidence (`docs/audit/`). |
+| `website/` | The static website, rebuilt from the repository on every push to `main`. |
 
-| Path | Component | Description |
-|---|---|---|
-| `pipelines/<name>/` | **Library Content** | `upstream/` (submodule pinned to a release) + generated `skill.md` (agent instructions, run commands, inputs, required parameters with constraints) and `reference.md` (complete schema catalog). |
-| `runner/` | **Execution Engine** | The `nfclaw` CLI runtime handling parameter preflight, environment isolation, provenance generation, replay guards, and multi-stage chaining. |
-| `librarian/` | **Maintenance Automation** | Tools for building context files, auditing schema drift, bumping releases, and discovering new DSL2 pipelines (`make build`, `make check`). |
-| `handoffs/` | **Chaining Rules** | Declarative rules (`handoffs/<upstream>/<downstream>.json`) mapping outputs between sequential pipeline stages, statically verified by the drift gate. |
-| `catalog.md` / `.json` | **Pipeline Catalog** | Auto-compiled index detailing declared inputs, conditional outputs, upstream descriptions, and citations for all tracked pipelines. |
-| `sources.tsv` | **Release Manifest** | Registry mapping pipeline names to upstream remotes and version tracking policies (`latest-release`, or `hold` to keep a pin). |
-| `docs/` | **Documentation** | The guides listed below, and the dated audit records with their evidence (`docs/audit/`). |
-| `website/` | **Live Portal** | Next.js static site and documentation hub, rebuilt from the repository data on every push to `main`. |
+## Documentation guides
 
-### Documentation Guides
+### Running pipelines
 
-#### Running pipelines
+| Document | What it covers |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | How to find, run, follow, replay and chain a pipeline. Written for agents and useful to people. [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
+| [`docs/preflight.md`](docs/preflight.md) | Which checks run before launch, which are left to the pipeline, the samplesheet generator and the pipelines it supports, and the inputs refused before launch. |
+| [`docs/chaining.md`](docs/chaining.md) | Chain specs, handoff rules, resuming a chain and verifying which outputs became which inputs. |
+| [`docs/mcp.md`](docs/mcp.md) | Setting up `nfclaw mcp` in Claude Code, Codex, Antigravity, Hermes and other clients, its tools, and detached jobs. |
+| [`docs/timeouts.md`](docs/timeouts.md) | Optional deadlines, background runs and cheap progress checks. |
+| [`docs/compatibility.md`](docs/compatibility.md) | Matching the Nextflow version to a release, `--nxf-ver` and `--nxf-env`, the CI workflows and host requirements. |
+| [`docs/dramp-reference.md`](docs/dramp-reference.md) | Preparing a DRAMP antimicrobial peptide reference for Funcscan. |
+| [`docs/known-issues.md`](docs/known-issues.md) | Symptoms and fixes: host setup, runs and resume, replay, chains, harmless warnings and upstream bugs. |
 
-| Topic | Document | Scope & Contents |
-|---|---|---|
-| **Agent Guide** | [`AGENTS.md`](AGENTS.md) | The operating manual for agents and people: find, run, follow, replay and chain. [`CLAUDE.md`](CLAUDE.md) imports it for Claude Code. |
-| **Preflight Scope** | [`docs/preflight.md`](docs/preflight.md) | Checked, deferred and unsupported validations, the schema subset, the per-pipeline samplesheet generation matrix, and what is refused before launch. |
-| **Pipeline Chaining** | [`docs/chaining.md`](docs/chaining.md) | Multi-stage orchestration, spec format, handoff rules and transformations, resume and lineage verification. |
-| **MCP Server** | [`docs/mcp.md`](docs/mcp.md) | `nfclaw mcp` for Claude Code, Codex, Antigravity, Hermes and other MCP clients: setup, tools, detached jobs and protocol. |
-| **Timeouts & Monitoring** | [`docs/timeouts.md`](docs/timeouts.md) | Optional execution deadlines, setup and shutdown margins, background runs and quick chain status. |
-| **Engine Compatibility** | [`docs/compatibility.md`](docs/compatibility.md) | DSL2 enforcement, the Nextflow 25 to 26 parser transition, `--nxf-ver` controls, CI validation scope and host requirements. |
-| **DRAMP References** | [`docs/dramp-reference.md`](docs/dramp-reference.md) | Preparing a recorded DRAMP antimicrobial peptide reference and its pinned-image index for Funcscan. |
-| **Known Issues** | [`docs/known-issues.md`](docs/known-issues.md) | Symptom-to-fix index: host environment, runs and resume, replay, chains, benign warnings and upstream defects. |
+### Trusting results
 
-#### Trusting results
+| Document | What it covers |
+|---|---|
+| [`docs/replay.md`](docs/replay.md) | What a provenance bundle holds, what the replay checks, resuming with changed inputs, and what `nfclaw verify` and `nfclaw assess` can and cannot show. |
+| [`docs/scientific-output-contracts.md`](docs/scientific-output-contracts.md) | Writing a contract for `nfclaw assess`: formats compared (BAM, VCF, FASTA, TSV, H5AD), sample coverage and tolerances. |
+| [`docs/source-corrections.md`](docs/source-corrections.md) | The recorded corrections for Createtaxdb, Funcscan, Bactmap and fastqrepair. |
+| [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, the settings each needed, and what that evidence does not show. |
 
-| Topic | Document | Scope & Contents |
-|---|---|---|
-| **Replay & Verification** | [`docs/replay.md`](docs/replay.md) | Bundle contents, the replay guard, dependency stability, resume of changed inputs, and what `nfclaw verify` and `nfclaw assess` establish. |
-| **Scientific Output Contracts** | [`docs/scientific-output-contracts.md`](docs/scientific-output-contracts.md) | `nfclaw assess` specifications, parsed format comparisons (BAM, VCF, FASTA, TSV, H5AD), sample coverage and tolerances. |
-| **Source Corrections** | [`docs/source-corrections.md`](docs/source-corrections.md) | Recorded workflow corrections for Createtaxdb, Funcscan and Bactmap, and Fastqrepair's runtime configs. |
-| **Validation** | [`docs/validation.md`](docs/validation.md) | End-to-end runs of every pinned pipeline and of nfclaw's features, the settings each needed, and the limits of that evidence. |
+### Maintaining nf-claw
 
-#### Maintaining nf-claw
-
-| Topic | Document | Scope & Contents |
-|---|---|---|
-| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | The four zones, the runner's modules, preflight, locking, provenance structure, verification and assessment. |
-| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Workflow, coding standards, adding a pipeline or handoff rule, tests and writing documentation. |
-| **Updating & Drift** | [`docs/updating.md`](docs/updating.md) | The daily and weekly maintenance workflows, tag discovery and strict zero-drift enforcement. |
-| **Maintenance Policy** | [`docs/maintenance.md`](docs/maintenance.md) | Automatic-publication evidence policy, immutable candidate verification, full matrix testing and gated promotion. |
-| **Audit Records** | [`docs/audit/`](docs/audit/README.md) | Dated audits and remediations, with the evidence behind each change. |
-| **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) | User-visible changes, newest first, by pull request. |
-| **Security Policy** | [`SECURITY.md`](SECURITY.md) | How to report a suspected vulnerability privately, and what is in scope. |
-| **Agent Index** | [`llms.txt`](llms.txt) | Curated discovery map for external AI agents (llms.txt standard). |
-
----
+| Document | What it covers |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | How the repository and the runner are put together: modules, preflight, locking, provenance, verification and assessment. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Reporting bugs, the development workflow, adding a pipeline or handoff rule, tests, releases and documentation conventions. |
+| [`docs/updating.md`](docs/updating.md) | The daily update and weekly discovery workflows, update policies and the drift gate. |
+| [`docs/maintenance.md`](docs/maintenance.md) | What the maintenance workflows must show before they publish a change to `main`. |
+| [`docs/audit/`](docs/audit/README.md) | Dated audit records and the evidence behind each change. |
+| [`CHANGELOG.md`](CHANGELOG.md) | User-visible changes, newest first, by pull request. |
+| [`SECURITY.md`](SECURITY.md) | How to report a vulnerability privately, and what is in scope. |
+| [`llms.txt`](llms.txt) | An index of this documentation for AI agents ([llms.txt](https://llmstxt.org) format). |
 
 ## Quickstart
 
-### 1. Installation & Basic Execution
-
-Clone into a space-free path (on macOS, avoid iCloud folders), use Python 3.11+,
-and install Git, Nextflow, Java 17+ and the selected container runtime separately.
+Clone into a path without spaces (on macOS, outside iCloud folders). You need Python 3.11+, Git,
+Nextflow with Java 17+, and Docker or Singularity/Apptainer.
 
 ```bash
-# Clone the library and its pinned pipeline sources (`main` moves daily as pins are bumped;
-# add `--branch v1.0.0` for exactly the 1.0.0 release)
+# main moves as pins are bumped; add --branch v1.0.0 for the 1.0.0 release
 git clone --recurse-submodules https://github.com/bmds-tue/nf-claw.git
 cd nf-claw
 python3 -m venv .venv
 source .venv/bin/activate
+pip install -e .           # puts nfclaw on PATH
+```
 
-# Editable install places `nfclaw` on PATH (or use `python3 -m runner <cmd>` without installation)
-pip install -e .
+Install it editable: `nfclaw` reads the pinned submodules and generated files from the checkout,
+from whichever directory you call it. Without installing, `python3 -m runner <command>` from the
+repository root does the same.
 
-# List all available pipelines and descriptions, or search them by keyword
-nfclaw list
-nfclaw list variant calling
+```bash
+nfclaw list variant calling     # pipelines that match, ranked
+nfclaw show rnaseq              # the pinned release's inputs, required parameters and run command
 
-# The nfclaw release and checkout commit (also recorded in every provenance bundle)
-nfclaw --version
-
-# Read the pinned release's inputs and required parameters before preparing data
-nfclaw show rnaseq
-
-# Execute a pipeline run with your matched genome and annotation
+# validate and print the command without running it
 nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
-  --fasta /data/reference.fa --gtf /data/genes.gtf --igenomes-ignore true
+  --fasta /data/genome.fa --gtf /data/genes.gtf --igenomes-ignore true --check
 
-# Check execution status (success / running / failed / stopped without outcome)
-nfclaw status results
+# the same without --check runs it; then follow it
+nfclaw status results           # success, running, or how it ended
 ```
 
-Replace the example reference paths with your own matched FASTA and GTF files.
-Later rnaseq examples focus on individual options; include these reference arguments
-or another reference selection supported by the chosen release. Schema-required
-parameters alone do not describe every reference the analysis needs. Samplesheet data
-paths, output directories and profiles follow the rules in [AGENTS.md](AGENTS.md).
+Use your own matched FASTA and GTF. The parameters a schema marks as required do not cover every
+reference an analysis needs; each `skill.md` has a section on references. `--check` leaves
+`--outdir` untouched but needs the run's tools on the host, including a running Docker daemon for
+the Docker profile.
 
-> [!NOTE]
-> The editable install is intentional: `nfclaw` resolves pinned submodules and generated schema context directly from the repository tree, even when invoked from another directory. An installation without that repository content emits a clear setup error instead of an empty catalog.
+Other common tasks:
 
-### 2. Command Inspection (Dry-Run)
+| To | Use | Details |
+|---|---|---|
+| Build the samplesheet from data files | `nfclaw run rnaseq --input /data/fastq --sheet-set strandedness=auto …` | [AGENTS.md](AGENTS.md#inputs) |
+| Replay a run and compare it | `results/provenance/commands.sh`, then `nfclaw verify results.replay --against results` | [replay](docs/replay.md) |
+| Check scientific outputs | `nfclaw assess results --contract FILE` | [output contracts](docs/scientific-output-contracts.md) |
+| Run another release, or `dev` | `nfclaw versions rnaseq`, then `--pipeline-version 3.14.0` | [AGENTS.md](AGENTS.md#to-run-a-specific-non-latest-version) |
+| Choose the Nextflow version | `--nxf-ver 25.10.4`, `--nxf-env NXF_OFFLINE=true` | [compatibility](docs/compatibility.md) |
+| Fit a small machine | `--limit-cpus 4 --limit-memory 15.GB` | [AGENTS.md](AGENTS.md#running-on-a-machine-smaller-than-the-pipeline-assumes) |
+| Set a deadline | `--timeout SECONDS` (whole run), `--limit-time` (each task) | [timeouts](docs/timeouts.md) |
+| Chain pipelines | `nfclaw chain run spec.json --outdir /abs/chain` | [chaining](docs/chaining.md) |
+| Use it from an MCP client | `claude mcp add nfclaw -- "$PWD/.venv/bin/nfclaw" mcp` | [MCP](docs/mcp.md) |
 
-```bash
-# Inspect the exact Nextflow command that would run without executing it
-# Validates parameters, schemas, and paths without creating or modifying --outdir
-nfclaw run rnaseq --input samplesheet.csv --outdir results -profile docker \
-  --fasta /data/reference.fa --gtf /data/genes.gtf --igenomes-ignore true --check
-```
+## Provenance and replay
 
-`--check` leaves `--outdir` untouched; conditional and complex schema rules remain subject to
-upstream runtime validation. It does need the run's tools on the host: Git, Nextflow, Java and the
-profile's container engine, and a Docker profile needs a responding daemon.
+Unless told otherwise, `nfclaw run` writes a provenance bundle to `<outdir>/provenance/`: the run log,
+a replay script with its dependency guard, an archive of the pipeline source, copies of the configs,
+records of the parameters, checksums and files, and as much of the execution environment as could
+be recorded. [docs/architecture.md](docs/architecture.md#25-provenance-bundles) lists every file. The
+bundle does not contain the input data, container images or plugins, so those must still be
+available for a replay. [docs/replay.md](docs/replay.md) covers replaying, resuming and verifying,
+and their limits.
 
-### 3. Samplesheet from Data Files
+## Maintenance
 
-```bash
-# Pass the data files instead of a samplesheet: a directory (searched recursively), a quoted glob,
-# or files (--input once per file).
-# nfclaw writes the samplesheet the pinned release's schema describes; set the columns no file
-# name determines with --sheet-set (each skill.md lists them). --check previews the sheet.
-nfclaw run rnaseq --input /data/fastq --sheet-set strandedness=auto --outdir results --check
-nfclaw run sarek --input '/data/run1/*.fastq.gz' --sheet-set 'patient={sample}' --outdir results
-```
+Generated files are never edited by hand. `make build` regenerates every `skill.md`, `reference.md`
+and `catalog.*` from the pinned submodules, `make update` bumps the pins to the newest releases, and
+`make check` runs the drift gate and the tests. [CONTRIBUTING.md](CONTRIBUTING.md) explains each
+target and how to add a pipeline or a handoff rule.
 
-The pinned schema decides the columns, sample names come unaltered from file names, and gaps and
-ambiguous matches are refused; unrelated unmatched files may be ignored with recorded warnings. [AGENTS.md](AGENTS.md) gives the pairing and identity rules ([in full](docs/preflight.md#inputs-refused-before-launch)),
-and [known issues](docs/known-issues.md#legacy-samplesheet-contracts-and-local-data-identity) the
-releases whose contracts were corrected from their pinned source.
+## How it stays current
 
-Review the generated sheet against the experimental design. Filename conventions and the first
-read header provide limited identity evidence; they do not establish biological replicates,
-complete read synchronization or correct study metadata. Distinct SRA `accession.spot-id`
-values remain distinct molecules. Explicit mate labels that contradict an inferred pairing
-are refused; `_R1`/`_R2` filenames remain authoritative with an advisory about contradictions.
+| Workflow | Runs | What it does |
+|---|---|---|
+| `auto-update.yml` | daily | Bumps pins to new releases. A candidate reaches `main` only after the test matrix, the drift gate and real runs of each changed pipeline's bundled test pass ([publication policy](docs/maintenance.md)). |
+| `discover-pipelines.yml` | weekly | Adds new nf-core DSL2 pipelines through the same gate. |
+| `tests.yml` | push to `main`, pull requests | pytest on Ubuntu and macOS with Python 3.11–3.15, integration tests against a real Nextflow, and the website build and browser tests. |
+| `drift-check.yml` | pull requests, daily | Regenerates every skill, reference and catalog, and fails on any difference. |
+| `smoke.yml` | runner or pipeline changes on `main`, weekly | `nfclaw run --check --demo` for every pipeline, on the Nextflow version its `skill.md` advises. |
+| `nextflow-validate.yml` | pin changes on `main`, weekly | `nextflow run -preview` of every pipeline's test profile. |
+| `demo-validation.yml`, `fastqrepair-validation.yml` | pull requests that change the runner | A real run in Docker, a replay, and checks of the results and the recorded environment. |
+| `pipeline-execution.yml` | manual | A real run of any one pipeline's test profile in Docker. |
+| `deploy-pages.yml` | push to `main` | Rebuilds and publishes the website. |
+| `codeql.yml` | push, pull requests, weekly | Code scanning of the Python, JavaScript/TypeScript and workflow files. |
 
-### 4. Provenance Replay & Verification
+[docs/compatibility.md](docs/compatibility.md#continuous-validation) gives each workflow's exact
+scope and what fails it.
 
-```bash
-# Reproduce a completed run into a fresh target directory
-./results/provenance/commands.sh                         # -> results.replay/
+## Scientific limits
 
-# Verify structural equivalence against the original run (pairs random library names, e.g. kraken2-build)
-nfclaw verify results.replay --against results           # structural check (file inventory)
+nfclaw validates inputs and parameters, assembles the command, isolates the run and records its
+provenance. None of that shows that the results are biologically correct: a run can pass every check,
+exit 0 and still be wrong for the question asked. Before you rely on results:
 
-# Require matching bytes, link identities and the compared environment evidence
-nfclaw verify results.replay --against results --strict
+1. Validate the pipeline, parameters and reference against benchmark data suited to your question.
+2. Read the caveats `nfclaw status` reports for a successful run. A pipeline can exit 0 after
+   skipping samples or ignoring failed tasks (`completion_caveats` in the run manifest).
+3. Compare a replay with `nfclaw verify --strict`, and inspect files that differ with tools that
+   understand their format.
+4. Check [docs/known-issues.md](docs/known-issues.md) for the release you run.
 
-# Assess scientific outputs and sample coverage against an explicit contract (BAM, VCF, FASTA, TSV, H5AD)
-nfclaw assess results.replay --contract runner/output_contracts/tumourevo-1.0.0-demo.json
-nfclaw assess results.replay --against results \
-  --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
-```
+`nfclaw assess` checks declared outputs and sample coverage against a contract
+([guide](docs/scientific-output-contracts.md)). Two demo contracts are supplied; other pipelines
+need their own.
 
-What each mode checks, and what it cannot certify, is in
-[the verification engine](docs/architecture.md#27-verification-engine-nfclaw-verify) and
-[scientific output contracts](docs/scientific-output-contracts.md).
+## Citation and attribution
 
-### 5. Release Selection & Development Code
+The pipelines are the work of the [nf-core](https://nf-co.re) community. nf-claw includes them
+unmodified as pinned submodules, and each keeps its own authors, licence and citations. The few
+corrections nf-claw applies at run time are documented separately.
 
-```bash
-# List available release tags (pinned latest flagged; dev branch listed last)
-nfclaw versions rnaseq
+nf-claw was created by Danilo Monge (Eberhard Karls Universität Tübingen). It adapts ideas and
+repository structure from [ClawBio](https://clawbio.ai), created by Manuel Corpas (MIT licence;
+copyright notice in [`LICENSE`](LICENSE), details in [`NOTICE`](NOTICE)).
 
-# Inspect on-demand documentation for a specific published release
-nfclaw show rnaseq --pipeline-version 3.14.0
+If you use nf-claw in research, cite it with [`CITATION.cff`](CITATION.cff), together with:
 
-# Run a specific published release tag
-nfclaw run rnaseq --pipeline-version 3.14.0 --input samplesheet.csv --outdir results -profile docker
-
-# Run unreleased development code (head of nf-core's `dev` branch, anchored by commit SHA)
-nfclaw show rnaseq --pipeline-version dev
-nfclaw run rnaseq --pipeline-version dev --input samplesheet.csv --outdir results -profile docker
-```
-
-### 6. Engine Pinning & Runtime Environment
-
-```bash
-# Pin a specific Nextflow engine version (records NXF_VER in provenance)
-nfclaw run rnaseq --nxf-ver 25.10.4 --input ss.csv --outdir results -profile docker
-
-# Pass NXF_* environment variables (e.g. JVM IPv6 preferences or offline execution)
-nfclaw run rnaseq --nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true --input ss.csv --outdir results -profile docker
-```
-
-### 7. Pipeline Chaining
-
-```bash
-# Discover supported downstream handoffs for a pipeline
-nfclaw chain edges fetchngs
-
-# Preflight validate a multi-stage specification without launching scientific tasks
-nfclaw chain run spec.json --outdir /abs/chain --check
-
-# Execute a multi-stage chain (stage 1 -> stage 2 -> stage 3)
-nfclaw chain run spec.json --outdir /abs/chain
-
-# Resume a failed chain using Nextflow caching
-nfclaw chain run spec.json --outdir /abs/chain --resume
-
-# Inspect chain execution and verify cryptographic custody across all stages
-nfclaw chain status /abs/chain
-```
-
-### 8. Workstation Resource Caps
-
-```bash
-# Apply a resource ceiling to prevent out-of-memory aborts on local workstations
-nfclaw run rnaseq --input ss.csv --outdir results -profile docker \
-  --limit-cpus 4 --limit-memory 15.GB
-```
-
-Ceilings need Nextflow 24.04.0 or newer; [AGENTS.md](AGENTS.md) explains how they apply to
-retries. Neither a task nor the analysis has a time limit by default: `--limit-time` caps each
-task and `--timeout` the whole analysis ([timeouts and long analyses](docs/timeouts.md)).
-
-### 9. AI Agents over MCP
-
-```bash
-# Serve nf-claw to an MCP client on stdio (Claude Code shown; Codex, Antigravity, Hermes: docs/mcp.md)
-claude mcp add nfclaw -- "$PWD/.venv/bin/nfclaw" mcp
-```
-
-`nfclaw mcp` exposes the library and the runner as MCP tools (find a pipeline, read its
-`skill.md`/`reference.md`, run, chain, follow, stop, verify), with no extra dependency. Every
-tool runs the matching `nfclaw` command. Runs and chains become detached jobs that keep going
-when the client disconnects and are followed by job id. See [`docs/mcp.md`](docs/mcp.md).
-
----
-
-## Provenance, Replay & Verification
-
-By default, `nfclaw run` writes a provenance bundle into `<outdir>/provenance/`: the run log, a
-replay script with its dependency guard, the archived pipeline source, config copies, parameter,
-checksum and inventory records, and what could be recorded of the execution environment.
-[docs/architecture.md](docs/architecture.md#25-provenance-bundles--dependency-hashing) lists every
-file and what it establishes. The bundle does not embed scientific input data, container images or
-plugins, so those must stay available for a replay. [docs/replay.md](docs/replay.md) covers
-replaying, resuming and verifying, and their limits.
-
----
-
-## Maintain
-
-Generated context is never edited by hand: `make build` regenerates every `skill.md`,
-`reference.md` and `catalog.*` from the pinned submodules, `make update` bumps them to their newest
-releases, and `make check` runs the drift gate and the test suite. [`CONTRIBUTING.md`](CONTRIBUTING.md)
-explains each target and how to add a pipeline or a chaining handoff rule.
-
----
-
-## How It Stays Current
-
-Automated GitHub Actions workflows keep the library, test suites, and website synchronized with upstream releases:
-
-```
-┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
-│      auto-update.yml      │      │  discover-pipelines.yml   │      │     deploy-pages.yml      │
-│    Daily tag discovery    │      │   Weekly DSL2 discovery   │      │  Rebuild & deploy portal  │
-│    & acceptance gating    │      │ & strict exit-code 0 gate │      │      on push to main      │
-└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
-              │                                  │                                  │
-              └──────────────────────────────────┼──────────────────────────────────┘
-                                                 ▼
-                                ┌─────────────────────────────────┐
-                                │     Continuous Verification     │
-                                │  • smoke.yml (preflight)        │
-                                │  • nextflow-validate.yml (DAG)  │
-                                │  • tests.yml (matrix & run)     │
-                                │  • drift-check.yml (schemas)    │
-                                │  • demo-validation.yml (demo)   │
-                                │  • fastqrepair-validation.yml   │
-                                │  • pipeline-execution.yml (PR)  │
-                                └─────────────────────────────────┘
-```
-
-- **`auto-update.yml`** (daily) and **`discover-pipelines.yml`** (weekly) bump pinned releases and
-  onboard new DSL2 pipelines. Each fixed candidate must pass the full Ubuntu/macOS Python
-  3.11–3.15 matrix and real bundled tasks for every changed pin before a separate publisher
-  can fast-forward `main` ([publication policy](docs/maintenance.md)).
-- **`smoke.yml`**, **`nextflow-validate.yml`**, **`tests.yml`**, **`drift-check.yml`**,
-  **`demo-validation.yml`**, **`fastqrepair-validation.yml`** and **`pipeline-execution.yml`**
-  validate every change; [docs/compatibility.md](docs/compatibility.md#3-automated-continuous-validation)
-  gives each one's scope and what fails it.
-- **`deploy-pages.yml`** (push to `main`) rebuilds the portal, and **`codeql.yml`** (push, PR and
-  weekly) scans the Python, JavaScript/TypeScript and GitHub Actions code.
-
----
-
-## Scientific Validation & Limitations
-
-Use `nfclaw assess OUTDIR --contract FILE [--against ORIGINAL]` to require declared scientific
-outputs and sample coverage, and compare their parsed content. The
-[output-contract guide](docs/scientific-output-contracts.md) defines the supported tables,
-BAM/VCF/FASTA and selected H5AD matrix scope, exact comparisons, explicit tolerances and exclusions.
-Two source-bound demo contracts are supplied; other pipelines/branches still need their own.
-
-> [!WARNING]
-> **Analytical Rigor & Validation Caveats:**
-> nf-claw validates declared inputs, checks parameters against schemas, assembles commands, isolates execution environments, and tracks cryptographic provenance. Successful parameter validation, exit code 0 completion, or identical output file structures do not inherently establish biological or analytical accuracy.
->
-> Prior to relying on results in production scientific research:
-> 1. Validate chosen pipelines, parameters, and reference genomes using domain-appropriate benchmark datasets.
-> 2. Read the caveats `nfclaw status` reports for a successful run: a pipeline can exit 0 after skipping samples or ignoring failed tasks (`completion_caveats` in the run manifest).
-> 3. Use `nfclaw verify ... --strict` to verify byte agreement; employ format-aware bioinformatics tools to inspect numerical differences.
-> 4. Consult [known issues](docs/known-issues.md) for documented engine boundaries, upstream workarounds, and runtime guidance.
-
----
-
-## Citation & Attribution
-
-**The pipelines themselves are the work of the [nf-core](https://nf-co.re) community** — the heart of this library. Pipeline source trees remain **unmodified** as pinned git submodules; each maintains its own authors, license, and citations. Recorded runtime corrections are documented separately from those upstream sources.
-
-**nf-claw** was created by **Danilo Monge** (Eberhard Karls Universität Tübingen) and adapts architectural concepts and repository structures from [ClawBio](https://clawbio.ai) — created by **Manuel Corpas** (MIT license; copyright retained in [`LICENSE`](LICENSE), provenance in [`NOTICE`](NOTICE)).
-
-When utilizing nf-claw in scientific research, cite via [`CITATION.cff`](CITATION.cff), alongside its foundational technologies:
 - **Nextflow:** Di Tommaso P, *et al.* Nextflow enables reproducible computational workflows. *Nat Biotechnol* **35**, 316–319 (2017). [doi:10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820)
 - **nf-core:** Ewels PA, *et al.* The nf-core framework for community-curated bioinformatics pipelines. *Nat Biotechnol* **38**, 276–278 (2020). [doi:10.1038/s41587-020-0439-x](https://doi.org/10.1038/s41587-020-0439-x)
-- **Executed Pipeline:** Cited individually in `pipelines/<name>/upstream/CITATIONS.md`.
+- **The pipeline you ran:** see `pipelines/<name>/upstream/CITATIONS.md`.
 - **ClawBio:** Corpas M. ClawBio: Bioinformatics-Native AI Agent Skill Library. Zenodo (2026). [doi:10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648)
 
-nf-claw is MIT-licensed (© Danilo Monge). Upstream nf-core pipelines are MIT-licensed, and Nextflow is Apache-2.0.
+nf-claw is MIT-licensed (© Danilo Monge). The nf-core pipelines are MIT-licensed, and Nextflow is
+Apache-2.0.

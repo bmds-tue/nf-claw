@@ -8,6 +8,15 @@ each change, are in [`docs/audit/`](docs/audit/README.md).
 
 ## Unreleased
 
+### Changed
+
+- The documentation is rewritten in plain language. The README, `AGENTS.md`, `CONTRIBUTING.md`,
+  `llms.txt`, the website README and the guides in `docs/` lose promotional wording, title-case
+  labels, box diagrams and repetition; every fact, command and limit is kept. The README's
+  quickstart links to `AGENTS.md` instead of repeating it, and its workflow diagram is now a table
+  of each workflow's real triggers. On the website, "Pipeline universe" is now "Pipelines by
+  domain" (#265).
+
 ## [1.0.0] — 2026-11-08
 
 The first release: the runner and the 95 pipeline pins at tag `v1.0.0`. Its

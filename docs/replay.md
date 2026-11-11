@@ -9,13 +9,13 @@ limits.
 
 ## Navigation
 
-[Replaying](#replaying-a-run) • [Bundle Contents](#what-the-bundle-carries) • [Dependency Stability](#dependency-stability-during-execution) • [Local Inputs and Resume](#local-inputs-and-resume) • [Verifying](#checking-a-replay-nfclaw-verify) • [Output Contracts](#scientific-output-contracts-nfclaw-assess)
+[Replaying](#replaying-a-run) • [What the bundle carries](#what-the-bundle-carries) • [Dependency stability](#dependency-stability-during-execution) • [Local inputs and resume](#local-inputs-and-resume) • [Verifying](#checking-a-replay-nfclaw-verify) • [Output contracts](#scientific-output-contracts-nfclaw-assess)
 
 ---
 
 ## Replaying a run
 
-`<outdir>/provenance/commands.sh` re-runs the recorded command. It reproduces the run into a **fresh** directory (default `<outdir>.replay`, or pass one: `./commands.sh /path/to/fresh-dir`) and refuses a target that already holds files. That is deliberate: an nf-core pipeline publishes into `--outdir` and cannot re-publish over a previous run's files, so replaying in place fails immediately on `pipeline_info/execution_trace_*.txt` (and on sarek's `manifest_*.bco.json`). A replay re-executes the pipeline — it is a reproduction, not a `--resume` — and the result can be compared against the original bundle's `outputs.sha256`. It logs itself the same way, to `<target>/provenance/logs/run.log`, ending with its outcome: `nfclaw status <target>` reads it, and `kill <replay pid>` stops Nextflow with it.
+`<outdir>/provenance/commands.sh` re-runs the recorded command. It reproduces the run into a **fresh** directory (default `<outdir>.replay`, or pass one: `./commands.sh /path/to/fresh-dir`) and refuses a target that already holds files. That is deliberate: an nf-core pipeline publishes into `--outdir` and cannot re-publish over a previous run's files, so replaying in place fails immediately on `pipeline_info/execution_trace_*.txt` (and on sarek's `manifest_*.bco.json`). A replay runs the pipeline again (it is a reproduction, not a `--resume`), and its result can be compared with the original bundle's `outputs.sha256`. It logs itself the same way, to `<target>/provenance/logs/run.log`, ending with its outcome: `nfclaw status <target>` reads it, and `kill <replay pid>` stops Nextflow with it.
 
 Before launching Nextflow, `commands.sh` runs `provenance/replay_guard.py` against the original bundle. The guard checks the recorded pipeline revision and source identity, declared local input content including data paths referenced in samplesheets (`inputs.sha256`), and parameters and configuration (`configs.sha256`). Source identity version 2 binds regular-file bytes (`pipeline.sha256`), permissions, directories, internal relative symlinks and hard-link topology in `pipeline-source-identity.json`, including untracked/ignored source files and excluding root `.git` administration and Python `__pycache__` bytecode caches. The `inputs.inventory.json` and `configs.inventory.json` records also preserve directory entries (including empty directories), entry types and symlink identities. Changed or missing dependencies and incomplete bundles are refused, rather than producing silently divergent scientific results. Replay targets inside a recorded input directory are refused before creating their locks or logs. New replay bundles acquire the same output-directory writer lock as `nfclaw run`, so overlapping runs and replays cannot write into that directory concurrently.
 
@@ -43,29 +43,37 @@ Before declaring success, nfclaw compares declared local input bytes and namespa
 
 ## Local inputs and resume
 
-An ordinary run's source identity must also match before cached tasks are reused. Changes to
-source bytes, permissions, links, ignored files, the source path or Git revision start a fresh
-session and preserve the earlier run in a sibling archive. An earlier bundle without complete
-version 2 source identity also starts fresh: old content-only checks cannot certify modes or
-ignored runtime code. Unchanged complete source identity retains normal cache reuse. This guard
-also applies when the new launch disables provenance.
+Nextflow's own cache can miss a change to a file whose size and timestamp stayed the same, and a
+change deep inside a directory whose top-level metadata did not change. So before a real
+`--resume`, nfclaw compares two things with the previous run:
 
-A failed, timed-out or `kill <pid>`-stopped run writes its bundle and resumes normally. A launch
-whose nfclaw vanished before writing one (SIGKILL, out of memory, a host restart) or could not
-finish it (a full disk) leaves `provenance/launch-record.json`, written before Nextflow starts: the
-source identity and the input bytes and namespace it launched with. `--resume` compares those with
-what it finds and reuses the finished tasks if they agree. The record cannot show a change made
-and undone while that run ran, nor can the comparison a stopped run makes when it ends. The
-published bundle replaces the record.
+- **The inputs:** the directory listing taken before launch and the SHA-256 of every declared local
+  input file, samplesheet data paths included.
+- **The pipeline source:** its bytes, permissions, links, ignored files, path and Git revision.
 
-A launch with `--no-provenance` records neither, so it has no source identity or input snapshot to
-compare: `--resume` after it starts a fresh session, the earlier run is preserved in a sibling
-`<outdir>.previous-<id>` archive and every task is recomputed. Keep provenance on for long runs you
-may need to resume.
+If both are unchanged, Nextflow's cache is reused as usual. If either changed, or the previous record
+is missing or incomplete, nfclaw moves the whole previous run to `<outdir>.previous-<id>`, says
+where, and recomputes every task in a fresh Nextflow cache session. The earlier logs stay in the
+archive and are copied forward, so the run log keeps appending, and earlier published files cannot
+leak into the new result inventory. Archiving refuses while the engine's database is locked or when
+a dependency lies inside the run directory. A previous bundle without the complete version 2 source
+identity also starts fresh, because the older content-only checks cannot vouch for permissions or
+ignored runtime code. These checks also apply when the new launch uses `--no-provenance`. They cover
+declared local inputs, not remote or indirectly configured ones.
 
-Ordinary Nextflow caching can miss file byte changes when size and timestamp are preserved, as well as recursive directory changes when root metadata is unchanged.
+Where the previous record comes from:
 
-Before a real `--resume`, nfclaw compares the prelaunch directory namespace and the SHA-256 of every explicitly declared local input file, including samplesheet data paths, with the previous bundle. An unchanged namespace and content retain normal caching; a changed namespace, changed file content, or an unavailable inventory preserves the complete previous run in a sibling `<outdir>.previous-<id>` archive, announces its path, and recomputes all tasks in a fresh Nextflow cache session. Prior logs remain in the archive and are copied forward so the current run log still appends. Previous publications cannot contaminate the fresh result inventory. Archiving refuses active engine database locks and dependencies that overlap the run directory. This safeguard also applies when the new launch disables provenance. Without a valid earlier input snapshot, local-input runs start fresh because unchanged data cannot be established. It covers explicitly declared local inputs, not remote or indirectly configured inputs.
+- A run that failed, timed out or was stopped with `kill <pid>` writes its bundle and resumes from
+  it.
+- A run whose nfclaw vanished before writing the bundle (SIGKILL, out of memory, a host restart) or
+  could not finish it (a full disk) leaves `provenance/launch-record.json`, written before Nextflow
+  starts, with the source identity and the input bytes and listing it launched with. `--resume`
+  compares against that and reuses the finished tasks if they agree. The record cannot reveal a
+  change made and undone while that run ran, and it does not replace the check a run makes when it
+  ends normally. The bundle replaces the record once it is written.
+- A run launched with `--no-provenance` records neither, so there is nothing to compare: `--resume`
+  after it archives the earlier run and recomputes every task. Keep provenance on for long runs you
+  may need to resume.
 
 ## Checking a replay (`nfclaw verify`)
 
@@ -91,13 +99,16 @@ separately as `earlier attempts` and not compared; only launch-stamped run metad
 newest of its kind is set apart this way, never a result. Without a recorded resume, two such files
 for one remain unexplained and fail the structural check.
 
-For a stronger recorded-environment guarantee, add `--require-environment` (and optionally
-`--strict` for output bytes). It refuses missing or incomplete environment observations,
-containerless tasks, changed process sets/platforms/engine builds, and hashes of validation
-inputs fetched again after execution. A successful ordinary replay may still fail this stronger
-check. It verifies the recorded evidence and cannot discover undeclared dependencies.
+For a stronger check of the recorded environment, add `--require-environment` (and `--strict` for
+output bytes). It refuses missing or incomplete environment records, tasks without a container,
+changed sets of processes, platforms or engine builds, and validation inputs that were only hashed
+by fetching them again after the run. A replay that succeeded on its own can still fail this check.
+It verifies the recorded evidence and cannot discover dependencies that were never recorded.
 
-Replay requires Python 3.9 or newer as `python3` (its guard scripts use only the standard library; nfclaw itself is not needed) and checks the recorded local data, configurations, parameters and archived pipeline source before launching. A changed dependency or incomplete bundle is refused. It pins the observed Nextflow version and, where recorded and eligible, container image digests and the nf-core/configs commit, then compares the recorded environment evidence. Retain the original bundle: standalone replay writes logs and source/environment records into the target, rather than generating another complete replay bundle. Files a task downloads by itself, Conda environments and a config's own `includeConfig` targets are not frozen.
+A replay needs `python3` 3.9 or newer (the guard scripts use only the standard library; nfclaw itself
+is not needed). Keep the original bundle: a replay writes its logs and source and environment
+records into the target, not a new complete bundle. Files a task downloads by itself, Conda
+environments and a config's own `includeConfig` targets are not frozen.
 
 ## Scientific output contracts (`nfclaw assess`)
 
