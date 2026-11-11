@@ -33,8 +33,8 @@ site was last built.
 nfclaw checks a run before it starts and again before it reports success. It refuses unknown flags,
 invalid values, unsafe file names or sample identifiers, and output directories that overlap the
 inputs, instead of correcting them silently. It fails a run whose inputs, configs or pipeline source
-changed while it ran. [AGENTS.md](AGENTS.md) lists these rules briefly,
-[docs/preflight.md](docs/preflight.md#inputs-refused-before-launch) in full,
+changed while it ran. [AGENTS.md](AGENTS.md) states these rules briefly and
+[docs/preflight.md](docs/preflight.md#inputs-refused-before-launch) in full;
 [docs/architecture.md](docs/architecture.md) explains how they are enforced, and
 [docs/known-issues.md](docs/known-issues.md) where the checks stop.
 
