@@ -1,120 +1,117 @@
-# Automated Updating & Maintenance
+# Updating and discovery
 
-nf-claw maintains synchronization with upstream nf-core pipeline releases through fully automated workflows and a strict, bidirectional schema drift gate. No context file (`skill.md`, `reference.md`, or `catalog.*`) is ever edited manually.
+How nf-claw follows nf-core releases. Two scheduled workflows bump the pins to new releases and add
+new pipelines, and a drift gate checks that the generated files match the pinned code. Generated
+files (`skill.md`, `reference.md`, `catalog.*`) are never edited by hand.
 
 ---
 
 ## Navigation
 
-[Version Policy](#1-version-policy--upstream-tracking) • [Daily Updates](#2-automated-daily-updates-auto-updateyml) • [Weekly Discovery](#3-automated-weekly-discovery-discover-pipelinesyml) • [Schema Drift Gate](#4-the-schema-drift-gate-librariancheck_driftpy) • [Maintenance Commands](#5-manual-maintenance-commands)
+[Update policy](#update-policy) • [Daily updates](#daily-updates-auto-updateyml) • [Weekly discovery](#weekly-discovery-discover-pipelinesyml) • [Drift gate](#drift-gate-librariancheck_driftpy) • [Running maintenance locally](#running-maintenance-locally)
 
 ---
 
-## 1. Version Policy & Upstream Tracking
+## Update policy
 
-Tracking policies are declared in `sources.tsv`:
-- Each row contains `name<TAB>url<TAB>version-policy`.
-- The primary policy is `latest-release`, directing automation to select the highest numeric
-  `X.Y.Z` release tag (optional `v` prefix); prereleases and two-component tags are excluded
-  from automated bumping. Other policies are skipped by the updater: `hold` keeps a pipeline at
-  its current pin, for a release that cannot pass the native publication gate and would otherwise
-  hold back every other bump ([publication evidence policy](maintenance.md)). Explicit runtime
-  version selection also supports older `X.Y` tags.
-- Submodules pin exact commits resolved from release tags. Tags can be moved upstream, but a
-  committed gitlink remains tied to its recorded commit until deliberately updated.
+`sources.tsv` has one row per pipeline: `name<TAB>url<TAB>policy`.
 
----
-
-## 2. Automated Daily Updates (`auto-update.yml`)
-
-The `.github/workflows/auto-update.yml` workflow is scheduled daily at 06:00 UTC:
-
-```
-┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
-│ 1. Git Tag Discovery      │ ──► │ 2. Submodule Checkout     │ ──► │ 3. Context Generation     │
-│ git ls-remote --tags      │     │ Pinned to latest tag      │     │ make build                │
-└───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
-                                                                                  │
-                                  ┌───────────────────────────┐                   ▼
-                                  │ 5. Publish Validated Code │ ◄── ┌───────────────────────────┐
-                                  │ Fast-forward into main    │     │ 4. Validation Gate        │
-                                  └───────────────────────────┘     │ Nextflow + Tests + Drift  │
-                                                                    └───────────────────────────┘
-```
-
-1. **Tag Discovery:** Queries upstream remotes via `git ls-remote --tags` (using standard git protocol to bypass GitHub REST API rate limits).
-2. **Deterministic Bumping:** When a newer release tag is discovered for a `latest-release` pipeline, the workflow checks out that tag in `pipelines/<name>/upstream`.
-3. **Context Regeneration:** Invokes `librarian/write_skill.py` and `librarian/write_catalog.py` to regenerate all parameter tables, input schemas, tool lists, and catalog manifests.
-4. **Freeze and validate one candidate:** After unique completed preview acceptance, a read-only
-   preparation job creates a generated-path-only commit and immutable Git-bundle artifact. Its
-   exact commit is checked by the complete Ubuntu/macOS Python 3.11–3.15 matrix, site/browser/parser
-   tests, real Nextflow integration, Ruff and generated drift. Every changed pipeline must also
-   complete actual bundled tasks; stub-only, incomplete or failed runs cannot authorize publication.
-5. **Automatic publication:** A fresh trusted-base job independently checks raw matrix/native
-   evidence before publishing that exact prevalidated commit. It alone has write permissions.
-   Main is updated atomically against the expected validated parent, with no unchecked rebase or
-   post-validation commit. A moved main defers publication; permission, rule, network or
-   follow-up dispatch failures remain failures. Both bots share one concurrency group and bind
-   preparation to their event commit; a queued stale run defers rather than changing main.
-   The [publication evidence policy](maintenance.md) defines resources, artifact identities,
-   supported skips, retention, reruns and the limits of actual-task evidence. After publishing, the
-   bots dispatch tests, smoke, CodeQL and Pages.
-6. **Error Reporting:** The maintenance scan attempts every source and returns failure after the scan if any remote could not be reached, rather than reporting that failure as "no new releases."
+- `latest-release` lets the updater move the pin to the highest `X.Y.Z` release tag (with or
+  without a `v` prefix). Prereleases and two-part tags are never picked automatically, though
+  `--pipeline-version` can still run older `X.Y` tags.
+- Any other policy makes the updater skip the pipeline. `hold` keeps it at its current pin, for a
+  release that cannot pass the publication gate and would otherwise hold back every other bump
+  ([publication policy](maintenance.md)).
+- A submodule pins the commit a tag pointed to. If the tag is later moved upstream, the committed
+  pin stays on its recorded commit until it is updated on purpose.
 
 ---
 
-## 3. Automated Weekly Discovery (`discover-pipelines.yml`)
+## Daily updates (`auto-update.yml`)
 
-The `.github/workflows/discover-pipelines.yml` workflow is scheduled weekly (Mondays, 07:00 UTC) to onboard newly created nf-core pipelines:
+`.github/workflows/auto-update.yml` runs every day at 06:00 UTC:
 
-1. **DSL2 Filtering:** Inspects the nf-core pipeline registry, excluding archived or disabled entries and entries explicitly marked `is_DSL2: false`. A missing marker alone does not exclude a candidate; the Nextflow acceptance gate must still pass before onboarding. Legacy DSL1 workflows are unsupported.
-2. **Name Sanitization & Security:**
-   - Every candidate pipeline name must satisfy the [pipeline-name rule](../CONTRIBUTING.md#step-1-validate-the-pipeline-name).
-   - Remotes are deterministically constructed as `https://github.com/nf-core/<validated-name>.git`. Mutable catalog metadata cannot redirect automation to external repositories.
-3. **Scaffolding:** Adds the submodule, pins its newest release tag, and generates initial context files.
-   - Discovery shares the runner's submodule writer lock and checks ownership before mutation. Existing pipeline entries, Git index entries, registrations and cached object stores are preserved, including caches in linked worktrees. Reinitializing an existing pipeline is a separate `git submodule update --init pipelines/<name>/upstream` operation.
-   - Git commands cannot wait for credential prompts. Clone and tag-fetch operations have a 300-second bound; other discovery Git commands have a 60-second bound. Timeout and handled interruption stop the command's process group before failure cleanup.
-   - A failed owned addition restores the original `.gitmodules` working bytes and permission bits, its staged blob and its assume-unchanged, skip-worktree and intent-to-add state. Unmerged or nonregular metadata is refused before adding a pipeline. Cleanup removes only the newly reserved pipeline entry and its new cache; explicit `--rollback NAME` remains a request to remove that pipeline.
-   - Partial addition failures return a nonzero status after attempting the remaining candidates, so incomplete discovery cannot reach the batch publication gate.
-4. **Strict Acceptance Gate:** Evaluates each candidate via `scripts/nextflow_accept.sh`.
-   - Nextflow must compile, resolve configurations, and validate schema with **strict exit code 0**.
-   - A recognized remote-input staging failure is labelled `staging-unverified`; any other
-     failure, including a preview that exceeds its time limit, is labelled `rejected`. Neither
-     authorizes an automated merge.
-   - `rejected` and `staging-unverified` additions are pruned before committing, and are
-     considered again by the next run. An incomplete result or unrecognized verdict fails the
-     batch instead of merging it.
-5. **Batch publication:** Surviving additions are frozen as one candidate and pass the same
-   full matrix, site, integration, drift and actual-task gates as daily updates: both workflows
-   call `maintenance-gate.yml` for them and for publication. A failure in
-   real execution blocks the frozen candidate rather than silently dropping that pipeline.
-   The isolated publisher verifies raw evidence and updates main only from its validated parent.
+1. It lists each pipeline's tags with `git ls-remote --tags`, which avoids GitHub API rate limits.
+2. For a `latest-release` pipeline with a newer release, it checks out that tag in
+   `pipelines/<name>/upstream`.
+3. It regenerates the skills, references and catalogs (`librarian/write_skill.py`,
+   `librarian/write_catalog.py`).
+4. Each bumped release must pass a Nextflow preview ([preview acceptance](compatibility.md#preview-acceptance)).
+   A read-only job then commits only the generated paths and the pins, and stores that commit as an
+   immutable Git bundle. That exact commit must pass the full test matrix (Ubuntu and macOS,
+   Python 3.11–3.15), the website, parser and browser tests, the Nextflow integration tests, Ruff and
+   the drift gate. Every changed pipeline must also complete a real run of its bundled test;
+   stub-only, incomplete or failed runs block publication.
+5. A separate publisher job, started from the trusted base and the only job with write permission,
+   checks the raw test and run evidence and then fast-forwards `main` to that exact commit. Nothing
+   is rebased or committed after validation. If `main` moved in the meantime, publication is
+   deferred to the next run; permission, ruleset, network and dispatch failures are reported as
+   failures. Both bots share one concurrency group and start from the commit that triggered them,
+   so a stale queued run defers instead of changing `main`. After publishing, the bots start the
+   tests, smoke, CodeQL and Pages workflows. The [publication policy](maintenance.md) gives the
+   resources, artifacts, allowed skips, retention, reruns and the limits of this evidence.
+6. The scan tries every source. If any remote could not be reached, the run fails after the scan
+   instead of reporting "no new releases".
 
 ---
 
-## 4. The Schema Drift Gate (`librarian/check_drift.py`)
+## Weekly discovery (`discover-pipelines.yml`)
 
-The drift gate guards against divergence between pinned code and documentation:
+`.github/workflows/discover-pipelines.yml` runs every Monday at 07:00 UTC to add pipelines nf-core
+has released since the last run:
 
-| Audit Check | Component Validated | Validation Mechanism |
+1. It reads the nf-core pipeline list and skips archived and disabled pipelines and those marked
+   `is_DSL2: false`. A pipeline without a DSL2 marker is not skipped for that reason, but it must
+   still pass the acceptance gate. DSL1 pipelines are not supported.
+2. Every name must pass the [pipeline name rule](../CONTRIBUTING.md#1-check-the-name), and the
+   remote is always built as `https://github.com/nf-core/<name>.git`, so catalog metadata cannot
+   point the workflow at another repository.
+3. It adds the submodule, pins the newest release tag and generates the pipeline's files.
+   - Discovery uses the runner's submodule lock and checks ownership before it changes anything.
+     Existing pipelines, index entries, registrations and cached object stores are kept, including
+     caches in linked worktrees. Re-initialising an existing pipeline is done separately with
+     `git submodule update --init pipelines/<name>/upstream`.
+   - Git never waits for a credential prompt. Clones and tag fetches time out after 300 seconds,
+     other Git commands after 60; a timeout or interruption stops the command's process group before
+     cleanup.
+   - If an addition fails, discovery restores `.gitmodules` (bytes and permissions), its staged
+     blob and its assume-unchanged, skip-worktree and intent-to-add flags. Unmerged or unusual
+     metadata is refused before anything is added. Cleanup removes only the entry and cache it
+     created; `--rollback NAME` asks to remove that pipeline.
+   - If some additions fail, discovery still tries the rest and then exits non-zero, so an
+     incomplete batch never reaches publication.
+4. Each candidate runs through `scripts/nextflow_accept.sh`. Its preview must exit 0. A recognised
+   remote staging failure is labelled `staging-unverified`; any other failure, a timeout included,
+   is `rejected`. Neither can be published. Rejected and staging-unverified additions are dropped
+   before the commit and tried again next week. An incomplete result or an unknown verdict fails
+   the whole batch.
+5. The remaining additions become one candidate and go through the same gate and publisher as the
+   daily updates (`maintenance-gate.yml`). A failed real run blocks the whole candidate instead of
+   quietly dropping that pipeline.
+
+---
+
+## Drift gate (`librarian/check_drift.py`)
+
+| Check | Files | How |
 |---|---|---|
-| **Manifest Equivalence** | `sources.tsv`, `.gitmodules`, `pipelines/` | Asserts exact equality of pipeline inventory and git remote URLs. |
-| **Context Parity** | `skill.md`, `reference.md`, `catalog.*` | Recompiles context in memory and verifies character-for-character equality against disk. |
-| **Handoff Verification** | `handoffs/*.json` rules | Validates parameter mappings and downstream column compatibility against pinned schemas. Published file existence and identity are checked at runtime. |
+| Registrations | `sources.tsv`, `.gitmodules`, `pipelines/` | The pipeline lists and remote URLs must be identical. |
+| Generated files | `skill.md`, `reference.md`, `catalog.*` | Regenerated in memory and compared character for character with the committed files. |
+| Handoff rules | `handoffs/*.json` | Parameter mappings and downstream columns are checked against the pinned schemas. Whether published files exist is checked when a chain runs. |
 
-If any upstream pipeline is updated without regenerating context, or if a manual edit is introduced, `make check` fails immediately.
+A pin changed without regenerating the files, or a hand edit to a generated file, makes
+`make check` fail.
 
 ---
 
-## 5. Manual Maintenance Commands
+## Running maintenance locally
 
-The bots change only generated paths and pins, so they do not update hand-written guides: a new pin
-leaves [`docs/validation.md`](validation.md) and the [generation matrix](preflight.md#support-matrix)
-as of their stated dates. `skill.md` is always current.
+The bots change only generated paths and pins, never the hand-written guides, so a new pin leaves
+[`docs/validation.md`](validation.md) and the [generation matrix](preflight.md#support-matrix) as
+they were on their stated dates. `skill.md` is always current.
 
-Developers can run maintenance tasks locally from the repository root with Python 3.11+
-and initialized submodules. Install test dependencies with `pip install -e ".[dev,yaml]"`.
-Change generators rather than editing generated context, then run `make build` and
-`make check`. `make update` fetches tags, changes submodule checkouts and stages their
-gitlinks; review those changes before committing. It does not run the CI acceptance gate.
-[CONTRIBUTING.md](../CONTRIBUTING.md#makefile-targets-summary) lists every target.
+You can run the same tasks from the repository root with Python 3.11+ and initialised submodules;
+install the test dependencies with `pip install -e ".[dev,yaml]"`. Change the generators rather
+than the generated files, then run `make build` and `make check`. `make update` fetches tags,
+changes submodule checkouts and stages the new pins; review them before committing. It does not run
+the CI acceptance gate. [CONTRIBUTING.md](../CONTRIBUTING.md#make-targets) lists every target.

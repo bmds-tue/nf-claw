@@ -47,7 +47,7 @@ export function Footer({ repo, pipelines }: { repo: string | null; pipelines: Pi
 
         <FooterCol title="Explore">
           <FooterLink href="/pipelines/">All pipelines</FooterLink>
-          <FooterLink href="/#pipelines">Pipeline universe</FooterLink>
+          <FooterLink href="/#pipelines">Pipelines by domain</FooterLink>
           <FooterLink href="/#skills">Skills explorer</FooterLink>
           <FooterLink href="/#activity">Live activity</FooterLink>
           <FooterLink href="/#releases">Release timeline</FooterLink>

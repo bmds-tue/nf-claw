@@ -1,83 +1,88 @@
-# Automatic-publication evidence policy
+# Publication policy for the maintenance workflows
 
-Daily release updates and weekly discovery prepare one candidate commit before final validation,
-then hand it to the same gate and publisher (`maintenance-gate.yml`).
-Only generated regular context/catalog files, canonical source registrations and pinned gitlinks
-may change. Unsupported deletions, type changes, executable documents, symlinks and redirected
-repositories are refused. A private index preserves unrelated staging and build output.
+What the daily update and the weekly discovery must show before they change `main`. Both prepare one
+candidate commit and hand it to the same gate and publisher (`maintenance-gate.yml`). A candidate
+may change only generated files (skills, references, catalogs), the registrations of its pipelines
+and their pinned gitlinks. Deletions, type changes, executable documents, symlinks and redirected
+repositories are refused. The candidate is built in a private Git index, so unrelated staged
+changes and build output are left alone.
 
 ---
 
 ## Navigation
 
-[Overview](#overview) • [Gating Criteria](#publication-gating-criteria) • [Trusted-Base Publisher](#fresh-trusted-base-publisher) • [Verification Boundaries](#verification-boundaries)
+[The candidate](#the-candidate) • [What must pass](#what-must-pass) • [The publisher](#the-publisher) • [What this does not show](#what-this-does-not-show)
 
 ---
 
-## Overview
+## The candidate
 
-The candidate Git bundle and metadata are uploaded as one immutable artifact. Consumers receive
-its producing artifact ID and exact base/candidate SHAs, including on failed-job reruns. Every
-consumer verifies the candidate's single parent, changed paths, modes and gitlink inventory before
-checking out source or initializing submodules. Artifact IDs refer to the current workflow run;
-see GitHub's [artifact-ID download contract](https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333#download-artifacts-by-id).
+The candidate commit is stored as a Git bundle, together with its metadata, in one immutable
+artifact. Every job that uses it receives the artifact's ID and the exact base and candidate SHAs,
+also when a failed job is rerun. Before it checks out source or initialises submodules, each job
+verifies that the candidate has a single parent and the expected changed paths, file modes and
+gitlinks. Artifact IDs belong to the workflow run that produced them; see GitHub's
+[download-by-ID contract](https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333#download-artifacts-by-id).
 
-## Publication gating criteria
+## What must pass
 
-Publication requires all of these checks on that same candidate:
+All of these must pass on the same candidate:
 
-- All ten Ubuntu/macOS Python 3.11–3.15 lanes run the complete suite with initialized pinned
-  sources, Nextflow, Node/site dependencies, YAML and declared scientific adapters. macOS also
-  provisions GNU checksum/timeout tools before Nextflow setup. macOS 3.15
-  retains the documented H5AD exception while h5py has no matching wheel. Known obsolete audited
-  revision tests and the two Linux-only process tests on macOS may skip. Other missing-dependency
-  or source skips fail the evidence gate. Reports with fewer than 3,000 executed cases are refused;
-  this is a partial-report guard, while the workflow's unfiltered pytest command defines scope.
-- Website dependency audit, parser tests without skips, typecheck, build and Chromium browser
-  checks; actual Nextflow integration checks; Ruff; and generated-source drift.
-- For every changed pipeline pin, a fresh bundled analysis on Linux amd64/Docker. Each run has a
-  90-minute execution budget and ceilings of 2 CPUs, 6 GB memory and 30 minutes per task. It must
-  record a successful manifest at the expected pin, unchanged discovered dependencies, no stub
-  profiles/configs or completion caveats, and exactly one trace with real completed tasks. Empty
-  traces, cached tasks, nonzero exits, failures, duplicate IDs and incomplete rows are refused.
+- All ten test lanes (Ubuntu and macOS, Python 3.11–3.15) run the complete suite with the pinned
+  sources, Nextflow, the website dependencies, YAML support and the scientific format libraries.
+  macOS lanes install GNU checksum and timeout tools before Nextflow. macOS with Python 3.15 skips
+  the H5AD tests, as declared, while h5py has no wheel for it. Apart from that, only the tests of
+  known obsolete audited revisions and the two Linux-only process tests on macOS may be skipped;
+  any other skip for a missing dependency or source fails the gate. A report with fewer than 3,000
+  executed tests is refused as incomplete; the workflow's unfiltered pytest command defines what
+  the suite is.
+- The website's dependency audit, its parser tests (no skips), typecheck, build and Chromium tests;
+  the Nextflow integration tests; Ruff; and the drift gate.
+- For every changed pin, a fresh run of the pipeline's bundled test on Linux amd64 with Docker. Each
+  run gets 90 minutes and at most 2 CPUs, 6 GB of memory and 30 minutes per task. It must record a
+  successful manifest at the expected pin, unchanged dependencies, no stub profiles or configs, no
+  completion caveats, and exactly one trace with real completed tasks. Empty traces, cached tasks,
+  non-zero exits, failures, duplicate task IDs and incomplete rows are refused.
 
-Preview remains an early compatibility filter. Discovery may remove additions that fail that
-filter before freezing the candidate. A frozen candidate whose real analysis needs unavailable
-GPU hardware, credentials, references, images or greater resources does not publish. Its evidence
-remains available for manual investigation; a bounded-host failure is not proof that a release is
-scientifically invalid. Every release bump of a run is one candidate, so such a release also holds
-back the others, every day, until it passes. To let them through, give its `sources.tsv` row a
-policy other than `latest-release` (for example `hold`): the updater then leaves that pipeline at
-its current pin, and the next run publishes the rest. Restore `latest-release` once the release can
-pass, or adopt it deliberately with its own evidence. Metadata-only candidates require the complete
-matrix/site/integration/drift checks and skip native execution only when the verified
-changed-gitlink inventory is empty.
+The preview is an earlier, cheaper filter: discovery drops additions that fail it before freezing
+the candidate. A frozen candidate whose real run needs a GPU, credentials, references, images or
+more resources than the runner has is not published. Its evidence stays available for
+investigation, and a failure on a small runner does not mean the release is scientifically wrong.
 
-## Fresh trusted-base publisher
+All of a day's bumps form one candidate, so a release that cannot pass holds back the others every
+day until it does. To let the rest through, set that pipeline's policy in `sources.tsv` to
+something other than `latest-release`, such as `hold`: the updater then leaves it at its current
+pin and the next run publishes the others. Set `latest-release` again once the release can pass, or
+adopt it on purpose with its own evidence. A candidate that changes metadata only still needs the
+full matrix, website, integration and drift checks; it skips the real runs only when the verified
+list of changed pins is empty.
 
-The publisher runs in a fresh job from the trusted base, with no candidate or upstream code
-execution. It alone has write permissions. It independently parses every lane's raw pytest report
-and each changed pipeline's raw manifest/trace, checks their candidate/pin identities and hashes,
-and requires the actual upstream job results. Invalid or missing raw evidence cannot be replaced
-by a successful job label. All candidate, report and diagnostic artifacts have 90-day retention.
-Successful artifacts are immutable; failed diagnostics have separate names. A failed-job rerun
-can reuse the original candidate and completed lanes. To rerun a previously successful producer,
-rerun the complete maintenance workflow to prepare a fresh candidate.
+## The publisher
 
-After verification, the publisher pushes the exact candidate to a temporary branch and reports
-only the checks that ran. Main updates use an explicit expected-old-commit lease. The candidate's
-verified single parent makes an accepted update a fast-forward; a concurrent main change causes
-deferral, including when another actor has already put the candidate on main. An up-to-date Git
-response is not recorded as publication by this job. When main already equals the fully validated
-candidate, the publisher retries all required follow-up workflow dispatches without another main
-update. This recovers a prior publication whose deployment/test dispatch failed. The publisher never
-rebases or creates a post-validation commit. Successful publication dispatches tests, smoke checks, CodeQL and Pages;
-network, permission, ruleset or dispatch errors remain visible failures.
+The publisher runs in a fresh job started from the trusted base and never runs candidate or upstream
+code. It is the only job with write permission. It parses every lane's raw pytest report and each
+changed pipeline's raw manifest and trace itself, checks their candidate and pin identities and
+hashes, and requires the actual results of the jobs before it. A green job label cannot stand in for
+missing or invalid raw evidence. Candidate, report and diagnostic artifacts are kept for 90 days.
+Successful artifacts are immutable, and failed diagnostics get separate names. Rerunning failed jobs
+can reuse the original candidate and the lanes that completed; to rerun a producer that succeeded,
+rerun the whole maintenance workflow so it prepares a fresh candidate.
 
-## Verification boundaries
+After verification, the publisher pushes the candidate to a temporary branch and reports the checks
+that ran. It updates `main` only if `main` is still at the expected commit. Because the candidate's
+single parent is that commit, an accepted update is a fast-forward; if `main` changed, including
+when someone else already put the candidate there, publication is deferred. An "up to date" reply
+from Git is not counted as a publication by this job. When `main` already equals the fully validated
+candidate, the publisher only retries the follow-up workflow dispatches, which recovers a
+publication whose test or deployment dispatch failed. It never rebases or adds a commit after
+validation. A successful publication starts the tests, smoke, CodeQL and Pages workflows; network,
+permission, ruleset and dispatch errors are reported as failures.
 
-These gates establish tested wrapper behavior and actual bundled-task execution. They do not
-prove continuous filesystem immutability, honesty of arbitrary upstream executable code,
-complete biological branch coverage, or scientific accuracy. Format-aware output contracts and
-known-answer controls retain their separate scope. GitHub-hosted matrix execution is only proven
-by the resulting workflow evidence; Linux server tests of this policy do not establish macOS runs.
+## What this does not show
+
+These gates show that the runner behaves as tested and that each changed pipeline's bundled test
+really ran. They do not show that files stayed unchanged at every moment, that upstream code does
+what it claims, that every scientific branch of a pipeline works, or that its results are correct.
+Output contracts and known-answer controls are separate checks. GitHub-hosted runs are proven only
+by their own workflow evidence: tests of this policy on a Linux server say nothing about the macOS
+lanes.

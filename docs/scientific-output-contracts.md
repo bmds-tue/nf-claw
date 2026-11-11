@@ -1,19 +1,19 @@
 # Scientific output contracts
 
-`nfclaw assess` checks explicit expectations after a run. It returns JSON and exits nonzero if
-any declared artifact, sample, format, binding or comparison fails. It does not infer completeness
-from the process exit status. Existing `verify`, `verify --strict` and
-`verify --require-environment` keep their separate file/namespace/environment behavior.
+`nfclaw assess` checks a run's outputs against expectations written down in a contract. It prints
+JSON and exits non-zero if any declared file, sample, format, binding or comparison fails. It does
+not take a zero exit status as proof that the outputs are complete. `nfclaw verify`, with or without
+`--strict` or `--require-environment`, is a separate check of files, listings and environment.
 
 ---
 
 ## Navigation
 
-[Usage & Setup](#usage--setup) • [Contract Specification](#contract-specification) • [Supported Formats](#supported-formats-and-comparison-scope) • [Tolerances & Exclusions](#tolerances-samples-and-exclusions) • [Shipped Contracts](#shipped-contracts-and-coverage)
+[Usage](#usage-and-setup) • [Contract format](#contract-specification) • [Formats](#supported-formats-and-comparison-scope) • [Tolerances and exclusions](#tolerances-samples-and-exclusions) • [Supplied contracts](#shipped-contracts-and-coverage)
 
 ---
 
-## Usage & Setup
+## Usage and setup
 
 ```bash
 pip install -e '.[scientific]'
@@ -21,18 +21,18 @@ nfclaw assess results/hgtseq.replay --against results/hgtseq \
   --contract runner/output_contracts/hgtseq-1.1.0-historical-demo.json
 ```
 
-Omit `--against` to check one run's requirements. With `--against`, the selected original files
-must still match their recorded `provenance/outputs.sha256` before their contents can be a
-reference. Candidate files are always read live. Both sides are hashed again after parsing.
-These before/after observations do not establish continuous immutability.
+Without `--against`, `nfclaw assess` checks one run against the contract. With `--against`, the
+original run's selected files must still match their recorded `provenance/outputs.sha256` before
+they serve as the reference. The candidate's files are read as they are. Both sides are hashed again
+after parsing; that shows they did not change between the two readings, not that they never changed.
 
-The BAM/VCF and H5AD adapters are optional. h5py 3.16 has no Python 3.15 wheel: installation on
-that interpreter needs a source build with HDF5 development headers/libraries (and pkg-config, or
-explicit HDF5 include/library paths). The validation server's Python 3.15 adapter tests passed with a private
-HDF5 1.10.10 build environment. CI prepares HDF5 on Linux 3.15; macOS 3.15 tests the runner and
-BAM/VCF adapters, while its H5AD lane awaits an available wheel. Other CI Python versions install
-all adapters. This describes the configured CI scope; each workflow run is the evidence for its own
-lanes.
+The BAM/VCF and H5AD readers are optional (the `scientific` extra). h5py 3.16 has no wheel for
+Python 3.15, so installing it there needs a source build with the HDF5 development headers and
+libraries (and pkg-config, or explicit HDF5 include and library paths). On the validation server,
+the Python 3.15 reader tests passed with a private HDF5 1.10.10 build. CI prepares HDF5 for Linux
+with 3.15; macOS with 3.15 tests the runner and the BAM/VCF readers but skips H5AD until a wheel
+exists. The other CI Python versions install every reader. That is how CI is configured; each
+workflow run is the evidence for its own lanes.
 
 ## Contract specification
 
@@ -42,10 +42,10 @@ Unknown or duplicate fields are refused. Parameter conditions preserve JSON type
 zero), and parameter bytes must match `configs.sha256`. Profile/config defaults absent from
 the recorded params file cannot be bound through a parameter condition.
 
-In comparative mode the binding applies **only to the recorded original**. The candidate's
-software and parameters remain unverified: passing means its selected content satisfies those
-expectations, not that it ran the same pipeline/environment. Use the existing environment
-verification separately. Single-run assessment requires its own binding records.
+With `--against`, the binding applies **only to the recorded original**. The candidate's software
+and parameters are not checked: passing means its selected content meets the expectations, not that
+it ran the same pipeline or environment. Check the environment separately with `nfclaw verify`. When
+one run is assessed on its own, its own records must satisfy the binding.
 
 Each artifact names one exact relative `path` and a supported `format`. It may declare
 `min_records`, `expected_records` and a `coordinates` description. Missing, external-link,
@@ -121,8 +121,8 @@ See the [AnnData format](https://anndata.readthedocs.io/en/stable/fileformat-pro
 | [HGTseq historical demo](../runner/output_contracts/hgtseq-1.1.0-historical-demo.json) | Exact 1.1.0 source, immutable matched references, expected paths for testsample01/02/03, nonempty sorted BAMs and exact decoded replay comparison. | These BAMs have no read-group sample labels; identity is the explicitly required per-sample path. No HGT-inference accuracy, classifier, plot or report contract. |
 | [Tumourevo tiny demo](../runner/output_contracts/tumourevo-1.0.0-demo.json) | Exact 1.0.0 source, intended `2:3` grid, three keyed PyClone input tables with both expected B/C samples and the known-answer control's 630/626/429 rows, plus six filtered VCFs. Only the declared positional dataframe index and bcftools command metadata are excluded. | The row counts are fixture regression expectations, not biological truth. Joint MS VCFs retain four cohort sample columns; SS/SS_nobam each retain the selected tumour and normal. This does not validate inferred trees, fitted signatures, CNAqc accuracy, all outputs or another input cohort. The upstream test profile's remaining implicit remote defaults are not authenticated by parameter binding. |
 
-Other pins/branches still need their own reviewed output contracts. The generic adapters and two
-selected fixture contracts do not establish scientific validation for the other pipelines. In
-particular H5AD currently has adversarial format controls, not a newly executed biological pipeline
-benchmark. Exact assembly comparison intentionally flags a lost Flye contig; changing RNG output,
-reports or filenames does not become acceptable merely because it is variable.
+Other pins and branches need their own reviewed contracts. The format readers and these two demo
+contracts do not validate any other pipeline scientifically. H5AD in particular is covered by
+format tests built to break the reader, not by a biological benchmark of a pipeline run. Exact
+assembly comparison deliberately flags a lost Flye contig: output that changes with a random seed,
+reports or file names is not accepted just because it varies.

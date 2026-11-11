@@ -1,102 +1,142 @@
-# Engine & Version Compatibility
+# Engine and version compatibility
 
-nf-claw wraps each nf-core pipeline **unmodified**, pinned to a commit resolved from a release tag. The runtime requirements of any pipeline are therefore dictated by that pinned release and its upstream dependencies, not by nf-claw.
+nf-claw runs each nf-core pipeline unmodified, pinned to the commit of a release tag. What a pipeline
+needs at run time (Nextflow version, Java, containers) is therefore set by that release, not by
+nf-claw. This page covers matching the Nextflow version to a release, the controls nfclaw offers for
+it, the CI workflows that check compatibility, and host requirements.
 
 ---
 
 ## Navigation
 
-[DSL2 Invariant](#1-only-dsl2-pipelines-are-supported) • [Nextflow Engine Matching](#2-matching-nextflow-engine-to-pinned-releases) • [Parser Transition](#the-parser-transition) • [Engine Controls](#runtime-engine-controls-in-nfclaw) • [Continuous Validation](#3-automated-continuous-validation) • [Host Requirements](#4-host-environment-requirements)
+[DSL2 only](#dsl2-only) • [Matching the Nextflow version](#matching-the-nextflow-version) • [Engine controls](#engine-controls) • [Continuous validation](#continuous-validation) • [Host requirements](#host-requirements)
 
 ---
 
-## 1. Only DSL2 Pipelines Are Supported
+## DSL2 only
 
-Nextflow permanently removed legacy DSL1 workflow syntax in version **22.12** (DSL2 became default in 22.03). Consequently, legacy DSL1 workflows cannot execute on modern Nextflow runtimes:
+Nextflow removed DSL1 in version 22.12 (DSL2 had been the default since 22.03), so DSL1 pipelines
+cannot run on a current engine.
 
-- **Automated Discovery:** `librarian/discover_pipelines.py` skips archived or disabled entries and pipelines explicitly marked `is_DSL2: false` in nf-core metadata. A missing DSL2 marker alone does not exclude a candidate; the Nextflow acceptance gate must still pass before automated onboarding.
-- **Manual Additions:** Any pipeline contributed manually must adhere strictly to DSL2 structure.
+- `librarian/discover_pipelines.py` skips archived and disabled pipelines and those nf-core marks
+  `is_DSL2: false`. A missing DSL2 marker alone does not exclude a pipeline; it must still pass the
+  Nextflow acceptance gate before it is added.
+- A pipeline added by hand must be DSL2.
 
 ---
 
-## 2. Matching Nextflow Engine to Pinned Releases
+## Matching the Nextflow version
 
-There is **no single Nextflow version that can run every pipeline release**. Each nf-core release declares its minimum engine requirement in `nextflow.config` via `manifest.nextflowVersion` (e.g., `!>=23.04.0` or `!>=25.10.4`), and is authored against the configuration parser of its era:
+No single Nextflow version runs every pinned release. Each release declares its minimum engine in
+`nextflow.config` (`manifest.nextflowVersion`, for example `!>=23.04.0` or `!>=25.10.4`) and was
+written for the configuration parser of its time.
 
-### Nextflow Generation Overview
-
-| Generation | Era / Versions | Parser Behavior | Typical Pipeline Compatibility | Recommended Flag |
+| Parser | Engines | Behaviour | Examples | What to pass |
 |---|---|---|---|---|
-| **Legacy Parser** | Default through `25.10.x`; selectable with `NXF_SYNTAX_PARSER=v1` on 26.04 | Permissive Groovy parsing; allows `def check_max()`, dynamic inclusions, and parse-time manifest lookups. | `chipseq` 2.1.0, `atacseq` 2.1.2, `circdna` 1.1.0, `marsseq` 1.0.3, `scrnaseq` 4.2.0 | `--nxf-ver 25.10.4` |
-| **Strict Parser** | Opt-in on 25.04/25.10; default from `26.04` | Strict declarative configuration validation before plugins load; rejects Groovy functions in config. | Releases using strict syntax (`mag` 5.5.0 declares `!>=26.04.0`) | Pin a tested compatible engine, e.g. `--nxf-ver 26.04.0` for mag 5.5.0 |
+| Legacy | Default up to 25.10; selectable on 26.04 with `NXF_SYNTAX_PARSER=v1` | Permissive Groovy: allows `def check_max()`, dynamic includes and manifest lookups while parsing. | `chipseq` 2.1.0, `atacseq` 2.1.2, `circdna` 1.1.0, `marsseq` 1.0.3, `scrnaseq` 4.2.0 | `--nxf-ver 25.10.4` |
+| Strict | Opt-in on 25.04 and 25.10; default from 26.04 | Validates the configuration before plugins load and rejects Groovy functions in config. | `mag` 5.5.0 declares `!>=26.04.0` | An engine tested with the release, e.g. `--nxf-ver 26.04.0` for mag 5.5.0 |
 
-### The Parser Transition
-Nextflow 25.04 and 25.10 default to the legacy parser; the strict parser is opt-in via `NXF_SYNTAX_PARSER=v2`. Starting with 26.04, strict syntax is the default, and the legacy parser can be selected with `NXF_SYNTAX_PARSER=v1`. Strict configuration syntax rejects some Groovy constructs allowed by older releases. See the official [strict syntax guide](https://docs.seqera.io/nextflow/strict-syntax) and [26.04 migration notes](https://docs.seqera.io/nextflow/migrations/26-04).
+### The parser change in 26.04
 
-Older pinned releases such as `chipseq` 2.1.0, `atacseq` 2.1.2 and `circdna` 1.1.0 have reproduced parser failures with the default 26.04 parser. Pin an engine that works with that release; a minimum-version declaration alone is not proof of compatibility with every later engine.
+Nextflow 25.04 and 25.10 use the legacy parser by default; the strict parser is opt-in with
+`NXF_SYNTAX_PARSER=v2`. From 26.04 the strict parser is the default and `NXF_SYNTAX_PARSER=v1` selects
+the legacy one. The strict parser rejects some Groovy that older releases rely on; see Nextflow's
+[strict syntax guide](https://docs.seqera.io/nextflow/strict-syntax) and
+[26.04 migration notes](https://docs.seqera.io/nextflow/migrations/26-04).
 
-Nextflow 26.10 also moves console logs from stdout to stderr ([migration notes](https://docs.seqera.io/nextflow/migrations/26-10#breaking-changes)). nfclaw captures both streams in the run log and preserves them separately in `stdout.txt` and `stderr.txt`; their contents depend on the selected engine.
+Older releases such as `chipseq` 2.1.0, `atacseq` 2.1.2 and `circdna` 1.1.0 fail to parse under
+26.04's default parser. Pin an engine that works with the release: a minimum-version declaration does
+not mean every later engine works.
 
-### Runtime Engine Controls in `nfclaw`
-To ensure reproducible execution across releases of varying ages, nf-claw provides explicit engine controls:
-
-1. **`--nxf-ver X.Y.Z`**: Pins the Nextflow version for a run by setting `NXF_VER`. Nextflow's launcher automatically downloads and executes the requested version.
-   - If your host Nextflow is too new for an older pipeline release, pin an engine that matches its era:
-     ```bash
-     nfclaw run chipseq --input samplesheet.csv --outdir results -profile docker --nxf-ver 25.10.4
-     ```
-   - An engine older than the pipeline's declared `nextflowVersion` is refused by Nextflow itself at launch (every pinned release uses the strict `!>=` form). A launch does not repeat that check; nfclaw's error names the `--nxf-ver` the release declares. `--check`, which never launches pipeline tasks, prints an informational advisory instead.
-2. **`--nxf-env KEY=VALUE`**: Passes `NXF_*` variables directly to Nextflow:
-   - IPv6-only environments: `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true`
-   - Air-gapped / offline runs: `--nxf-env NXF_OFFLINE=true`
-3. **Provenance Recording**: Both `--nxf-ver` and `--nxf-env` are recorded in `<outdir>/provenance/run_manifest.json`. Replay restores recorded non-sensitive `NXF_*` variables and pins the observed engine version; redacted secrets must be supplied again. Eligible Docker/Podman processes receive digest pins in `containers.config`; Singularity/Apptainer image files are recorded by SHA-256. `environment.json` records the loaded plugins and Java runtime. Plugin changes fail the replay's environment comparison, while Java runtime changes are informational notes. Other environment variables are not frozen; see [replay and verification](architecture.md#26-replay--replay-guard) for comparison limits.
-
-> [!TIP]
-> **Chaining Engine Overrides:** In pipeline chains (`nfclaw chain run`), each stage can declare its own `"nxf_ver"` in `spec.json`, allowing modern and older pipelines to use different compatible engines within one chain.
+Nextflow 26.10 also moves console logs from stdout to stderr
+([migration notes](https://docs.seqera.io/nextflow/migrations/26-10#breaking-changes)). nfclaw writes
+both streams to the run log and keeps them separately in `stdout.txt` and `stderr.txt`; what each
+contains depends on the engine.
 
 ---
 
-## 3. Automated Continuous Validation
+## Engine controls
 
-The repository validates engine and workflow compatibility using automated GitHub Actions workflows:
-
-| Workflow | Scope & Verification Level | Failure Criteria |
-|---|---|---|
-| **`smoke.yml`** (weekly & on changes) | Builds and preflights each pipeline's demo command via `nfclaw run --check --demo` on the engine its `skill.md` advises, which also has that engine parse the release's configuration, and validates registered registry chains. Reports, without failing, which pins the launcher's default engine refuses when no `--nxf-ver` is given. Validates schema parsing, CLI argument handling, parameter composition and configuration parsing without launching Nextflow tasks. | Any schema parsing exception, unknown parameter rejection, invalid command assembly, or a configuration the advised engine cannot parse. |
-| **`nextflow-validate.yml`** (weekly & when a pin changes) | Runs each pinned test profile with `-preview`, using the declared engine (or 24.10.5 when the declaration predates the preview-capable 22.10.0 floor). Checks configuration, applicable schema validation and DAG construction across parallel shards. Containers are not pulled or executed. | Any nonzero exit code, 15-minute timeout, initialization failure, or unresolvable remote staging — except a documented upstream defect of that exact commit failing with its recorded evidence (reported `known-*`, never accepted). |
-| **`tests.yml`** (push, PR & reusable maintenance gate) | Complete Python 3.11–3.15 Linux/macOS matrix with pinned sources and scientific adapters (documented macOS 3.15 H5AD exception), real Nextflow integration, website audit/build and Chromium tests. | Failed checks or undeclared skipped coverage; [publication evidence policy](maintenance.md). |
-| **`drift-check.yml`** (PR, daily & manual) | Regenerates all pinned pipeline context and checks catalog, manifest and handoff consistency. | Any detected drift. |
-| **`demo-validation.yml`** (PR touching `runner/`, the demo pin or its own files; manual) | Executes the pinned demo in native Linux Docker and replays it into a fresh directory and from the bundle's source archive, then checks each run against nf-core/demo's own nf-test snapshot (its expected output paths and checksums) and checks what nfclaw recorded: engine identity, parameters, container digests and the replay's environment comparison. | Analysis failure, a result that differs from the release's snapshot, or a recording or replay check failure. |
-| **`fastqrepair-validation.yml`** (PR touching `runner/`, the fastqrepair pin or its own files; manual) | Executes the affected release with recorded runtime corrections, checks independent single/paired read controls and replay. | Execution, read-conservation or replay-check failure. |
-| **`pipeline-execution.yml`** (PR changing this workflow; manual, for any pipeline) | Executes a selected pinned pipeline's bundled test profile on native Linux Docker under bounded resources and its declared engine, then checks the run status and the recorded engine identity; outputs and task scripts are retained as evidence. It does not replay or verify the run (`demo-validation.yml` and `fastqrepair-validation.yml` do). | Process failure, timeout, or an engine identity that was not recorded. |
-| **`maintenance-gate.yml`** (reusable; both maintenance bots) | Runs `tests.yml`, `maintenance-native.yml` and the drift gate on one frozen candidate, then the isolated publisher, the only job with write permissions. | Any gate failure or invalid raw evidence: nothing is published. |
-| **`maintenance-native.yml`** (reusable maintenance gate) | Runs real bundled tasks for every changed candidate pin on Linux amd64/Docker; the fresh publisher checks raw task evidence. | Stub-only, failed, empty, cached or incomplete execution, a wrong pin, changed dependencies or missing evidence. |
-
-### Strict Exit Code Gating
-Automated discovery and update workflows require **strict exit code 0** from Nextflow validation. Pipelines with a recognized remote-input staging error are labelled `staging-unverified`, and every other failure, an unexpected timeout included, `rejected`. Both block automated merging. A failure caused by an unreachable remote file (a staging report, or nf-schema's existence check on a URL) or by a failed plugin download is retried twice, after 30 seconds and then 5 minutes, before it is reported: hosted test data and plugin releases are occasionally unreachable, once for over ten minutes. A preview that still fails is never accepted. Some upstream completion handlers wait for task results that preview never produces, so a compiled DAG can still fail the preview gate. Reduced-output previews and actual test executions must be reported separately from default-profile acceptance.
-
-Upstream defects that make a pinned release's default preview fail — each investigated in [`known-issues.md`](known-issues.md#upstream-pipeline-bugs-documented-not-patched) — are recorded in [`scripts/nextflow_accept_exceptions.tsv`](../scripts/nextflow_accept_exceptions.tsv) by **exact commit**, expected outcome and an evidence pattern (searched in the console and the Nextflow log). Such a preview is reported `known-rejected`, `known-staging-unverified` or `known-timeout`: it is **not accepted**, but it does not turn the weekly gate red while it still fails exactly as documented, so a new regression elsewhere stays visible. A different failure, missing evidence, a preview that now passes (`stale-exception`), or any other commit — every release bump — is judged as above, so an exception never carries over to a new release. A documented `timeout` is bounded at 300 seconds, since its evidence (the task monitor's barrier after the DAG is built) is written within seconds.
-
-Running `scripts/nextflow_accept.sh` locally needs Python 3.11+: the script uses `$PYTHON`
-(default `python3`, which on macOS is often 3.9) and refuses an older interpreter before
-any preview. Each preview gets 15 minutes, followed by a 10-second shutdown grace period
-before surviving process-group members are killed. GNU `timeout` (or `gtimeout` from Homebrew
-coreutils) enforces that when present; without either, the bundled
-`scripts/run_with_timeout.py` enforces the same deadline, grace period and exit statuses, so a
-preview is never unbounded.
-
-> [!NOTE]
-> Successful preview and smoke verification confirms syntactic correctness and DAG construction within the tested environment; it does not constitute execution or biological verification on experimental datasets.
+- **`--nxf-ver X.Y.Z`** pins the Nextflow version for a run by setting `NXF_VER`; the Nextflow
+  launcher downloads that version on first use. If your Nextflow is too new for an older release,
+  pin one from the release's era:
+  ```bash
+  nfclaw run chipseq --input samplesheet.csv --outdir results -profile docker --nxf-ver 25.10.4
+  ```
+  Nextflow itself refuses an engine older than the release's `nextflowVersion` (every pinned release
+  uses the strict `!>=` form). nfclaw does not repeat that check before launch, but its error names
+  the `--nxf-ver` the release declares, and `--check`, which launches nothing, prints it as an
+  advisory.
+- **`--nxf-env KEY=VALUE`** passes an `NXF_*` variable to Nextflow, for example
+  `--nxf-env NXF_JVM_ARGS=-Djava.net.preferIPv6Addresses=true` on an IPv6-only host, or
+  `--nxf-env NXF_OFFLINE=true` for an offline run.
+- **Recording.** Both are recorded in `<outdir>/provenance/run_manifest.json`. A replay restores the
+  recorded `NXF_*` variables that are not secret and pins the engine version that ran; redacted
+  secrets must be supplied again. Eligible Docker and Podman processes are pinned to image digests in
+  `containers.config`, and Singularity/Apptainer image files are recorded by SHA-256.
+  `environment.json` records the loaded plugins and the Java runtime: a replay with different
+  plugins fails its environment comparison, while a different Java is reported as a note. Other
+  environment variables are not frozen; [replay and verification](replay.md) gives the limits.
+- **Chains.** Each stage of `nfclaw chain run` can set its own `"nxf_ver"`, so old and new
+  pipelines can run on different engines in one chain.
 
 ---
 
-## 4. Host Environment Requirements
+## Continuous validation
 
-| Requirement | Supported Version | Notes & Invariants |
+| Workflow | Runs | What it checks | What fails it |
+|---|---|---|---|
+| `smoke.yml` | weekly, and on `main` when the runner or a pin changes | `nfclaw run --check --demo` for every pipeline on the engine its `skill.md` advises, which includes that engine parsing the release's configuration, and the registered chains. It also reports, without failing, which pins the launcher's default engine refuses when no `--nxf-ver` is given. Nothing is launched. | A schema parsing error, a rejected parameter, a wrong command, or a configuration the advised engine cannot parse. |
+| `nextflow-validate.yml` | weekly, and on `main` when a pin changes | `nextflow run -preview` of every pipeline's test profile on its declared engine (24.10.5 when the declaration is older than 22.10.0, the first engine with `-preview`), in parallel shards. This checks the configuration, the schema validation that applies, and that the DAG builds. No container is pulled or run. | A nonzero exit, a 15-minute timeout, an initialisation failure or remote test data that cannot be staged, unless it is a documented upstream defect of that exact commit failing as recorded (reported `known-*`, never accepted; see below). |
+| `tests.yml` | push to `main`, pull requests, and the maintenance gate | pytest on Ubuntu and macOS with Python 3.11–3.15, with the pinned sources and the scientific format libraries (macOS 3.15 skips H5AD, as declared), integration tests against a real Nextflow, and the website audit, build and Chromium tests. | A failed test or an undeclared skip. See the [publication policy](maintenance.md). |
+| `drift-check.yml` | pull requests, daily, manual | Regenerates the context of every pinned pipeline and checks the catalog, the manifest and the handoff rules. | Any drift. |
+| `demo-validation.yml` | pull requests that change `runner/`, the demo pin or the workflow; manual | Runs nf-core/demo in Docker on Linux, replays it into a fresh directory and from the bundle's source archive, and compares each run with the release's own nf-test snapshot (expected paths and checksums). It also checks what nfclaw recorded: engine, parameters, container digests and the replay's environment comparison. | A failed run, a result that differs from the snapshot, or a failed recording or replay check. |
+| `fastqrepair-validation.yml` | pull requests that change `runner/`, the fastqrepair pin or the workflow; manual | Runs the release with its recorded corrections, checks single-end and paired-end read controls and the replay. | A failed run, reads lost or mispaired, or a failed replay check. |
+| `pipeline-execution.yml` | manual (and pull requests that change the workflow) | Runs one chosen pipeline's test profile in Docker on Linux with bounded resources and its declared engine, then checks the run status and the recorded engine. Outputs and task scripts are kept as evidence. It does not replay or verify the run. | A failed run, a timeout, or no recorded engine. |
+| `maintenance-gate.yml` | called by both maintenance bots | Runs `tests.yml`, `maintenance-native.yml` and the drift gate on one frozen candidate, then the publisher, the only job with write permission. | Any failed gate or invalid evidence; nothing is published. |
+| `maintenance-native.yml` | called by the maintenance gate | Runs the bundled test of every changed pin for real on Linux amd64 with Docker; the publisher then checks the raw task evidence. | Stub-only, failed, empty, cached or incomplete runs, a wrong pin, changed dependencies or missing evidence. |
+
+### Preview acceptance
+
+The update and discovery workflows accept a new or bumped pin only if its preview exits 0. A preview
+that fails while staging remote input is labelled `staging-unverified`; any other failure, an
+unexpected timeout included, is `rejected`. Both block publication. A failure caused by an
+unreachable remote file (a staging error, or nf-schema's existence check on a URL) or a failed plugin
+download is retried twice, after 30 seconds and after 5 minutes, because hosted test data and plugin
+releases are sometimes unreachable, once for more than ten minutes. A preview that still fails is
+never accepted. Some completion handlers wait for task results a preview never produces, so a
+release whose DAG builds can still fail its preview. Reduced-output previews and real test runs are
+reported separately from this acceptance.
+
+Upstream defects that make a pinned release's default preview fail are investigated in
+[known issues](known-issues.md#upstream-pipeline-bugs-documented-not-patched) and listed in
+[`scripts/nextflow_accept_exceptions.tsv`](../scripts/nextflow_accept_exceptions.tsv) with the exact
+commit, the expected outcome and an evidence pattern searched in the console and the Nextflow log.
+Such a preview is reported `known-rejected`, `known-staging-unverified` or `known-timeout`. It is not
+accepted, but while it fails exactly as documented it does not turn the weekly run red, so a new
+regression elsewhere stays visible. A different failure, missing evidence, a preview that now passes
+(`stale-exception`) or any other commit, including every release bump, is judged normally: an
+exception never carries over to a new release. A documented `timeout` is cut off after 300 seconds,
+since its evidence (the task monitor waiting after the DAG is built) appears within seconds.
+
+Running `scripts/nextflow_accept.sh` locally needs Python 3.11+. The script uses `$PYTHON` (default
+`python3`, often 3.9 on macOS) and refuses an older interpreter before any preview. Each preview gets
+15 minutes, then 10 seconds to shut down before the remaining processes in its group are killed. GNU
+`timeout` (or `gtimeout` from Homebrew coreutils) enforces this when installed; otherwise
+`scripts/run_with_timeout.py` enforces the same deadline, grace period and exit statuses.
+
+A passing preview or smoke check shows that the configuration parses and the DAG builds in the tested
+environment. It does not run the analysis and says nothing about results on real data.
+
+---
+
+## Host requirements
+
+| Requirement | Version | Notes |
 |---|---|---|
-| **Operating System** | Linux or macOS (Windows: inside WSL 2) | `nfclaw run`, `nfclaw chain run` and MCP jobs refuse a Python without POSIX file locks (native Windows) rather than run without their writer locks; Nextflow itself needs WSL 2 there. The test suite runs on Ubuntu and macOS (GitHub-hosted runners); pipeline executions are validated on native Linux x86_64 with Docker. On arm64 hosts a pipeline depends on arm64 containers or emulation of amd64 ones, which can fail (see [known-issues](known-issues.md#pipeline-specific-run-notes)). |
-| **Python** | 3.11+ | Required for `nfclaw` CLI runtime and `librarian`. |
-| **Java** | Java 17+ compatible with the selected engine | CI uses Temurin 17; newer Java releases are not necessarily supported by older pinned engines. See [Nextflow installation requirements](https://docs.seqera.io/nextflow/install#requirements). |
-| **Nextflow** | The engine each `skill.md` names (`--nxf-ver`) | The launcher on system PATH downloads a pinned engine on first use. |
-| **Container Engine** | Docker, Singularity / Apptainer, or Podman | Container execution profile recommended for reproducibility. Pipeline sweeps ran on Docker; Singularity/Apptainer on the demo in CI; Podman handling in tests only ([validation limits](validation.md#limits)). |
-| **Filesystem Paths** | Space-free repository, output and work paths by default | `--allow-spaces` bypasses the space check at the caller's risk; LF/CR remain forbidden. Input basenames have separate safety checks. On macOS, avoid iCloud directories. |
+| Operating system | Linux or macOS; on Windows, inside WSL 2 | `nfclaw run`, `nfclaw chain run` and MCP jobs refuse a Python without POSIX file locks (native Windows) rather than run without their writer locks, and Nextflow needs WSL 2 there anyway. The tests run on Ubuntu and macOS; pipelines are validated on Linux x86_64 with Docker. On arm64, a pipeline needs arm64 containers or emulation of amd64 ones, which can fail ([known issues](known-issues.md#pipeline-specific-run-notes)). |
+| Python | 3.11+ | For `nfclaw` and `librarian`. |
+| Java | 17+, as supported by the engine you run | CI uses Temurin 17. Older engines do not necessarily support newer Java; see Nextflow's [requirements](https://docs.seqera.io/nextflow/install#requirements). |
+| Nextflow | The version each `skill.md` names (`--nxf-ver`) | The launcher on `PATH` downloads a pinned engine on first use. |
+| Containers | Docker, Singularity/Apptainer or Podman | Use a container profile for reproducible runs. The pipeline sweeps ran on Docker, CI runs the demo on Singularity/Apptainer, and Podman is covered only by unit tests ([validation limits](validation.md#limits)). |
+| Paths | Repository, output and work paths without spaces | `--allow-spaces` lifts the space check at your own risk; line breaks are always refused. Input file names have their own checks. On macOS, avoid iCloud folders. |

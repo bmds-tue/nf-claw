@@ -1,4 +1,4 @@
-# End-to-End Validation
+# End-to-end validation
 
 Every pipeline pinned at the time of the validation was attempted through `nfclaw`.
 Of 91 bundled tests, 90 reached success, including proteinfold's stub-only test;
@@ -7,13 +7,18 @@ tested on the same host: replay, verification, resume, chains, sample-sheet gene
 versions and status reporting. This page records how the runs were done, what passed, and what each
 result does and does not show.
 
-The versions and observations below describe the 2026-10-14 to 2026-10-16 validation,
-not a fresh execution after every repository change. Releases bumped and pipelines added since then
-that were run the same way are listed under [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep),
-the [final pin sweep](#final-pin-sweep) of 2026-11-05 to 2026-11-06 ran the pins again with their replays, and the
-[final-code sweep](#final-code-sweep) of 2026-11-07 to 2026-11-08 ran them once more on the audited code;
-the automated updater itself gates a release on its preview, tests, drift checks and one bundled analysis
-on a hosted runner ([publication evidence policy](maintenance.md)).
+The versions and observations below describe the validation of 2026-10-14 to 2026-10-16; they are
+not repeated after every change to the repository. Since then:
+
+- releases bumped and pipelines added, and run the same way, are listed under
+  [Releases bumped or added after the sweep](#releases-bumped-or-added-after-the-sweep);
+- the [final pin sweep](#final-pin-sweep) of 2026-11-05 to 2026-11-06 ran every pin again, with its
+  replay;
+- the [final-code sweep](#final-code-sweep) of 2026-11-07 to 2026-11-08 ran them once more on the
+  audited code.
+
+The automated updater itself publishes a release only after its preview, the tests, the drift checks
+and a real run of its bundled test on a hosted runner pass ([publication policy](maintenance.md)).
 For the current pin and its requirements, read `pipelines/<name>/skill.md`.
 
 ---
@@ -771,7 +776,7 @@ The nfclaw feature paths were replayed the same way:
 - `--no-provenance`, which writes no bundle
 
 Every replay reported as successful in these final results had an `identical` environment
-comparison. This describes the recorded comparison scope in [the architecture guide](architecture.md#27-verification-engine-nfclaw-verify), not complete machine identity or proof of analytical agreement.
+comparison. This describes the recorded comparison scope in [the architecture guide](architecture.md#27-verification-nfclaw-verify), not complete machine identity or proof of analytical agreement.
 
 On GitHub Actions, the `demo-validation` workflow replays the demo with Docker twice: in place, and
 from the bundle's source archive with the checkout moved away. It also runs the demo with Apptainer,

@@ -29,7 +29,7 @@ const MAX_HEADINGS = 12;
 // The home page's sections, in page order.
 const SECTIONS = [
   { id: "how", label: "How it works", hint: "Find, read, run — three commands" },
-  { id: "pipelines", label: "Pipeline universe", hint: "Explore the constellation" },
+  { id: "pipelines", label: "Pipelines by domain", hint: "Grouped by research domain" },
   { id: "skills", label: "Skills explorer", hint: "What an agent reads" },
   { id: "activity", label: "Repository activity", hint: "Commits & automation" },
   { id: "releases", label: "Release timeline", hint: "Pinned versions" },

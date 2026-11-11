@@ -9,7 +9,7 @@ runtime configuration instead.
 
 ## Navigation
 
-[Overview](#overview) • [Source Cache & Isolation](#source-cache-and-isolation) • [Preflight & Provenance](#preflight-checks-resume-and-provenance) • [Bactmap Matched Demo](#bactmap-matched-demo-fixture) • [Acceptance Staging](#internal-acceptance-staging) • [FastQRepair Runtime Corrections](#runtime-configuration-corrections-fastqrepair-111)
+[Overview](#overview) • [Source cache and isolation](#source-cache-and-isolation) • [Preflight, resume and provenance](#preflight-checks-resume-and-provenance) • [Bactmap demo data](#bactmap-matched-demo-fixture) • [Acceptance staging](#internal-acceptance-staging) • [FastQRepair runtime corrections](#runtime-configuration-corrections-fastqrepair-111)
 
 ---
 
@@ -114,7 +114,7 @@ its workflow source and receives its corrections through a recorded runtime conf
 - **Separated publications:** distinct read, log and MultiQC report publication channels.
 
 The complete standalone implementation and its source digest are recorded in provenance bundles for
-replay ([bundle contents](architecture.md#25-provenance-bundles--dependency-hashing)); internal recipe
+replay ([bundle contents](architecture.md#25-provenance-bundles)); internal recipe
 prefixes invalidate prior task caches. The pinned source tree remains unchanged, while generated task
 scripts explicitly incorporate these corrections, so inspect actual task `.command.sh` files and
 retained read and report inventories. Process success alone does not establish read conservation or

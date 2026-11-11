@@ -1,27 +1,32 @@
 # Validation scope and samplesheet generation
 
-`nfclaw run --check` prepares a command; it does not execute scientific tasks. Its three
-`preflight` lines list checks completed by the wrapper, deferred to workflow launch, and unsupported
-by preparation. A real run retains the detailed versioned report as `validation_scope` in
-`provenance/run_manifest.json`. Failed preparation reports the failing check through its error;
-it does not claim that later checks ran. `host_requirements` means the run's tools are on the host:
-Git, Nextflow, Java and the profile's container engine, and a Docker profile's daemon must answer
-`docker info`, so start Docker before checking. One engine probe runs: `--check` asks the Nextflow the
-run would use (its `--nxf-ver`, `--nxf-env` and every `-c`, generated ones included) to resolve the
-pipeline's configuration and selected profiles with `nextflow config`, from a scratch directory, and
-refuses a release that engine cannot parse — an older one under Nextflow 26.04's strict parser —
-naming the declared engine or the legacy parser to use; `profile_config` is then reported checked.
-It resolves no parameter values, and a pinned engine not yet on the host is downloaded first.
-Generated tables count as validated local sheets too. A check-only preparation inspects local data
-paths but does not read every data file's bytes; `local_data_bytes` stays deferred until a real run
-has taken its input snapshots. A successful check can therefore still encounter unreadable data at
-launch, and is not a byte-readability guarantee.
+What nfclaw checks before a pipeline starts, what it leaves to the pipeline, how it writes a
+samplesheet from data files and for which pipelines, and which inputs it refuses.
+
+`nfclaw run --check` prepares the command without running any scientific task. Its three
+`preflight` lines list the checks it completed, those left to the pipeline at launch, and those it
+does not support. A real run keeps the detailed, versioned report as `validation_scope` in
+`provenance/run_manifest.json`. When preparation fails, the error names the failing check and does
+not claim that later checks ran.
+
+`host_requirements` means the run's tools are on the host: Git, Nextflow, Java and the profile's
+container engine. For a Docker profile the daemon must answer `docker info`, so start Docker before
+checking. `--check` also runs one engine probe: it asks the Nextflow the run would use (with its
+`--nxf-ver`, `--nxf-env` and every `-c`, generated ones included) to resolve the pipeline's
+configuration and selected profiles with `nextflow config`, from a scratch directory. A release that
+engine cannot parse, such as an older one under Nextflow 26.04's strict parser, is refused with the
+engine or parser to use instead; otherwise `profile_config` is reported as checked. The probe
+resolves no parameter values, and a pinned engine that is not on the host yet is downloaded first.
+
+Generated samplesheets are validated like hand-written ones. `--check` looks at local data paths but
+does not read every data file, so `local_data_bytes` stays deferred until a real run takes its input
+snapshots: a file that cannot be read can still stop a run that passed `--check`.
 
 ---
 
 ## Navigation
 
-[Schema Subset](#wrapper-schema-subset) • [Replay Integrity Limits](#replay-integrity-limits) • [Generation Boundaries](#generation-boundaries) • [Support Matrix](#support-matrix) • [Inputs Refused Before Launch](#inputs-refused-before-launch)
+[Schema subset](#wrapper-schema-subset) • [Replay integrity limits](#replay-integrity-limits) • [Generation boundaries](#generation-boundaries) • [Support matrix](#support-matrix) • [Inputs refused before launch](#inputs-refused-before-launch)
 
 ---
 
@@ -39,7 +44,7 @@ launch, and is not a byte-readability guarantee.
 | Scientific results | Preparation establishes no result completeness or biological accuracy. | Expected/processed samples, required scientific artifacts, formats and analysis-specific assessments. Exit zero alone does not establish these. |
 
 The supported path formats and exact-source annotations are shared by handwritten tables, generated
-tables and handoffs. The [architecture](architecture.md#21-schema-preflight--fast-fail-parameter-validation)
+tables and handoffs. The [architecture](architecture.md#21-preflight)
 describes their boundaries. Before/after local hashes can detect a lasting change but cannot prove
 continuous immutability or establish every byte a task consumed. Implicit indexes, transitive config
 includes, Conda environments and task-managed downloads are not comprehensively discovered.
@@ -205,7 +210,7 @@ guide gives the one-line rules.
 
 ### Output directories and locking
 
-On POSIX systems, `nfclaw run` holds an exclusive non-blocking sibling lock (`.{outdir.name}.nfclaw.lock`) around the run. Overlapping or concurrent runs into the same `--outdir` fail fast with an environment error, preventing race conditions or output corruption.
+On POSIX systems, `nfclaw run` holds an exclusive, non-blocking lock on a file beside the output directory (`.{outdir.name}.nfclaw.lock`) for the whole run. A second run into the same `--outdir` fails at once with an environment error instead of mixing its output with the first.
 
 Before creating that lock or any run files, explicit local dependencies and samplesheet data paths are checked against output, work, engine-state and log destinations:
 
