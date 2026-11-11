@@ -1625,11 +1625,11 @@
     "output": "--outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)",
     "summary": "nf-core/provenancereport is a reporting pipeline that validates a samplesheet and renders reproducible Quarto reports. The samplesheet has two columns, id and path, where each row points to one input file. The pipeline stages all listed files into a single Quarto render and publishes the rendered report plus any generated artifacts.",
     "tools": [
+      "MultiQC",
       "Quarto",
-      "nf-prov",
-      "MultiQC"
+      "nf-prov"
     ],
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   {
     "description": "Long-term vegetation trend analysis pipeline for rangeland systems using satellite imagery.",
@@ -2013,6 +2013,7 @@
       "ASCAT",
       "alleleCount",
       "BCFTools",
+      "BEDTools",
       "BGZip",
       "BWA-MEM",
       "BWA-MEM2",
@@ -2061,7 +2062,7 @@
       "R",
       "RColorBrewer"
     ],
-    "version": "3.11.0"
+    "version": "3.12.0"
   },
   {
     "description": "Single-cell/nuclei pipeline for data derived from Oxford Nanopore",

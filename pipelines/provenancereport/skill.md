@@ -1,14 +1,14 @@
 ---
 name: provenancereport
 pipeline: nf-core/provenancereport
-version: 1.0.0
-commit: 89ed44de8da1788e5f00a6dd95bd72c51ff36dff
+version: 1.0.1
+commit: a1cea59800fd6c18c705324845c8a16f61ebf0f6
 description: Generate reproducible Quarto reports together with an audit trail of inputs, checksums, software versions, runtime environments, and provenance metadata.
 summary: nf-core/provenancereport is a reporting pipeline that validates a samplesheet and renders reproducible Quarto reports. The samplesheet has two columns, id and path, where each row points to one input file. The pipeline stages all listed files into a single Quarto render and publishes the rendered report plus any generated artifacts.
 has_samplesheet: true
 input: samplesheet (id, path)
 output: --outdir/ (configured results); pipeline_info/ (run metadata when enabled); MultiQC report (conditional)
-tools: ["Quarto", "nf-prov", "MultiQC"]
+tools: ["MultiQC", "Quarto", "nf-prov"]
 ---
 # provenancereport
 
@@ -47,11 +47,11 @@ id,path
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
-- **Generic options** (`generic_options`) — 11 parameters
-- **Input/output options** (`input_output_options`) — 5 parameters
+- **Generic options** (`generic_options`) — 15 parameters
+- **Input/output options** (`input_output_options`) — 6 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 
-Upstream usage: https://github.com/nf-core/provenancereport/blob/1.0.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/provenancereport/blob/1.0.1/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -75,18 +75,18 @@ nfclaw run provenancereport ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/provenancereport/blob/1.0.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/provenancereport/blob/1.0.1/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
 ## Tools this pipeline runs
-The tools/methods this pipeline runs, per the authors' own list: Quarto, nf-prov, MultiQC.
+The tools/methods this pipeline runs, per the authors' own list: MultiQC, Quarto, nf-prov.
 
-Full list with references: https://github.com/nf-core/provenancereport/blob/1.0.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/provenancereport/blob/1.0.1/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run provenancereport --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/provenancereport@89ed44de8da1788e5f00a6dd95bd72c51ff36dff. Do not edit by hand. -->
+<!-- Generated from nf-core/provenancereport@a1cea59800fd6c18c705324845c8a16f61ebf0f6. Do not edit by hand. -->

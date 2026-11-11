@@ -1,7 +1,7 @@
 ---
 name: sarek
-version: 3.11.0
-commit: 6e9b164daa2a54c98f7dda538645d340c561ac24
+version: 3.12.0
+commit: 786a11bb4f989751d1c4bb87908ffc6096635ff3
 ---
 
 # sarek — full parameter reference
@@ -120,12 +120,12 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
-| `--intervals` | string (file path) |  |  |  | matches `\S+\.(bed\|interval_list)$` |  | Path to target bed file in case of whole exome or targeted sequencing or intervals file. |
+| `--intervals` | string or boolean |  |  |  |  |  | Path to target bed file in case of whole exome or targeted sequencing or intervals file. |
 | `--no-intervals` | boolean |  |  |  |  |  | Disable usage of intervals. |
 | `--nucleotides-per-second` | integer |  |  |  | ≥ 1 | `200000` | Estimate interval size. |
 | `--skip-tools` | string |  |  |  | matches `^((baserecalibrator\|baserecalibrator_report\|bcftools\|dnascope_filter\|documentation\|fastqc\|haplotypecaller_filter\|haplotyper_filter\|markduplicates\|markduplicates_report\|mosdepth\|multiqc\|samtools\|vcftools\|versions)?,?)*(?<!,)$` |  | Disable specified tools. |
 | `--split-fastq` | integer |  |  |  |  | `50000000` | Specify how many reads each split of a FastQ file contains. Set 0 to turn off splitting at all. |
-| `--tools` | string |  |  |  | matches `^((ascat\|bbsplit\|bcfann\|cnvkit\|controlfreec\|deepsomatic\|deepvariant\|freebayes\|haplotypecaller\|indexcov\|lofreq\|manta\|merge\|mpileup\|msisensor2\|msisensorpro\|muse\|mutect2\|ngscheckmate\|parabricks_deepsomatic\|parabricks_deepvariant\|parabricks_haplotypecaller\|sentieon_dedup\|sentieon_dnascope\|sentieon_haplotyper\|sentieon_tnscope\|snpeff\|snpsift\|strelka\|tiddit\|vep\|varlociraptor)?,?)*(?<!,)$` |  | Tools to use for contamination removal, duplicate marking, variant calling and/or for annotation. |
+| `--tools` | string |  |  |  | matches `^((ascat\|bbsplit\|bcfann\|cnvkit\|controlfreec\|deepsomatic\|deepvariant\|freebayes\|haplotypecaller\|indexcov\|lofreq\|manta\|merge\|mpileup\|msisensor2\|msisensorpro\|muse\|mutect2\|ngscheckmate\|parabricks_deepsomatic\|parabricks_deepvariant\|parabricks_haplotypecaller\|parabricks_mutectcaller\|sentieon_dedup\|sentieon_dnascope\|sentieon_haplotyper\|sentieon_tnscope\|snpeff\|snpsift\|strelka\|tiddit\|vep\|varlociraptor)?,?)*(?<!,)$` |  | Tools to use for contamination removal, duplicate marking, variant calling and/or for annotation. |
 | `--wes` | boolean |  |  |  |  |  | Enable when exome or panel data is provided. |
 
 ## post_variant_calling
@@ -153,6 +153,7 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 |---|---|---|---|---|---|---|---|
 | `--aligner` | string |  |  | `bwa-mem`, `bwa-mem2`, `dragmap`, `sentieon-bwamem`, `parabricks` |  | `bwa-mem` | Specify aligner to be used to map reads to reference genome. |
 | `--markduplicates-pixel-distance` | integer |  |  |  |  |  |  |
+| `--mosdepth-fast-mode` | boolean |  |  |  |  | `true` | Enable Mosdepth fast mode for whole-genome coverage calculations. |
 | `--save-mapped` | boolean |  |  |  |  |  | Save mapped files. |
 | `--save-output-as-bam` | boolean |  |  |  |  |  | Saves output from mapping (if `--save_mapped`), Markduplicates & Baserecalibration as BAM file instead of CRAM |
 | `--sentieon-consensus` | boolean |  |  |  |  |  | Generate consensus reads with Sentieon dedup rather than choosing one best read. |
@@ -170,6 +171,8 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--bwa` | string (directory path) |  |  |  |  |  | Path to BWA mem indices. |
 | `--bwamem2` | string (directory path) |  |  |  |  |  | Path to bwa-mem2 mem indices. |
 | `--chr-dir` | string (file or directory path) |  |  |  |  |  | Path to chromosomes folder used with ControLFREEC. |
+| `--contamination-resource` | string (file path) |  |  |  | matches `\S+\.vcf\.gz$` |  | Path to the common germline variant sites VCF used by GATK GetPileupSummaries for contamination estimation. |
+| `--contamination-resource-tbi` | string (file path) |  |  |  | matches `\S+\.vcf\.gz\.tbi$` |  | Path to the index of the contamination resource VCF. |
 | `--dbsnp` | string (file path) |  |  |  | matches `^\S+\.vcf\.gz$` |  | Path to dbsnp file. |
 | `--dbsnp-tbi` | string (file path) |  |  |  | matches `^\S+\.vcf\.gz\.tbi$` |  | Path to dbsnp index. |
 | `--dbsnp-vqsr` | string |  |  |  |  |  | Label string for VariantRecalibration (haplotypecaller joint variant calling). If you use AWS iGenomes, this has already been set for you appropriately. |
@@ -178,8 +181,8 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--fasta` | string (file path) |  |  |  | matches `^\S+\.fn?a(sta)?(\.gz)?$` |  | Path to FASTA genome file. |
 | `--fasta-fai` | string (file path) |  |  |  |  |  | Path to FASTA reference index. |
 | `--genome` | string |  |  |  |  | `GATK.GRCh38` | Name of iGenomes reference. |
-| `--germline-resource` | string (file path) |  |  |  | matches `\S+\.vcf\.gz$` |  | Path to GATK Mutect2 Germline Resource File. |
-| `--germline-resource-tbi` | string (file path) |  |  |  | matches `\S+\.vcf\.gz\.tbi$` |  | Path to GATK Mutect2 Germline Resource Index. |
+| `--germline-resource` | string (file path) |  |  |  | matches `\S+\.vcf\.gz$` |  | Path to GATK Mutect2 and Parabricks MutectCaller Germline Resource File. |
+| `--germline-resource-tbi` | string (file path) |  |  |  | matches `\S+\.vcf\.gz\.tbi$` |  | Path to GATK Mutect2 and Parabricks MutectCaller Germline Resource Index. |
 | `--known-indels` | string (file path glob) |  |  |  |  |  | Path to known indels file. |
 | `--known-indels-tbi` | string (file path glob) |  |  |  |  |  | Path to known indels file index. |
 | `--known-indels-vqsr` | string |  |  |  |  |  | Label string for VariantRecalibration (haplotypecaller joint variant calling). If you use AWS iGenomes, this has already been set for you appropriately. |
@@ -233,6 +236,8 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--cf-ploidy` | string |  |  |  |  | `2` | Genome ploidy used by ControlFREEC |
 | `--cf-window` | number |  |  |  |  |  | Overwrite Control-FREEC window size. |
 | `--cnvkit-reference` | string (file path) |  |  |  | matches `^\S+\.cnn$` |  | Copy-number reference for CNVkit |
+| `--force-call-alleles` | string (file path) |  |  |  | matches `^\S+\.vcf\.gz$` |  | VCF (bgzipped) of alleles to force-call with GATK Mutect2 and Parabricks MutectCaller. |
+| `--force-call-alleles-tbi` | string (file path) |  |  |  | matches `^\S+\.vcf\.gz\.tbi$` |  | Index of the force-call alleles VCF for GATK Mutect2 and Parabricks MutectCaller. |
 | `--freebayes-filter` | string |  |  |  |  | `30` | Filtering expression for vcflib/vcffilter |
 | `--gatk-pcr-indel-model` | string |  |  |  |  | `CONSERVATIVE` |  |
 | `--ignore-soft-clipped-bases` | boolean |  |  |  |  |  | Do not analyze soft clipped bases in the reads for GATK Mutect2. |
@@ -245,4 +250,4 @@ nf-core/sarek pipeline parameters. Every parameter from the pinned `nextflow_sch
 | `--sentieon-dnascope-pcr-indel-model` | string |  |  |  | matches `^(NONE\|HOSTILE\|AGGRESSIVE\|CONSERVATIVE)(?<!,)$` | `CONSERVATIVE` | Option for selecting the PCR indel model used by Sentieon Dnascope. |
 | `--sentieon-haplotyper-emit-mode` | string |  |  |  | matches `^(all\|confident\|gvcf\|variant\|gvcf,all\|gvcf,confident\|gvcf,variant\|all,gvcf\|confident,gvcf\|variant,gvcf)(?<!,)$` | `variant` | Option for selecting output and emit-mode of Sentieon's Haplotyper. |
 
-<!-- Generated from nf-core/sarek@6e9b164daa2a54c98f7dda538645d340c561ac24. Do not edit by hand. -->
+<!-- Generated from nf-core/sarek@786a11bb4f989751d1c4bb87908ffc6096635ff3. Do not edit by hand. -->
