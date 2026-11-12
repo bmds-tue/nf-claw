@@ -1,8 +1,8 @@
 ---
 name: rnaseq
 pipeline: nf-core/rnaseq
-version: 3.27.0
-commit: a1fcdddd3b826fe46eb46f0479f2ff8a7815af05
+version: 3.28.0
+commit: f24c6c0e9469d04975d87c3a8bf9020800978782
 description: RNA sequencing analysis pipeline for gene/isoform quantification and extensive quality control.
 summary: nf-core/rnaseq is a bioinformatics pipeline that can be used to analyse RNA sequencing data obtained from organisms with a reference genome and annotation. It takes a samplesheet with FASTQ files or pre-aligned BAM files as input, performs quality control (QC), trimming and (pseudo-)alignment, and produces a gene expression matrix and extensive QC report.
 has_samplesheet: true
@@ -63,8 +63,8 @@ This release reads Nextflow secrets: `SENTIEON_LICENSE_BASE64` (in `modules/nf-c
 
 ## Other parameters
 Every parameter not listed above is optional as far as the schema is concerned. [reference.md](reference.md) documents them all — type, required, hidden, allowed values, constraints, default and description. Use it as the source of truth; do not guess flags. It uses nfclaw's hyphenated flags; raw Nextflow requires the exact schema spelling (usually underscores). nfclaw checks explicit parameters before launch; the pinned pipeline's validation handles conditional and complex constraints at runtime. It is organised into these groups (counts are full group sizes, so they include any parameter already listed above):
-- **Alignment options** (`alignment_options`) — 23 parameters
-- **Generic options** (`generic_options`) — 15 parameters
+- **Alignment options** (`alignment_options`) — 26 parameters
+- **Generic options** (`generic_options`) — 16 parameters
 - **Input/output options** (`input_output_options`) — 4 parameters
 - **Institutional config options** (`institutional_config_options`) — 6 parameters
 - **Optional outputs** (`optional_outputs`) — 10 parameters
@@ -75,7 +75,7 @@ Every parameter not listed above is optional as far as the schema is concerned. 
 - **Reference genome options** (`reference_genome_options`) — 25 parameters
 - **UMI options** (`umi_options`) — 10 parameters
 
-Upstream usage: https://github.com/nf-core/rnaseq/blob/3.27.0/docs/usage.md
+Upstream usage: https://github.com/nf-core/rnaseq/blob/3.28.0/docs/usage.md
 
 ## Resources
 Resource requests follow the pipeline's configs and selected profiles. nf-core's resource labels often assume a server — a single step can request far more memory than a workstation has, and retry rules can increase requests. If a run fails with `Process requirement exceeds available memory` (or CPUs), cap every request, and every retry, at what this machine actually has:
@@ -99,7 +99,7 @@ nfclaw run rnaseq ... --nxf-ver 25.10.4
 ## Outputs
 Results land in `--outdir`; the files and directory layout depend on the selected workflow, parameters and publication settings. Run metadata is normally placed in `<outdir>/pipeline_info/` (execution report, software versions), when those outputs are enabled. The pinned tree includes MultiQC support; a report is produced only when its workflow step runs. `--skip-multiqc true` disables that report. `nfclaw run` also writes `<outdir>/provenance/` with the exact params file and the run log, `<outdir>/provenance/logs/run.log` — the whole launch, whose last line states the outcome (Nextflow's own log is `<outdir>/.nextflow.log`); unless `--no-provenance` it adds a run manifest (pinned version, commit and exact command), input/output SHA-256 checksums, and a replayable `commands.sh`.
 
-The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnaseq/blob/3.27.0/docs/output.md
+The exact output files and directory layout for this release are documented upstream: https://github.com/nf-core/rnaseq/blob/3.28.0/docs/output.md
 
 Check a run — in the foreground or the background — with `nfclaw status <outdir>`: success, still running, how it ended (with the error), or stopped without an outcome; exit 0 success, 3 running, 1 otherwise.
 
@@ -117,11 +117,11 @@ Fed by:
 ## Tools this pipeline runs
 The tools/methods this pipeline runs, per the authors' own list: BBMap, BEDTools, Bowtie2, Bracken, fastp, FastQC, featureCounts, fq, GffRead, HISAT2, Kallisto, Kraken2, MultiQC, picard-tools, preseq, Qualimap 2, RiboDetector, RSEM, RustQC, RSeQC, Salmon, SeqKit, SAMtools, SortMeRNA, STAR, StringTie2, Sylph, Trim Galore!, tximport, UCSC tools, UMI-tools, UMICollapse, R, DESeq2, dupRadar, ggplot2, optparse, pheatmap, RColorBrewer, SummarizedExperiment, Tximeta.
 
-Full list with references: https://github.com/nf-core/rnaseq/blob/3.27.0/CITATIONS.md
+Full list with references: https://github.com/nf-core/rnaseq/blob/3.28.0/CITATIONS.md
 
 ## Demo
 ```bash
 nfclaw run rnaseq --demo --outdir results   # adds the upstream test profile (-profile test,docker)
 ```
 
-<!-- Generated from nf-core/rnaseq@a1fcdddd3b826fe46eb46f0479f2ff8a7815af05. Do not edit by hand. -->
+<!-- Generated from nf-core/rnaseq@f24c6c0e9469d04975d87c3a8bf9020800978782. Do not edit by hand. -->

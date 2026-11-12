@@ -1,7 +1,7 @@
 ---
 name: rnaseq
-version: 3.27.0
-commit: a1fcdddd3b826fe46eb46f0479f2ff8a7815af05
+version: 3.28.0
+commit: f24c6c0e9469d04975d87c3a8bf9020800978782
 ---
 
 # rnaseq — full parameter reference
@@ -20,6 +20,9 @@ nf-core/rnaseq pipeline parameters. Every parameter from the pinned `nextflow_sc
 | `--extra-salmon-index-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to the Salmon index command in addition to defaults defined by the pipeline. |
 | `--extra-salmon-quant-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to Salmon quant command in addition to defaults defined by the pipeline. |
 | `--extra-star-align-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to STAR alignment command in addition to defaults defined by the pipeline. Only available for the STAR-Salmon route. |
+| `--fail-on-low-mapped-reads` | boolean |  |  |  |  |  | Fail the run for samples with a mapping rate below --min_mapped_reads, instead of only skipping them. |
+| `--fail-on-low-trimmed-reads` | boolean |  |  |  |  |  | Fail the run for samples with too few reads after trimming (see --min_trimmed_reads), instead of only skipping them. |
+| `--fail-on-undetermined-strandedness` | boolean |  |  |  |  |  | Fail the run for samples with strandedness 'auto' that Salmon cannot determine, instead of treating them as 'unstranded'. |
 | `--gpu-container-options` | string |  | yes |  |  |  | Override container GPU flags for GPU tasks. Auto-detects if not set (--gpus all for Docker, --nv for Singularity/Apptainer). |
 | `--kallisto-quant-fraglen` | integer |  |  |  |  | `200` | In single-end mode Kallisto requires an estimated fragment length (in base pairs). Specify a default value for that here. |
 | `--kallisto-quant-fraglen-sd` | integer |  |  |  |  | `200` | In single-end mode, Kallisto requires an estimated standard error for fragment length (in base pairs). Specify a default value for that here. |
@@ -41,6 +44,7 @@ nf-core/rnaseq pipeline parameters. Every parameter from the pinned `nextflow_sc
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--email-on-fail` | string |  | yes |  | matches `^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$` |  | Email address for completion summary, only when pipeline fails. |
+| `--force-completion-email` | boolean |  | yes |  |  |  | Send the completion email on Seqera Platform launches, where it is skipped by default. |
 | `--help` | boolean or string |  |  |  |  |  | Display the help message. |
 | `--help-full` | boolean |  |  |  |  |  | Display the full detailed help message. |
 | `--max-multiqc-email-size` | string |  | yes |  |  | `25.MB` | File size limit when attaching MultiQC reports to summary emails. |
@@ -150,7 +154,7 @@ nf-core/rnaseq pipeline parameters. Every parameter from the pinned `nextflow_sc
 | parameter | type | required | hidden | allowed values | constraints | default | description |
 |---|---|---|---|---|---|---|---|
 | `--extra-fastp-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to fastp command in addition to defaults defined by the pipeline. |
-| `--extra-trimgalore-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to Trim Galore! command in addition to defaults defined by the pipeline. |
+| `--extra-trimgalore-args` | string |  |  |  | length ≥ 1 |  | Extra arguments to pass to Trim Galore! command in addition to defaults defined by the pipeline. Only applicable when using `--trimmer trimgalore`. |
 | `--min-trimmed-reads` | integer |  |  |  |  | `10000` | Minimum number of trimmed reads below which samples are removed from further processing. Some downstream steps in the pipeline will fail if this threshold is too low. |
 | `--trimmer` | string |  |  | `trimgalore`, `fastp` |  | `trimgalore` | Specifies the trimming tool to use - available options are 'trimgalore' and 'fastp'. |
 
@@ -199,4 +203,4 @@ nf-core/rnaseq pipeline parameters. Every parameter from the pinned `nextflow_sc
 | `--umitools-umi-separator` | string |  |  |  | matches `^\S+$`; length ≥ 1; length ≤ 1 |  | The character that separates the UMI in the read name. Most likely a colon if you skipped the extraction with UMI-tools and used other software. |
 | `--with-umi` | boolean |  |  |  |  |  | Enable UMI-based read deduplication. |
 
-<!-- Generated from nf-core/rnaseq@a1fcdddd3b826fe46eb46f0479f2ff8a7815af05. Do not edit by hand. -->
+<!-- Generated from nf-core/rnaseq@f24c6c0e9469d04975d87c3a8bf9020800978782. Do not edit by hand. -->
